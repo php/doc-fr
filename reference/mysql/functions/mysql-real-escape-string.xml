@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.8 $ -->
-<!-- EN-Revision: 1.12 Maintainer: dams Status: ready -->
+<!-- $Revision: 1.9 $ -->
+<!-- EN-Revision: 1.13 Maintainer: dams Status: ready -->
   <refentry id="function.mysql-real-escape-string">
    <refnamediv>
     <refname>mysql_real_escape_string</refname>
@@ -38,10 +38,29 @@
     </para>
     <para>
      <function>mysql_real_escape_string</function> appelle une fonction de la bibliothèque MySQL
-     du même nom, qui ajoute un slashe aux caractères suivants :
+     (<function>mysql_escape_string</function>), qui ajoute un slashe aux caractères suivants :
      <literal>NULL</literal>, <literal>\x00</literal>, <literal>\n</literal>,
      <literal>\r</literal>, <literal>\</literal>, <literal>'</literal>,
      <literal>"</literal> et <literal>\x1a</literal>.
+    </para>
+    <para>
+     <example>
+      <title>Exemple simple avec <function>mysql_real_escape_string</function></title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+// Connexion
+$link = mysql_connect('mysql_host', 'mysql_user', 'mysql_password')
+    OR die(mysql_error());
+
+// Requête
+$query = sprintf("SELECT * FROM users WHERE user='%s' AND password='%s'",
+            mysql_real_escape_string($user),
+            mysql_real_escape_string($password));
+?>
+]]>
+      </programlisting>
+     </example>
     </para>
     <para>
      Vous devez toujours (avec quelques rares exceptions) utiliser cette fonction
@@ -75,7 +94,7 @@ echo $query;
        </para>
       <screen>
 <![CDATA[
-SELECT * FROM users WHERE name='fred' AND password='' OR 1=1
+SELECT * FROM users WHERE name='aidan' AND password='' OR 1=1
 ]]>
       </screen>
       <para>
@@ -87,25 +106,13 @@ SELECT * FROM users WHERE name='fred' AND password='' OR 1=1
 <![CDATA[
 <?php
 /**
- * Applique la fonction stripslashes recursivement
- */
-function stripslashes_deep($value)
-{
-    $value = is_array($value) ?
-                array_map('stripslashes_deep', $value) :
-                stripslashes($value);
-
-    return $value;
-}
-
-/**
  * Protège la variable avant l'insertion
  */
 function quote_smart($value)
 {
     // Stripslashes si nécessaire
     if (get_magic_quotes_gpc()) {
-        $value = stripslashes_deep($value);
+        $value = stripslashes($value);
     }
 
     // Protection si ce n'est pas un entier
@@ -117,7 +124,7 @@ function quote_smart($value)
 }
 
 // Connexion
-$link = mysql_connect('localhost', 'mysql_user', 'mysql_password')
+$link = mysql_connect('mysql_host', 'mysql_user', 'mysql_password')
     OR die('Could not connect: ' . mysql_error());
 
 // Fabrication d'une requête sécurisée
@@ -130,15 +137,15 @@ mysql_query($query);
 ]]>
       </programlisting>
       <para>
-       Votre requête est maintenant sécurisé quelques que soient les données entrées par l'utilisateur !
+       La requête s'exécute maintenant correctement et les attaques par injection ne fonctionne plus.
       </para>
      </example>
     </para>
     <note>
      <simpara>
       <function>mysql_real_escape_string</function> n'échappe ni 
-      <literal>%</literal>, ni <literal>_</literal>. Ce sont des jokers en MySQL si non liés par
-      des guillemets.
+      <literal>%</literal>, ni <literal>_</literal>. Ce sont des jokers en MySQL si 
+      combinés avec <literal>LIKE</literal>.
      </simpara>
     </note>
     <para>
