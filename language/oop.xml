@@ -1,5 +1,5 @@
  <chapter id="language.oop">
-  <title>Classes et objets</title>
+  <title>Les classes et les objets</title>
   <sect1 id="keyword.class">
    <title>Les classes : <literal>class</literal></title>
    <para>
@@ -34,6 +34,29 @@ class Caddie {
     tableau associatif contenant les articles du panier et de deux fonctions,
     une pour ajouter et une pour enlever des &eacute;l&eacute;ments au panier.
    </para>
+   <caution>
+    <simpara>
+     Les notes suivantes ne sont valable que pour PHP 4.
+    </simpara>
+    <simpara>
+     Le nom <literal>stdClass</literal> est utilis&eacute; en interne par
+     Zend et ne doit pas &ecirc;tre utilis&eacute;. Vous ne pouvez pas nommer une
+     classe <literal>stdClass</literal> en PHP.
+    </simpara>
+    <simpara>
+      Les noms de fonctions <literal>__sleep</literal> et
+      <literal>__wakeup</literal> sont magiques en PHP. Vous ne pouvez
+      pas utiliser ces noms de fonctions dans vos classes, &agrave; moins
+      que vous ne souhaitiez utiliser la magie qui y est associ&eacute;e.
+    </simpara>
+    <simpara>
+      PHP se r&eacute;serve l'usage de tous les noms de fonctions commen&ccedil;ants par
+      <literal>__</literal>, pour sa propre magie. Il est vivement
+      recommand&eacute; de ne pas utilser des noms de fonctions commen&ccedil;ants par
+      <literal>__</literal>, &agrave; moins que vous ne souhaitiez utiliser
+      la magie qui y est associ&eacute;e.
+    </simpara>
+   </caution>
    <note>
     <simpara>
      En PHP 4, seuls les initialiseurs constants pour les variables
@@ -49,19 +72,21 @@ class Caddie {
     var $date_du_jour = date("d/m/Y");
     var $name = $firstname;
     var $owner = 'Fred ' . 'Jones';
+    var $items = array("DVD", "T&eacute;l&eacute;","Magn&eacute;toscope");
 }
 /* Voici comment cela doit se faire d&eacute;sormais. */
 class Caddie {
     var $date_du_jour;
     var $name;
     var $owner;
+    var $items;
     function Caddie() {
         $this->date_du_jour = date("d/m/Y");
         $this->name = $GLOBALS['firstname'];
         /* etc... */
     }
 }
-?&lt;
+?&gt;
      </programlisting>
     </informalexample>
    </note>
@@ -74,21 +99,75 @@ class Caddie {
 &lt;?php
  $cart = new Caddie;
  $cart->add_item("10", 1);
+ $another_cart = new Cart;
+ $another_cart->add_item("0815", 3);
 ?&gt;
     </programlisting>
    </informalexample>
    <para>
     L'instruction ci-dessus cr&eacute;e l'objet $cart de la class Caddie.
     La fonction add_idem() est appel&eacute;e afin d'ajouter l'article
-    num&eacute;ro 10 dans la panier.
+    num&eacute;ro 10 dans le panier. 3 articles num&eacute;ro 0815 sont ajout&eacute;s au
+    cart $another_cart.
    </para>
    <para>
-    Une classe peut &ecirc;tre une extension d'une autre classe.
-    Les classes "extended" ou "derived" h&eacute;ritent de toutes
-    les variables et de toutes les fonctions de la classe p&egrave;re
-    plus toutes les d&eacute;finitions que vous rajoutez &agrave; cette
-    classe. Cela se fait avec le mot clef "extends".
-    L'h&eacute;ritage multiple n'est pas support&eacute;.
+    $cart et $another_cart disposent des fonctions add_item(),
+    remove_item() et de la variable items. Ce sont des fonctions
+    et variables distinctes. Vous pouvez vous repr&eacute;senter les
+    objets comme des dossiers sur votre disque dur. Vous pouvez
+    avoir deux fichiers "lisez-moi.txt" sur votre disque dur, tant qu'ils
+    ne sont pas dans le m&ecirc;me r&eacute;pertoire. De m&ecirc;me que vous devez alors
+    taper le chemin complet jusqu'au fichier, vous devez sp&eacute;cifier
+    le nom complet de la m&eacute;thode avant de l'employer : en termes PHP,
+    le dossier racine est l'espace de nom global, et le s&eacute;parateur
+    de dossier est <literal>-&gt;</literal>.  Par exemple, les noms
+    $cart-&gt;items et $another_cart-&gt;items repr&eacute;sentent deux
+    variables distinctes. Notez que le nom de la variable est alors
+    $cart-&gt;items, et non pas $cart-&gt;$items : il n'y a qu'un seul
+    signe $ dans un nom de variable.
+   </para>
+   <informalexample>
+    <programlisting role="php">
+&lt;?php
+// correct, $ unique
+$cart->items  = array("10" => 1);
+// incorrect, car $cart->$items devient $cart->""
+$cart->$items = array("10" => 1);
+// correct, mais risque de ne pas se comporter comme pr&eacute;vu
+// $cart->$myvar devient $ncart->items
+$myvar = 'items';
+$cart->$myvar = array("10" => 1);
+?&gt;
+    </programlisting>
+   </informalexample>
+   <para>
+    A l'int&eacute;rieur d'une d&eacute;finition de classe, vous ne savez pas le
+    nom de la variable &agrave; partir duquel l'objet sera accessible dans
+    le script. On ne peut pr&eacute;voir que l'objet cr&eacute;&eacute; sera affect&eacute; &agrave;
+    la variable $cart ou $another_cart. Donc, vous ne pouvez pas
+    utiliser la syntaxe $cart-&gt;items. Mais pour pouvoir acc&eacute;der &agrave;
+    aux m&eacute;thodes et membres d'un objet, vous pouvez utiliser la variable
+    sp&eacute;ciale $this, qui peut s'interpr&eacute;ter comme 'moi-m&ecirc;me', ou bien
+    'l'objet courant'. Par exemple, <literal>'$this->items[$artnr] += $num;'</literal>
+    peut se lire comme 'ajouter $num au compteur $artnr de mon propre tableau
+    de compteur' ou bien 'ajouter $num au compteur $artnr du tableau de compteurs
+    de l'objet courant'.
+   </para>
+  </sect1>
+  <sect1 id="keyword.extends">
+   <title><literal>extends</literal> : h&eacute;ritage</title>
+   <para>
+    Souvent, vous aurez besoin d'une classe avec des m&eacute;thodes et
+    fonctions similaires &agrave; une autre classe. En fait, il est bon
+    de d&eacute;finir des classes g&eacute;n&eacute;riques, qui pourront &ecirc;tre r&eacute;utilis&eacute;es
+    et adapt&eacute;es &agrave; tous vos projets. Pour faciliter cela, une
+    classe peut &ecirc;tre une extension d'une autre classe. La classe
+    d&eacute;riv&eacute;e h&eacute;rite alors de toutes les m&eacute;thodes et variables de
+    la classe de base (cet h&eacute;ritage a &ccedil;a de bien que personne ne
+    meurt pour en profiter), mais peut d&eacute;finir ses propres fonctions
+    et variables, qui s'ajouteront. Une classe ne peut h&eacute;riter que
+    d'une seule autre classe, et l'h&eacute;ritage multiple n'est pas
+    support&eacute;. Les h&eacute;ritages se font avec le mot cl&eacute; 'extends'.
    </para>
    <informalexample>
     <programlisting role="php">
@@ -122,31 +201,25 @@ $ncart->add_item ("10", 1); // (h&eacute;ritage des fonctions de la classe p&egr
 ?&gt;
     </programlisting>
    </informalexample>
-   <para>
-     Dans les fonctions d'une classe, la variable $this est
-     &eacute;gale &agrave; l'objet de la classe. Vous pouvez
-     utilisez la forme "$this->quelquechose" pour acc&eacute;der aux
-     fonctions ou aux variables de l'objet courant. Aussi bien
-     depuis l'objet lui-m&ecirc;me que de l'ext&eacute;rieur, vous n'avez pas
-     besoin de <literal>$</literal> pour acc&eacute;der aux
-     propri&eacute;t&eacute;s d'un objet.
-   </para>
-   <informalexample>
-    <programlisting role="php">
-&lt;?php
-$ncart->owner  = "chris"; // pas de '$'
-$ncart->$owner = "chris";
-// Ceci est invalide, car $ncart->$owner &eacute;quivaut &agrave; $ncart->""
-$myvar = 'owner';
-$ncart->$myvar = "chris";
-// Ceci est valide, car $ncart->$owner &eacute;quivaut &agrave; $ncart->owner
-    </programlisting>
-   </informalexample>
+  </sect1>
+  <sect1 id="language.oop.constructor">
+   <title><literal>Constructor</literal> : constructeur</title>
+   <caution>
+    <simpara>
+     En PHP 3 et PHP 4, les constructeurs se comportent diff&eacute;remment.
+     La s&eacute;mantique de PHP 4 est fortement recommand&eacute;e.
+    </simpara>
+   </caution>
    <para>
     Le constructeur est la fonction qui est appel&eacute;e
     automatiquement par la classe lorsque vous cr&eacute;ez
-    une nouvelle instance d'une classe. La fonction constructeur a
+    une nouvelle instance d'une classe a l'aide de l'op&eacute;rateur
+    <literal>new</literal>. La fonction constructeur a
     le m&ecirc;me nom que la classe.
+    En PHP 3, une fonction devient le constructeur si elle porte le
+    m&ecirc;me nom que la classe. En PHP 4, une fonction devient un constructeur
+    si elle porte le m&ecirc;me nom que la classe dans laquelle elle est d&eacute;finit.
+    La diff&eacute;rence est subtile, mais cruciale.
    </para>
    <informalexample>
     <programlisting role="php">
@@ -156,43 +229,353 @@ class Auto_Caddie extends Caddie {
         $this->add_item ("10", 1);
     }
 }
+// Cette syntaxe est valable en PHP 3 et 4
 ?&gt;
     </programlisting>
    </informalexample>
-   <para>
+    <para>
      L'exemple ci-dessus d&eacute;finit la classe Auto_Caddie qui
      h&eacute;rite de la classe Caddie et d&eacute;finit le construteur
      de la classe. Ce dernier initialise le panier avec 1 article de
      type num&eacute;ro 10 d&egrave;s que l'instruction "new" est
-     appel&eacute;e. La fonction constructeur peut prendre ou non,
-     des param&egrave;tres optionnels, ce qui la rend
-     beaucoup plus pratique.
+     appel&eacute;e. La fonction constructeur peut prendre ou non
+     des param&egrave;tres optionnels, ce qui la rend beaucoup plus
+     pratique. Pour pouvoir utiliser cette classe sans param&egrave;tre,
+     tous les param&egrave;tres du constructeurs devraient &ecirc;tre optionnels,
+     en fournissant une valeur par d&eacute;faut, comme ci-dessous.
    </para>
    <informalexample>
     <programlisting role="php">
-&lt;?php
-class Constructor_Caddie extends Caddie {
-    function Constructor_Caddie ($item = "10", $num = 1) {
+// Cette syntaxe est valable en PHP 3 et 4
+class Constructor_Cart extends Cart {
+    function Constructor_Cart ($item = "10", $num = 1) {
         $this->add_item ($item, $num);
     }
 }
-// Place dans le caddie toujours la m&ecirc;me chose...
-$default_cart   = new Constructor_Caddie;
-// Place dans le caddie des objets diff&eacute;rents, comme dans la
-// r&eacute;alit&eacute;
-$different_cart = new Constructor_Caddie ("20", 17);
-?&gt;
+// Cr&eacute;ation du caddie
+$default_cart   = new Constructor_Cart;
+// Cr&eacute;ation d'un vrai caddie
+$different_cart = new Constructor_Cart ("20", 17);
     </programlisting>
    </informalexample>
    <caution>
     <simpara>
-     Pour les classes qui utilisent l'h&eacute;ritage,
-     le constructeur de la classe p&egrave;re n'est pas
-     automatiquement appel&eacute; lorsque le constructeur de la classe
-     d&eacute;riv&eacute;e est appel&eacute;.
+     En PHP 3, les classes d&eacute;riv&eacute;es et les constructeurs ont un certains
+     nombre de limitations. Les exemples suivants doivent &ecirc;tre lus avec
+     beaucoup d'attention pour comprendre ces limitations.
     </simpara>
    </caution>
+   <informalexample>
+    <programlisting role="php">
+class A {
+  function A() {
+    echo "Je suis le constructeur de A.&lt;br&gt;\n";
+  }
+}
+class B extends A {
+  function C() {
+    "Je suis une fonction standard.&lt;br&gt;\n";
+  }
+}
+// Aucun constructeur n'est appel&eacute; en PHP 3!!
+$b = new B;
+    </programlisting>
+   </informalexample>
+   <para>
+    En PHP 3, aucun constructeur ne sera appel&eacute; dans l'exemple ci-dessus.
+    La r&egrave;gle en PHP 3 est : 'Un constructeur est une fonction qui a le m&ecirc;me nom
+    que la classe'. Le nom de la classe est B, et il n'y a pas de fonctions qui
+    s'appelle B() dans la classe B. Rien ne se passe.
+   </para>
+   <para>
+    Ceci est corrig&eacute; en PHP 4, avec l'introduction d'une nouvelle r&egrave;gle :
+    Si une classe n'a pas de constructeur, le constructeur de la classe de
+    basse est appel&eacute;, s'il existe. L'exemple ci-dessus affichera
+    'Je suis le constructeur de A.&lt;br&gt;' en PHP 4.
+   </para>
+   <informalexample>
+    <programlisting role="php">
+class A {
+  function A() {
+    echo "Je suis le constructeur de A.&lt;br&gt;\n";
+  }
+  function B() {
+    echo "Je suis une fonction standard appel&eacute;e B dans la classe A.&lt;br&gt;\n";
+    echo "Je ne suis pas le constructeur de A.&lt;br&gt;\n";
+  }
+}
+class B extends A {
+  function C() {
+    "Je suis une fonction standard.&lt;br&gt;\n";
+  }
+}
+// Cette syntaxe va appeler B() comme constructeur.
+$b = new B;
+    </programlisting>
+   </informalexample>
+   <para>
+    En PHP 3, la fonction B() de la classe A va soudaiement devenir le
+    constructeur de la classe B, bien qu'il n'ai pas &eacute;t&eacute; pr&eacute;vu pour.
+    La r&egrave;gle de PHP 3 est 'Un constructeur est une fonction qui a le m&ecirc;me nom
+    que la classe'. PHP 3 ne se soucie gu&egrave;re si la fonction est d&eacute;finie
+    dans la classe B ou si elle a &eacute;t&eacute; h&eacute;rit&eacute;e.
+   </para>
+   <para>
+    Ceci est corrig&eacute; en PHP 4, avec l'introduction d'une nouvelle r&egrave;gle :
+    'Un constructeur est une classe de m&ecirc;me nom, d&eacute;finit dans la classe
+    elle-m&ecirc;me'. Donc, en PHP 4, la classe B n'a pas de constructeur par elle-m&ecirc;me,
+    et le constructeur de la classe A aura &eacute;t&eacute; appel&eacute;, affichant :
+    'Je suis le constructeur de A.&lt;br&gt;'.
+   </para>
+   <caution>
+    <simpara>
+     Ni PHP 3 ni PHP 4 n'appelle automatiquement le constructeur de
+     la classe sup&eacute;rieure depuis le constructeur de la classe d&eacute;riv&eacute;e.
+     Il est de votre responsabilit&eacute; de propager l'appel des constructeurs.
+    </simpara>
+   </caution>
+   <note>
+    <simpara>
+     Il n'y a pas de destructeurs en PHP 3 et PHP 4. Vous pouvez utiliser
+     la fonction <function>register_shutdown_function</function> &agrave; la place,
+     pour simuler un destructeur.
+    </simpara>
+   </note>
+   <para>
+    Les destructeurs sont des fonctions qui sont appel&eacute;es lorsqu'un
+    objet est d&eacute;truit, soit avec la fonction <function>unset</function>
+    soit par simple sortie d'une fonction (cas des variables locales).
+    Il n'y a pas de destructeurs en PHP.
+   </para>
   </sect1>
+ <sect1 id="keyword.paamayim_nekudotayim">
+   <title>Op&eacute;rateur <literal>::</literal></title>
+   <caution>
+    <simpara>
+     La documentation suivante n'est valable que pour PHP 4.
+    </simpara>
+   </caution>
+   <para>
+    Parfois, il est pratique de faire r&eacute;f&eacute;rence aux fonctions
+    est variables d'une classe de base, ou bien d'utiliser
+    des m&eacute;thodes de classes qui n'ont pas encore d'objets
+    cr&eacute;&eacute;s. L'op&eacute;rateur <literal>::</literal> est l&agrave; pour ces
+    situations.
+   </para>
+   <informalexample>
+    <programlisting role="php">
+&lt;?php
+class A {
+  function example() {
+    echo "Je suis la fonction originale A::example().&lt;br&gt;\n";
+  }
+}
+class B extends A {
+  function example() {
+    echo "Je suis la fonction red&eacute;finie B::example().&lt;br&gt;\n";
+    A::example();
+  }
+}
+// Il n'y a pas d'objets de classe A.
+// L'affichage est :
+//   Je suis la fonction originale A::example().&lt;br&gt;
+A::example();
+// Cr&eacute;ation d'un objet de la classe B.
+$b = new B;
+// L'affichage est :
+//   Je suis la fonction red&eacute;finie B::example().&lt;br&gt;
+//   Je suis la fonction originale A::example().&lt;br&gt;
+$b->example();
+?&gt;
+    </programlisting>
+   </informalexample>
+   <para>
+    Les exemples ci-dessus appellent la fonction example() dans la
+    classe A, mais il n'y a pas encore d'objet de classe A, alors il
+    n'est pas possible d'&eacute;crire $a->example(). A la place, on appelle
+    la fonction example() comme une fonction de classe, c'est-&agrave;-dire
+    avec le nom de la classe elle-m&ecirc;me, et sans objet.
+   </para>
+   <para>
+    Il y a des fonctions de classe, mais pas de variables de classe.
+    En fait, il n'y a aucun objet au moment de l'appel de la fonction.
+    Donc, une fonction de classe ne peut acc&eacute;der &agrave; aucune variable
+    (mais elle peut acc&eacute;der aux variables locales et globales).
+    Il faut proscire l'utilisation de $this.
+   </para>
+   <para>
+    Dans l'exemple ci-dessus, la classe B red&eacute;finit la fonction example().
+    La d&eacute;finition originale dans la classe A est remplac&eacute;e par celle de
+    B, et n'est plus accessible depuis B, &agrave; moins que vous n'appeliez
+    sp&eacute;cifiquement la fonction example() de la classe A avec l'op&eacute;rateur
+    ::. Ecrivez A::example() pour cela (en fait, il faudrait &eacute;crire
+    parent::example(), comme expliqu&eacute; dans la section suivante).
+   </para>
+   <para>
+    Dans ce contexte, il y a un objet courant, qui peut avoir d'autres
+    variables objets. De ce fait, lorsqu'il est utilis&eacute; depuis une m&eacute;thode
+    d'un objet, vous pouvez utiliser $this.
+   </para>
+ </sect1>
+ <sect1 id="keyword.parent">
+   <title><literal>parent</literal></title>
+  <para>
+   Il arrive que vous ayez &agrave; &eacute;crire du code qui faire r&eacute;f&eacute;rence
+   aux variables et fonctions des classes de base. C'est particuli&egrave;rement
+   vrai si votre classe d&eacute;riv&eacute;e est une sp&eacute;cialisation de votre classe
+   de base.
+  </para>
+  <para>
+   Au lieu d'utiliser le nom lit&eacute;ral de votre classe de base dans
+   votre code, vous pouvez utiliser le mot r&eacute;serv&eacute;
+   <literal>parent</literal>, qui repr&eacute;sente votre classe de
+   base (celle indiqu&eacute; par <literal>extends</literal>, dans la d&eacute;claration
+   de votre classe). En faisant cela, vous &eacute;viter d'appeler le
+   nom de votre classe de base directement dans votre code.
+   Si votre h&eacute;ritage change, vous n'aurez plus qu'&agrave; modifier
+   le nom de la classe dans la d&eacute;claration <literal>extends</literal>
+   de votre classe.
+  </para>
+  <informalexample>
+   <programlisting role="php">
+&lt;?php
+class A {
+  function example() {
+    echo "Je suis A::example() et je fournis une fonctionnalit&eacute; de base.&lt;br&gt;\n";
+  }
+}
+class B extends A {
+  function example() {
+    echo "Je suis B::example() et je fournis une fonctionnalit&eacute; suppl&eacute;mentaire.&lt;br&gt;\n";
+    parent::example();
+  }
+}
+$b = new B;
+// Cette syntaxe va appeler B::example(), qui, &agrave; sont tour, va appeler A::example().
+$b->example();
+?&gt;
+   </programlisting>
+  </informalexample>
+ </sect1>
+ <sect1 id="language.oop.serialization">
+  <title>Sauvegarde d'objets - cas des sessions</title>
+  <note>
+   <simpara>
+    En PHP 3, les objets perdent leur association de classe &agrave; travers
+    le processus de sauvegarde et relecture. Le type de la variable apr&egrave;s
+    relecture est bien objet mais il n'a plus de m&eacute;thode ou de nom
+    de classe. Cela rend la focntionnalit&eacute; plut&ocirc;t inutile (l'objet
+    est devenu un tableau avec une syntaxe &eacute;trange).
+   </simpara>
+  </note>
+  <caution>
+   <simpara>
+    La documentation suivante n'est valable que pour PHP 4.
+   </simpara>
+  </caution>
+  <para>
+   <function>serialize</function> retourne une cha&icirc;ne repr&eacute;sentant
+   une valeur qui peut &ecirc;tre stock&eacute;e dans les sessions de PHP, ou une
+   base de donn&eacute;es. <function>unserialize</function> peut relire cette
+   cha&icirc;ne pour recr&eacute;er la valeur originale. <function>serialize</function>
+   va sauver toutes les variables d'un objet. Le nom de la classe sera
+   sauv&eacute; mais par les m&eacute;thodes de cet objet.
+  </para>
+  <para>
+   Pour permettre &agrave; <function>unserialize</function> de lire un objet,
+   la classe de cet objet doit &ecirc;tre d&eacute;finie. C'est-&agrave;-dire, si vous avez
+   un objet $a de la classe A dans une page php1.php, et que vous le
+   lin&eacute;arisez avec <function>serialize</function>, vous obtiendrez une
+   cha&icirc;ne qui fait r&eacute;f&eacute;rence &agrave; la classe A, et contient toutes les valeurs
+   de $a. Pour pouvoir le relire avec la fonction <function>unserialize</function>
+   dans une page page2.php, il faut que la d&eacute;finition de la classe
+   A soit pr&eacute;sente dans cette deuxi&egrave;me page. Cela peut se faire
+   de mani&egrave;re pratique en sauvant la d&eacute;finition de la classe A dans un
+   fichier s&eacute;par&eacute;, et en l'incluant dans les deux pages page1.php et
+   page2.php.
+  </para>
+  <informalexample>
+   <programlisting role="php">
+&lt;?php
+classa.inc:
+  class A {
+    var $one = 1;
+    function show_one() {
+      echo $this->one;
+    }
+  }
+?&gt;
+page1.php:
+&lt;?php
+  include("classa.inc");
+  $a = new A;
+  $s = serialize($a);
+  // enregistrez $s o&ugrave; la page2.php pourra le trouver.
+  $fp = fopen("store", "w");
+  echo $s;
+  fclose($fp);
+?&gt;
+page2.php:
+&lt;?php
+  // Ceci est n&eacute;cessaire pour que unserialize() fonctionne correctement
+  include("classa.inc");
+  $s = implode("", @file("store"));
+  unserialize($s);
+  // maintenant, utilisez la m&eacute;thode show_one de l'objet $a.
+  $a->show_one();
+?&gt;
+   </programlisting>
+  </informalexample>
+  <para>
+   Si vous utilisez les sessions et la fonction <function>session_register</function>
+   pour sauver des objets, ces objets seront lin&eacute;aris&eacute;s automatiquement
+   avec la fonction <function>serialize</function> &agrave; la fin de chaque
+   script, et relus avec <function>unserialize</function> au d&eacute;but du prochain
+   script. Cela signifie que ces objets peuvent appara&icirc;tre dans n'importe quelle
+   page qui utilise vos sessions.
+  </para>
+  <para>
+   Il est vivement recommand&eacute; d'inclure la d&eacute;finition de classe dans
+   toutes vos pages, m&ecirc;me si vous n'utilisez pas ces classes dans
+   toutes vos pages. Si vous l'oubliez et qu'un tel objet est
+   pr&eacute;sent, il perdra sa classe, et deviendra un objet de classe
+   <literal>stdClass</literal> sans aucune fonction, et donc, plut&ocirc;t
+   inutile.
+  </para>
+  <para>
+   Si, dans l'exemple ci-dessus, $a devient un objet de session
+   avec l'utilisation de <literal>session_register("a")</literal>, vous
+   devez pensez &agrave; inclure le fichier <literal>classa.inc</literal> dans toutes
+   vos pages, et pas seulement page1.php et page2.php.
+  </para>
+ </sect1>
+ <sect1 id="language.oop.magic-functions">
+  <title>Les fonctions magiques <literal>__sleep</literal> et <literal>__wakeup</literal></title>
+  <para>
+   <function>serialize</function> s'assure que votre classe a une m&eacute;thode
+   avec le nom magique <literal>__sleep</literal>. Si c'est le cas, cette
+   fonction est appel&eacute;e avant toute lin&eacute;arisation. Elle peut alors nettoyer
+   l'objet et on s'attend &agrave; ce qu'elle retourne un tableau avec la liste des
+   noms de variables qui doivent &ecirc;tre sauv&eacute;es.
+  </para>
+  <para>
+   Le but de cette fonction <literal>__sleep</literal> est de fermer
+   proprement toute connexion &agrave; une base de donn&eacute;es, de valider les
+   requ&ecirc;tes, de finaliser toutes les actions commenc&eacute;es. Cette fonction
+   est aussi pratique si vous ave de tr&egrave;s grands objets qui n'ont pas
+   besoin d'&ecirc;tre sauv&eacute; enti&egrave;rement.
+  </para>
+  <para>
+   A l'inverse, <function>unserialize</function> s'assure de la pr&eacute;sence
+   de la fonction magique <literal>__wakeup</literal>. Si elle existe, cette
+   fonction reconstruit toutes les ressources d'un objet.
+  </para>
+  <para>
+    Le but de cette fonction <literal>__wakeup</literal> est de r&eacute;tablit
+    toutes les connexions aux bases de donn&eacute;es, et de recr&eacute;er les
+    variables qui n'ont pas &eacute;t&eacute; sauv&eacute;es.
+  </para>
+ </sect1>
   <sect1 id="keyword.newref">
    <title>R&eacute;f&eacute;rences dans un constructeur</title>
    <para>
@@ -249,7 +632,7 @@ class foo {
     </programlisting>
    </informalexample>
    <para>
-    Apparement, il n'y a pas de diff&eacute;rence, mais en fait, il y en a une
+    Apparament, il n'y a pas de diff&eacute;rence, mais en fait, il y en a une
     significative : <varname>$bar1</varname> et <varname>$globalref[0]</varname>
     ne sont pas r&eacute;f&eacute;renc&eacute;es, ces deux variables sont diff&eacute;rentes.
     Cela est du au fait que  l'op&eacute;rateur "new"ne retourne par de r&eacute;f&eacute;rence,
@@ -260,9 +643,9 @@ class foo {
       r&eacute;f&eacute;rence) &agrave; retourner des copies au lieu de r&eacute;f&eacute;rences. Au contraire, il est
       souvent mieux de travailler sur les copies plut&ocirc;t que sur les r&eacute;f&eacute;rences,
       car cr&eacute;er une r&eacute;f&eacute;rence prend un peu plus de temps que de cr&eacute;er une copie
-      qui ne prend virtuellement pas de temps (&agrave; moins qu'il ne se cr&eacute;e un
-      tableau g&eacute;ant ou un objet monstreux, auquel cas il est pr&eacute;f&eacute;rable de passer
-      par des r&eacute;f&eacute;rences).
+      qui ne prend virtuellement pas de temps (&agrave; moins de cr&eacute;er un
+      tableau g&eacute;ant ou un objet monstreux, auquel cas il est
+      pr&eacute;f&eacute;rable de passer par des r&eacute;f&eacute;rences).
      </simpara>
     </note>
     Pour prouver ceci, regardez le code suivant :
@@ -270,9 +653,9 @@ class foo {
    <informalexample>
      <programlisting role="php">
 &lt;?php
-        // maintenant, nous allons changer de nom. Qu'attendez vous?
+        // maintenant, nous allons changer de nom. Qu'attendez-vous?
         // Vous pouvez vous attendre &agrave; ce que les deux variables $bar
-        // et  $globalref[0] change de nom...
+        // et  $globalref[0] changent de nom...
         $bar1-&gt;setName('modifi&eacute;');
         // comme pr&eacute;dit, ce n'est pas le cas
         $bar1-&gt;echoName();
@@ -321,7 +704,8 @@ class b  {
         }
 }
 // Essayez de comprendre pourquoi une copie simple va
-// conduire &agrave; un r&eacute;sultat ind&eacute;sirable &agrave; la ligne marqu&eacute;e d'une &eacute;toile
+// conduire &agrave; un r&eacute;sultat ind&eacute;sirable &agrave;
+// la ligne marqu&eacute;e d'une &eacute;toile
 $a =&amp;new a(10);
 $a-&gt;createRef();
 $a-&gt;echoValue();
