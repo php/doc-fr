@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.13 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
-<!-- splitted from ./fr/functions/http.xml, last change in rev 1.2 -->
-<!-- last change to 'header' in en/ tree in rev 1.2 -->
+<!-- $Revision: 1.14 $ -->
+<!-- EN-Revision: 1.23 Maintainer: yannick Status: ready -->
  <refentry id="function.header">
   <refnamediv>
    <refname>header</refname>
@@ -20,8 +17,8 @@
    <para>
     <function>header</function> permet de spécifier un
     en-tête HTTP lors de l'envoi des fichiers HTML. Reportez-vous
-    à <ulink url="&spec.http1.1;">HTTP 1.1 Specification</ulink>
-    pour plus d'informations sur les en-têtes HTTP.
+    à <ulink url="&url.rfc;2616">HTTP/1.1 Specification</ulink>
+    pour plus d'informations sur les en-têtes <acronym>HTTP</acronym>.
    </para>
     <para>
      Le paramètre optionnel <parameter>replace</parameter> indique
@@ -31,13 +28,15 @@
      précédent, mais si vous passez &false; dans cet argument, vous pouvez
      forcer les en-têtes multiples pour un même type d'en-tête.
      Par exemple :
+     </para>
+     <para>
      <example>
       <title>Identification HTTP avec <function>header</function></title>
       <programlisting role="php">
 <![CDATA[
 <?php
-  header('WWW-Authenticate: Negotiate');
-  header('WWW-Authenticate: NTLM', FALSE);
+header('WWW-Authenticate: Negotiate');
+header('WWW-Authenticate: NTLM', false);
 ?>
 ]]>
       </programlisting>
@@ -48,22 +47,67 @@
      le code de réponse HTTP à la valeur de <parameter>http_response_code</parameter>.
      Ce paramètre est disponible en &php; 4.3.0 et plus récent.
     </para>
-   <para>
-    Il y a cependant deux en-têtes spéciaux. Le premier est
-    &quot;Location&quot;. Non seulement il renvoie un en-tête au
-    client, mais, en plus, il envoie un statut de redirection à
+    <para>
+     Il y a deux en-têtes spéciaux. Le premier commence par la chaîne
+     "<literal>HTTP/</literal>" (insensible à la casse), qui est utilisée
+     pour signifier le statut HTTP à envoyer. Par exemple, si vous avez configuré
+     Apache pour utiliser les scripts &php; pour gérer les requètes vers des fichiers 
+     inexistants (en utilisant la directive <literal>ErrorDocument</literal>),
+     vous voulez vous assurer que le script génère un code statut correct.
+    </para>
+    <para>
+     <informalexample>
+      <programlisting role="php">
+<![CDATA[
+<?php
+header("HTTP/1.0 404 Not Found");
+?>
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+    <note>
+     <para>
+      Le code statut HTTP doit toujours être le premier à être envoyé au client, au regard de
+      l'actuel <function>header</function> qui peut être le premier ou non.
+      Le statut peut être écrasé en appelant <function>header</function> avec 
+      un nouveau statut à n'importe quel moment même si l'en-tête HTTP a déjà été envoyé.
+     </para>
+    </note>
+    <note>
+     <para>
+      En &php; 3, celà ne fonctionne que si &php; est compilé en tant que module d'Apache.
+      Vous arriverez au même effet en utilisant l'en-tête <literal>Status</literal>.
+      <example>
+       <programlisting role="php">
+<![CDATA[
+<?php
+header("Status: 404 Not Found");
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+    </note>
+    <para>
+    Le deuxième type d'appel spécial est "Location:". Non seulement 
+    il renvoie un en-tête au  client, mais, en plus, il envoie un statut 
+    <literal>REDIRECT</literal> (302) à
     Apache. Du point de vue de l'auteur de script, cela importe peu,
     mais pour ceux qui connaissent les rouages internes d'Apache, c'est
     primordial.
+    </para>
+    <para>
     <example>
      <title>Redirection HTTP avec <function>header</function></title>
      <programlisting role="php">
 <![CDATA[
 <?php
-  header("Location: http://www.php.net/");
-/* Redirige le client vers le site PHP */
-  exit();
+/* Redirige le client vers le site PHP */  
+header("Location: http://www.php.net/");
+
 /* Garantie que le code ci-dessous n'est jamais exécuté. */
+exit();
 ?>
 ]]>
      </programlisting>
@@ -80,12 +124,12 @@
      construire vous-même une URI absolue : 
      <example>
       <title>Redirection à l'aide de <function>header</function></title>
-      <programlisting>
+      <programlisting role="php">
 <![CDATA[
 <?php
-  header("Location: http://".$_SERVER['HTTP_HOST']
-                     ."/".dirname($_SERVER['PHP_SELF'])
-                     ."/".$relative_url);
+header("Location: http://" . $_SERVER['HTTP_HOST']
+                     . dirname($_SERVER['PHP_SELF'])
+                     . "/" . $relative_url);
 ?>
 ]]>
       </programlisting>
@@ -93,54 +137,27 @@
     </para>
    </note>
    <para>
-    Le deuxième type d'appel spécial regroupe tous les
-    en-têtes qui commencent par "HTTP/" (la casse n'est
-    pas importante). Par exemple, si vous avez votre page d'erreur 404
-    Apache qui pointe sur un script PHP, c'est une bonne idée
-    que de vous assurer que le script PHP génère une erreur
-    404. La première chose à faire dans votre script est  :
-    <example>
-     <title>Limitation d'accès à l'aide de <function>header</function></title>
-     <programlisting role="php">
-<![CDATA[
-<?php
-  header("HTTP/1.0 404 Not Found");
-?>
-]]>
-     </programlisting>
-    </example>
-   </para>
-    <note>
-     <para>
-      En PHP 3, cela ne fonctionne que si PHP est compilé comme
-      module Apache. Vous pouvez arriver au même résultat
-      en utilisant l'en-tête <literal>Status</literal>.
-      <example>
-       <title>Limitation d'accès à l'aide de <function>header</function>, en PHP 3</title>
-       <programlisting role="php">
-<![CDATA[
-<?php
-  header("Status: 404 Not Found");
-?>
-]]>
-       </programlisting>
-      </example>
-     </para>
-    </note>
-   <para>
     Les scripts PHP génèrent souvent du HTML dynamiquement,
     qui ne doit pas être mis en cache, ni par le client, ni par les
     proxy intermédiaires. On peut forcer la désactivation du
-    cache de nombreux clients et proxy avec
+    cache de nombreux clients et proxy avec :
     <example>
      <title>Interdire la mise en cache avec <function>header</function></title>
      <programlisting role="php">
 <![CDATA[
 <?php
-  header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");             // Date du passé
-  header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT"); // toujours modifié
-  header("Cache-Control: no-cache, must-revalidate");           // HTTP/1.1
-  header("Pragma: no-cache");                                   // HTTP/1.0
+// Date du passé
+header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
+
+// toujours modifié
+header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
+
+// HTTP/1.1
+header("Cache-Control: no-store, no-cache, must-revalidate");
+header("Cache-Control: post-check=0, pre-check=0", false);
+
+// HTTP/1.0
+header("Pragma: no-cache");
 ?>
 ]]>
      </programlisting>
@@ -217,10 +234,14 @@
      <programlisting role="php">
 <![CDATA[
 <?php
-header("Content-type: application/pdf");
-header("Content-Disposition: attachment; filename=downloaded.pdf");
+// Vous voulez afficher un pdf
+header('Content-type: application/pdf');
 
-/* ... output pdf file ... */
+// Il sera nommé downloaded.pdf
+header('Content-Disposition: attachment; filename="downloaded.pdf"');
+
+// Le source du PDF original.pdf
+readfile('original.pdf');
 ?>
 ]]>
      </programlisting>
