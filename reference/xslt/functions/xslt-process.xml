@@ -9,77 +9,181 @@
    <refsect1>
     <title>Description</title>
      <methodsynopsis>
-      <type>boolean</type><methodname>xslt_process</methodname>
-       <methodparam><type>string</type><parameter>xsl_data</parameter></methodparam>
-       <methodparam><type>string</type><parameter>xml_data</parameter></methodparam>
-       <methodparam><type>string</type><parameter>result</parameter></methodparam>
+      <type>mixed</type><methodname>xslt_process</methodname>
+       <methodparam><type>resource</type><parameter>xh</parameter></methodparam>
+       <methodparam><type>string</type><parameter>xmlcontainer</parameter></methodparam>
+       <methodparam><type>string</type><parameter>xslcontainer</parameter></methodparam>
+       <methodparam choice="opt"><type>string</type><parameter>resultcontainer</parameter></methodparam>
+       <methodparam choice="opt"><type>array</type><parameter>arguments</parameter></methodparam>
+       <methodparam choice="opt"><type>array</type><parameter>parameters</parameter></methodparam>
      </methodsynopsis>
     <para>
-     <function>xslt_process</function> prend la cha&icirc;ne
-     string <parameter>xsl_data</parameter> comme feuille de style XSLT, et
-     des donn&eacute;es XML dans <parameter>xml_data</parameter>. Le r&eacute;sultat
-     de la transformation sera plac&eacute; dans <parameter>result</parameter>.
-     <function>xslt_process</function> retourne &true;
-     en cas de succ&egrave;s, et &false; sinon. Vous
-     pourrez lire les erreurs survenues gr&acirc;ce aux fonctions
-     <function>xslt_errno</function> et <function>xslt_error</function>.
+     <function>xslt_process</function> fait partie de la nouvelle
+     vague de fonctions XSLT. Elle vous permet de r&eacute;aliser des transformations
+     XSLT en utilisant n'importe quelle type de source : des conteneurs.
+     Cela se fait gr&acirc;ce &agrave; l'utilisation de buffers d'arguments : un concept
+     issu de Sablotron (actuellement, c'est le seul processeur XSLT qui le
+     supporte). Les conteneurs sont par d&eacute;faut des fichiers qui contiennent
+     le document &agrave; traiter. Le conteneur de r&eacute;sultat est par d&eacute;faut un fichier
+     qui recevera le document trait&eacute;. Si le conteneur de r&eacute;sultat n'est pas
+     fourni (l'argument vaut alors &null;), le r&eacute;sultat sera retourn&eacute; par la fonction.
+    </para>
+    <para>
+     <warning>
+      <simpara>
+       Cette fonction a vu ses arguments &ecirc;tre modifi&eacute; depuis la version &php; 4.0.6.
+       Ne placez pas le code XML ou XSL dans les deuxi&egrave;me et troisi&egrave;me arguments,
+       car cela engendrera une segmentation fault, dans les versions de Sablotron 
+       0.95 et plus r&eacute;centes.
+      </simpara>
+     </warning>
+    </para>
+    <para>
+     Les conteneurs peuvent aussi &ecirc;tre modifi&eacute;s via le tableau <parameter>$arguments</parameter>.
+    </para>
+   <para>
+    Le type le plus simple de ransformation r&eacute;alisable avec 
+    <function>xslt_process</function> est la transformation d'un fichier
+    XML avec un fichier XSLT, en pla&ccedil;ant le r&eacute;sultat dans un troisi&egrave;me fichier.
+    Faire cela avec Sablotron est tr&egrave;s facile...
+    </para>
+    <example>
+     <title>Utilisation de <function>xslt_process</function> pour transformer un fichier
+     XML avec un fichier XSL en un autre fichier XML</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+
+// Allocation du processuer XSLT
+$xh = xslt_create();
+
+// Traitement du document
+if (xslt_process($xh, 'sample.xml', 'sample.xsl', 'result.xml')) {
+    print "R&eacute;ussi. sample.xml a &eacute;t&eacute; transform&eacute; par sample.xsl en result.xml";
+    print ", result.xml contient ceci : \n<br>\n";
+    print "<pre>\n";
+    readfile('result.xml');
+    print "</pre>\n";
+}
+else {
+    print "D&eacute;sol&eacute;, sample.xml n'a pu &ecirc;tre transform&eacute; par sample.xsl en ";
+    print " result.xml. La raison est " . xslt_error($xh) . " et ";
+    print " le code d'erreur est " . xslt_errno($xh);
+}
+
+xslt_free($xh);
+
+?>
+]]>
+     </programlisting>
+    </example>
+    <para>
+     M&ecirc;me si cette fonctionnalit&eacute; est tr&egrave;s pratique, il arrive souvent qu'en environnement
+     web, vous vouliez &ecirc;tre capable d'afficher directement votre r&eacute;sultat. Par cons&eacute;quent,
+     si vous omettez le troisi&egrave;me argument de <function>xslt_process</function>, ou que
+     vous fournissez la valeur &null; &agrave; la place, la fonction va automatiquement
+     retourner le r&eacute;sultat de la transformation XSLT, au lieu de l'&eacute;crire dans un
+     fichier.
     </para>
     <para>
      <example>
-     <title>Utilisation de <function>xslt_process</function> pour transformer trois</title>
+     <title>Utilisation de <function>xslt_process</function> pour transformer un fichier
+     XML avec un fichier XSL et le placer dans une variable</title>
      <programlisting role="php">
-&lt;?php
-$xslData = '&lt;xsl:stylesheet
-  version="1.0"
-  xmlns:xsl="http://www.w3.org/1999/XSL/Transform"&gt;
-&lt;xsl:template match="article"&gt;
-    &lt;table border="1" cellpadding="2" cellspacing="1"&gt;
-        &lt;tr&gt;
-            &lt;td width="20%"&gt;
-             &amp;#160;
-            &lt;/title&gt;
-            &lt;td width="80%"&gt;
-                &lt;h2&gt;&lt;xsl:value-of select="title"&gt;&lt;/h2&gt;
-                &lt;h3&gt;&lt;xsl:value-of select="author"&gt;&lt;/h3&gt;
-                &lt;br&gt;
-                &lt;xsl:value-of select="body"&gt;
-            &lt;/td&gt;
-        &lt;/tr&gt;
-    &lt;/table&gt;
-&lt;/xsl:template&gt;
-&lt;/xsl:stylesheet&gt;';
-$xmlData = '
-&lt;?xml version="1.0"&gt;
-&lt;article&gt;
-    &lt;title&gt;Learning German&lt;/title&gt;
-    &lt;author&gt;Sterling Hughes&lt;/author&gt;
-    &lt;body&gt;
-      Essential phrases:
-      &lt;br&gt;
-      &lt;br&gt;
-      K&amp;#246;nnen Sie mir sagen, wo die Toilette ist?&lt;br&gt;
-      Ein grosses Bier, bitte!&lt;br&gt;
-      Noch eins, bitte.&lt;br&gt;
-    &lt;/body&gt;
-&lt;/article&gt;';
-if (xslt_process($xslData, $xmlData, $result))
-{
-    echo "Voici un brillant article sur l'apprentissage du ";
-    echo " fran&ccedil;ais: ";
-    echo "&lt;br&gt;\n&lt;br&gt;";
-    echo $result;
+<![CDATA[
+<?php
+
+// Allocation d'un analyseur XSLT
+$xh = xslt_create();
+
+// Traitement du document
+$result = xslt_process($xh, 'sample.xml', 'sample.xsl');
+if ($result) {
+    print "R&eacute;ussi. sample.xml a &eacute;t&eacute; transform&eacute; par sample.xsl en result.xml";
+    print ", result.xml contient ceci : \n<br>\n";
+    print "<pre>\n";
+    print $result;
+    print "</pre>\n";
 }
-else
-{
-    echo "Une erreur est survenue durant le traitement XSL...\n";
-    echo "\tErreur num&eacute;ro : " . xslt_errno() . "\n";
-    echo "\tMessage d'erreur : " . xslt_error() . "\n";
-    exit;
+else {
+    print "D&eacute;sol&eacute;, sample.xml n'a pu &ecirc;tre transform&eacute; par sample.xsl en ";
+    print " result.xml. La raison est " . xslt_error($xh) . " et ";
+    print " le code d'erreur est " . xslt_errno($xh);
 }
-?&gt;
+
+xslt_free($xh);
+
+?>
+]]>
       </programlisting>
      </example>
     </para>
+    <para>
+     Les deux cas de transformations XSLT ci-dessus sont les cas les plus simples, 
+     quand on parle de transformation XSLT, et ce sont les cas les plus courants, mais
+     il existe des situations o&ugrave; vous obtenez vos donn&eacute;es XML et XSLT de sources externes
+     comme des sockets ou des bases de donn&eacute;es. Dans ces cas, vous avez d&eacute;j&agrave; les donn&eacute;es
+     dans une variable, et en mode de production, &eacute;crire ces donn&eacute;es dans des fichiers
+     serait trop inefficace. C'est l&agrave; ou la syntaxe de buffers d'arguments de XSLT
+     prend la rel&egrave;ve. Au lieu de fichier en terme d'arguments XML et XSLT, vous pouvez
+     passer des buffers d'arguments, qui sont alors substitu&eacute;s en valeur au
+     cinqui&egrave;me argument de la fonction <function>xslt_process</function>. 
+     L'exemple suivant vous montre comment traiter du XML et du XSLT issus de variable,
+     et de retrouver le r&eacute;sultat dans une troisi&egrave;me variable.
+    </para>
+    <para>
+     <example>
+     <title>Utilisation de <function>xslt_process</function> pour transformer une variable
+     XML avec une autre variable XSL et placer le r&eacute;sultat dans une variable</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+// $xml et $xsl contiennent des donn&eacute;es XML et XSL
+
+$arguments = array(
+     '/_xml' => $xml,
+     '/_xsl' => $xsl
+);
+
+// Allocation d'un analyseur XSLT
+$xh = xslt_create();
+
+// Traitement du document
+$result = xslt_process($xh, 'arg:/_xml', 'arg:/_xsl', NULL, $arguments); 
+if ($result) {
+    print "R&eacute;ussi. sample.xml a &eacute;t&eacute; transform&eacute; par sample.xsl en result.xml";
+    print ", result.xml contient ceci : \n<br>\n";
+    print "<pre>\n";
+    print $result;
+    print "</pre>\n";
+}
+else {
+    print "D&eacute;sol&eacute;, sample.xml n'a pu &ecirc;tre transform&eacute; par sample.xsl en ";
+    print " result.xml. La raison est " . xslt_error($xh) . " et ";
+    print " le code d'erreur est " . xslt_errno($xh);
+}
+xslt_free($xh);
+?>
+]]>
+      </programlisting>
+     </example>
+    </para>
+    <para>
+     Finalement, le dernier argument de <function>xslt_process</function>
+     repr&eacute;sente un tableau de tous les param&egrave;tres que vous souhaitez passer
+     au document XSLT. Ces param&egrave;tres peuvent &ecirc;tre acc&eacute;d&eacute;s depuis le fichier
+     XSL en utilisant l'instruction &lt;xsl:param name=&quot;parameter_name&quot;&gt;.
+     Les param&egrave;tres doivent &ecirc;tre encod&eacute;s au format UTF-8 et leur valeur sera interpr&eacute;t&eacute;e
+     comme une cha&icirc;ne de caract&egrave;res par l'analyseur Sablotron. En d'autres termes,
+     vous ne pouvez pas passer des groupes de noeuds (node-sets) comme param&egrave;tre
+     au document XSLT.
+    </para>
+    <note>
+     <simpara>
+      Notez que <emphasis>file://</emphasis> est n&eacute;cessaire au d&eacute;but des 
+      chemin si vous utilisez Windows.
+     </simpara>
+    </note>
    </refsect1>
   </refentry>
 
