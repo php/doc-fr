@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.4 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.5 $ -->
+<!-- EN-Revision: 1.18 Maintainer: didou Status: ready -->
  <reference id="ref.tokenizer">
   <title>Analyseur de code PHP</title>
-  <titleabbrev>Analyseur de code PHP</titleabbrev>
+  <titleabbrev>Tokenizer</titleabbrev>
 
   <partintro>
    <section id="tokenizer.intro">
@@ -28,10 +28,6 @@
    
    &reference.tokenizer.configure;
 
-   <!--
-   &reference.tokenizer.ini;
-   -->
-
    &reference.tokenizer.constants;
 
    <section id="tokenizer.examples">
@@ -46,27 +42,41 @@
      <programlisting role="php">
 <![CDATA[
 <?php
-  $source = file_get_contents("un_script.php");
-  $tokens = token_get_all($source);
-  foreach ($tokens as $token) {
-    if (is_string($token)) {
-      // token d'un seul caractère
-      echo $token;
-    } else {
-      // tableau de tokens
-      list($id, $text) = $token;
-      switch($id) { 
-        case T_COMMENT: 
-        case T_ML_COMMENT:
-          // aucune action sur les commentaires
-          break;
-        default:
-          // tout le reste doit être affiché
-          echo $text;
-          break;
-      }
+
+$source = file_get_contents("somefile.php");
+$tokens = token_get_all($source);
+/* T_ML_COMMENT does not exist in PHP 5.
+ * The following three lines define it in order to
+ * preserve backwards compatibility.
+ *
+ * The next two lines define the PHP 5-only T_DOC_COMMENT,
+ * which we will mask as T_ML_COMMENT for PHP 4.
+ */
+if (!defined('T_ML_COMMENT')) {
+  define('T_ML_COMMENT', T_COMMENT);
+} else {
+  define('T_DOC_COMMENT', T_ML_COMMENT);
+}
+foreach ($tokens as $token) {
+  if (is_string($token)) {
+    // simple 1-character token
+    echo $token;
+  } else {
+    // token array
+    list($id, $text) = $token;
+    switch ($id) { 
+      case T_COMMENT: 
+      case T_ML_COMMENT: // we've defined this
+      case T_DOC_COMMENT: // and this
+        // no action on comments
+        break;
+      default:
+        // anything else -> output "as is"
+        echo $text;
+        break;
     }
   }
+}
 ?>
 ]]>
      </programlisting>
