@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.12 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.13 $ -->
+<!-- EN-Revision: 1.18 Maintainer: yannick Status: ready -->
  <reference id="ref.sockets">
   <title>Socket</title>
   <titleabbrev>Sockets</titleabbrev>
 
   <partintro>
+  
    <section id="sockets.intro">
     &reftitle.intro;
    <simpara>
@@ -16,7 +17,10 @@
    </simpara>
    <para>
      Pour une interface socket cliente plus générique, voyez 
-    <function>fsockopen</function> et <function>pfsockopen</function>.
+     <function>stream_socket_client</function>, 
+     <function>stream_socket_server</function>,
+     <function>fsockopen</function> et
+     <function>pfsockopen</function>.
    </para>
    <para>
     Lorsque vous utilisez ces fonctions, il est important de vous
@@ -58,52 +62,53 @@
    <section id="sockets.errors">
     <title>Socket Errors</title>
     <para>
-    L'extension socket a été écrite pour fournir une interface utilisable
-    avec les puissantes sockets fournies par BSD. Un soin particulier a été
-    apporté pour que les fonctions soient aussi efficaces sous Unix que sous
-    Windows32. Presque toutes les fonctions de sockets peuvent échouer
-    dans certaines circonstances, et émettent ainsi un message d'alerte
-    <constant>E_WARNING</constant> décrivant l'erreur. Parfois, cela ne
-    se fait pas selon les souhaits du développeur. Par exemple, la fonction
-    <function>socket_read</function> peut tout à coup émettre un 
-    message <constant>E_WARNING</constant> car la connexion a été 
-    inopinément interrompu. Il est commun de supprimer les erreurs avec
-    l'opérateur <literal>@</literal> et de traiter les erreurs avec la 
-    fonction <function>socket_last_error</function>, au niveau application. 
-    Vous pouvez appeler <function>socket_strerror</function> avec le code
-    d'erreur pour connaître le message d'erreur, humainement lisible.
-    Reportez vous à leur description pour plus de détails.
-   </para>
-   <note>
-    <para>
-     Les messages <constant>E_WARNING</constant> généré par l'extension
-     socket sont en anglais, mais le message d'erreur s'affichera en fonction
-     de la configuration locale (<constant>LC_MESSAGES</constant>):
-     <programlisting role="php">
+     L'extension socket a été écrite pour fournir une interface utilisable
+     avec les puissantes sockets fournies par BSD. Un soin particulier a été
+     apporté pour que les fonctions soient aussi efficaces sous Unix que sous
+     Windows32. Presque toutes les fonctions de sockets peuvent échouer
+     dans certaines circonstances, et émettent ainsi un message d'alerte
+     <constant>E_WARNING</constant> décrivant l'erreur. Parfois, cela ne
+     se fait pas selon les souhaits du développeur. Par exemple, la fonction
+     <function>socket_read</function> peut tout à coup émettre un 
+     message <constant>E_WARNING</constant> car la connexion a été 
+     inopinément interrompu. Il est commun de supprimer les erreurs avec
+     l'opérateur <literal>@</literal> et de traiter les erreurs avec la 
+     fonction <function>socket_last_error</function>, au niveau application. 
+     Vous pouvez appeler <function>socket_strerror</function> avec le code
+     d'erreur pour connaître le message d'erreur, humainement lisible.
+     Reportez vous à leur description pour plus de détails.
+    </para>
+    <note>
+     <para>
+      Les messages <constant>E_WARNING</constant> généré par l'extension
+      socket sont en anglais, mais le message d'erreur s'affichera en fonction
+      de la configuration locale (<constant>LC_MESSAGES</constant>):
+      <programlisting role="php">
 <![CDATA[
 Warning - socket_bind() unable to bind address [98]: Die Adresse wird bereits verwendet
 ]]>
-     </programlisting>
-    </para>
-   </note>
+      </programlisting>
+     </para>
+    </note>
    </section>
    
    <section id="sockets.examples">
     &reftitle.examples;
     <para>
-    <example>
-     <title>Exemple de socket : serveur TCP/IP simple</title>
-     <para>
-      Cet exemple montre comment créer un serveur simple.
-      Changez les variables <varname>address</varname> et 
-      <varname>port</varname> pour vous adapter à votre configuration,
-      et exécutez le. Vous pourrez alors vous connecter au serveur
-      avec une commande comme ceci : <command>telnet 192.168.1.53
-      10000</command> (en supposant que l'adresse et le port correspondent
-      à votre configuration). Tout ce que vous saisissez après cela sera
-      envoyé au serveur, et affiché en retour. Pour vous déconnecter,
-      tapez 'quit'.
-     <programlisting role="php">
+     <example>
+      <title>Exemple de socket : serveur TCP/IP simple</title>
+      <para>
+       Cet exemple montre comment créer un serveur simple.
+       Changez les variables <varname>address</varname> et 
+       <varname>port</varname> pour vous adapter à votre configuration,
+       et exécutez le. Vous pourrez alors vous connecter au serveur
+       avec une commande comme ceci : <command>telnet 192.168.1.53
+       10000</command> (en supposant que l'adresse et le port correspondent
+       à votre configuration). Tout ce que vous saisissez après cela sera
+       envoyé au serveur, et affiché en retour. Pour vous déconnecter,
+       tapez 'quit'.
+      </para>
+      <programlisting role="php">
 <![CDATA[
 #!/usr/local/bin/php -q
 <?php
@@ -142,7 +147,7 @@ do {
     socket_write($msgsock, $msg, strlen($msg));
 
     do {
-        if (FALSE === ($buf = socket_read($msgsock, 2048))) {
+        if (false === ($buf = socket_read($msgsock, 2048))) {
             echo "socket_read() a échoué : raison : " . socket_strerror ($ret) . "\n";
             break 2;
         }
@@ -153,31 +158,30 @@ do {
             break;
         }
         if ($buf == 'shutdown') {
-            socket_close ($msgsock);
+            socket_close($msgsock);
             break 2;
         }
         $talkback = "PHP: You said '$buf'.\n";
         socket_write($msgsock, $talkback, strlen($talkback));
         echo "$buf\n";
     } while (true);
-    socket_close ($msgsock);
+    socket_close($msgsock);
 } while (true);
 
-socket_close ($sock);
+socket_close($sock);
 ?>
 ]]>
       </programlisting>
-     </para>
-    </example>
-   </para>
-   <para>
-    <example>
-     <title>Exemple avec les sockets : Client TCP/IP simple</title>
-     <para>
-      Ce exemple illustre un client HTTP simple. Il se connecte simplement
-      à une page, envoie une requête HEAD, affiche le résultat, et se termine.
-     </para>
-     <programlisting>
+     </example>
+    </para>
+    <para>
+     <example>
+      <title>Exemple avec les sockets : Client TCP/IP simple</title>
+      <para>
+       Ce exemple illustre un client HTTP simple. Il se connecte simplement
+       à une page, envoie une requête HEAD, affiche le résultat, et se termine.
+      </para>
+     <programlisting role="php">
 <![CDATA[
 <?php
 error_reporting(E_ALL);
@@ -207,6 +211,8 @@ if ($result < 0) {
 }
 
 $in = "HEAD / HTTP/1.0\r\n\r\n";
+$in .= "Host: www.example.com\r\n";
+$in .= "Connection: Close\r\n\r\n";
 $out = '';
 
 echo "Envoi de la requête HTTP HEAD...";
