@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.7 $ -->
-<!-- EN-Revision: 1.3 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.8 $ -->
+<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
  <refentry id="class.variant">
   <refnamediv>
    <refname>variant</refname>
@@ -12,14 +12,16 @@
   <refsect1 id="class.variant.class">
    <title>Description</title>
    <simpara>
-    Une classe container qui transforme les variables en structures
-    VARIANT.
+    Le VARIANT est un équivalent de COM pour &php; zval ; c'est une structure qui peut contenir
+    une valeur avec un intervalle de types possibles. La classe VARIANT fournie par 
+    l'extension COM vous permet d'avoir plus de contrôle sur ce que &php;
+    envoie et reçoit de COM.
    </simpara>
   </refsect1>
   <refsect1 id="class.variant.constructor">
    <title>Methodes</title>
     <methodsynopsis>
-     <type>string</type><methodname>variant::variant</methodname>
+     <type>object</type><methodname>VARIANT::VARIANT</methodname>
      <methodparam choice="opt"><type>mixed</type><parameter>value</parameter></methodparam>
      <methodparam choice="opt"><type>int</type><parameter>type</parameter></methodparam>
      <methodparam choice="opt"><type>int</type><parameter>codepage</parameter></methodparam>
@@ -37,21 +39,20 @@
     <varlistentry><term>type</term>
     <listitem>
      <simpara>
-      spécifie le type d'objet VARIANT contenu. Les valeurs possibles sont 
-      <constant>VT_UI1</constant>, <constant>VT_UI2</constant>,
-      <constant>VT_UI4</constant>, <constant>VT_I1</constant>,
-      <constant>VT_I2</constant>, <constant>VT_I4</constant>,
-      <constant>VT_R4</constant>, <constant>VT_R8</constant>,
-      <constant>VT_INT</constant>, <constant>VT_UINT</constant>,
-      <constant>VT_BOOL</constant>, <constant>VT_ERROR</constant>,
-      <constant>VT_CY</constant>, <constant>VT_DATE</constant>,
-      <constant>VT_BSTR</constant>, <constant>VT_DECIMAL</constant>,
-      <constant>VT_UNKNOWN</constant>, <constant>VT_DISPATCH</constant>
-      et <constant>VT_VARIANT</constant>. Ces valeurs sont mutuellement
-      exclusives, mais elles peuvent être combinées avec
-      <constant>VT_BYREF</constant> pour spécifier que c'est une valeur.
-      Si omis, le type de <parameter>value</parameter> est utilisé. Consultez
-      la librairie <acronym>MSDN</acronym> pour plus de détails.
+      spécifie le type d'objet VARIANT contenu. Les valeurs possibles sont une des
+      constantes <constant>VT_XXX</constant> <xref
+      linkend="com.constants"/>.
+     </simpara>
+     <simpara>
+      Dans les versions antérieures à &php; 5, vous pouvez forcer &php; à 
+      passer un objet VARIANT par référence par OR'ing <constant>VT_BYREF</constant>
+      avec le paramètre <parameter>type</parameter>. En &php; 5, 
+      ce hack n'est pas supporté ; en lieu et place, &php; 5 peut détecter 
+      les paramètres passés par référence automatiquement ; ils n'ont pas 
+      à être passés comme des objets VARIANT.
+     </simpara>
+     <simpara>
+       Consultez la librairie <acronym>MSDN</acronym> pour plus de détails.
      </simpara>
     </listitem>
     </varlistentry>
@@ -59,17 +60,78 @@
     <listitem>
      <simpara>
       spécifie le code qui est utilisé pour transformer les chaînes de
-      caractères PHP en chaînes unicode, et vice-versa. Les valeurs possibles
-      sont
-      <constant>CP_ACP</constant>, <constant>CP_MACCP</constant>,
-      <constant>CP_OEMCP</constant>, <constant>CP_SYMBOL</constant>,
-      <constant>CP_THREAD_ACP</constant>, <constant>CP_UTF7</constant>
-      et <constant>CP_UTF8</constant>.
+      caractères PHP en chaînes unicode, et vice-versa. Voir le paramètre du même nom
+      dans la <xref linkend="class.com"/> classe pour plus d'informations.
      </simpara>
     </listitem>
     </varlistentry>
     </variablelist>
    </para>
+   
+   <para>
+    Les versions antérieures à &php; 5 définissent un nombre de propriétés vituelles (non-documenté)
+    pour les instances de classe VARIANT ; ces propriétés ont été toutes supprimées de &php; 5
+    en faveur d'une synthaxe plus naturelle ; ces différences sont plus visibles par un exemple :
+   </para>
+
+   <para>
+    <example id="com.variant.example.php4">
+     <title>Exemple d'une classe VARIANT, comme utilisé en &php; 4.x</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$v = new VARIANT(42);
+echo 'The type is ' . $v->type . '<br />';
+echo 'The value is ' . $v->value . '<br />';
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example id="com.variant.example.php5">
+     <title>Exemple d'une classe VARIANT, comme utilisé en &php; 5</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$v = new VARIANT(42);
+echo 'The type is ' . variant_get_type($v) . '<br />';
+echo 'The value is ' . $v . '<br />';
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    Les raisons de ces changements sont que, en interne, l'extension COM voit
+    les classes VARIANT, CM et DOTNET comme étant la même chose, 
+    et l'esprit pour ces classes est que tous les accès aux propriétés et aux méthodes
+    sont transmis à COM sans interférence. La nouvelle synthaxe est plus naturelle
+    et demande moins d'effort et la plus part des propriétés virtuelles supprimées n'ont 
+    plus aucun sens dans ce contexte.
+   </para>
+
+   <note>
+    <para>
+     &php; 5 prend une approche plus simple pour gérer les classes VARIANT ; 
+     lorsqu'il retourne une valeur d'une propriété VARIANT, elle est converti en une valeur
+     &php; seulement qu'il y a un mappage direct entre les types sans perdre aucune information.
+     Das tous les autres cas, le résultat est retourné comme une instance de la classe VARIANT.
+     Vous pouvez forcer &php; à convertir ou à évaluer la classe VARIANT comme un type natif 
+     de &php; en utilisant explicitement un opérateur de transtypage, ou implicitement transtyper
+     en une chaîne pour l'afficher. Vous pouvez utiliser l'éventails de fonctions pour 
+     réaliser des opérations arithmétiques sur les classes VARIANT sans forcer des convertions
+     ou bien risquer de perdre des données.
+    </para>
+   </note>
+
+   <para>
+    Voir aussi 
+    <function>variant_get_type</function>.
+   </para>
+   
   </refsect1>
  </refentry>
 
