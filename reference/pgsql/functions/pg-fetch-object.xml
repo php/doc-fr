@@ -3,15 +3,15 @@
 <!-- last change to 'pg-fetch-object' in en/ tree in rev 1.2 -->
   <refentry id="function.pg-fetch-object">
    <refnamediv>
-    <refname>pg_Fetch_Object</refname>
-    <refpurpose>Lit une ligne dans un objet.</refpurpose>
+    <refname>pg_fetch_object</refname>
+    <refpurpose>Lit une ligne de r&eacute;sultat PGSQL dans un objet</refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
      <methodsynopsis>
       <type>object</type><methodname>pg_fetch_object</methodname>
       <methodparam><type>resource</type><parameter>result</parameter></methodparam>
-      <methodparam><type>int</type><parameter>row</parameter></methodparam>
+      <methodparam choice="opt"><type>int</type><parameter>row</parameter></methodparam>
       <methodparam choice="opt"><type>int</type><parameter>result_type</parameter></methodparam>
      </methodsynopsis>
     <para>
@@ -30,7 +30,8 @@
     <para>
       L'argument optionnel <parameter>result_type</parameter> de
       <parameter>result_type</parameter> est une constante qui peut prendre les
-      valeurs suivantes : PGSQL_ASSOC, PGSQL_NUM, et PGSQL_BOTH.
+      valeurs suivantes : <constant>PGSQL_ASSOC</constant>, 
+      <constant>PGSQL_NUM</constant> et <constant>PGSQL_BOTH</constant>.
      <note>
       <para>
        <parameter>result_type</parameter> a &eacute;t&eacute; ajout&eacute; dans
@@ -44,52 +45,68 @@
      <function>pg_fetch_row</function> (la diff&eacute;rence est non significative).
     </para>
     <para>
-     Voir aussi
-     <function>pg_fetch_array</function> et
-     <function>pg_fetch_row</function>.
      <example>
       <title>Lecture d'un objet Postgres</title>
       <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php 
 $database = "verlag";
-$db_conn = pg_connect("host=localhost port=5432 dbname=$database");
-if (!$db_conn):
-?&gt;
-    &lt;H1&gt;Connexion impossible &agrave; la base postgres &lt;?php echo $database &gt;&lt;/H1&gt; &lt;?php
+$db_conn = pg_connect ("host=localhost port=5432 dbname=$database");
+if (!$db_conn): ?>
+    <H1>Impossible de se connecter &agrave; la base PostgreSQL<?php echo $database ?></H1> <?php
     exit;
 endif;
-$qu = pg_exec($db_conn, "SELECT * FROM verlag ORDER BY autor");
-$row = 0; // postgres r&eacute;clame un compteur de ligne, d'autres bases ne le font pas.
-while ($data = pg_fetch_object($qu, $row)):
-    echo $data-&gt;autor." (";
-    echo $data-&gt;jahr ."): ";
-    echo $data-&gt;titel."&lt;BR&gt;";
+
+$qu = pg_query ($db_conn, "SELECT * FROM verlag ORDER BY autor");
+$row = 0; // PostgreSQL requiert un compteur de ligne que d'autres n'ont pas
+
+while ($data = pg_fetch_object ($qu, $row)) {
+    echo $data->autor." (";
+    echo $data->jahr ."): ";
+    echo $data->titel."<BR>";
     $row++;
-endwhile;
-?&gt;
-&lt;PRE&gt;&lt;?php
-$fields[] = array("autor", "Author");
-$fields[] = array("jahr",  "  Year");
-$fields[] = array("titel", " Title");
-$row= 0; // Postgres r&eacute;clame un compteur de ligne, d'autres bases ne le font pas.
-while ($data = pg_fetch_object($qu, $row)):
+}
+?>
+<PRE>
+<?php
+$fields[] = Array ("autor", "Author");
+$fields[] = Array ("jahr",  "  Year");
+$fields[] = Array ("titel", " Title");
+
+$row= 0; // PostgreSQL requiert un compteur de ligne que d'autres n'ont pas
+while ($data = pg_fetch_object ($qu, $row)) {
     echo "----------\n";
-    reset($fields);
-    while (list(,$item) = each($fields)):
-        echo $item[1].": ".$data-&gt;$item[0]."\n";
+    reset ($fields);
+    while (list (,$item) = each ($fields)):
+        echo $item[1].": ".$data->$item[0]."\n";
     endwhile;
     $row++;
-endwhile;
-echo "----------\n";
-?&gt;
-&lt;/PRE&gt;
-&lt;?php
-pg_freeresult($qu);
-pg_close($db_conn);
-?&gt;
+}
+echo "----------\n"; 
+?>
+</PRE> 
+<?php
+pg_free_result ($qu);
+pg_close ($db_conn);
+?>
+]]>
       </programlisting>
      </example>
     </para>
+    <para> 
+     Voir aussi
+     <function>pg_query</function>, 
+     <function>pg_fetch_array</function>,
+     <function>pg_fetch_row</function> et
+     <function>pg_fetch_result</function>.
+    </para>
+    <note>
+     <para>
+      Depuis 4.1.0, <parameter>row</parameter> est devenu optionnel.
+      Appeler <function>pg_fetch_array</function> avec incr&eacute;menter
+      le pointeur interne de 1.
+     </para>
+    </note>
    </refsect1>
   </refentry>
 
