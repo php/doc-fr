@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.9 $ -->
-<!-- EN-Revision: 1.7 Maintainer: didou Status: ready -->
+<!-- $Revision: 1.10 $ -->
+<!-- EN-Revision: 1.8 Maintainer: didou Status: ready -->
   <refentry id="function.stream-set-timeout">
    <refnamediv>
     <refname>stream_set_timeout</refname>
@@ -19,22 +19,36 @@
      du flux <parameter>stream</parameter>,exprimé comme la durée de
      <parameter>seconds</parameter> secondes et 
      <parameter>microseconds</parameter> micro-secondes.
+    </para>
+    <para>
+     Lorsque le flux se termine, la clé 'timed_out' du tableau retourné par
+     <function>stream_get_meta_data</function> est défini à &true;, 
+     cependant, aucune erreur/alerte n'est générée.
+    </para>
+    <para>
      <example>
       <title>Exemple avec <function>stream_set_timeout</function></title>
        <programlisting role="php">
 <![CDATA[
 <?php
 $fp = fsockopen("www.example.com", 80);
-if(!$fp) {
-    echo "Unable to open\n";
+if (!$fp) {
+     echo "Impossible d'ouvrir\n";
 } else {
-    fputs($fp, "GET / HTTP/1.0\n\n");
-    $start = time();
-    stream_set_timeout($fp, 2);
-    $res = fread($fp, 2000);
-    var_dump(stream_get_meta_data($fp));
-    fclose($fp);
-    echo $res;
+
+  fwrite($fp, "GET / HTTP/1.0\r\n\r\n");
+  stream_set_timeout($fp, 2);
+  $res = fread($fp, 2000);
+
+  $info = stream_get_meta_data($fp);
+  fclose($fp);
+
+  if ($info['timed_out']) {
+     echo 'Délai de connexion dépassé !';
+  } else {
+     echo $res;
+  }
+
 }
 ?>
 ]]>
