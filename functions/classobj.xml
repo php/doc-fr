@@ -1,1 +1,619 @@
-<?xml version="1.0" encoding="iso-8859-1"?><!-- $Revision: 1.12 $ --><reference id="ref.classobj"> <title>Objets</title> <titleabbrev>Classes et Objets</titleabbrev> <partintro>  <sect1 id="classobj.partintro">  <title>Introduction</title>  <sect2 id="classobj.intro">  <title>About</title>  <para>   Ces fonctions permettent de g&eacute;rer les classes et les objets.   Vous pouvez notamment conna&icirc;tre le nom de la classe d'un   objet, ses membres et ses m&eacute;thodes, et tous les objets   parents (les classes qui sont &eacute;tendues par la classe d'un objet).  </para>  </sect2>  <sect2 id="classobj.example">  <title>Exemple d'utilisation</title>  <para>   Dans cet exemple, on d&eacute;finit une classe de base, et une   extension. La classe de base d&eacute;finit un l&eacute;gume, s'il est   mangeable ou pas, et sa couleur. La sous-classe   <varname>epinard</varname> ajoute une m&eacute;thode pour le cuisiner,   et une autre pour savoir s'il est cuisin&eacute;.  </para>  <para>   <example>    <title>classes.inc</title>    <programlisting role="php">&lt;?php// classe de base, avec ses membres et ses m&eacute;thodesclass Legume {    var $mangeable;    var $couleur;    function legume( $mangeable, $couleur=&quot;green&quot; ) {        $this-&gt;mangeable = $mangeable;        $this-&gt;couleur = $couleur;    }    function est_mangeable() {        return $this-&gt;mangeable;    }    function quelle_couleur() {        return $this-&gt;couleur;    }} // fin de la classe Legume// extend la classe de baseclass Epinard extends Legume {    var $cuit = <literal>FALSE</literal>;    function Epinard() {        $this-&gt;Legume( <literal>TRUE</literal>, &quot;green&quot; );    }    function cuisine() {        $this-&gt;cuit = <literal>TRUE</literal>;    }    function est_cuit() {        return $this-&gt;cuit;    }} // fin de la classe Epinard?&gt;    </programlisting>   </example>  </para>  <para>   Lorsqu'on instantie deux objets de ces classes, et qu'on affiche   leurs informations, on affiche aussi leur h&eacute;ritage. On d&eacute;finit ici   des utilitaires qui servent essentiellement &agrave; afficher ces   informations proprement.  </para>  <para>   <example>    <title>test_script.php</title>    <programlisting role="php">&lt;pre&gt;&lt;?php  include &quot;classes.inc&quot;;// utilitaires  function print_vars($obj) {    $arr = get_object_vars($obj);    while (list($prop, $val) = each($arr))        echo &quot;\t$prop = $val\n&quot;;  }  function print_methods($obj) {    $arr = get_class_methods(get_class($obj));    foreach ($arr as $method)        echo &quot;\tfunction $method()\n&quot;;  }  function class_parentage($obj, $class) {    global $$obj;    if (is_subclass_of($$obj, $class)) {        echo &quot;L'objet $obj belongs to class &quot;.get_class($$obj);        echo &quot; est une sous-classe de $class\n&quot;;    } else {        echo &quot;L'objet $obj n'est pas une sous classe $class\n&quot;;    }  }// instantie 2 objets  $legume = new Legume(TRUE,&quot;blue&quot;);  $feuilles = new Epinard();// affiche les informations sur ces objets  echo &quot;legume: CLASS &quot;.get_class($legume).&quot;\n&quot;;  echo &quot;feuilles: CLASS &quot;.get_class($feuilles);  echo &quot;, PARENT &quot;.get_parent_class($feuilles).&quot;\n&quot;;// affiche les propri&eacute;t&eacute;s du l&eacute;gume  echo &quot;\nl&eacute;gume: Propri&eacute;t&eacute;s \n&quot;;  print_vars($legume);// et les m&eacute;thodes de "feuilles"  echo &quot;\nfeuilles: Methods\n&quot;;  print_methods($feuilles);  echo &quot;\nParent&eacute;e:\n&quot;;  class_parentage(&quot;feuilles&quot;, &quot;Epinard&quot;);  class_parentage(&quot;feuilles&quot;, &quot;Legume&quot;);?&gt;&lt;/pre&gt;    </programlisting>   </example>  </para>  <para>   Il est important de noter que dans les exemples ci-dessus, les objets   <varname>$feuilles</varname> sont une instance de   <classname>Epinard</classname> qui est une sous-classe de   <classname>Legume</classname>, donc la derni&egrave;re partie du script   va afficher :  </para>  <para>   <informalexample>    <screen>    [...]    Parent&eacute;e:    L'objet feuilles n'est pas une sous classe Spinach    L'objet feuilles est une sous-classe de Legume    </screen>   </informalexample>  </para>  </sect2>  </sect1> </partintro> <refentry id="function.call-user-method">  <refnamediv>   <refname>call_user_method</refname>   <refpurpose>    Appelle une m&eacute;thode utilisateur d'un objet   </refpurpose>  </refnamediv>  <refsect1>   <title>Description</title>   <funcsynopsis>    <funcprototype>     <funcdef>mixed      <function>call_user_method</function>     </funcdef>     <paramdef>string      <parameter>method_name</parameter>     </paramdef>     <paramdef>object      <parameter>obj</parameter>     </paramdef>     <paramdef>mixed      <parameter><optional>parameter</optional></parameter>     </paramdef>     <paramdef>mixed      <parameter><optional>...</optional></parameter>     </paramdef>    </funcprototype>   </funcsynopsis>   <para>    Appelle la m&eacute;thode <parameter>method_name</parameter> depuis l'objet    <parameter>obj</parameter>. Un exemple d'utilisation de cet objet    est pr&eacute;sent&eacute; ci-dessous, o&ugrave; une classe est d&eacute;finie, puis instanti&eacute;e.    On utilise alors <function>call_user_method</function> pour appeler    indirectement les m&eacute;thodes <varname>print_info</varname>.    <informalexample>     <programlisting role="php">&lt;?phpclass Pays {    var $NOM;    var $TLD;    function Pays($nom, $tld) {        $this-&gt;NOM = $nom;        $this-&gt;TLD = $tld;    }    function print_info($prestr=&quot;&quot;) {        echo $prestr.&quot;Pays: &quot;.$this-&gt;NOM.&quot;\n&quot;;        echo $prestr.&quot;Nom de domaine: &quot;.$this-&gt;TLD.&quot;\n&quot;;    }}$unPays = new Pays(&quot;P&eacute;rou&quot;,&quot;pe&quot;);echo &quot;* Appel de la m&eacute;thode directement\n&quot;;$unPays-&gt;print_info();echo &quot;\n* Appel de la m&eacute;thode indirectement\n&quot;;call_user_method (&quot;print_info&quot;, $unPays, &quot;\t&quot;);?&gt;     </programlisting>    </informalexample>   </para>   <simpara>    Voir aussi    <function>call_user_func_array</function>.    <function>call_user_func</function> et    <function>call_user_method_array</function>.   </simpara>  </refsect1> </refentry> <refentry id="function.call-user-method-array">  <refnamediv>   <refname>call_user_method_array</refname>   <refpurpose>    Appelle une m&eacute;thode utilisateur avec un tableau de param&egrave;tres   </refpurpose>  </refnamediv>  <refsect1>   <title>Description</title>   <funcsynopsis>    <funcprototype>     <funcdef>mixed      <function>call_user_method_array</function>     </funcdef>     <paramdef>string      <parameter>method_name</parameter>     </paramdef>     <paramdef>object      <parameter>obj</parameter>     </paramdef>     <paramdef>array      <parameter><optional>paramarr</optional></parameter>     </paramdef>    </funcprototype>   </funcsynopsis>   <para>    <function>call_user_method_array</function> appelle la m&eacute;thode    <parameter>method_name</parameter> de l'object <parameter>obj</parameter>,    en utilisant les param&egrave;tres <parameter>paramarr</parameter>, rassembl&eacute;s    sous forme de tableau.   </para>   <para>    Voir aussi    <function>call_user_func_array</function>,    <function>call_user_func</function> et    <function>call_user_method</function>.   </para>   <note>    <para>     <function>call_user_method_array</function> a &eacute;t&eacute; ajout&eacute;e en version     PHP 4.05.    </para>   </note>  </refsect1> </refentry> <refentry id="function.class-exists">  <refnamediv>   <refname>class_exists</refname>   <refpurpose>V&eacute;rifie qu'une classe a &eacute;t&eacute; d&eacute;finie</refpurpose>  </refnamediv>  <refsect1>   <title>Description</title>   <funcsynopsis>    <funcprototype>     <funcdef>boolean <function>class_exists</function></funcdef>     <paramdef>string <parameter>class_name</parameter></paramdef>    </funcprototype>   </funcsynopsis>   <para>    <function>class_exists</function> retourne <literal>TRUE</literal> si la classe    <parameter>class_name</parameter> a &eacute;t&eacute; d&eacute;finie, et <literal>FALSE</literal> sinon.   </para>  </refsect1> </refentry> <refentry id="function.get-class">  <refnamediv>   <refname>get_class</refname>   <refpurpose>Retourne la classe d'un objet</refpurpose>  </refnamediv>  <refsect1>   <title>Description</title>   <funcsynopsis>    <funcprototype>     <funcdef>string <function>get_class</function></funcdef>     <paramdef>object <parameter>obj</parameter></paramdef>    </funcprototype>   </funcsynopsis>   <para>    <function>get_class</function> retourne la classe de l'objet    <parameter>obj</parameter>.   </para>   <simpara>    Voir aussi    <function>get_parent_class</function> et    <function>is_subclass_of</function>   </simpara>  </refsect1> </refentry> <refentry id="function.get-class-methods">  <refnamediv>   <refname>get_class_methods</refname>   <refpurpose>Retourne les noms des m&eacute;thodes d'une classe.</refpurpose>  </refnamediv>  <refsect1>   <title>Description</title>   <funcsynopsis>    <funcprototype>     <funcdef>array <function>get_class_methods</function></funcdef>     <paramdef>string <parameter>class_name</parameter></paramdef>    </funcprototype>   </funcsynopsis>   <para>    <function>get_class_methods</function> retourne un tableau contenant les    noms des m&eacute;thodes de la classe <parameter>class_name</parameter>.   </para>    <note>     <para>      A partir de PHP 4.0.6, vous pouvez sp&eacute;cifier l'objet lui-m&ecirc;me, au lieu      de sa classe <parameter>class_name</parameter>. Par exemple :      <informalexample>       <programlisting role="php">&lt;?php  $class_methods = get_class_methods($my_class);?&gt;       </programlisting>      </informalexample>     </para>    </note>    <para>     <example>      <title>Exemple avec <function>get_class_methods</function></title>      <programlisting role="php">&lt;?phpclass myclass {    // constructeur    function maclasse() {        return(TRUE);    }    // m&eacute;thode 1    function myfunc1() {        return(TRUE);    }    // m&eacute;thode 2    function mafunc2() {        return(TRUE);    }}$ma_classe = new maclasse();$class_methods = get_class_methods(get_class($ma_class));foreach ($class_methods as $method_name) {    echo "$method_name\n";}?&gt;      </programlisting>     </example>    </para>    <para>     Va afficher :     <informalexample>      <programlisting>maclassmafunc1mafunc2      </programlisting>     </informalexample>    </para>   <simpara>    Voir aussi    <function>get_class_vars</function> et    <function>get_object_vars</function>   </simpara>  </refsect1> </refentry> <refentry id="function.get-class-vars">  <refnamediv>   <refname>get_class_vars</refname>   <refpurpose>    Retourne les valeurs par d&eacute;faut des attributs d'une classe.   </refpurpose>  </refnamediv>  <refsect1>   <title>Description</title>   <funcsynopsis>    <funcprototype>     <funcdef>array <function>get_class_vars</function></funcdef>     <paramdef>string <parameter>class_name</parameter></paramdef>    </funcprototype>   </funcsynopsis>   <para>    <function>get_class_vars</function> retourne un tableau contenant les    valeurs par d&eacute;faut des attributs de la classe    <parameter>class_name</parameter>.   </para>    <note>     <para>      Les variables de classe qui ne sont pas encore initialis&eacute;es ne seront pas      retourn&eacute;es par <function>get_class_vars</function>.     </para>    </note>    <para>     <example>      <title>Exemple <function>get_class_vars</function></title>      <programlisting role="php">&lt;?phpclass maclasse {    var $var1; // Pas de valeur par d&eacute;faut    var $var2 = "xyz";    var $var3 = 100;    // constructeur    function maclasse() {        return(TRUE);    }}$ma_classe = new maclasse();$class_vars = get_class_vars(get_class($ma_classe));foreach ($class_vars as $name => $value) {    echo "$name : $value\n";}?&gt;      </programlisting>     </example>    </para>    <para>     va afficher :     <informalexample>      <programlisting>var2 : xyzvar3 : 100      </programlisting>     </informalexample>    </para>  </refsect1> </refentry> <refentry id="function.get-declared-classes">  <refnamediv>   <refname>get_declared_classes</refname>   <refpurpose>Liste toutes les classes d&eacute;finies</refpurpose>  </refnamediv>  <refsect1>   <title>Description</title>   <funcsynopsis>    <funcprototype>     <funcdef>array <function>get_declared_classes</function></funcdef>     <paramdef>void</paramdef>    </funcprototype>   </funcsynopsis>   <para>    <function>get_declared_classes</function> retourne un tableau contenant    la liste des fonctions d&eacute;clar&eacute;es dans le script courant.   </para>   <note>    <para>     En PHP 4.0.1pl2, trois classes suppl&eacute;mentaires sont retourn&eacute;es, au     d&eacute;but de ce tableau : <classname>stdClass</classname> (d&eacute;finie dans     <filename>Zend/zend.c</filename>),     <classname>OverloadedTestClass</classname> (d&eacute;finie dans     <filename>ext/standard/basic_functions.c</filename>)     et <classname>Directory</classname>     (d&eacute;finie dans <filename>ext/standard/dir.c</filename>).    </para>   </note>  </refsect1> </refentry> <refentry id="function.get-object-vars">  <refnamediv>   <refname>get_object_vars</refname>   <refpurpose>    Retourne un tableau associatif des propri&eacute;t&eacute;s d'un objet   </refpurpose>  </refnamediv>  <refsect1>   <title>Description</title>   <funcsynopsis>    <funcprototype>     <funcdef>array <function>get_object_vars</function></funcdef>     <paramdef>object <parameter>obj</parameter></paramdef>    </funcprototype>   </funcsynopsis>   <para>    <function>get_object_vars</function> retourne un tableau associatif    contenant les propri&eacute;t&eacute;s de l'objet <parameter>obj</parameter>.    Les cl&eacute;s du tableau sont les noms des propri&eacute;t&eacute;s    de l'objet.Si des variables d&eacute;clar&eacute;es dans la classe de    l'objet <parameter>obj</parameter>, n'ont pas &eacute;t&eacute;    assign&eacute;es, elles ne seront pas retourn&eacute;es dans le tableau.    <example>     <title>Exemple avec <function>get_object_vars</function></title>     <programlisting role="php">&lt;?phpclass Point2D {    var $x, $y;    var $nom;    function Point2D($x, $y) {        $this-&gt;x = $x;        $this-&gt;y = $y;    }    function donne_nom($nom) {        $this-&gt;nom = $nom;    }    function LitPoint() {        return array("x" -&gt; $this-&gt;x,                     "y" -&gt; $this-&gt;y,                     "nom" -&gt; $this-&gt;nom);    }}$p1 = new Point2D(1.233, 3.445);print_r(get_object_vars($p1));// "$nom" est d&eacute;clar&eacute;, mais non d&eacute;fini// Array// (//     [x] -&gt; 1.233//     [y] -&gt; 3.445// )$p1-&gt;setnom("point #1");print_r(get_object_vars($p1));// Array// (//     [x] -&gt; 1.233//     [y] -&gt; 3.445//     [nom] -&gt; point #1// )?&gt;     </programlisting>    </example>   </para>   <simpara>    Voir aussi    <function>get_class_methods</function> et    <function>get_class_vars</function>   </simpara>  </refsect1> </refentry> <refentry id="function.get-parent-class">  <refnamediv>   <refname>get_parent_class</refname>   <refpurpose>Retourne le nom de la classe d'un objet</refpurpose>  </refnamediv>  <refsect1>   <title>Description</title>   <funcsynopsis>    <funcprototype>     <funcdef>string <function>get_parent_class</function></funcdef>     <paramdef>object <parameter>obj</parameter></paramdef>    </funcprototype>   </funcsynopsis>   <para>    <function>get_parent_class</function> retourne le nom de la classe    de l'objet <parameter>obj</parameter>.   </para>   <simpara>    Voir aussi    <function>get_class</function> et    <function>is_subclass_of</function>   </simpara>  </refsect1> </refentry> <refentry id="function.is-subclass-of">  <refnamediv>   <refname>is_subclass_of</refname>   <refpurpose>    D&eacute;termine si un objet est une sous-classe   </refpurpose>  </refnamediv>  <refsect1>   <title>Description</title>   <funcsynopsis>    <funcprototype>     <funcdef>boolean <function>is_subclass_of</function></funcdef>     <paramdef>object <parameter>obj</parameter></paramdef>     <paramdef>string <parameter>superclass</parameter></paramdef>    </funcprototype>   </funcsynopsis>   <para>    <function>is_subclass_of</function> retourne <literal>TRUE</literal> si l'objet    <parameter>obj</parameter> est une sous-classe de    <parameter>superclass</parameter>, <literal>FALSE</literal> sinon.   </para>   <simpara>    Voir aussi    <function>get_class</function> et    <function>get_parent_class</function>   </simpara>  </refsect1> </refentry> <refentry id="function.method-exists">  <refnamediv>   <refname>method_exists</refname>   <refpurpose>    V&eacute;rifie que la m&eacute;thode existe pour une classe.   </refpurpose>  </refnamediv>  <refsect1>   <title>Description</title>   <funcsynopsis>    <funcprototype>     <funcdef>boolean <function>method_exists</function></funcdef>     <paramdef>object <parameter>object</parameter></paramdef>     <paramdef>string <parameter>method_name</parameter></paramdef>    </funcprototype>   </funcsynopsis>   <para>    <function>method_exists</function> retourne <literal>TRUE</literal>    si la m&eacute;thode <parameter>method_name</parameter> a    &eacute;t&eacute; d&eacute;finie pour la classe    <parameter>object</parameter>, et sinon, retourne <literal>FALSE</literal>.   </para>  </refsect1> </refentry></reference><!-- Keep this comment at the end of the fileLocal variables:mode: sgmlsgml-omittag:tsgml-shorttag:tsgml-minimize-attributes:nilsgml-always-quote-attributes:tsgml-indent-step:1sgml-indent-data:tsgml-parent-document:nilsgml-default-dtd-file:"../../manual.ced"sgml-exposed-tags:nilsgml-local-catalogs:nilsgml-local-ecat-files:nilEnd:-->
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.13 $ -->
+<reference id="ref.classobj">
+ <title>Objets</title>
+ <titleabbrev>Classes et Objets</titleabbrev>
+ <partintro>
+  <sect1 id="classobj.partintro">
+  <title>Introduction</title>
+  <sect2 id="classobj.intro">
+  <title>About</title>
+  <para>
+   Ces fonctions permettent de g&eacute;rer les classes et les objets.
+   Vous pouvez notamment conna&icirc;tre le nom de la classe d'un
+   objet, ses membres et ses m&eacute;thodes, et tous les objets
+   parents (les classes qui sont &eacute;tendues par la classe d'un objet).
+  </para>
+  </sect2>
+  <sect2 id="classobj.example">
+  <title>Exemple d'utilisation</title>
+  <para>
+   Dans cet exemple, on d&eacute;finit une classe de base, et une
+   extension. La classe de base d&eacute;finit un l&eacute;gume, s'il est
+   mangeable ou pas, et sa couleur. La sous-classe
+   <varname>epinard</varname> ajoute une m&eacute;thode pour le cuisiner,
+   et une autre pour savoir s'il est cuisin&eacute;.
+  </para>
+  <para>
+   <example>
+    <title>classes.inc</title>
+    <programlisting role="php">
+&lt;?php
+// classe de base, avec ses membres et ses m&eacute;thodes
+class Legume {
+    var $mangeable;
+    var $couleur;
+    function legume( $mangeable, $couleur=&quot;green&quot; ) {
+        $this-&gt;mangeable = $mangeable;
+        $this-&gt;couleur = $couleur;
+    }
+    function est_mangeable() {
+        return $this-&gt;mangeable;
+    }
+    function quelle_couleur() {
+        return $this-&gt;couleur;
+    }
+} // fin de la classe Legume
+// extend la classe de base
+class Epinard extends Legume {
+    var $cuit = <literal>FALSE</literal>;
+    function Epinard() {
+        $this-&gt;Legume( <literal>TRUE</literal>, &quot;green&quot; );
+    }
+    function cuisine() {
+        $this-&gt;cuit = <literal>TRUE</literal>;
+    }
+    function est_cuit() {
+        return $this-&gt;cuit;
+    }
+} // fin de la classe Epinard
+?&gt;
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Lorsqu'on instantie deux objets de ces classes, et qu'on affiche
+   leurs informations, on affiche aussi leur h&eacute;ritage. On d&eacute;finit ici
+   des utilitaires qui servent essentiellement &agrave; afficher ces
+   informations proprement.
+  </para>
+  <para>
+   <example>
+    <title>test_script.php</title>
+    <programlisting role="php">
+&lt;pre&gt;
+&lt;?php
+  include &quot;classes.inc&quot;;
+// utilitaires
+  function print_vars($obj) {
+    $arr = get_object_vars($obj);
+    while (list($prop, $val) = each($arr))
+        echo &quot;\t$prop = $val\n&quot;;
+  }
+  function print_methods($obj) {
+    $arr = get_class_methods(get_class($obj));
+    foreach ($arr as $method)
+        echo &quot;\tfunction $method()\n&quot;;
+  }
+  function class_parentage($obj, $class) {
+    global $$obj;
+    if (is_subclass_of($$obj, $class)) {
+        echo &quot;L'objet $obj belongs to class &quot;.get_class($$obj);
+        echo &quot; est une sous-classe de $class\n&quot;;
+    } else {
+        echo &quot;L'objet $obj n'est pas une sous classe $class\n&quot;;
+    }
+  }
+// instantie 2 objets
+  $legume = new Legume(TRUE,&quot;blue&quot;);
+  $feuilles = new Epinard();
+// affiche les informations sur ces objets
+  echo &quot;legume: CLASS &quot;.get_class($legume).&quot;\n&quot;;
+  echo &quot;feuilles: CLASS &quot;.get_class($feuilles);
+  echo &quot;, PARENT &quot;.get_parent_class($feuilles).&quot;\n&quot;;
+// affiche les propri&eacute;t&eacute;s du l&eacute;gume
+  echo &quot;\nl&eacute;gume: Propri&eacute;t&eacute;s \n&quot;;
+  print_vars($legume);
+// et les m&eacute;thodes de "feuilles"
+  echo &quot;\nfeuilles: Methods\n&quot;;
+  print_methods($feuilles);
+  echo &quot;\nParent&eacute;e:\n&quot;;
+  class_parentage(&quot;feuilles&quot;, &quot;Epinard&quot;);
+  class_parentage(&quot;feuilles&quot;, &quot;Legume&quot;);
+?&gt;
+&lt;/pre&gt;
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Il est important de noter que dans les exemples ci-dessus, les objets
+   <varname>$feuilles</varname> sont une instance de
+   <classname>Epinard</classname> qui est une sous-classe de
+   <classname>Legume</classname>, donc la derni&egrave;re partie du script
+   va afficher :
+  </para>
+  <para>
+   <informalexample>
+    <screen>
+    [...]
+    Parent&eacute;e:
+    L'objet feuilles n'est pas une sous classe Spinach
+    L'objet feuilles est une sous-classe de Legume
+    </screen>
+   </informalexample>
+  </para>
+  </sect2>
+  </sect1>
+ </partintro>
+ <refentry id="function.call-user-method">
+  <refnamediv>
+   <refname>call_user_method</refname>
+   <refpurpose>
+    Appelle une m&eacute;thode utilisateur d'un objet
+   </refpurpose>
+  </refnamediv>
+  <refsect1>
+   <title>Description</title>
+   <funcsynopsis>
+    <funcprototype>
+     <funcdef>mixed
+      <function>call_user_method</function>
+     </funcdef>
+     <paramdef>string
+      <parameter>method_name</parameter>
+     </paramdef>
+     <paramdef>object
+      <parameter>obj</parameter>
+     </paramdef>
+     <paramdef>mixed
+      <parameter><optional>parameter</optional></parameter>
+     </paramdef>
+     <paramdef>mixed
+      <parameter><optional>...</optional></parameter>
+     </paramdef>
+    </funcprototype>
+   </funcsynopsis>
+   <para>
+    Appelle la m&eacute;thode <parameter>method_name</parameter> depuis l'objet
+    <parameter>obj</parameter>. Un exemple d'utilisation de cet objet
+    est pr&eacute;sent&eacute; ci-dessous, o&ugrave; une classe est d&eacute;finie, puis instanti&eacute;e.
+    On utilise alors <function>call_user_method</function> pour appeler
+    indirectement les m&eacute;thodes <varname>print_info</varname>.
+    <informalexample>
+     <programlisting role="php">
+&lt;?php
+class Pays {
+    var $NOM;
+    var $TLD;
+    function Pays($nom, $tld) {
+        $this-&gt;NOM = $nom;
+        $this-&gt;TLD = $tld;
+    }
+    function print_info($prestr=&quot;&quot;) {
+        echo $prestr.&quot;Pays: &quot;.$this-&gt;NOM.&quot;\n&quot;;
+        echo $prestr.&quot;Nom de domaine: &quot;.$this-&gt;TLD.&quot;\n&quot;;
+    }
+}
+$unPays = new Pays(&quot;P&eacute;rou&quot;,&quot;pe&quot;);
+echo &quot;* Appel de la m&eacute;thode directement\n&quot;;
+$unPays-&gt;print_info();
+echo &quot;\n* Appel de la m&eacute;thode indirectement\n&quot;;
+call_user_method (&quot;print_info&quot;, $unPays, &quot;\t&quot;);
+?&gt;
+     </programlisting>
+    </informalexample>
+   </para>
+   <simpara>
+    Voir aussi
+    <function>call_user_func_array</function>.
+    <function>call_user_func</function> et
+    <function>call_user_method_array</function>.
+   </simpara>
+  </refsect1>
+ </refentry>
+ <refentry id="function.call-user-method-array">
+  <refnamediv>
+   <refname>call_user_method_array</refname>
+   <refpurpose>
+    Appelle une m&eacute;thode utilisateur avec un tableau de param&egrave;tres
+   </refpurpose>
+  </refnamediv>
+  <refsect1>
+   <title>Description</title>
+   <funcsynopsis>
+    <funcprototype>
+     <funcdef>mixed
+      <function>call_user_method_array</function>
+     </funcdef>
+     <paramdef>string
+      <parameter>method_name</parameter>
+     </paramdef>
+     <paramdef>object
+      <parameter>obj</parameter>
+     </paramdef>
+     <paramdef>array
+      <parameter><optional>paramarr</optional></parameter>
+     </paramdef>
+    </funcprototype>
+   </funcsynopsis>
+   <para>
+    <function>call_user_method_array</function> appelle la m&eacute;thode
+    <parameter>method_name</parameter> de l'object <parameter>obj</parameter>,
+    en utilisant les param&egrave;tres <parameter>paramarr</parameter>, rassembl&eacute;s
+    sous forme de tableau.
+   </para>
+   <para>
+    Voir aussi
+    <function>call_user_func_array</function>,
+    <function>call_user_func</function> et
+    <function>call_user_method</function>.
+   </para>
+   <note>
+    <para>
+     <function>call_user_method_array</function> a &eacute;t&eacute; ajout&eacute;e en version
+     PHP 4.05.
+    </para>
+   </note>
+  </refsect1>
+ </refentry>
+ <refentry id="function.class-exists">
+  <refnamediv>
+   <refname>class_exists</refname>
+   <refpurpose>V&eacute;rifie qu'une classe a &eacute;t&eacute; d&eacute;finie</refpurpose>
+  </refnamediv>
+  <refsect1>
+   <title>Description</title>
+   <funcsynopsis>
+    <funcprototype>
+     <funcdef>boolean <function>class_exists</function></funcdef>
+     <paramdef>string <parameter>class_name</parameter></paramdef>
+    </funcprototype>
+   </funcsynopsis>
+   <para>
+    <function>class_exists</function> retourne <literal>TRUE</literal> si la classe
+    <parameter>class_name</parameter> a &eacute;t&eacute; d&eacute;finie, et <literal>FALSE</literal> sinon.
+   </para>
+  </refsect1>
+ </refentry>
+ <refentry id="function.get-class">
+  <refnamediv>
+   <refname>get_class</refname>
+   <refpurpose>Retourne la classe d'un objet</refpurpose>
+  </refnamediv>
+  <refsect1>
+   <title>Description</title>
+   <funcsynopsis>
+    <funcprototype>
+     <funcdef>string <function>get_class</function></funcdef>
+     <paramdef>object <parameter>obj</parameter></paramdef>
+    </funcprototype>
+   </funcsynopsis>
+   <para>
+    <function>get_class</function> retourne la classe de l'objet
+    <parameter>obj</parameter>.
+   </para>
+   <simpara>
+    Voir aussi
+    <function>get_parent_class</function> et
+    <function>is_subclass_of</function>
+   </simpara>
+  </refsect1>
+ </refentry>
+ <refentry id="function.get-class-methods">
+  <refnamediv>
+   <refname>get_class_methods</refname>
+   <refpurpose>Retourne les noms des m&eacute;thodes d'une classe.</refpurpose>
+  </refnamediv>
+  <refsect1>
+   <title>Description</title>
+   <funcsynopsis>
+    <funcprototype>
+     <funcdef>array <function>get_class_methods</function></funcdef>
+     <paramdef>string <parameter>class_name</parameter></paramdef>
+    </funcprototype>
+   </funcsynopsis>
+   <para>
+    <function>get_class_methods</function> retourne un tableau contenant les
+    noms des m&eacute;thodes de la classe <parameter>class_name</parameter>.
+   </para>
+    <note>
+     <para>
+      A partir de PHP 4.0.6, vous pouvez sp&eacute;cifier l'objet lui-m&ecirc;me, au lieu
+      de sa classe <parameter>class_name</parameter>. Par exemple :
+      <informalexample>
+       <programlisting role="php">
+&lt;?php
+  $class_methods = get_class_methods($my_class);
+?&gt;
+       </programlisting>
+      </informalexample>
+     </para>
+    </note>
+    <para>
+     <example>
+      <title>Exemple avec <function>get_class_methods</function></title>
+      <programlisting role="php">
+&lt;?php
+class myclass {
+    // constructeur
+    function maclasse() {
+        return(TRUE);
+    }
+    // m&eacute;thode 1
+    function myfunc1() {
+        return(TRUE);
+    }
+    // m&eacute;thode 2
+    function mafunc2() {
+        return(TRUE);
+    }
+}
+$ma_classe = new maclasse();
+$class_methods = get_class_methods(get_class($ma_class));
+foreach ($class_methods as $method_name) {
+    echo "$method_name\n";
+}
+?&gt;
+      </programlisting>
+     </example>
+    </para>
+    <para>
+     Va afficher :
+     <informalexample>
+      <programlisting>
+maclass
+mafunc1
+mafunc2
+      </programlisting>
+     </informalexample>
+    </para>
+   <simpara>
+    Voir aussi
+    <function>get_class_vars</function> et
+    <function>get_object_vars</function>
+   </simpara>
+  </refsect1>
+ </refentry>
+ <refentry id="function.get-class-vars">
+  <refnamediv>
+   <refname>get_class_vars</refname>
+   <refpurpose>
+    Retourne les valeurs par d&eacute;faut des attributs d'une classe.
+   </refpurpose>
+  </refnamediv>
+  <refsect1>
+   <title>Description</title>
+   <funcsynopsis>
+    <funcprototype>
+     <funcdef>array <function>get_class_vars</function></funcdef>
+     <paramdef>string <parameter>class_name</parameter></paramdef>
+    </funcprototype>
+   </funcsynopsis>
+   <para>
+    <function>get_class_vars</function> retourne un tableau contenant les
+    valeurs par d&eacute;faut des attributs de la classe
+    <parameter>class_name</parameter>.
+   </para>
+    <note>
+     <para>
+      Les variables de classe qui ne sont pas encore initialis&eacute;es ne seront pas
+      retourn&eacute;es par <function>get_class_vars</function>.
+     </para>
+    </note>
+    <para>
+     <example>
+      <title>Exemple <function>get_class_vars</function></title>
+      <programlisting role="php">
+&lt;?php
+class maclasse {
+    var $var1; // Pas de valeur par d&eacute;faut
+    var $var2 = "xyz";
+    var $var3 = 100;
+    // constructeur
+    function maclasse() {
+        return(TRUE);
+    }
+}
+$ma_classe = new maclasse();
+$class_vars = get_class_vars(get_class($ma_classe));
+foreach ($class_vars as $name => $value) {
+    echo "$name : $value\n";
+}
+?&gt;
+      </programlisting>
+     </example>
+    </para>
+    <para>
+     va afficher :
+     <informalexample>
+      <programlisting>
+var2 : xyz
+var3 : 100
+      </programlisting>
+     </informalexample>
+    </para>
+  </refsect1>
+ </refentry>
+ <refentry id="function.get-declared-classes">
+  <refnamediv>
+   <refname>get_declared_classes</refname>
+   <refpurpose>Liste toutes les classes d&eacute;finies</refpurpose>
+  </refnamediv>
+  <refsect1>
+   <title>Description</title>
+   <funcsynopsis>
+    <funcprototype>
+     <funcdef>array <function>get_declared_classes</function></funcdef>
+     <paramdef>void</paramdef>
+    </funcprototype>
+   </funcsynopsis>
+   <para>
+    <function>get_declared_classes</function> retourne un tableau contenant
+    la liste des fonctions d&eacute;clar&eacute;es dans le script courant.
+   </para>
+   <note>
+    <para>
+     En PHP 4.0.1pl2, trois classes suppl&eacute;mentaires sont retourn&eacute;es, au
+     d&eacute;but de ce tableau : <classname>stdClass</classname> (d&eacute;finie dans
+     <filename>Zend/zend.c</filename>),
+     <classname>OverloadedTestClass</classname> (d&eacute;finie dans
+     <filename>ext/standard/basic_functions.c</filename>)
+     et <classname>Directory</classname>
+     (d&eacute;finie dans <filename>ext/standard/dir.c</filename>).
+    </para>
+   </note>
+  </refsect1>
+ </refentry>
+ <refentry id="function.get-object-vars">
+  <refnamediv>
+   <refname>get_object_vars</refname>
+   <refpurpose>
+    Retourne un tableau associatif des propri&eacute;t&eacute;s d'un objet
+   </refpurpose>
+  </refnamediv>
+  <refsect1>
+   <title>Description</title>
+   <funcsynopsis>
+    <funcprototype>
+     <funcdef>array <function>get_object_vars</function></funcdef>
+     <paramdef>object <parameter>obj</parameter></paramdef>
+    </funcprototype>
+   </funcsynopsis>
+   <para>
+    <function>get_object_vars</function> retourne un tableau associatif
+    contenant les propri&eacute;t&eacute;s de l'objet <parameter>obj</parameter>.
+    Les cl&eacute;s du tableau sont les noms des propri&eacute;t&eacute;s
+    de l'objet.Si des variables d&eacute;clar&eacute;es dans la classe de
+    l'objet <parameter>obj</parameter>, n'ont pas &eacute;t&eacute;
+    assign&eacute;es, elles ne seront pas retourn&eacute;es dans le tableau.
+    <example>
+     <title>Exemple avec <function>get_object_vars</function></title>
+     <programlisting role="php">
+&lt;?php
+class Point2D {
+    var $x, $y;
+    var $nom;
+    function Point2D($x, $y) {
+        $this-&gt;x = $x;
+        $this-&gt;y = $y;
+    }
+    function donne_nom($nom) {
+        $this-&gt;nom = $nom;
+    }
+    function LitPoint() {
+        return array("x" -&gt; $this-&gt;x,
+                     "y" -&gt; $this-&gt;y,
+                     "nom" -&gt; $this-&gt;nom);
+    }
+}
+$p1 = new Point2D(1.233, 3.445);
+print_r(get_object_vars($p1));
+// "$nom" est d&eacute;clar&eacute;, mais non d&eacute;fini
+// Array
+// (
+//     [x] -&gt; 1.233
+//     [y] -&gt; 3.445
+// )
+$p1-&gt;setnom("point #1");
+print_r(get_object_vars($p1));
+// Array
+// (
+//     [x] -&gt; 1.233
+//     [y] -&gt; 3.445
+//     [nom] -&gt; point #1
+// )
+?&gt;
+     </programlisting>
+    </example>
+   </para>
+   <simpara>
+    Voir aussi
+    <function>get_class_methods</function> et
+    <function>get_class_vars</function>
+   </simpara>
+  </refsect1>
+ </refentry>
+ <refentry id="function.get-parent-class">
+  <refnamediv>
+   <refname>get_parent_class</refname>
+   <refpurpose>Retourne le nom de la classe d'un objet</refpurpose>
+  </refnamediv>
+  <refsect1>
+   <title>Description</title>
+   <funcsynopsis>
+    <funcprototype>
+     <funcdef>string <function>get_parent_class</function></funcdef>
+     <paramdef>object <parameter>obj</parameter></paramdef>
+    </funcprototype>
+   </funcsynopsis>
+   <para>
+    <function>get_parent_class</function> retourne le nom de la classe
+    de l'objet <parameter>obj</parameter>.
+   </para>
+   <simpara>
+    Voir aussi
+    <function>get_class</function> et
+    <function>is_subclass_of</function>
+   </simpara>
+  </refsect1>
+ </refentry>
+ <refentry id="function.is-subclass-of">
+  <refnamediv>
+   <refname>is_subclass_of</refname>
+   <refpurpose>
+    D&eacute;termine si un objet est une sous-classe
+   </refpurpose>
+  </refnamediv>
+  <refsect1>
+   <title>Description</title>
+   <funcsynopsis>
+    <funcprototype>
+     <funcdef>boolean <function>is_subclass_of</function></funcdef>
+     <paramdef>object <parameter>obj</parameter></paramdef>
+     <paramdef>string <parameter>superclass</parameter></paramdef>
+    </funcprototype>
+   </funcsynopsis>
+   <para>
+    <function>is_subclass_of</function> retourne <literal>TRUE</literal> si l'objet
+    <parameter>obj</parameter> est une sous-classe de
+    <parameter>superclass</parameter>, <literal>FALSE</literal> sinon.
+   </para>
+   <simpara>
+    Voir aussi
+    <function>get_class</function> et
+    <function>get_parent_class</function>
+   </simpara>
+  </refsect1>
+ </refentry>
+ <refentry id="function.method-exists">
+  <refnamediv>
+   <refname>method_exists</refname>
+   <refpurpose>
+    V&eacute;rifie que la m&eacute;thode existe pour une classe.
+   </refpurpose>
+  </refnamediv>
+  <refsect1>
+   <title>Description</title>
+   <funcsynopsis>
+    <funcprototype>
+     <funcdef>boolean <function>method_exists</function></funcdef>
+     <paramdef>object <parameter>object</parameter></paramdef>
+     <paramdef>string <parameter>method_name</parameter></paramdef>
+    </funcprototype>
+   </funcsynopsis>
+   <para>
+    <function>method_exists</function> retourne <literal>TRUE</literal>
+    si la m&eacute;thode <parameter>method_name</parameter> a
+    &eacute;t&eacute; d&eacute;finie pour la classe
+    <parameter>object</parameter>, et sinon, retourne <literal>FALSE</literal>.
+   </para>
+  </refsect1>
+ </refentry>
+</reference>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->
+
