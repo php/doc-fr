@@ -1,56 +1,184 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.2 $ -->
+<!-- $Revision: 1.3 $ -->
  <reference id="ref.zlib">
-  <title>Zlib (Compression)</title>
+  <title>Compression Zlib</title>
   <titleabbrev>Zlib</titleabbrev>
+
   <partintro>
-  <para>
-   Ce module utilise les fonctions de la librairie zlib
-   (<ulink url="&url.zlib;">zlib</ulink>) de Jean-loup Gailly et Mark Adler pour
-   lire et &eacute;crire, de mani&egrave;re transparente, des fichiers
-   compress&eacute;s avec gzip (.gz).
-   Il faut utiliser la librairie zlib, de version >= 1.0.9.
-  </para>
-  <para>
-   Ce module contient des versions de la plupart des fonctions du chapitre
-   <link linkend="ref.filesystem">syst&egrave;me de fichier</link>.
-   Mais celles-ci fonctionnent non seulement avec des fichiers
-   compress&eacute;s, mais aussi des fichiers d&eacute;compress&eacute;s
-   (hormis les fonctions utilisant les sockets).
-  </para>
-   <section id="zlib-example">
-    <title>Petit exemple</title>
+   <section id="zlib.intro">
+    &reftitle.intro;
+    <para>
+     Ce module donne acc&egrave;s aux fichiers compress&eacute;s avec l'utilitaire
+     gzip, gr&acirc;ce &agrave; des fonctions semblables aux fonctions d'acc&egrave;s
+     aux <link linkend="ref.filesystem">fichiers</link>, qui fonctionnent
+     avec les fichiers compress&eacute;s ou non (mais pas avec les sockets).
+    </para>
+    <note>
      <para>
-      Ouvre un fichier temporaire, &eacute;crit un texte et puis affiche deux
-      fois le contenu.
+      La version 4.0.4 a introduit la version &eacute;tendue de <function>fopen<\/function>
+      pour les fichiesr compress&eacute;s avec GZ. Vous pouvez utiliser le pr&eacute;fixe sp&eacute;cial
+      <literal>zlib:</literal> dans les URL pour acc&eacute;der directement
+      et de mani&egrave;re transparente aux fichiers compress&eacute;s par GZ, avec toutes
+      les fonctions f* habituelles.
      </para>
+     <para>
+      En version 4.3.0, ce pr&eacute;fixe sp&eacute;cial est remplac&eacute; par 
+      <literal>zlib://</literal> pour &eacute;viter les ambiguit&eacute;s
+      avec les fichiers contenant des deux points <literal>:</literal>. 
+     </para>
+     <para>
+      Cette fonctionnalit&eacute; requiert une librarie C qui fournisse la fonction
+      <literal>fopencookie()</literal>. A ma connaissance, la librairie
+      GNU libc est la seule &agrave; fournir cette fonctionnalit&eacute;.
+     </para>
+    </note>
+   </section>
+
+   <section id="zlib.requirements">
+    &reftitle.required;
+    <para>
+     Ce module utilise les fonctions de la librairie <ulink url="&url.zlib;">zlib</ulink>
+     de Jean-loup Gailly et Mark Adler. Vous devez utiliser zlib
+     version &gt;= 1.0.9 avec ce module.
+    </para>
+   </section>
+
+   <section id="zlib.configuration">
+    &reftitle.runtime;
+    <para>
+     L'extension zlib offre l'option de compresser &agrave; la vol&eacute;e les pages web, si le
+     navigateur client le supporte. Il existe donc deux options dans le fichier
+     de configuration <link linkend="configuration.file">&php.ini;</link>.
+
+     <table>
+      <title>Options de configuration Zlib</title>
+      <tgroup cols="3">
+       <thead>
+        <row>
+         <entry>Nom</entry>
+         <entry>D&eacute;faut</entry>
+         <entry>Changeable</entry>
+        </row>
+       </thead>
+       <tbody>
+        <row>
+         <entry>zlib.output_compression</entry>
+         <entry>"0"</entry>
+         <entry>PHP_INI_ALL</entry>
+        </row>
+        <row>
+         <entry>zlib.output_compression_level</entry>
+         <entry>"-1"</entry>
+         <entry>PHP_INI_ALL</entry>
+        </row>
+       </tbody>
+      </tgroup>
+     </table>
+
+     Pour plus de d&eacute;tails sur les constantes PHP_INI_*, voyez 
+     <function>ini_set<\/function>.
+   </para>
+
+   <para>
+    Voici une explication rapide des directives de configuration.
+    <variablelist>
+     <varlistentry id="ini.zlib.output_compression">
+      <term>
+       <parameter>zlib.output_compression</parameter>
+       <type>boolean</type>/<type>integer</type>
+      </term>
+      <listitem>
+       <para>
+        Compression &agrave; la vol&eacute;e des pages. Si cette option est mise &agrave; 
+        "On" dans &php.ini ou dans la configuration d'Apache, les page sont
+        compress&eacute;es si le navigateur envoie un ent&ecirc;te HTTP 
+        <literal>"Accept-Encoding: gzip"</literal> ou <literal>"deflate"</literal>. 
+        <literal>"Content-Encoding: gzip"</literal> (respectivement  "deflate") et
+        <literal>"Vary: Accept-Encoding"</literal> sont alors ajout&eacute;s au r&eacute;sultat.
+       </para>
+       <para>
+        Vous pouvez utiliser la fonction <function>ini_set<\/function> pour
+        d&eacute;sactiver cette configuration durant un script, si les ent&ecirc;tes
+        HTTP n'ont pas &eacute;t&eacute; envoy&eacute;. Si vous envoyez un ent&ecirc;te 
+        <literal>"Content-Type: image/"</literal>, alors la compression
+        sera d&eacute;sactiv&eacute;e (afin d'&eacute;viter un bug de Netscape). Vous pouvez
+        r&eacute;activer cette compression en utilisant la ligne 
+        <literal>ini_set('zlib.output_compression', 'On')</literal>
+        apr&egrave;s avoir appel&eacute; la fonction header qui fixe le type.
+       </para>
+       <para>
+        Cette option accepte aussi des valeurs enti&egrave;res au lieu d'un bool&eacute;en
+        "On"/"Off". Cela vous permet de modifier la taille du buffer de sortie.
+       </para>
+      </listitem>
+     </varlistentry>
+     <varlistentry id="ini.zlib.output_compression_level">
+      <term>
+       <parameter>zlib.output_compression_level</parameter>
+       <type>integer</type>
+      </term>
+      <listitem>
+       <para>
+        Niveau de compression utilis&eacute; pour la compression de sortie.
+       </para>
+      </listitem>
+     </varlistentry>
+    </variablelist>
+    </para>
+   </section>
+
+   <section id="zlib.resources">
+    &reftitle.resources;
+    &no.resource;
+   </section>
+
+   &reference.zlib.constants;
+
+   <section id="zlib.examples">
+    &reftitle.examples;
+    <para>
+     Cet exemple ouvre un fichier temporaire, &eacute;crit une page de test dedans,
+     puis affiche le contenu du fichier deux fois.
+    </para>
     <example>
-     <title>Petit exemple avec ZLIB</title>
+     <title>Exemple de l'extension Zlib</title>
      <programlisting role="php">
-&lt;?php
-  $filename = tempnam('/tmp', 'zlibtest').'.gz';
-  print "&lt;html>\n&lt;head>&lt;/head>\n&lt;body>\n&lt;pre>\n";
-  $s = "Only a test, test, test, test, test, test, test, test!\n";
-  // ouvre un fichier en &eacute;criture, avec compression maximale
-  $zp = gzopen($filename, "w9");
-  // &eacute;crit la cha&icirc;ne dans le fichier
-  gzwrite($zp, $s);
-  // ferme le fichier
-  gzclose($zp);
-  // ouvre en lecture
-  $zp = gzopen($filename, "r");
-  // lis 3 caract&egrave;res
-  print gzread($zp, 3);
-  // Affiche le reste du fichier
-  gzpassthru($zp);
-  print "\n";
-  // ouvre le fichier et affiche le contenu (deuxi&egrave;me passe)
-  if (readgzfile($filename) != strlen($s)) {
-          echo "Error with zlib functions!";
-  }
-  unlink($filename);
-  print "&lt;pre>\n&lt;/h1>&lt;/body>\n&lt;/html>\n";
-?&gt;
+<![CDATA[
+<?php
+
+$filename = tempnam ('/tmp', 'zlibtest').'.gz';
+print "<html>\n<head></head>\n<body>\n<pre>\n";
+$s = "C'est juste un test, test, test, test, test, test, test, test!\n";
+
+// ouvre le fichier en &eacute;criture avec la compression maximale
+$zp = gzopen($filename, "w9");
+
+// &eacute;crit uen cha&icirc;ne dans le fichier
+gzwrite($zp, $s);
+
+// ferme le fichier
+gzclose($zp);
+
+// ouvre le fichier en lecture
+$zp = gzopen($filename, "r");
+
+// lit 3 caract&egrave;res
+print gzread($zp, 3);
+
+// affiche le reste du fichier, puis le ferme
+gzpassthru($zp);
+
+print "\n";
+
+// ouvre le fichier et affiche le fichier une seconde fois
+if (readgzfile($filename) != strlen($s)) {
+        echo "Erreur avec les fonctions zlib!";
+}
+unlink($filename);
+print "</pre>\n</h1></body>\n</html>\n";
+
+?>
+]]>
      </programlisting>
     </example>
    </section>
@@ -70,10 +198,13 @@ sgml-indent-step:1
 sgml-indent-data:t
 indent-tabs-mode:nil
 sgml-parent-document:nil
-sgml-default-dtd-file:"../manual.ced"
+sgml-default-dtd-file:"../../../manual.ced"
 sgml-exposed-tags:nil
 sgml-local-catalogs:nil
 sgml-local-ecat-files:nil
 End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
 -->
 
