@@ -4,59 +4,49 @@
  <refentry id="function.fopen">
   <refnamediv>
    <refname>fopen</refname>
-   <refpurpose>Ouverture d'un fichier ou d'une URL.</refpurpose>
+   <refpurpose>Ouverture d'un fichier ou d'une URL</refpurpose>
   </refnamediv>
   <refsect1>
    <title>Description</title>
-    <methodsynopsis>
-     <type>int</type><methodname>fopen</methodname>
-     <methodparam><type>string</type><parameter>filename</parameter></methodparam>
-     <methodparam><type>string</type><parameter>mode</parameter></methodparam>
-     <methodparam choice="opt"><type>int</type><parameter>
-      use_include_path
-      </parameter></methodparam>
-    </methodsynopsis>
+     <methodsynopsis>
+      <type>resource</type><methodname>fopen</methodname>
+      <methodparam><type>string</type><parameter>filename</parameter></methodparam>
+      <methodparam><type>string</type><parameter>mode</parameter></methodparam>
+      <methodparam choice="opt"><type>int</type><parameter>use_include_path</parameter></methodparam>
+      <methodparam choice="opt"><type>resource</type><parameter>zcontext</parameter></methodparam>
+     </methodsynopsis>
    <simpara>
-    Si <parameter>filename</parameter> commence par "http://" (insensible &agrave;
-    la casse), une connexion HTTP 1.x est ouverte avec le serveur
-    sp&eacute;cifi&eacute;, et un pointeur sur la r&eacute;ponse fournie est
-    retourn&eacute;. Une en-t&ecirc;te '<literal>Host:</literal>' est envoy&eacute; avec la
-    requ&ecirc;te, afin de g&eacute;rer les virtual hosts bas&eacute;s sur les noms.
+    <function>fopen</function> cr&eacute;e une ressource nomm&eacute;e, sp&eacute;cifi&eacute;e par le
+    param&egrave;tre <parameter>filename</parameter>, sous la forme d'un fl&ocirc;t.
+    Si <parameter>filename</parameter> est de la forme "protocole://...",
+    <parameter>filename</parameter> est suppos&eacute; &ecirc;tre une URL, et &php; va
+    rechercher un gestionnaire de protocole adapt&eacute; pour lire ce fichier.
+    Si aucun gestionnaire pour ce protocole n'est disponible, &php; va &eacute;mettre
+    une alerte qui vous permettra de savoir que vous avez des probl&egrave;mes dans
+    votre script, et il tentera d'exploiter <parameter>filename</parameter>
+    comme un fichier classique.
     </simpara>
     <simpara>
-     Notez que le pointeur de fichier retourn&eacute; repr&eacute;sente le corps de la
-     r&eacute;ponse, et qu'il n'est pas possible d'acc&eacute;der aux en-t&ecirc;tes HTTP
-     avec cette fonction.
-   </simpara>
-   <simpara>
-    Les versions ant&eacute;rieures &agrave; PHP 4.0.6, ne g&egrave;re pas les
-    redirections automatiques, ce qui oblige &agrave; ajouter les slash finaux
-    "/" pour indiquer un dossier.
-   </simpara>
-   <simpara>
-    Si <parameter>filename</parameter> commence par "ftp://" (insensible &agrave;
-    la casse), une connexion FTP est ouverte avec le serveur sp&eacute;cifi&eacute;,
-    et un pointeur sur la r&eacute;ponse fournie est retourn&eacute;. Si le serveur
-    ne supporte par le mode FTP passif, <function>fopen</function> &eacute;chouera.
-    Vous pouvez ouvrir des fichiers en lecture seulement, ou en &eacute;criture
-    seulement (le full duplex n'est pas support&eacute;).
-   </simpara>
-   <simpara>
-    Si <parameter>filename</parameter> commence par "php://stdin", "php://stdout",
-    ou "php://stderr", le flot correspondant sera ouvert. (Cela a &eacute;t&eacute;
-    introduit en PHP 3.0.13; dans les anciennes versions, les fichiers "/dev/stdin"
-    ou "/dev/fd/0" devaient &ecirc;tre utilis&eacute;s pour acc&eacute;der &agrave;
-    ces flots).
-   </simpara>
-   <simpara>
-    Si <parameter>filename</parameter> commence par n'importe quoi d'autre, PHP
-    tentera de lire ce fichier dans le syst&egrave;me local, et un pointeur sur
-    le fichier ouvert sera retourn&eacute;.
-   </simpara>
-   <simpara>
-    Si l'ouverture &eacute;choue, <function>fopen</function> retourne
-    &false;.
-   </simpara>
+     Si &php; d&eacute;cide que le fichier <parameter>filename</parameter> est un fichier
+     local, il va essayer d'ouvrir un fl&ocirc;t avec ce fichier. Le fichier doit &ecirc;tre
+     accessible &agrave; &php;. Il vous faut donc vous assurer que vous avez les
+     droits d'acc&egrave;s &agrave; ce fichier. Si vous activ&eacute; le &safemode;,
+     ou la directive <link linkend="ini.open-basedir">open_basedir</link>, d'autres
+     conditions peuvent aussi s'appliquer.
+    </simpara>
+    <simpara>
+     Si &php; a d&eacute;cid&eacute; que <parameter>filename</parameter> sp&eacute;cifie
+     un protocole enregistr&eacute;, et que ce protocole est enregistr&eacute; comme
+     un protocole r&eacute;seau, &php; s'assurera que la directive
+     <link linkend="ini.allow-url-fopen">allow_url_fopen</link> est activ&eacute;e.
+     Si elle est inactive, &php; va &eacute;mettre une alerte, et l'ouverte
+     va &eacute;chouer.
+    </simpara>
+    <note>
+     <simpara>
+      La liste des protocoles support&eacute;s est disponible <xref linkend="wrappers"/>.
+     </simpara>
+    </note>
    <para>
     <parameter>mode</parameter> peut prendre les valeurs suivantes :
     <itemizedlist>
@@ -113,14 +103,24 @@
     en le mettant &agrave; 1.
    </para>
    <para>
+    Le param&egrave;tre optionnel <parameter>zcontext</parameter> est utilis&eacute; pour
+    sp&eacute;cifier des param&egrave;tres d'optimisation et de callback.
+    </para>
+    <simpara>
+     Si l'ouverture &eacute;choue, <function>fopen</function> retournera &false;.
+    </simpara>
+   <para>
     <example>
      <title>Exemple avec <function>fopen</function></title>
      <programlisting role="php">
-&lt;?php
-  $fp = fopen("/home/rasmus/file.txt", "r");
-  $fp = fopen("http://www.php.net/", "r");
-  $fp = fopen("ftp://user:password&#64;example.com/", "w");
-?&gt;
+<![CDATA[
+<?php
+$handle = fopen ("/home/rasmus/file.txt", "r");
+$handle = fopen ("/home/rasmus/file.gif", "wb");
+$handle = fopen ("http://www.example.com/", "r");
+$handle = fopen ("ftp://user:password@example.com/somefile.txt", "w");
+?>
+]]>
      </programlisting>
     </example>
    </para>
@@ -133,20 +133,28 @@
    <para>
     Sous Windows, assurez-vous de bien &eacute;chapper les anti-slash
     utilis&eacute;s dans le chemin du fichier, ou bien utilisez des slash.
-    <informalexample>
+    <example>
+     <title>Exemple avec <function>fopen</function> sous Windows</title>
      <programlisting role="php">
-&lt;?php
-  $fp = fopen("c:\\data\\info.txt", "r");
-?&gt;
+<![CDATA[
+<?php
+  $handle = fopen ("c:\\data\\info.txt", "r");
+?>
+]]>
      </programlisting>
-    </informalexample>
+    </example>
    </para>
    <simpara>
     Voir aussi
-    <function>fclose</function>,
-    <function>fsockopen</function>,
-    <function>socket_set_timeout</function> et
-    <function>popen</function>.
+    <xref linkend="wrappers"/>,
+     <function>fclose</function>,
+     <function>fgets</function>, 
+     <function>fsockopen</function>,
+     <function>file</function>,
+     <function>file_exists</function>,
+     <function>is_readable</function>,
+     <function>socket_set_timeout</function> et
+     <function>popen</function>.
    </simpara>
   </refsect1>
  </refentry>
