@@ -8,7 +8,7 @@
     Cette extension offre &agrave; PHP l'interface avec les produits
     <productname>YAZ</productname>, qui impl&eacute;mentent le protocole
     Z39.50. Avec cette extension, vous pouvez facilement impl&eacute;menter
-    un client Z39.50 qui fouille des serveurs Z39.50 en paralelle.
+    un client Z39.50 qui analyse ou scanne des serveurs Z39.50 en paralelle.
    </para>
    <para>
     <productname>YAZ</productname> est disponible &agrave; <ulink
@@ -32,7 +32,7 @@
    </para>
    <para>
    <informalexample>
-    <programlisting role="php">
+    <programlisting>
 gunzip -c yaz-1.6.tar.gz|tar xf -
 gunzip -c php-4.0.X.tar.gz|tar xf -
 cd yaz-1.6
@@ -50,17 +50,15 @@ make install
    <sect1 id="yaz.example">
    <title>Exemple</title>
    <para>
-    PHP/YAZ conserve les connexions aux serveurs. Un entier positif repr&eacute;sente
-    l'ID d'une connexion particuli&egrave;re.
+    PHP/YAZ conserve les connexions aux serveurs. Un entier positif
+    repr&eacute;sente l'ID d'une connexion particuli&egrave;re.
    </para>
    <para>
     Le script ci-dessous montre comment effectuer une recherche paralelle.
     Lorsqu'il est appel&eacute; sans param&egrave;tre, ce script affiche la
     requ&ecirc;te. Sinon, il effectue la recherche sur les serveurs.
-   </para>
-   <para>
    <example>
-    <title>YAZ</title>
+    <title>Recherche paralelle, utilisant YAZ</title>
     <programlisting role="php">
 &lt;?php
 $num_hosts = count ($host);
@@ -75,7 +73,7 @@ if (empty($term) || count($host) == 0) {
     &lt;input type="checkbox" checked="1"
     name="host[]" value="z3950.bell-labs.com/books"&gt;
         BELL Labs Library
-    &lt;br>
+    &lt;br&gt;
     RPN Query:
     &lt;input type="text" size="30" name="term"&gt;
     &lt;input type="submit" name="action" value="Search"&gt;
@@ -149,9 +147,11 @@ if (empty($term) || count($host) == 0) {
      </funcprototype>
     </funcsynopsis>
     <para>
-     <function>yaz_close</function> ferme une connexion &agrave; un h&ocirc;te YAZ.
-     L'application ne peut plus utiliser l'identifiant de connexoin
-     <parameter>id</parameter>.
+     <function>yaz_close</function> ferme une connexion &agrave; un
+     h&ocirc;te YAZ. L'application ne pourra plus utiliser
+     l'identifiant de connexion <parameter>id</parameter>.
+     <parameter>id</parameter> est un identifiant d'h&ocirc;te, retourn&eacute;
+     par <function>yaz_connect</function>.
     </para>
    </refsect1>
   </refentry>
@@ -167,14 +167,20 @@ if (empty($term) || count($host) == 0) {
     <funcsynopsis>
      <funcprototype>
       <funcdef>int <function>yaz_connect</function></funcdef>
-      <paramdef>string <parameter>zurl</parameter></paramdef>
+      <paramdef>string
+        <parameter>zurl</parameter>
+      </paramdef>
+      <paramdef>string
+       <parameter><optional>authentication</optional></parameter>
+      </paramdef>
      </funcprototype>
     </funcsynopsis>
     <para>
-     <function>yaz_connect</function> pr&eacute;pare une connexion &agrave; un serveur
-     Z39.50 target. <parameter>zurl</parameter> est de la forme
-     host[:port][/database]. Si port est omis, 210 est utilis&eacute;. Si
-     database est omis, Default est utilis&eacute;. Cette fonction n'est pas bloquante,
+     <function>yaz_connect</function> pr&eacute;pare une connexion
+     &agrave; un serveur Z39.50. <parameter>zurl</parameter> est de la forme
+	 "<literal>host[:port][/database]</literal>". Si port est omis, 210 est
+	 utilis&eacute;. Si <literal>database</literal> est omis, <literal>default</literal>
+	 est utilis&eacute;. <function>yaz_connect</function> n'est pas bloquante,
      et ne tente pas d'&eacute;tablir une socket. En fait, elle ne fait que
      pr&eacute;parer la connexion pour ex&eacute;cution ult&eacute;rieure
      par <function>yaz_wait</function>.
@@ -273,14 +279,37 @@ if (empty($term) || count($host) == 0) {
     </funcsynopsis>
     <para>
      <function>yaz_range</function> est &agrave; utiliser en conjonction
-     avec <function>yaz_search</function> pour sp&eacute;cifier le type
-     d'&eacute;l&eacute;ments &agrave; lire. La pluspart des serveurs
-     supporte <literal>F</literal> (full, tous), et <literal>B</literal>
-     (brief, bref).
+     avec <function>yaz_search</function> et <function>yaz_present</function>
+     pour sp&eacute;cifier le type d'&eacute;l&eacute;ments &agrave; lire.
+     La plupart des serveurs supporte <literal>F</literal> (full, tous), et
+     <literal>B</literal> (brief, bref).
     </para>
     <para>
      <function>yaz_range</function> retourne <literal>TRUE</literal> en
      cas de succ&egrave;s, et <literal>FALSE</literal> sinon.
+    </para>
+   </refsect1>
+  </refentry>
+  <refentry id="function.yaz-present">
+   <refnamediv>
+    <refname>yaz_present</refname>
+    <refpurpose>
+     Pr&eacute;pare &agrave; la lecture (Z39.50 present).
+    </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>int <function>yaz_present</function></funcdef>
+      <void/>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>yaz_present</function> pr&eacute;pare PHP &agrave; la lecture des
+     r&eacute;sultats, apr&egrave;s une recherche. <function>yaz_range</function>
+     doit &ecirc;tre appel&eacute;e avant celle-ci pour sp&eacute;cifier la plage
+     de r&eacute;sultat &agrave; lire.
     </para>
    </refsect1>
   </refentry>
@@ -311,7 +340,8 @@ if (empty($term) || count($host) == 0) {
      et <parameter>number</parameter> vaudra 10.
     </para>
     <para>
-     Retourne <literal>TRUE</literal> en cas de succ&egrave;s; <literal>FALSE</literal> en cas d'erreur.
+     <function>yaz_range</function> retourne <literal>TRUE</literal> en
+     cas de succ&egrave;s; <literal>FALSE</literal> en cas d'erreur.
     </para>
    </refsect1>
   </refentry>
@@ -370,23 +400,25 @@ if (empty($term) || count($host) == 0) {
      repr&eacute;sente le type de requ&ecirc;te : seul RPN est support&eacute;
      actuellement, et dans ce cas, le troisi&egrave;me argument est un
      pr&eacute;fixe de notation de requ&ecirc;te utilis&eacute; par YAZ.
-     Comme pour <function>yaz_connect</function>, <function>yaz_search</function> n'est pas
-     bloquante, et ne fait que pr&eacute;parer la recherche pour ex&eacute;cution
-     ult&eacute;rieure, avec <function>yaz_wait</function>.
+     Comme pour <function>yaz_connect</function>, <function>yaz_search</function>
+     n'est pas bloquante, et ne fait que pr&eacute;parer la recherche pour
+     ex&eacute;cution ult&eacute;rieure, avec <function>yaz_wait</function>.
     </para>
    </refsect1>
    <refsect1>
     <title>Requ&ecirc;tes RPN</title>
     <para>
-     Les requ&ecirc;tes RPN sont des repr&eacute;sentation textuelles des requ&ecirc;tes
-     de type Type-1, comme d&eacute;finit dans le standard Z39.50. Cependant,
-     dans la repr&eacute;sentation textuelle utilis&eacute;e par YAZ, une notation
-     &agrave; pr&eacute;fixage est utilis&eacute;e, c'est &agrave; dire que l'op&eacute;rateur pr&eacute;c&eacute;de
-     l'op&eacute;rande. La cha&icirc;ne de requ&ecirc;te est une s&eacute;quence de mots
-     reserv&eacute;s, o&ugrave; les espaces sont ignor&eacute;s, &agrave; moins qu'ils n'ai &eacute;t&eacute;
-     mis entre guillemets doubles. Les mots reserv&eacute;s qui commencent par
-     un arobase (<literal>@</literal>) sont consid&eacute;r&eacute;s comme des op&eacute;rateurs
-     et trait&eacute;s comme tels.
+     Les requ&ecirc;tes RPN sont des repr&eacute;sentation textuelles des
+     requ&ecirc;tes de type Type-1, comme d&eacute;finit dans le standard
+     Z39.50. Cependant, dans la repr&eacute;sentation textuelle utilis&eacute;e
+     par YAZ, une notation &agrave; pr&eacute;fixage est utilis&eacute;e,
+     c'est &agrave; dire que l'op&eacute;rateur pr&eacute;c&eacute;de
+     l'op&eacute;rande. La cha&icirc;ne de requ&ecirc;te est une
+     s&eacute;quence de mots reserv&eacute;s, o&ugrave; les espaces sont
+     ignor&eacute;s, &agrave; moins qu'ils n'ai &eacute;t&eacute;
+     mis entre guillemets doubles. Les mots reserv&eacute;s qui commencent
+     par un arobase (<literal>@</literal>) sont consid&eacute;r&eacute;s
+     comme des op&eacute;rateurs et trait&eacute;s comme tels.
     </para>
     <table>
      <title>Op&eacute;rateurs RPN</title>
@@ -448,13 +480,14 @@ if (empty($term) || count($host) == 0) {
       <screen>@attr 1=4 php</screen>
      </informalexample>
      L'attribut est de type 1 (Bib-1 use), sa valeur est 4 (Title, titre) :
-     cette requ&ecirc;te recherche les documents o&ugrave; le mot "php" est dans le titre.
+     cette requ&ecirc;te recherche les documents o&ugrave; le mot "php"
+     est dans le titre.
     </para>
     <para>
      <informalexample>
-<screen>@attrset gils @and @attr 1=4 php @attr 1=1003 "Rasmus Lerdorf"</screen>
+     <screen>@attrset gils @and @attr 1=4 php @attr 1=1003 "Rasmus Lerdorf"</screen>
      </informalexample>
-     Cette requ&ecirc;te utilise tout le jeu d'attrbuts GILS. Elle recherche
+     Cette requ&ecirc;te utilise tout le jeu d'attributs GILS. Elle recherche
      les documents dont le titre contient "php", et qui contiennent le
      nom "Rasmus Lerdorf" comme auteur.
     </para>
@@ -479,30 +512,352 @@ if (empty($term) || count($host) == 0) {
     <para>
      <function>yaz_syntax</function> est utilis&eacute;e conjointement avec
      <function>yaz_search</function> pour sp&eacute;cifier la m&eacute;thode
-     de lecture des lignes.
+     de lecture des lignes. La syntaxe est sp&eacute;cifi&eacute;e comme un OID
+     (Identifiant d'Objet), en notation brute, s&eacute;par&eacute;e par des
+	 points (i.e. <literal>1.2.840.10003.5.10</literal>), ou bien avec une
+	 des valeurs pr&eacute;d&eacute;finies : sutrs, usmarc, grs1, xml, etc...
+	 <function>yaz_syntax</function> doit &ecirc;tre utilis&eacute;e en conjonction avec
+	 <function>yaz_search</function> et <function>yaz_present</function>
+     pour sp&eacute;cifier la m&eacute;thode de lecture des r&eacute;sultats.
     </para>
+   </refsect1>
+  </refentry>
+  <refentry id="function.yaz-scan">
+   <refnamediv>
+    <refname>yaz_scan</refname>
+    <refpurpose>Pr&eacute;pare un scan</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>int <function>yaz_scan</function></funcdef>
+      <paramdef>int <parameter>id</parameter></paramdef>
+      <paramdef>string <parameter>type</parameter></paramdef>
+      <paramdef>string <parameter>startterm</parameter></paramdef>
+      <paramdef>array
+       <parameter><optional>flags</optional></parameter>
+      </paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>yaz_scan</function> pr&eacute;pare une requ&ecirc;te "Z39.50 Scan Request".
+     <parameter>id</parameter> sp&eacute;cifie l'h&ocirc;te cible. Le point de d&eacute;part
+     est donn&eacute; avec <parameter>startterm</parameter>. La forme de sp&eacute;cification
+     du point de d&eacute;part est donn&eacute; par <parameter>type</parameter>. Actuellement,
+     le type <literal>rpn</literal> est support&eacute;. Le param&egrave;tre optionnel
+     <parameter>flags</parameter> donne des informations suppl&eacute;mentaires pour
+     contr&ocirc;ler le comportement de la requ&ecirc;te de scan. Actuellement, trois index
+     sont lus dans ce param&egrave;tre : <literal>number</literal> (nombre de termes
+     requis), <literal>position</literal> (position pr&eacute;f&eacute;r&eacute;e du terme) et
+     <literal>stepSize</literal> (taille du pas pr&eacute;fer&eacute;e).
+     Pour r&eacute;&eacute;llement envoyer la requ&ecirc;te de recherche &agrave; l'h&ocirc;te, et recevoir
+     la r&eacute;ponse, <function>yaz_wait</function> doit &ecirc;tre appel&eacute;e. A la fin de
+     <function>yaz_wait</function>, <function>yaz_error</function> et
+     <function>yaz_scan_result</function> auront les r&eacute;sultats.
+    </para>
+    <para>
+     La syntaxe de <parameter>startterm</parameter> est similaire aux requ&ecirc;tes
+     RPN, d&eacute;crites dans <function>yaz_search</function>.
+     <parameter>startterm</parameter> est constitu&eacute; de z&eacute;ro ou plus
+     sp&eacute;cifications, avec les op&eacute;rateurs <literal>@attr</literal>, suivi par
+     exactement un token.
+    </para>
+    <para>
+    <example>
+    <title>Fonction PHP qui scanne les titres</title>
+    <programlisting>
+      function scan_titles($id, $starterm) {
+        yaz_scan($id,"rpn", "@attr 1=4 " . $starterm);
+        yaz_wait();
+        $errno = yaz_errno($id);
+        if ($errno == 0) {
+          $ar = yaz_scan_result($id,&$options);
+          echo 'Scan ok; ';
+          $ar = yaz_scan_result($id, &$options);
+          while(list($key,$val)=each($options)) {
+             echo "$key = $val &nbsp;";
+          }
+          echo '&lt;br&gt;&lt;table&gt;&lt;tr&gt;&lt;td&gt;';
+          while(list($key,list($k, $term, $tcount))=each($ar)) {
+            if (empty($k)) continue;
+            echo "&lt;tr&gt;&lt;td&gt;$term&lt;/td&gt;&lt;td&gt;";
+            echo $tcount;
+            echo "&lt;/td&gt;&lt;/tr&gt;";
+          }
+          echo '&lt;/table&gt;';
+        } else {
+          echo "Echec du scan. Erreur: " . yaz_error($id) . "&lt;br&gt;";
+        }
+      }
+    </programlisting>
+    </example>
+     </para>
+    </refsect1>
+   </refentry>
+   <refentry id="function.yaz-scan-result">
+   <refnamediv>
+    <refname>yaz_scan_result</refname>
+    <refpurpose>Retourne le r&eacute;sultat d'un scan</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>array <function>yaz_scan_result</function></funcdef>
+      <paramdef>int <parameter>id</parameter></paramdef>
+      <paramdef>array &amp;
+       <parameter><optional>result</optional></parameter>
+      </paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>yaz_scan_result</function> retourne un tableau contenant
+     les termes recu de l'h&ocirc;te <parameter>id</parameter>, lors
+     de la derni&egrave;re requ&ecirc;te de scan. Le tableau commence &agrave; l'index 0.
+     Chaque valeur est une paire, o&ugrave; le premier &eacute;l&eacute;ment est le terme,
+     et le second est un compte de r&eacute;sultat. Si
+     <parameter>result</parameter> est fourni, il sera rempli avec
+     les informations g&eacute;n&eacute;rales de la requ&ecirc;te de scan :
+     <literal>number</literal> (numbre  d'entr&eacute;e retourn&eacute;es),
+     <literal>stepsize</literal> (taille du pas),
+     <literal>position</literal> (position du terme),
+     <literal>status</literal> (Statut du Scan).
+    </para>
+   </refsect1>
+  </refentry>
+  <refentry id="function.yaz-ccl-conf">
+   <refnamediv>
+    <refname>yaz_ccl_conf</refname>
+    <refpurpose>Configure l'analyseur CCL</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>int <function>yaz_ccl_conf</function></funcdef>
+      <paramdef>int <parameter>id</parameter></paramdef>
+      <paramdef>array <parameter>config</parameter></paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>yaz_ccl_conf</function> configure l'analyseur CCL
+     de requete de l'h&ocirc;te <parameter>id</parameter>, avec
+     les d&eacute;finitions de points d'acc&egrave;s (CCL qualifiers) et leur
+     &eacute;quivalent en RPN. Pour cabler une requ&ecirc;te sp&eacute;cifique vers un
+     appel RPN, utilisez <function>yaz_ccl_parse</function>.
+     Chaque index du tableau <parameter>config</parameter> est un
+     nom de champs CCL et la valeur correspondante contient une cha&icirc;ne
+     sp&eacute;cifiant le code RPN. Ce code est une s&eacute;quence de paires
+     "attribut-type, attribute-value". Les "attribut-type" et
+     "attribut-value" sont s&eacute;par&eacute; par le signe &eacute;gal (<literal>=</literal>).
+     Chaque paire est s&eacute;par&eacute; par un espace ("<literal>=</literal>").
+    </para>
+    <para>
+    <example>
+    <title>Exemple de configuration CCL</title>
+    <simpara>
+     Dans l'exemple ci-dessous, l'analyseur CCL est configur&eacute; pour
+     supporter trois champs CCL : <literal>ti</literal>, <literal>au</literal> et
+     <literal>isbn</literal>. Chaque champs correspond &agrave; leur &eacute;quivalent
+     &eacute;quivalent BIB-1. On suppose que chaque variable <literal>$id</literal> est
+     un h&ocirc;te de destination.
+    </simpara>
+    <programlisting role="php">
+&lt;?php
+      $field["ti"] = "1=4";
+      $field["au"] = "1=1";
+      $field["isbn"] = "1=7";
+      yaz_ccl_conf($id,$field);
+?&lt;
+    </programlisting>
+    </example>
+    </para>
+   </refsect1>
+  </refentry>
+  <refentry id="function.yaz-ccl-parse">
+   <refnamediv>
+    <refname>yaz_ccl_parse</refname>
+    <refpurpose>Appelle l'analyseur CCL</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>int <function>yaz_ccl_parse</function></funcdef>
+      <paramdef>int <parameter>id</parameter></paramdef>
+      <paramdef>string <parameter>query</parameter></paramdef>
+      <paramdef>array &amp;<parameter>result</parameter></paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>yaz_ccl_parse</function> appelle l'analyseyr CCL.
+     Il convertit une requ&ecirc;te CCL FIND en une requ&ecirc;te RPN qui peut &ecirc;tre
+     pass&eacute;e &agrave; <function>yaz_search</function> pour effectuer une recherche.
+     Pour d&eacute;finir un champs CCL valide, utilisez la fonction
+     <function>yaz_ccl_conf</function> avant celle-ci.
+     Si la requ&ecirc;te <parameter>query</parameter> a pu &ecirc;tre convertie en
+     RPN, <function>yaz_ccl_parse</function> retourne <literal>TRUE</literal>,
+     et l'index <literal>rpn</literal> du tableau <parameter>result</parameter>
+     contient une requ&ecirc;te RPN valide. Si la requ&ecirc;te n'a pas pu &ecirc;tre convertie,
+     (pour n'importe quelle raison, comme syntaxe invalide, champs inconnu...),
+     <function>yaz_ccl_parse</function> retourne <literal>FALSE</literal>.
+     Trois index sont alors cr&eacute;&eacute; dans le tableau de r&eacute;sultat :
+     <literal>errorcode</literal> (code d'erreur CCL, un entier),
+     <literal>errorstring</literal> (message d'erreur CCL), et
+     <literal>errorpos</literal> position estim&eacute;e de l'erreur dans la
+     requ&ecirc;te (entier, position en nombre de caract&egrave;res).
+    </para>
+   </refsect1>
+  </refentry>
+  <refentry id="function.yaz-itemorder">
+   <refnamediv>
+    <refname>yaz_itemorder</refname>
+    <refpurpose>
+     Pr&eacute;pare une requ&ecirc;te Z39.50 Item Order avec le package ILL-Request
+    </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>int <function>yaz_itemorder</function></funcdef>
+      <paramdef>array <parameter>args</parameter></paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>yaz_itemorder</function> pr&eacute;pare une requ&ecirc;te de type "Extended Services"
+     en utilisant le "Profile" avec "Use of Z39.50 Item Order Extended Service to
+     Transport ILL (Profile/1)" (Note du Traducteur : mailes moi de l'aide!). Reportez vous
+     <ulink url="http://www.nlc-bnc.ca/iso/ill/stanprf.htm">ici</ulink>
+     ou aux
+     <ulink url="http://www.nlc-bnc.ca/iso/ill/document/standard/z-ill-1a.pdf">
+     sp&eacute;cification</ulink>.
+     Le param&egrave;tre <parameter>args</parameter> doit &ecirc;tre un tableau associatif,
+     contenant les informations "Item Order" &agrave; envoyer. L'index du tableau est
+     le nom ASN.1  correspondant au tag path. Par exemple, le num&eacute;ro ISBN sous
+     l'Item-ID est la cl&eacute; item-id,ISBN.
+    </para>
+    <para>
+    Les param&egrave;tres de ILL-Request sont :
+    </para>
+    <literallayout>
+protocol-version-num
+transaction-id,initial-requester-id,person-or-institution-symbol,person
+transaction-id,initial-requester-id,person-or-institution-symbol,institution
+transaction-id,initial-requester-id,name-of-person-or-institution,name-of-person
+transaction-id,initial-requester-id,name-of-person-or-institution,name-of-institution
+transaction-id,transaction-group-qualifier
+transaction-id,transaction-qualifier
+transaction-id,sub-transaction-qualifier
+service-date-time,this,date
+service-date-time,this,time
+service-date-time,original,date
+service-date-time,original,time
+requester-id,person-or-institution-symbol,person
+requester-id,person-or-institution-symbol,institution
+requester-id,name-of-person-or-institution,name-of-person
+requester-id,name-of-person-or-institution,name-of-institution
+responder-id,person-or-institution-symbol,person
+responder-id,person-or-institution-symbol,institution
+responder-id,name-of-person-or-institution,name-of-person
+responder-id,name-of-person-or-institution,name-of-institution
+transaction-type
+delivery-address,postal-address,name-of-person-or-institution,name-of-person
+delivery-address,postal-address,name-of-person-or-institution,name-of-institution
+delivery-address,postal-address,extended-postal-delivery-address
+delivery-address,postal-address,street-and-number
+delivery-address,postal-address,post-office-box
+delivery-address,postal-address,city
+delivery-address,postal-address,region
+delivery-address,postal-address,country
+delivery-address,postal-address,postal-code
+delivery-address,electronic-address,telecom-service-identifier
+delivery-address,electronic-address,telecom-service-addreess
+billing-address,postal-address,name-of-person-or-institution,name-of-person
+billing-address,postal-address,name-of-person-or-institution,name-of-institution
+billing-address,postal-address,extended-postal-delivery-address
+billing-address,postal-address,street-and-number
+billing-address,postal-address,post-office-box
+billing-address,postal-address,city
+billing-address,postal-address,region
+billing-address,postal-address,country
+billing-address,postal-address,postal-code
+billing-address,electronic-address,telecom-service-identifier
+billing-address,electronic-address,telecom-service-addreess
+ill-service-type
+requester-optional-messages,can-send-RECEIVED
+requester-optional-messages,can-send-RETURNED
+requester-optional-messages,requester-SHIPPED
+requester-optional-messages,requester-CHECKED-IN
+search-type,level-of-service
+search-type,need-before-date
+search-type,expiry-date
+search-type,expiry-flag
+place-on-hold
+client-id,client-name
+client-id,client-status
+client-id,client-identifier
+item-id,item-type
+item-id,call-number
+item-id,author
+item-id,title
+item-id,sub-title
+item-id,sponsoring-body
+item-id,place-of-publication
+item-id,publisher
+item-id,series-title-number
+item-id,volume-issue
+item-id,edition
+item-id,publication-date
+item-id,publication-date-of-component
+item-id,author-of-article
+item-id,title-of-article
+item-id,pagination
+item-id,ISBN
+item-id,ISSN
+item-id,additional-no-letters
+item-id,verification-reference-source
+copyright-complicance
+retry-flag
+forward-flag
+requester-note
+forward-note
+    </literallayout>
+    <para>
+    Il y a quelques param&egrave;tres du package Extended Services Request
+    et ItemOrder :
+    </para>
+    <literallayout>
+package-name
+user-id
+contact-name
+contact-phone
+contact-email
+itemorder-item
+    </literallayout>
    </refsect1>
   </refentry>
   <refentry id="function.yaz-wait">
    <refnamediv>
     <refname>yaz_wait</refname>
-    <refpurpose>Ex&eacute;cute une requ&ecirc;te</refpurpose>
+    <refpurpose>Attend l'ex&eacute;cution d'une requ&ecirc;te</refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
     <funcsynopsis>
      <funcprototype>
       <funcdef>int <function>yaz_wait</function></funcdef>
-      <paramdef>int <parameter>id</parameter></paramdef>
-      <paramdef>string <parameter>syntax</parameter></paramdef>
+      <void/>
      </funcprototype>
     </funcsynopsis>
     <para>
-     <function>yaz_wait</function> ex&eacute;cute les requ&ecirc;tes pr&eacute;par&eacute;e par les fonctions
-     <function>yaz_connect</function>, <function>yaz_search</function>.
-     <function>yaz_wait</function> fonctionne en mode bloquant.
-     <function>yaz_wait</function> se termine lorsque toutes les requ&ecirc;tes
-     se sont termin&eacute;es (succ&egrave;s ou erreur).
+     <function>yaz_wait</function> ex&eacute;cute les requ&ecirc;tes
+     pr&eacute;par&eacute;e par les fonctions
+     <function>yaz_search</function>, <function>yaz_present</function>,
+     <function>yaz_scan</function> et <function>yaz_itemorder</function>.
+     <function>yaz_wait</function> se termine lorsque tous les h&ocirc;tes
+     ont termin&eacute; leurs requ&ecirc;tes (&eacute;ventuellement en cas d'erreur).
     </para>
    </refsect1>
   </refentry>
