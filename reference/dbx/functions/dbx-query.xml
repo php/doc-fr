@@ -9,135 +9,271 @@
    <refsect1>
     <title>Description</title>
      <methodsynopsis>
-      <type>resource</type><methodname>dbx_query</methodname>
-      <methodparam><type>resource</type><parameter>link_identifier</parameter></methodparam>
+      <type>object</type><methodname>dbx_query</methodname>
+      <methodparam><type>object</type><parameter>link_identifier</parameter></methodparam>
       <methodparam><type>string</type><parameter>sql_statement</parameter></methodparam>
       <methodparam choice="opt"><type>int</type><parameter>flags</parameter></methodparam>
      </methodsynopsis>
-   &warn.experimental;
-    <para>
-     <function>dbx_query</function> retourne une ressource
-     dbx_result_object ou 1 en cas de succ&egrave;s (un objet de r&eacute;sultat
+    <simpara>
+      retourne un objet dbx_result_object ou 
+     <literal>1</literal>  en cas de succ&egrave;s (un objet de r&eacute;sultat
      ne sera retourn&eacute; que pour les requ&ecirc;tes SQL qui retournent un
-     r&eacute;sultat), ou 0 en cas d'erreur. Le param&egrave;tre
+     r&eacute;sultat), ou 0 en cas d'erreur. 
+    </simpara>
+    <example>
+     <title>Comment g&eacute;rer la valeur retourn&eacute;e par <function>dbx_query</function></title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$link   = dbx_connect(DBX_ODBC, "", "db", "username", "password")
+    or die("Impossible de se connecter");
+
+$result = dbx_query($link, 'SELECT id, parentid, description FROM table');
+
+if ( is_object($result) ) {
+    // ... Faire quelquechose d'utile ici
+    // first, print out field names and types 
+    // then, draw a table filled with the returned field values
+}
+else if ( $result == 1 ) {
+    echo("Requ&ecirc;te ex&eacute;cut&eacute;e correctement, mais pas de r&eacute;sultat.");
+}
+else {
+    exit("La requ&ecirc;te a &eacute;chou&eacute;");
+}
+
+dbx_close($link);
+?>
+]]>
+     </programlisting>
+    </example>
+
+    <para>     
+     Le param&egrave;tre
      <parameter>flags</parameter> sert &agrave; contr&ocirc;ler la quantit&eacute;
      d'informations retourn&eacute;e. Il peut &ecirc;tre n'importe quelle
-     combinaisons par OR des constantes : DBX_RESULT_INFO,
-     DBX_RESULT_INDEX, DBX_RESULT_ASSOC. DBX_RESULT_INFO fournit
-     des informations sur les colonnes, comme les noms des champs
-     et leur type. DBX_RESULT_INDEX retourne le r&eacute;sultat dans un
-     tableau index&eacute; (par exemple, data[2][3], o&ugrave; 2 est le num&eacute;ro
-     de ligne et 3 est le num&eacute;ro de colonne), dont la premi&egrave;re
-     colonne est index&eacute;e &agrave; 0. DBX_RESULT_ASSOC associe les noms
-     de colonnes avec leurs indices. Notez que DBX_RESULT_INDEX est
-     toujours retourn&eacute;, ind&eacute;pendamment de la valeur de
-     <parameter>flags</parameter>. Si DBX_RESULT_ASSOC est sp&eacute;cifi&eacute;,
-     DBX_RESULT_INFO est aussi retourn&eacute;, m&ecirc;me s'il n'a pas &eacute;t&eacute;
-     sp&eacute;cifi&eacute;. Ce qui signifie que les seules combinaisons envisageables
-     sont
-     DBX_RESULT_INDEX,
-     DBX_RESULT_INDEX | DBX_RESULT_INFO et
-     DBX_RESULT_INDEX | DBX_RESULT_INFO | DBX_RESULT_ASSOC. La derni&egrave;re
-     combinaison est la valeur par d&eacute;faut de <parameter>flags</parameter>.
-     Les r&eacute;sultats associ&eacute;s sont en fait des r&eacute;f&eacute;rences, ce qui fait que
-     modifier <literal>data[0][0]</literal>, revient &agrave; modifier
-     <literal>data[0]['fieldnameforfirstcolumn']</literal>.
+     combinaisons par l'op&eacute;rateur OR des constantes ci-apr&egrave;s. Les constantes
+     remplacent la configuration du &php.ini;.
+          <variablelist>
+      <varlistentry>
+       <term>
+        <constant>DBX_RESULT_INDEX</constant>
+       </term>
+       <listitem>
+        <simpara>
+         Ce param&egrave;tre est <emphasis>toujours</emphasis> activ&eacute;, 
+         c'est &agrave; dire que l'objet retourn&eacute; dispose du membre 
+         <property>data</property> qui est un tableau &agrave; deux dimensions,
+         index&eacute; num&eacute;riquement. Par exemple, dans l'expression
+         <literal>data[2][3]</literal> <literal>2</literal> repr&eacute;sente
+         le num&eacute;ro de ligne et <literal>3</literal> repr&eacute;sente 
+         le num&eacute;ro de colonne. Les premi&egrave;res lignes et colonnes 
+         sont index&eacute;es &agrave; 0.
+        </simpara>
+        <simpara>
+         Si <constant>DBX_RESULT_ASSOC</constant> est aussi sp&eacute;cifi&eacute;, l'objet
+         retourn&eacute; contient en plus les informations li&eacute;es &agrave; 
+         <constant>DBX_RESULT_INFO</constant>, m&ecirc;me si il n'a pas &eacute;t&eacute; sp&eacute;cifi&eacute;.
+        </simpara>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term>
+        <constant>DBX_RESULT_INFO</constant>
+       </term>
+       <listitem>
+        <simpara>
+         Cette option fournit des informations sur les colonnes, comme
+         les noms des champs et leur type.
+        </simpara>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term>
+        <constant>DBX_RESULT_ASSOC</constant>
+       </term>
+       <listitem>
+        <simpara>
+         Cette option fait que la valeur des champs peut &ecirc;tre accessible
+         avec le nom de la colonne, utilis&eacute; comme cl&eacute; dans le tableau du
+         membre <property>data</property>.
+        </simpara>
+        <simpara>
+         Les r&eacute;sultats ainsi associ&eacute;s sont des r&eacute;f&eacute;rences sur les valeurs
+         identifi&eacute;es par les index num&eacute;riques, ce quie fait que modifier
+         <literal>data[0][0]</literal> fait que 
+         <literal>data[0]['nom_de_la_premiere_colonne']</literal> sera aussi
+         modifi&eacute;.
+        </simpara>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term>
+        <constant>DBX_COLNAMES_UNCHANGED</constant> (disponible depuis PHP 4.3.0)
+       </term>
+       <listitem>
+        <simpara>
+         La casse du nom des colonnes retourn&eacute;e ne sera pas modifi&eacute;e.
+        </simpara>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term>
+        <constant>DBX_COLNAMES_UPPERCASE</constant> (disponible depuis PHP 4.3.0)
+       </term>
+       <listitem>
+        <simpara>
+         Les noms de colonnes seront mis en majuscules.
+        </simpara>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term>
+        <constant>DBX_COLNAMES_LOWERCASE</constant> (disponible depuis PHP 4.3.0)
+       </term>
+       <listitem>
+        <simpara>
+         Les noms de colonnes seront mis en minuscules.
+        </simpara>
+       </listitem>
+      </varlistentry>
+     </variablelist>
+     Notez que <constant>DBX_RESULT_INDEX</constant> est toujours active,
+     ind&eacute;pendemment de la valeur de <parameter>flags</parameter>. Cela signifie
+     que seules les combinaisons suivantes sont utiles : 
+     <itemizedlist>
+      <listitem>
+       <simpara>
+        <constant>DBX_RESULT_INDEX</constant>
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        <constant>DBX_RESULT_INDEX</constant> |
+        <constant>DBX_RESULT_INFO</constant>
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        <constant>DBX_RESULT_INDEX</constant> |
+        <constant>DBX_RESULT_INFO</constant> |
+        <constant>DBX_RESULT_ASSOC</constant> - c'est la valeur par d&eacute;faut,
+        si <parameter>flags</parameter> est omis.
+       </simpara>
+      </listitem>
+     </itemizedlist>
+    </para>
+    <para> 
     </para>
     <para>
      Un objet dbx_result_object a 5 membres (&eacute;ventuellement 4, suivants
-     les valeurs de <parameter>flags</parameter>) : 'handle', 'cols', 'rows',
-     'info' (optionnel) et 'data'. Handle est un identifiant de r&eacute;sultat,
-     qui peut &ecirc;tre utilis&eacute; avec les fonctions sp&eacute;cifiques &agrave; son module.
-     Par exemple :
-    </para>
-    <para>
-     <informalexample role="php">
-      <programlisting>
-&lt;?php
-$result = dbx_query($link, "SELECT id FROM tbl");
-mysql_field_len($result->handle, 0);
-?&gt;
-      </programlisting>
-     </informalexample>
-    </para>
-    <para>
-     Les membres cols et rows contiennent les num&eacute;ros de colonne et de
-     champs.
-    </para>
-    <para>
-     <informalexample>
-      <programlisting role="php">
-&lt;?php
-$result = dbx_query($link, "SELECT id FROM tbl");
-echo "Taille du r&eacute;sultat: " . $result->rows . " x " . $result->cols . "&lt;br&gt;\n";
-?&gt;
-      </programlisting>
-     </informalexample>
-    </para>
-    <para>
-     Le membre info n'est retourn&eacute; que si DBX_RESULT_INFO et/ou
-     DBX_RESULT_ASSOC sont sp&eacute;cifi&eacute; dans le param&egrave;tre <parameter>flags</parameter>.
-     C'est un deuxi&egrave;me tableau, qui poss&egrave;de deux lignes ("name" and "type"),
-     pour conna&icirc;tre les informations sur les colonnes.
-    </para>
-    <para>
-     <informalexample>
-      <programlisting role="php">
-&lt;?php
-$result = dbx_query($link, "SELECT id FROM tbl");
-echo "Nom de la colonne : " . $result->info["name"][0] . "&lt;br&gt;\n";
-echo "Type de la colonne: " . $result->info["type"][0] . "&lt;br&gt;\n";
-?&gt;
-      </programlisting>
-     </informalexample>
-    </para>
-    <para>
-     Le membre data contient les donn&eacute;es effectivement lues,
-     &eacute;ventuellement associ&eacute;es &agrave; des noms de colonnes. Si
-     DBX_RESULT_ASSOC est utilis&eacute;, il est possible d'utiliser
-     <literal>$result->data[2]["fieldname"]</literal>.
-    </para>
-    <example>
-     <title>Exemple avec <function>dbx_query</function></title>
-     <programlisting role="php">
-&lt;?php
-$link = dbx_connect("odbc", "", "base de donn&eacute;es", "utilisateur", "mot de passe")
-    or die ("Impossible de se connecter");
-$result = dbx_query($link, "SELECT id, parentid, description FROM tbl");
-if ($result==0) echo "La requ&ecirc;te a &eacute;chou&eacute;\n&lt;br&gt;";
-elseif ($result==1) {
-    echo "La requ&ecirc;te a r&eacute;ussie\n&lt;br&gt;";
-} else {
-    $rows=$result->rows;
-    $cols=$result->cols;
-    echo "&lt;p>table dimension: {$result->rows} x {$result->cols}&lt;br&gt;&lt;table border=1>\n";
-    echo "&lt;tr>";
-    for ($col=0; $col&lt;$cols; ++$col) {
-        echo "&lt;td>-{$result->info["name"][$col]}-&lt;br&gt;-{$result->info["type"][$col]}-&lt;/td>";
-    }
-    echo "&lt;/tr>\n";
-    for ($row=0; $row&lt;$rows; ++$row){
-        echo "&lt;tr>";
-        for ($col=0; $col&lt;$cols; ++$col) {
-            echo "&lt;td>-{$result->data[$row][$col]}-&lt;/td>";
-        }
-        echo "&lt;/tr>\n";
-    }
-    echo "&lt;/table>&lt;p>\n";
-    echo "table dimension: {$result->rows} x id, parentid, description&lt;br&gt;&lt;table border=1>\n";
-    for ($row=0; $row&lt;$rows; ++$row) {
-        echo "&lt;tr>";
-        echo "&lt;td>-{$result->data[$row]["id"]}-&lt;/td>";
-        echo "&lt;td>-{$result->data[$row]["parentid"]}-&lt;/td>";
-        echo "&lt;td>-{$result->data[$row]["description"]}-&lt;/td>";
-        echo "&lt;/tr>\n";
-    }
-    echo "&lt;/table>&lt;p>\n";
+     les valeurs de <parameter>flags</parameter>) : 
+     <variablelist>
+      <varlistentry>
+       <term>
+        <property>handle</property>
+       </term>
+       <listitem>
+        <para>
+         Ceci est une ressource repr&eacute;sentant la connexion &agrave; la 
+         base de donn&eacute;es, et il peut &ecirc;tre utilis&eacute; (si n&eacute;cessaire) avec
+         les fonctions sp&eacute;cialis&eacute;es de la base.
+         <example role="php">
+          <title>Exemple avec <function>dbx_query</function></title>
+          <programlisting>
+<![CDATA[
+<?php
+  $result = dbx_query($link, "SELECT id FROM table");
+  mysql_field_len($result->handle, 0);
+?>
+]]>
+          </programlisting>
+         </example>
+        </para>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term>
+        <property>cols</property> et <property>rows</property>
+       </term>
+       <listitem>
+        <para>
+         Ces deux membres contiennent respectivement le nombre de colonne et de
+         ligne.
+         <informalexample>
+          <programlisting role="php">
+<![CDATA[
+$result = dbx_query ($link, 'SELECT id FROM table');
+echo $result->rows; // nombre de lignes
+echo $result->cols; // nombre de champs
+]]>
+          </programlisting>
+         </informalexample>
+        </para>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term>
+        <property>info</property> (optionnel)
+       </term>
+       <listitem>
+        <simpara>
+         Ce membre est retourn&eacute; uniquement si <constant>DBX_RESULT_INFO</constant> ou
+         <constant>DBX_RESULT_ASSOC</constant> sont sp&eacute;cifi&eacute;s dans le param&egrave;tre
+         <parameter>flags</parameter>. C'est un tableau &agrave; deux dimensions,
+         avec deux lignes (<literal>name</literal> et
+         <literal>type</literal>) pour lire les informations de colonnes.
+        </simpara>
+        <example>
+         <title>Listes les types et noms de colonnes avec dbplus</title>
+         <programlisting role="php">
+<![CDATA[
+$result = dbx_query ($link, 'SELECT id FROM table',
+                     DBX_RESULT_INDEX | DBX_RESULT_INFO);
+
+for ($i = 0; $i < $result->cols; $i++ ) {
+    echo $result->info['name'][$i] . "\n";
+    echo $result->info['type'][$i] . "\n";  
 }
-dbx_close($link);
-?&gt;
-     </programlisting>
-    </example>
+]]>
+         </programlisting>
+        </example>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term>
+        <property>data</property>
+       </term>
+       <listitem>
+        <simpara>
+         Ce membre contient les r&eacute;sultat obtenus, possiblement associ&eacute;s
+         avec le nom de colonne, en fonction de la valeur du param&egrave;tre 
+         <parameter>flags</parameter>. Si <constant>DBX_RESULT_ASSOC</constant> 
+         est activ&eacute;, il est possible d'utiliser aussi
+         <literal>$result->data[2]["nom_de_la_colonne"]</literal>.
+        </simpara>
+        <example>
+         <title>Afficher le contenu d'une base avec dbplus</title>
+         <programlisting role="php">
+<![CDATA[
+$result = dbx_query ($link, 'SELECT id, parentid, description FROM table');
+
+echo "<table>\n";
+foreach ( $result->data as $row ) {
+    echo "<tr>\n";
+    foreach ( $row as $field ) {
+        echo "<td>$field</td>";
+    }
+    echo "</tr>\n";
+}
+echo "</table>\n";
+]]>
+         </programlisting>
+        </example>
+       </listitem>
+      </varlistentry>
+     </variablelist>
+    </para>
     <note>
      <para>
       Reportez-vous aussi &agrave; la documentation de la base de donn&eacute;es que vous
@@ -146,6 +282,7 @@ dbx_close($link);
     </note>
     <para>
      Voir aussi
+     <function>dbx_escape_string</function> et
      <function>dbx_connect</function>.
     </para>
    </refsect1>
