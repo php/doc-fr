@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+  <sect1 id="security.registerglobals">
+   <title>Utilisation des variables super-globales</title>
+   <para>
+    Une fonctionnalité de PHP qui peut être utilisée pour
+    améliorer la sécurité est de configurer PHP en désactivant l'option
+    <link linkend="ini.register-globals">register_globals</link>.
+    En supprimant la possibilité que les variables envoyées
+    par les internautes soient injectées automatiquement dans
+    le script PHP, vous pouvez restreindre la quantité de
+    variables non-protégées.  Les intrus devront prendre beaucoup plus
+    de temps pour corrompre les mécanismes d'envoi de données,
+    et vos variables internes seront nettement mieux protégées.
+   </para>
+   <para>
+    Bien que cela augmente d'autant les efforts à fournir pour
+    écrire un script PHP, les bénéfices peuvent en être
+    nettement plus interessants.
+    <example>
+     <title>Travailler avec register_globals = on</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+  if ($username) {
+// attention, cette valeur peut être parasitée via GET/POST/COOKIES
+    $good_login = 1;
+  }
+if ($good_login == 1) {
+// attention, cette valeur peut être parasitée via GET/POST/COOKIES
+    fpassthru ("/données/très/très/sensibles/index.html");
+}
+?>
+]]>
+     </programlisting>
+    </example>
+    <example>
+     <title>Travailler avec register_globals = off</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+  if($_COOKIE["username"]){
+// ne peut provenir que d'un cookie, corrompu ou pas
+    $good_login = 1;
+// Impossible à parasiter
+    fpassthru ("/données/très/très/sensibles/index.html");
+  }
+?>
+]]>
+     </programlisting>
+    </example>
+    En utilisant intelligemment ceci, il est même possible
+    de détecter les tentatives de corruption. Si vous savez à l'avance
+    d'où la variable doit venir (GET ou POST ou COOKIE), vous pouvez
+    tester les données. Même si cela ne vous garantit pas contre
+    la corruption de ces données, cela impose aux pirates de bien
+    savoir comment corrompre les données.
+    <example>
+     <title>Détection de corruption de variables</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+  if ($_COOKIE['username'] &&
+      !$_POST['username'] &&
+      !$_GET['username'] ) {
+    // D'autres vérifications pour vérifier l'origine du nom d'utilisateur fourni
+    $good_login = 1;
+    fpassthru ("/données/très/très/sensibles/index.html");
+  } else {
+   mail("admin@example.com", "Tentative de piratage", $_SERVER['REMOTE_ADDR']);
+   echo "Problème de sécurité, l'administrateur est alerté.";
+   exit;
+  }
+?>
+]]>
+     </programlisting>
+    </example>
+    Bien entendu, désactiver l'option register_globals ne signifie pas
+    que votre code devient ouvert à tous. Mais il faut aussi
+    vérifier toutes les données qui vous sont fournies par les
+    utilisateurs, et plutôt deux fois qu'une.
+   </para>
+  </sect1>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
