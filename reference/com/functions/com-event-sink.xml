@@ -1,0 +1,107 @@
+<?xml version='1.0' encoding='iso-8859-1'?>
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+  <refentry id="function.com-event-sink">
+   <refnamediv>
+    <refname>com_event_sink</refname>
+    <refpurpose>
+     Connecte des évènements d'un objet COM sur un objet PHP
+    </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <methodsynopsis>
+     <type>bool</type><methodname>com_event_sink</methodname>
+     <methodparam><type>object</type><parameter>comobject</parameter></methodparam>
+     <methodparam><type>object</type><parameter>sinkobject</parameter></methodparam>
+     <methodparam choice="opt"><type>mixed</type><parameter>sinkinterface</parameter></methodparam>
+    </methodsynopsis>
+
+    <para>
+     <function>com_event_sink</function>connecte des évènements de l'objet COM
+     <parameter>comobject</parameter> sur un l'objet &php; 
+     <parameter>sinkobject</parameter>. &php; devrait être capable d'utiliser
+     le type par défaut de dispinterface spécifié par la Typelib associée avec l'objet
+     <parameter>comobject</parameter>, mais vous pouvez changer celà en spécifiant
+     dans le paramètre <parameter>sinkinterface</parameter> le dispinterface que vous
+     souhaitez utiliser.
+    </para>
+
+    <para>
+     <parameter>sinkobject</parameter> devra être une instance de la classe
+     avec des noms de méthodes suivant le dispinterface désiré ; vous devriez utilisé
+     <function>com_print_typeinfo</function> pour l'aide à la génération d'un
+     gabarit de classe pour celà.
+    </para>
+
+    <para>
+     Soyez prudent sur l'utilisation de cette fonctionnalité ; si vous faîtes quelque chose de similaire
+     à l'exemple ci-dessous, celà n'a pas de sens de le lancer sur un serveur Web.
+    </para>
+
+    <example>
+      <title>Exemple de connexions d'évènements COM</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+class IEEventSinker {
+  var $terminated = false;
+
+  function ProgressChange($progress, $progressmax) {
+    echo "Progression du téléchargement : $progress / $progressmax\n";
+  }
+
+  function DocumentComplete(&$dom, $url) {
+    echo "Document $url terminé\n";
+  }
+
+  function OnQuit() {
+    echo "Quitter!\n";
+    $this->terminated = true;
+  }
+}
+$ie = new COM("InternetExplorer.Application");
+// notez que vous n'avez pas besoin du & en PHP 5!
+$sink =& new IEEventSinker();
+com_event_sink($ie, $sink, "DWebBrowserEvents2");
+$ie->Visible = true;
+$ie->Navigate("http://www.php.net");
+while(!$sink->terminated) {
+  com_message_pump(4000);
+}
+$ie = null;
+?>
+]]>
+     </programlisting>
+    </example>
+
+    <para>
+     Voir aussi 
+     <function>com_print_typeinfo</function> et 
+     <function>com_message_pump</function>.
+    </para>
+ 
+
+   </refsect1>
+  </refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
