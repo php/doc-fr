@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+ <reference id="ref.xml">
+  <title>Analyseur syntaxique XML</title>
+  <titleabbrev>XML</titleabbrev>
+  <partintro>
+   <section id="xml.partintro">
+    <title>Introduction</title>
+    <section id="xml.intro">
+     <title>A propos de XML</title>
+     <para>
+      Le langage XML (eXtensible Markup Language (Langage &agrave; Balises
+      Etendu)) est un format structur&eacute; de donn&eacute;es pour les
+      &eacute;changes sur le web. C'est un standard d&eacute;fini par le
+      consortium World Wide Web (W3C). Plus d'informations &agrave; propos
+      du XML et des technologies aff&eacute;rentes sont accessibles (en anglais)
+      <ulink url="&url.xml;">&url.xml;</ulink>.
+     </para>
+    </section>
+    <section id="xml.install">
+     <title>Installation</title>
+     <para>
+      Cette extension de PHP utilise <productname>expat</productname>,
+      disponible &agrave; <ulink url="&url.expat;">&url.expat;</ulink>.
+      Le fichier Makefile livr&eacute; avec <productname>expat</productname>
+      ne construit pas par d&eacute;faut de librairie : il faut utiliser
+      la ligne suivante :
+      <programlisting role="makefile">
+libexpat.a: $(OBJS)
+	ar -rc $@ $(OBJS)
+	ranlib $@
+      </programlisting>
+      Les sources RPM de expat sont disponibles &agrave;
+      <ulink url="&url.expat.rpm;">&url.expat.rpm;</ulink>.
+     </para>
+     <para>
+      Notez que si vous utilisez Apache-1.3.7 ou plus r&eacute;cent,
+      vous disposez d&eacute;j&agrave; de la librairie expat.
+      Configurez simplement PHP avec
+      <link linkend="install.configure.with-xml"><option role="configure">--with-xml</option></link>
+      (sans aucun autre information) et la librairie expat d'Apache sera
+      automatiquement utilis&eacute;e.
+     </para>
+     <para>
+      Sous UNIX, lancez la configuration de PHP avec l'option
+      <link linkend="install.configure.with-xml"><option role="configure">--with-xml</option></link>,
+      la librairie <productname>expat</productname> &eacute;tant install&eacute;e
+      l&agrave; o&ugrave; votre compilateur peut la trouver.
+      Si vous compilez PHP comme module de PHP 1.3.9 ou plus r&eacute;cent,
+      PHP utilisera automatiquement le module <productname>expat</productname>
+      livr&eacute; avec Apache. Il vous faudra peut &ecirc;tre fixer
+      les valeurs des variables d'environnement <envar>CPPFLAGS</envar>
+      et <envar>LDFLAGS</envar>, si vous avez fait une installation exotique.
+     </para>
+     <para>
+      Compilez PHP.  <emphasis>Tada!</emphasis> C'est fait !
+     </para>
+    </section>
+    <section id="xml.about">
+     <title>A propos de cette extension :</title>
+     <para>
+       Cette extension PHP supporte la librairie <productname>expat</productname>
+       de James Clark sous PHP. Cela vous permettra d'analyser mais
+       pas de valider les documents XML. Il supporte trois types de
+       codage diff&eacute;rents, disponibles aussi sous PHP:
+      <literal>US-ASCII</literal>, <literal>ISO-8859-1</literal> et
+      <literal>UTF-8</literal>. <literal>UTF-16</literal> n'est pas support&eacute;.
+     </para>
+     <para>
+       Cette extension vous permet de cr&eacute;er des
+       <link linkend="function.xml-parser-create">analyseurs XML</link>
+       puis de d&eacute;finir des <emphasis>points d'entr&eacute;e</emphasis>
+       pour chaque &eacute;v&eacute;nement XML. Les analyseurs XML disposent
+       de quelques
+       <link linkend="function.xml-parser-set-option">param&eacute;trages</link>.
+     </para>
+     <para>
+       Les gestionnaires d'&eacute;v&egrave;nements XML sont:
+      <table>
+       <title>Les gestionnaires d'&eacute;v&egrave;nements XML</title>
+       <tgroup cols="2">
+	<thead>
+	 <row>
+	  <entry>Fonction PHP de configuration du gestionnaire</entry>
+	  <entry>Description de l'&eacute;v&eacute;nement</entry>
+	 </row>
+	</thead>
+	<tbody>
+	 <row>
+	  <entry><function>xml_set_element_handler</function></entry>
+	  <entry>
+		Un &eacute;v&eacute;nement est g&eacute;n&eacute;r&eacute;
+		&agrave; chaque fois que l'analyseur XML rencontre une balise de
+		d&eacute;but ou de fin. Deux gestionnaires sont disponibles : un
+		pour le d&eacute;but, et un pour la fin.
+	  </entry>
+	 </row>
+	 <row>
+	  <entry>
+	   <function>xml_set_character_data_handler</function>
+	  </entry>
+	  <entry>
+		 "Character data" correspond grosso modo &agrave; tout ce qui n'est
+		 pas une balise XML, y compris les espaces entre les balises. Notez
+		 bien que l'analyseur XML n'ajoute ou n'efface aucun espace, et que
+		 c'est &agrave; l'application (c'est-&agrave;-dire vous) de
+		 d&eacute;cider de la signification de ces espaces.
+      </entry>
+	 </row>
+	 <row>
+	  <entry>
+	   <function>xml_set_processing_instruction_handler</function>
+	  </entry>
+	  <entry>
+        Les programmeurs PHP sont habitu&eacute;s aux instructions
+        ex&eacute;cutables (processing instructions ou PIs).
+        <literal>&lt;?php ?&gt;</literal> est une instruction ex&eacute;cutable o&ugrave;
+        php est appel&eacute; programme cible. Ces instructions sont
+		g&eacute;r&eacute;es de mani&egrave;re sp&eacute;cifiques,
+		(sauf le programme cible, qui est r&eacute;serv&eacute; &agrave; XML).
+	  </entry>
+	 </row>
+	 <row>
+	  <entry><function>xml_set_default_handler</function></entry>
+	  <entry>
+		Tout ce qui n'a pas trouv&eacute; de gestionnaire est transmis
+		au gestionnaire par d&eacute;faut. Vous retrouverez par exemple,
+		les d&eacute;clarations de type de document dans ce gestionnaire.
+	  </entry>
+	 </row>
+	 <row>
+	  <entry>
+	   <function>xml_set_unparsed_entity_decl_handler</function>
+	  </entry>
+	  <entry>
+		Ce gestionnaire est appel&eacute; pour g&eacute;rer les
+		d&eacute;claration des entit&eacute;s non analys&eacute;s.
+	  </entry>
+	 </row>
+	 <row>
+	  <entry>
+	   <function>xml_set_notation_decl_handler</function>
+	  </entry>
+	  <entry>
+	   Ce gestionnaire est appel&eacute; pour g&eacute;rer les notations.
+	  </entry>
+	 </row>
+	 <row>
+	  <entry>
+	   <function>xml_set_external_entity_ref_handler</function>
+	  </entry>
+	  <entry>
+		Ce gestionnaire est appel&eacute; lorsque l'analyseur XML trouve une
+		r&eacute;f&eacute;rence &agrave; un fichier externe. Cela peut
+		&ecirc;tre un fichier, ou une URL. Reportez-vous &agrave;
+		<link linkend="example.xml-external-entity">entit&eacute; externe</link>
+		pour un exemple.
+	  </entry>
+	 </row>
+	</tbody>
+       </tgroup>
+      </table>
+     </para>
+    </section>
+    <section id="xml.case-folding">
+     <title>Probl&egrave;mes de casse</title>
+     <para>
+        Les fonctions de gestion des balises peuvent rencontrer des balises en
+        minuscule, majuscule ou encore dans un m&eacute;lange des deux. En XML,
+        la proc&eacute;dure standard est d' "identifier les s&eacute;quences de
+        caract&egrave;re qui ne sont pas reconnues comme majuscule, et de les
+        remplacer par leur &eacute;quivalent majuscule". En d'autres termes,
+        XML met toutes lettres en majuscules.
+     </para>
+     <para>
+        Par d&eacute;faut, tous les noms des &eacute;l&eacute;ments qui sont
+        transmis aux fonctions de gestion sont mises en majuscule. Ce
+        comportement est contr&ocirc;l&eacute; par l'analyseur XML, et
+        peut &ecirc;tre lu et modifi&eacute; avec les fonctions respectives
+        <function>xml_parser_get_option</function> et
+        <function>xml_parser_set_option</function>, respectivement.
+     </para>
+    </section>
+    <section id="xml.error-codes">
+     <title>Codes d'erreurs</title>
+     <para>
+      Les constantes suivantes sont d&eacute;finies comme des codes
+      d'erreurs XML : (retourn&eacute;e par <function>xml_parse</function>)
+      <simplelist>
+       <member>XML_ERROR_NONE</member>
+       <member>XML_ERROR_NO_MEMORY</member>
+       <member>XML_ERROR_SYNTAX</member>
+       <member>XML_ERROR_NO_ELEMENTS</member>
+       <member>XML_ERROR_INVALID_TOKEN</member>
+       <member>XML_ERROR_UNCLOSED_TOKEN</member>
+       <member>XML_ERROR_PARTIAL_CHAR</member>
+       <member>XML_ERROR_TAG_MISMATCH</member>
+       <member>XML_ERROR_DUPLICATE_ATTRIBUTE</member>
+       <member>XML_ERROR_JUNK_AFTER_DOC_ELEMENT</member>
+       <member>XML_ERROR_PARAM_ENTITY_REF</member>
+       <member>XML_ERROR_UNDEFINED_ENTITY</member>
+       <member>XML_ERROR_RECURSIVE_ENTITY_REF</member>
+       <member>XML_ERROR_ASYNC_ENTITY</member>
+       <member>XML_ERROR_BAD_CHAR_REF</member>
+       <member>XML_ERROR_BINARY_ENTITY_REF</member>
+       <member>XML_ERROR_ATTRIBUTE_EXTERNAL_ENTITY_REF</member>
+       <member>XML_ERROR_MISPLACED_XML_PI</member>
+       <member>XML_ERROR_UNKNOWN_ENCODING</member>
+       <member>XML_ERROR_INCORRECT_ENCODING</member>
+       <member>XML_ERROR_UNCLOSED_CDATA_SECTION</member>
+       <member>XML_ERROR_EXTERNAL_ENTITY_HANDLING</member>
+      </simplelist>
+     </para>
+    </section>
+    <section id="xml.encoding">
+     <title>Codage des caract&egrave;res</title>
+     <para>
+      L'extension XML de PHP supporte les caract&egrave;res
+      <ulink url="&url.unicode;">Unicode</ulink> gr&acirc;ce &agrave;
+      diff&eacute;rents codages. Il y a deux types de codages de
+      caract&egrave;res : le codage &agrave; la source et le codage &agrave;
+      la cible. PHP utilise le <literal>UTF-8</literal> comme
+      repr&eacute;sentation interne.
+     </para>
+     <para>
+      L'encodage &agrave; la source est effectu&eacute; lors de
+     <link linkend="function.xml-parse">l'analyse</link> du fichier par XML.
+      Lors de la <link linkend="function.xml-parser-create"> cr&eacute;ation
+      d'un analyseur XML</link>), un type de codage &agrave; la
+      source doit &ecirc;tre sp&eacute;cifi&eacute; (et il ne pourra plus
+      &ecirc;tre modifi&eacute; jusqu'&agrave; la destruction de
+      l'analyseur). Les codages support&eacute;s sont :
+      <literal>ISO-8859-1</literal>, <literal>US-ASCII</literal> et
+      <literal>UTF-8</literal>. Les deux derniers sont des codages
+      &agrave; un seul octet, c'est-&agrave;-dire que les caract&egrave;res
+      sont repr&eacute;sent&eacute;s sur un seul octet. <literal>UTF-8</literal>
+      peut repr&eacute;senter des caract&egrave;res compos&eacute;s par un
+      nombre variable de bits (jusqu'&agrave; 21), allant de 1 &agrave;
+      quatre octets. Le codage par d&eacute;faut utilis&eacute; par PHP
+      <literal>ISO-8859-1</literal>.
+     </para>
+     <para>
+      Le codage &agrave; la cible est effectu&eacute; lorsque PHP transfert
+      les donn&eacute;es aux gestionnaires XML. Lorsqu'un analyseur est
+      cr&eacute;&eacute;, le codage &agrave; la cible est sp&eacute;cifi&eacute;
+      de la m&ecirc;me fa&ccedil;on que le codage &agrave; la source, mais
+      il peut &ecirc;tre modifi&eacute; &agrave; tout moment. Le codage
+      &agrave; la cible affectera les balises, tout comme les
+      donn&eacute;es brutes, et les noms des instructions ex&eacute;cutables.
+     </para>
+     <para>
+      Si l'analyseur XML rencontre un caract&egrave;re qu'il ne
+      conna&icirc;t pas (hors limite, par exemple), il retournera une erreur.
+     </para>
+     <para>
+      Si PHP rencontre un caract&egrave;re dans le document XML analys&eacute;,
+      qu'il ne peut pas repr&eacute;senter dans le codage &agrave; la cible
+      choisi, le caract&egrave;re sera remplac&eacute; par un point
+      d'interrogation (cette attitude est susceptible de changer
+      ult&eacute;rieurement).
+     </para>
+    </section>
+   </section>
+   <section id="xml.examples">
+    <title>Quelques exemples</title>
+    <para>
+     Voici une liste d'exemple de code PHP qui analyse un document XML.
+    </para>
+    <section id="example.xml-structure">
+     <title>Exemple de structure XML</title>
+     <para>
+      Ce premier exemple affiche la structure de l'&eacute;l&eacute;ment
+      de d&eacute;but dans un document avec indentation.
+      <example>
+       <title>Afficher une structure XML</title>
+       <programlisting role="php">
+&lt;?php
+$file = "data.xml";
+$depth = array();
+function startElement($parser, $name, $attrs) {
+    global $depth;
+    for ($i = 0; $i &lt; $depth[$parser]; $i++) {
+        print "  ";
+    }
+    print "$name\n";
+    $depth[$parser]++;
+}
+function endElement($parser, $name) {
+    global $depth;
+    $depth[$parser]--;
+}
+$xml_parser = xml_parser_create();
+xml_set_element_handler($xml_parser, "startElement", "endElement");
+if (!($fp = fopen($file, "r"))) {
+    die("could not open XML input");
+}
+while ($data = fread($fp, 4096)) {
+    if (!xml_parse($xml_parser, $data, feof($fp))) {
+        die(sprintf("XML error: %s at line %d",
+                    xml_error_string(xml_get_error_code($xml_parser)),
+                    xml_get_current_line_number($xml_parser)));
+    }
+}
+xml_parser_free($xml_parser);
+?&gt;
+       </programlisting>
+      </example>
+     </para>
+    </section>
+    <section id="example.xml-map-tags">
+     <title>XML Transtypage XML -> HTML</title>
+     <para>
+      <example>
+       <title>XML Transtypage XML -> HTML</title>
+       <para>
+        Cet exemple remplace les balises XML d'un document par des balises
+        HTML. Les &eacute;l&eacute;ments inconnus seront ignor&eacute;s.
+        Bien entendu, cet exemple sera appliqu&eacute; &agrave; un type
+        pr&eacute;cis de fichiers XML.
+	<programlisting role="php">
+&lt;?php
+$file = "data.xml";
+$map_array = array(
+    "BOLD"     =&gt; "B",
+    "EMPHASIS" =&gt; "I",
+    "LITERAL"  =&gt; "TT"
+);
+function startElement($parser, $name, $attrs) {
+    global $map_array;
+    if ($htmltag = $map_array[$name]) {
+        print "&lt;$htmltag&gt;";
+    }
+}
+function endElement($parser, $name) {
+    global $map_array;
+    if ($htmltag = $map_array[$name]) {
+        print "&lt;/$htmltag&gt;";
+    }
+}
+function characterData($parser, $data) {
+    print $data;
+}
+$xml_parser = xml_parser_create();
+// use case-folding so we are sure to find the tag in $map_array
+xml_parser_set_option($xml_parser, XML_OPTION_CASE_FOLDING, TRUE);
+xml_set_element_handler($xml_parser, "startElement", "endElement");
+xml_set_character_data_handler($xml_parser, "characterData");
+if (!($fp = fopen($file, "r"))) {
+    die("could not open XML input");
+}
+while ($data = fread($fp, 4096)) {
+    if (!xml_parse($xml_parser, $data, feof($fp))) {
+        die(sprintf("XML error: %s at line %d",
+                    xml_error_string(xml_get_error_code($xml_parser)),
+                    xml_get_current_line_number($xml_parser)));
+    }
+}
+xml_parser_free($xml_parser);
+?&gt;
+	</programlisting>
+       </para>
+      </example>
+     </para>
+    </section>
+    <section id="example.xml-external-entity">
+     <title>XML Entit&eacute; externe</title>
+     <para>
+      Cet exemple exploite les r&eacute;f&eacute;rences externes de XML :
+      il est possible d'utiliser un gestionnaire d'entit&eacute; externe
+      pour inclure et analyser les documents, tous comme les instructions
+      ex&eacute;cutables peuvent servir &agrave; inclure et analyser
+      d'autres documents, et aussi fournir une indication de confiance
+      (voir plus bas).
+     </para>
+     <para>
+      Le document XML qui est utilis&eacute; dans cet exemple est fourni plus
+      loin dans l'exemple (<filename>xmltest.xml</filename> et
+      <filename>xmltest2.xml</filename>).
+     </para>
+     <para>
+      <example>
+       <title>Entit&eacute; externe</title>
+       <programlisting role="php">
+&lt;?php
+$file = "xmltest.xml";
+function trustedFile($file) {
+    // only trust local files owned by ourselves
+    if (!eregi("^([a-z]+)://", $file)
+        &amp;&amp; fileowner($file) == getmyuid()) {
+            return TRUE;
+    }
+    return FALSE;
+}
+function startElement($parser, $name, $attribs) {
+    print "&amp;lt;&lt;font color=\"#0000cc\"&gt;$name&lt;/font&gt;";
+    if (sizeof($attribs)) {
+        while (list($k, $v) = each($attribs)) {
+            print " &lt;font color=\"#009900\"&gt;$k&lt;/font&gt;=\"&lt;font
+                   color=\"#990000\"&gt;$v&lt;/font&gt;\"";
+        }
+    }
+    print "&amp;gt;";
+}
+function endElement($parser, $name) {
+    print "&amp;lt;/&lt;font color=\"#0000cc\"&gt;$name&lt;/font&gt;&amp;gt;";
+}
+function characterData($parser, $data) {
+    print "&lt;B&gt;$data&lt;/B&gt;";
+}
+function PIHandler($parser, $target, $data) {
+    switch (strtolower($target)) {
+        case "php":
+            global $parser_file;
+            // If the parsed document is "trusted", we say it is safe
+            // to execute PHP code inside it.  If not, display the code
+            // instead.
+            if (trustedFile($parser_file[$parser])) {
+                eval($data);
+            } else {
+                printf("Code PHP peu s&ucirc;r : &lt;B&gt;%s&lt;/B&gt;",
+                        htmlspecialchars($data));
+            }
+            break;
+    }
+}
+function defaultHandler($parser, $data) {
+    if (substr($data, 0, 1) == "&amp;" &amp;&amp; substr($data, -1, 1) == ";") {
+        printf('&lt;font color="#aa00aa"&gt;%s&lt;/font&gt;',
+                htmlspecialchars($data));
+    } else {
+        printf('&lt;font size="-1"&gt;%s&lt;/font&gt;',
+                htmlspecialchars($data));
+    }
+}
+function externalEntityRefHandler($parser, $openEntityNames, $base, $systemId,
+                                  $publicId) {
+    if ($systemId) {
+        if (!list($parser, $fp) = new_xml_parser($systemId)) {
+            printf("Could not open entity %s at %s\n", $openEntityNames,
+                   $systemId);
+            return FALSE;
+        }
+        while ($data = fread($fp, 4096)) {
+            if (!xml_parse($parser, $data, feof($fp))) {
+                printf("XML error: %s at line %d while parsing entity %s\n",
+                       xml_error_string(xml_get_error_code($parser)),
+                       xml_get_current_line_number($parser), $openEntityNames);
+                xml_parser_free($parser);
+                return FALSE;
+            }
+        }
+        xml_parser_free($parser);
+        return TRUE;
+    }
+    return FALSE;
+}
+function new_xml_parser($file) {
+    global $parser_file;
+    $xml_parser = xml_parser_create();
+    xml_parser_set_option($xml_parser, XML_OPTION_CASE_FOLDING, 1);
+    xml_set_element_handler($xml_parser, "startElement", "endElement");
+    xml_set_character_data_handler($xml_parser, "characterData");
+    xml_set_processing_instruction_handler($xml_parser, "PIHandler");
+    xml_set_default_handler($xml_parser, "defaultHandler");
+    xml_set_external_entity_ref_handler($xml_parser, "externalEntityRefHandler");
+    if (!($fp = @fopen($file, "r"))) {
+        return FALSE;
+    }
+    if (!is_array($parser_file)) {
+        settype($parser_file, "array");
+    }
+    $parser_file[$xml_parser] = $file;
+    return array($xml_parser, $fp);
+}
+if (!(list($xml_parser, $fp) = new_xml_parser($file))) {
+    die("could not open XML input");
+}
+print "&lt;pre&gt;";
+while ($data = fread($fp, 4096)) {
+    if (!xml_parse($xml_parser, $data, feof($fp))) {
+        die(sprintf("XML error: %s at line %d\n",
+                    xml_error_string(xml_get_error_code($xml_parser)),
+                    xml_get_current_line_number($xml_parser)));
+    }
+}
+print "&lt;/pre&gt;";
+print "parse complete\n";
+xml_parser_free($xml_parser);
+?&gt;
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      <example>
+       <title>xmltest.xml</title>
+       <programlisting role="xml">
+&lt;?xml version='1.0'?&gt;
+&lt;!DOCTYPE chapter SYSTEM "/just/a/test.dtd" [
+&lt;!ENTITY plainEntity "FOO entity"&gt;
+&lt;!ENTITY systemEntity SYSTEM "xmltest2.xml"&gt;
+]&gt;
+&lt;chapter&gt;
+ &lt;TITLE&gt;Title &amp;plainEntity;&lt;/TITLE&gt;
+ &lt;para&gt;
+  &lt;informaltable&gt;
+   &lt;tgroup cols="3"&gt;
+    &lt;tbody&gt;
+     &lt;row&gt;&lt;entry&gt;a1&lt;/entry&gt;&lt;entry morerows="1"&gt;b1&lt;/entry&gt;&lt;entry&gt;c1&lt;/entry&gt;&lt;/row&gt;
+     &lt;row&gt;&lt;entry&gt;a2&lt;/entry&gt;&lt;entry&gt;c2&lt;/entry&gt;&lt;/row&gt;
+     &lt;row&gt;&lt;entry&gt;a3&lt;/entry&gt;&lt;entry&gt;b3&lt;/entry&gt;&lt;entry&gt;c3&lt;/entry&gt;&lt;/row&gt;
+    &lt;/tbody&gt;
+   &lt;/tgroup&gt;
+  &lt;/informaltable&gt;
+ &lt;/para&gt;
+ &amp;systemEntity;
+ &lt;sect1 id="about"&gt;
+  &lt;title&gt;About this Document&lt;/title&gt;
+  &lt;para&gt;
+   &lt;!-- this is a comment --&gt;
+   &lt;?php print 'Hi!  This is PHP version '.phpversion(); ?&gt;
+  &lt;/para&gt;
+ &lt;/sect1&gt;
+&lt;/chapter&gt;
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      Ce fichier est inclus depuis <filename>xmltest.xml</filename>:
+      <example>
+       <title>xmltest2.xml</title>
+       <programlisting role="xml">
+&lt;?xml version="1.0" ?&gt;
+&lt;!DOCTYPE foo [
+&lt;!ENTITY testEnt "test entity"&gt;
+?&gt;
+&lt;foo&gt;
+   &lt;element attrib="value"?&gt;
+   &amp;testEnt;
+   &lt;?php print "This is some more PHP code being executed."; ?&gt;
+&lt;/foo&gt;
+       </programlisting>
+      </example>
+     </para>
+    </section>
+   </section>
+  </partintro>
+&reference.xml.functions;
+
+ </reference>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->
+

@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+<reference id="ref.dba">
+ <title>DBA</title>
+ <titleabbrev>DBA</titleabbrev>
+ <partintro>
+  <para>
+   Ces fonctions sont l'interface avec les bases de type Berkeley.
+  </para>
+  <para>
+   C'est une couche g&eacute;n&eacute;rale pour plusieurs bases de
+   donn&eacute;es sur fichiers. En tant que tel, les fonctionnalit&eacute;s
+   sont limit&eacute;es &agrave; une partie des fonctionnalit&eacute;s des
+   bases de donn&eacute;es modernes, comme
+   <ulink url="&url.sleepycat;">Sleepycat Software's DB2</ulink> (A ne pas
+   confondre avec IBM's DB2 software, qui fonctionne avec <link
+   linkend="ref.odbc">ODBC</link>).
+  </para>
+  <para>
+   Le comportement de certaines fonctions d&eacute;pends de la base de
+   donn&eacute;es utilis&eacute;e. Par exemple
+   <function>dba_optimize</function> et <function>dba_sync</function>
+   n'auront pas le m&ecirc;me effet d'une base &agrave; l'autre.
+  </para>
+  <para>
+   Lors de l'utilisation de la fonction <function>dba_open</function> ou de
+   <function>dba_popen</function>, une des librairies suivante doit
+   &ecirc;tre fournie comme argument. La liste compl&egrave;te des librairies
+   support&eacute;es par votre configuration est disponible avec la fonction
+   <function>phpinfo</function>.  (Pour ajouter le support de l'une
+   de ces librairies, ajouter l'option de configuration
+   <literal>--with-XXXX</literal>).
+   <table>
+    <title>Liste des librairies DBA</title>
+    <tgroup cols="2">
+     <thead>
+     <row>
+      <entry>Librairie</entry>
+      <entry>Notes</entry>
+     </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><literal>dbm</literal></entry>
+       <entry>
+        Dbm est la plus ancienne des base de donn&eacute;es de type Berkeley.
+        Il vaut mieux l'&eacute;viter si possible. Les fonctions de
+        compatibilit&eacute;s cod&eacute;es dans DB2 et gdbm
+        ne sont pas support&eacute;es, car elles ne sont compatibles qu'au
+        niveau du code source, et ne peuvent pas g&eacute;rer le format dbm
+        originel.
+        (<link linkend="install.configure.with-dbm"><option role="configure">
+        --with-dbm</option></link>).
+       </entry>
+      </row>
+      <row>
+       <entry><literal>ndbm</literal></entry>
+       <entry>
+        ndbm est un nouveau type de dbm plus flexible. Il a cependant
+        la majorit&eacute; des limitations du genre.
+        (<link linkend="install.configure.with-ndbm"><option role="configure">
+        --with-ndbm</option></link>).
+       </entry>
+      </row>
+      <row>
+       <entry><literal>gdbm</literal></entry>
+       <entry>
+        gdbm est <ulink url="&url.gdbm;">la base dbm GNU</ulink>.
+        (<link linkend="install.configure.with-gdbm"><option role="configure">
+        --with-gdbm</option></link>).
+       </entry>
+      </row>
+      <row>
+       <entry><literal>db2</literal></entry>
+       <entry>
+        db2 est <ulink url="&url.sleepycat;">DB2 de Sleepycat Software</ulink>.
+        Elle se d&eacute;crit comme un "ensemble d'outils qui fournissent une
+        base de donn&eacute;es performante, tant pour les applications
+        ind&eacute;pendantes que pour le client/serveur".
+        (<link linkend="install.configure.with-db2"><option role="configure">
+        --with-db2</option></link>).
+       </entry>
+      </row>
+      <row>
+       <entry><literal>db3</literal></entry>
+       <entry>
+        DB3 est le <ulink url="&url.sleepycat;">DB3 de Sleepycat
+        Software</ulink>.
+        (<link linkend="install.configure.with-db3"><option role="configure">
+        --with-db3</option></link>).
+       </entry>
+      </row>
+      <row>
+       <entry><literal>cdb</literal></entry>
+       <entry>
+        cdb est "un package rapide, robuste, l&eacute;ger, pour cr&eacute;er et
+        lire des bases de donn&eacute;es constantes". C'est l'auteur de qmail
+        qui l'a &eacute;crit, et elle est disponible <ulink
+        url="&url.cdb;">ici</ulink>. Puisque
+        c'est une base constante, elle ne supporte que la lecture.
+        (<link linkend="install.configure.with-cdb">--with-cdb</link>).
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+  <para>
+   <example>
+    <title>Exemple DBA</title>
+    <programlisting role="php">
+&lt;?php
+$id = dba_open("/tmp/test.db", "n", "db2");
+if(!$id) {
+    echo "dba_open a &eacute;chou&eacute;\n";
+    exit;
+}
+dba_replace("key", "Ceci est un exemple!", $id);
+if(dba_exists("key", $id)) {
+    echo dba_fetch("key", $id);
+    dba_delete("key", $id);
+}
+dba_close($id);
+?&gt;
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   DBA g&egrave;re les donn&eacute;es binaires, et n'a pas de limites
+   arbitraires. Elle h&eacute;rite de toutes les limites de la base 
+   sous-jacentes.
+  </para>
+  <para>
+   Toutes les bases de donn&eacute;es sur fichiers doivent fournir un moyen
+   de changer le mode d'acc&egrave;s au fichier d'une base, et si possible,
+   de toutes les bases. Le mode d'acc&egrave;s est g&eacute;n&eacute;ralement
+   pass&eacute; en 4&egrave;me argument &agrave; <function>dba_open</function>
+   ou <function>dba_popen</function>.
+  </para>
+  <para>
+   Vous pouvez acc&eacute;der &agrave; toutes les entr&eacute;es d'une
+   base d'une mani&egrave;re lin&eacute;aire, avec les fonctions
+   <function>dba_firstkey</function> et <function>dba_nextkey</function>.
+   Vous ne devez pas modifier une base lorsque vous la traversez ainsi.
+  </para>
+  <para>
+   <example>
+    <title>Passer en revue une base</title>
+    <programlisting role="php">
+&lt;?php
+// ...ouverture de la base...
+$key = dba_firstkey($id);
+while($key != FALSE) {
+    if(...) { 
+// conserver la cl&eacute; pour faire d'autres op&eacute;rations plus tard
+        $handle_later[] = $key;
+    }
+    $key = dba_nextkey($id);
+}
+for($i = 0; $i &lt; count($handle_later); $i++)
+    dba_delete($handle_later[$i], $id);
+?&gt;
+    </programlisting>
+   </example>
+  </para>
+ </partintro>
+&reference.dba.functions;
+
+</reference>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->
+

@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+<reference id="ref.ldap">
+ <title>LDAP</title>
+ <titleabbrev>LDAP</titleabbrev>
+ <partintro>
+  <section id="ldap.intro">
+  <title>Introduction &agrave; LDAP</title>
+  <para>
+   LDAP est l'acronyme de Lightweight Directory Access Protocol, c'est &agrave;
+   dire Protocole L&eacute;ger d'Acc&egrave;s aux Dossiers. C'est un protocole
+   utilis&eacute; pour acc&eacute;der &agrave; des "serveurs de dossiers", des
+   serveurs qui g&egrave;rent les informations de mani&egrave;re
+   hi&eacute;rarchique.
+  </para>
+  <para>
+   Le concept est similaire &agrave; la structure de votre disque dur, hormis
+   le fait que la racine s'appelle ici : "The world" (le monde), et que les
+   dossiers du premier niveau sont assimil&eacute;s &agrave; des pays. Les
+   niveaux inf&eacute;rieurs de la structure contiennent des entr&eacute;es
+   de soci&eacute;t&eacute;s, d'organisations ou de lieux tandis que les
+   niveaux encore inf&eacute;rieurs sont des gens, voire des &eacute;quipements
+   ou des documents.
+  </para>
+  <para>
+   Pour acc&eacute;der &agrave; un fichier sur votre disque, vous devez utiliser
+   la syntaxe suivante :
+  </para>
+  <literallayout>
+    /usr/local/myapp/docs
+  </literallayout>
+  <para>
+   Le slash indique une division de la r&eacute;f&eacute;rence, et la
+   s&eacute;quence est lue de gauche &agrave; droite.
+  </para>
+  <para>
+   Avec tous les d&eacute;tails, une r&eacute;f&eacute;rence LDAP s'appelle un "nom
+   distingu&eacute;" ("distinguished name"), appel&eacute; aussi "nd" ("dn" en anglais).
+   Par exemple :
+  </para>
+  <literallayout>
+    cn=Jean Dupont,ou=Comptes,o=Ma Soci&eacute;t&eacute;,c=Fr
+  </literallayout>
+  <para>
+   La virgule marque une division de la r&eacute;f&eacute;r&eacute;nce, et
+   la s&eacute;quence est lue de droite &agrave; gauche. Vous pouvez la lire
+   comme ceci :
+  </para>
+  <literallayout>
+    country = Fr
+    organization = Ma Soci&eacute;t&eacute;
+    organizationalUnit = Comptes
+    commonName = Jean Dupont
+  </literallayout>
+  <para>
+   De la m&ecirc;me fa&ccedil;on qu'il n'y a pas de r&egrave;gle universelle
+   d'organisation d'un disque dur, un serveur de dossier peut supporter
+   n'importe quelle structure du moment qu'elle a un sens pour ce qu'on en
+   fait. Cependant, il existe quelques conventions : il est impossible
+   d'&eacute;crire un code d'acc&egrave;s &agrave; un dossier sans en
+   conna&icirc;tre sa structure, de la m&ecirc;me fa&ccedil;on que vous
+   ne pouvez pas utiliser une base de donn&eacute;es sans en conna&icirc;tre
+   les tables.
+  </para>
+  </section>
+  <section id="ldap-example">
+  <title>Exemple complet </title>
+  <para>
+   Recup&eacute;rer toutes les entr&eacute;es dont le nom commence par "S"
+   dans un serveur, et afficher le nom et l'adresse email.
+  </para>
+  <example>
+   <title>Recherche LDAP </title>
+   <programlisting role="php">
+&lt;?php
+// Structure d'une commande simple :
+// connexion, lien, recherche, interpretation de la recherche
+// r&eacute;sultat, d&eacute;connexion
+  echo "&lt;?h3>LDAP query test&lt;?/h3>";
+  echo "Connexion ...";
+  $ds=ldap_connect("localhost");  // Doit &ecirc;tre un serveur LDAP valide!
+  echo "R&eacute;sultat de la connexion : ".$ds."&lt;?p>";
+  if ($ds) {
+    echo "Lien ...";
+    $r=ldap_bind($ds);     // Ceci est un lien "anonymous", typiquement
+                           // en lecture seule. En cas d'acc&egrave;s, affiche
+                           // " Lien r&eacute;sultat est"
+    echo "Lien r&eacute;sultat est ".$r."&lt;?p>";
+    echo "Recherche de (sn=S*) ...";
+    // Recherche dans les noms
+    $sr=ldap_search($ds,"o=Ma Soci&eacute;t&eacute;, c=Fr", "sn=S*");
+    echo "R&eacute;sultat : ".$sr."&lt;?p>";
+    echo "Nombre d'entr&eacute;e retourn&eacute;e : ".ldap_count_entries($ds,$sr)."&lt;?p>";
+    echo "Lecture des entr&eacute;es...&lt;?p>";
+    $info = ldap_get_entries($ds, $sr);
+    echo "Data for ".$info["count"]." items returned:&lt;?p>";
+    for ($i=0; $i&lt;?$info["count"]; $i++) {
+        echo "dn vaut : ". $info[$i]["dn"] ."&lt;?br>";
+        echo "premi&egrave;re entr&eacute;e cn vaut : ". $info[$i]["cn"][0] ."&lt;?br>";
+        echo "premi&egrave;r email vaut: ". $info[$i]["mail"][0] ."&lt;?p>";
+    }
+    echo "D&eacute;connexion ";
+    ldap_close($ds);
+  } else {
+    echo "&lt;?h4>Impossible de se connecter &agrave; un serveur LDAP &lt;?/h4>";
+  }
+?&gt;
+   </programlisting>
+  </example>
+  <section id="ldap.using">
+  <title>Utilisation des fonctions PHP LDAP </title>
+  <para>
+   Il faut d'abord que les biblioth&egrave;ques client LDAP soient
+   compil&eacute;es avec PHP. Vous pouvez vous procurer ces
+   biblioth&egrave;ques University of Michigan (ldap-3.3 package) ou
+   chez Netscape (Netscape Directory SDK).
+   </para><para>
+   Avant d'utiliser les fonctions LDAP il faut savoir :
+   <itemizedlist>
+    <listitem>
+     <para>
+      Le nom ou l'adresse du serveur &agrave; utiliser
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Le "nd" dans le serveur (la partie du monde qui est sur ce serveur,
+      ce qui peut correspondre &agrave; "o=Ma soci&eacute;t&eacute;,c=Fr")
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Eventuellement, un mot de passe pour acc&eacute;der au serveur (de nombreux
+      serveusr fournissent un acc&egrave;s anonyme ("anonymous bind")
+      mais requi&egrave;rent un mot de passe pour tous les autres).
+     </para>
+    </listitem>
+   </itemizedlist>
+  </para>
+  <para>
+   Une s&eacute;quence habituelle LDAP suivra le sch&eacute;ma suivant :
+   <literallayout>
+  ldap_connect()    // &eacute;tablit une connexion &agrave; un serveur
+     |
+  ldap_bind()       // nom de compte "login" ou anonyme
+     |
+    &eacute;x&eacute;cution de commandes sur le serveur, comme un listage, ou
+    une modification de donn&eacute;es avec affichage
+     |
+  ldap_close()      // "d&eacute;connexion"
+   </literallayout>
+  </para>
+  </section>
+  <section id="ldap.moreinfo">
+  <title>Plus d'informations</title>
+  <para>
+   Vous pouvez en apprendre encore plus, mais en anglais, aux adresses suivantes :
+  </para>
+  <itemizedlist>
+   <listitem>
+    <para>
+     <ulink url="&url.ldap.netscape;">Netscape</ulink>
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     <ulink url="&url.ldap.michigan;">University of Michigan</ulink>
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     <ulink url="&url.ldap.openldap;">OpenLDAP Project</ulink>
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     <ulink url="&url.ldap.ldapworld;">LDAP World</ulink>
+    </para>
+   </listitem>
+  </itemizedlist>
+  <para>
+   Le SDK Netscape contient un guide du programmeur au format HTML
+   particuli&egrave;rement pratique (en anglais).
+  </para>
+  </section>
+  </section>
+ </partintro>
+&reference.ldap.functions;
+
+</reference>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->
+

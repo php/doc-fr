@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+ <reference id="ref.session">
+  <title>Sessions</title>
+  <titleabbrev>Sessions</titleabbrev>
+  <partintro>
+   <para>
+    La gestion des sessions avec PHP est un moyen de sauver des informations
+    entre deux acc&egrave;s. Cela permet notamment de construire des
+    applications personnalis&eacute;es, et d'accro&icirc;tre l'attrait de votre site.
+   </para>
+   <para>
+    Si vous connaissez d&eacute;j&agrave; la gestion des sessions avec
+    phplib, vous remarquerez que certains concepts sont similaires.
+   </para>
+   <para>
+    Chaque visiteur qui acc&egrave;de &agrave; votre site se voit assigner
+    un num&eacute;ro d'identifiant, appel&eacute; plus loin "identifiant de
+    session". Celui-ci est enregistr&eacute; soit dans un cookie, chez
+    le client, soit dans l'URL.
+   </para>
+   <para>
+    Les sessions vous permettront d'enregistrer des variables pour
+    les pr&eacute;server et les r&eacute;utiliser tout au long de la
+    visites de votre site. Lorsqu'un visiteur acc&egrave;dere &agrave; votre site,
+    PHP v&eacute;rifiera automatiquement (si session.auto_start est &agrave;
+    1) ou manuellement (explicitement avec <function>session_start</function>
+    ou implicitement avec <function>session_register</function>) si une
+    session a d&eacute;j&agrave; &eacute;t&eacute; ouverte. Si
+    une telle session existe d&eacute;j&agrave;, l'environnement
+    pr&eacute;c&eacute;dent sera recr&eacute;&eacute;.
+   </para>
+   <para>
+    Toutes les variables &agrave; enregistrer seront enregistr&eacute;es
+    sur le disque &agrave; la fin de chaque requ&ecirc;te. Les variables
+    enregistr&eacute;es mais non d&eacute;finies seront marqu&eacute;es
+    comme telles. Lors des acc&egrave;s ult&eacute;rieurs, elles ne seront
+    d&eacute;finies que si l'utilisateur le fait.
+   </para>
+   <para>
+    Les options <literal>track_vars</literal> et <literal>gpc_globals</literal>
+    modifient la fa&ccedil;on dont les variables sont recharg&eacute;es.
+   </para>
+   <note>
+    <para>
+     Depuis PHP 4.0.3,
+     <link linkend="ini.track-vars"><literal>track_vars</literal></link> est toujours
+     activ&eacute;e.
+    </para>
+   </note>
+   <para>
+    Si <literal>track_vars</literal> est activ&eacute;e, et <link
+    linkend="ini.register-globals"><literal>register_globals</literal></link>
+    d&eacute;sactiv&eacute;e, alors les variables de session seront accessibles
+    uniquement dans le tableau associatif global $HTTP_STATE_VARS.
+    Les variables de session lues seront disponibles dans
+    $HTTP_STATE_VARS.
+    <example>
+     <title>
+      Enregistrer une variable lorsque l'option <link
+      linkend="ini.track-vars"><literal>track_vars</literal></link>
+      est activ&eacute;e
+     </title>
+     <programlisting role="php">
+&lt;?php
+  session_register("compte");
+  $HTTP_SESSION_VARS["compte"]++;
+?&gt;
+     </programlisting>
+    </example>
+   </para>
+   <para>
+    Si <link linkend="ini.register-globals"><literal>register_globals</literal></link>
+    est activ&eacute;e, alors les variables de session seront plac&eacute;es
+    dans les variables globales associ&eacute;es.
+    <example>
+     <title>
+      Enregistrer une variable lorsque <link
+      linkend="ini.register-globals"><literal>register_globals</literal></link>
+      est activ&eacute;e
+     </title>
+     <programlisting role="php">
+&lt;?php
+  session_register("compte");
+  $compte++;
+?&gt;
+     </programlisting>
+    </example>
+   </para>
+   <para>
+    Si les deux options
+    <link linkend="ini.track-vars"><literal>track_vars</literal></link> et
+    <link linkend="ini.register-globals"><literal>register_globals</literal></link>
+    sont activ&eacute;es, alors les variables globales et
+    $HTTP_STATE_VARS contiendront les valeurs de session.
+   </para>
+   <para>
+    Il y a deux modes de propagation de l'identifiant de session :
+    <itemizedlist>
+     <listitem>
+    <simpara>
+     Cookies
+    </simpara>
+     </listitem>
+     <listitem>
+    <simpara>
+     Param&egrave;tre URL
+    </simpara>
+     </listitem>
+    </itemizedlist>
+   </para>
+   <para>
+    Le module de session supporte les deux techniques. La
+    m&eacute;thode par cookies est optimale, mais &eacute;tant
+    donn&eacute; son peu de fiabilit&eacute; (les clients peuvent refuser
+    ou effacer les cookies), on ne peut pas se contenter de cette technique.
+    La deuxi&egrave;me m&eacute;thode place l'identifiant de session
+    directement dans l'URL.
+   </para>
+   <para>
+    PHP est capable de g&eacute;rer ceci de mani&egrave;re transparente,
+    lorsque vous le compilez avec l'option <link linkend="install.configure.enable-trans-sid">
+    <literal>--enable-trans-sid</literal></link>.
+    Dans ce cas, les URL relatives seront modifi&eacute;es pour
+    contenir l'identifiant de session automatiquement. Sinon,
+    vous pouvez toujours utiliser la constante <literal>SID</literal>,
+    qui sera d&eacute;finie si le client n'envoie pas le cookie
+    appropri&eacute;. <literal>SID</literal> prend la forme de
+    <literal>session_name=session_id</literal>, ou bien, c'est
+    une cha&icirc;ne vide.
+   </para>
+   <para>
+    <note>
+     <para>
+      La fonction qui g&eacute;rera l'&eacute;criture des donn&eacute;es ne sera appel&eacute;e
+      qu'une fois que le script aura envoy&eacute; toutes ses donn&eacute;es. Ainsi,
+      les affichages tent&eacute;s par cette fonction ne pourront jamais
+      &ecirc;tre re&ccedil;us par le navigateur. Si un tel affichage est n&eacute;cessaire,
+      il est conseill&eacute; d'&eacute;crire les debugs dans un fichier.
+     </para>
+    </note>
+   </para>
+   <para>
+    L'exemple suivant montre comment enregistrer une variable, et comment relier
+    correctement des pages avec SID.
+    <example>
+     <title>Compter le nombre de hits d'un utilisateur.</title>
+     <programlisting role="php">
+&lt;?php
+  session_register("compteur");
+  $compteur++;
+?&gt;
+Salut visiteur, vous avez vu cette page &lt;?php echo $compteur; ?&gt; times.&lt;P&gt;
+&lt;php?
+# le &lt;?=SID&gt; est n&eacute;cessaire pour transmettre l'identifiant de session
+# au cas o&ugrave; les utilisateurs auraient inactiv&eacute; les cookies
+?&gt;
+     </programlisting>
+     <simpara>
+      Pour continuer, &lt;A HREF="nextpage.php?&lt;?=SID"?&gt;clique ici&lt;/?&gt;
+    </simpara>
+    </example>
+   </para>
+   <para>
+    Le <literal>&lt;?=SID-&gt;</literal> n'est pas n&eacute;cessaire, si l'option
+    <link linkend="install.configure.enable-trans-sid">
+    <literal>--enable-trans-sid</literal></link> a &eacute;t&eacute; utilis&eacute;e
+    pour compiler PHP.
+   </para>
+   <para>
+    <note>
+     <para>
+     Les URL absolues sont consid&eacute;r&eacute;es comme des sites externes,
+     et PHP ne leur attribuera pas le SID, qui pourrait repr&eacute;senter
+     un trou de s&eacute;curit&eacute;.
+     </para>
+    </note>
+   </para>
+   <para>
+    Pour enregistrer ces informations dans une base de donn&eacute;es,
+    il vous faut utiliser la fonction <function>session_set_save_handler</function>.
+    Il faudra alors impl&eacute;menter la fonction suivante pour
+    l'adapter &agrave; MySQL ou &agrave; toute autre base de donn&eacute;es :
+   </para>
+   <para>
+    Le syst&egrave;me de gestion des sessions dispose d'un grand nombre d'options,
+    qui sont plac&eacute;es dans le fichier <filename>php.ini</filename>. En voici
+    un survol rapide :
+    <itemizedlist>
+     <listitem>
+      <simpara>
+      <literal>session.save_handler</literal> d&eacute;finit les noms
+      des fonctions qui seront utilis&eacute;es pour enregistrer et
+      retrouver les donn&eacute;es associ&eacute;es &agrave; une session.
+      Par d&eacute;faut, les sessions sont enregistr&eacute;es dans des
+      <literal>fichiers</literal>.
+        </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>session.save_path</literal> d&eacute;finit l'argument qui
+         est pass&eacute; &agrave; la fonction de sauvegarde. Si vous utilisez
+       la sauvegarde par fichier, cet argument est le chemin jusqu'au dossier
+       o&ugrave; les fichiers sont cr&eacute;&eacute;s. Par d&eacute;faut, le
+       dossier est <literal>/tmp</literal>.
+      </simpara>
+      <warning>
+       <para>
+        Si le dossier que vous utilisez a les droits de lecture universels,
+        comme <filename>/tmp</filename> (valeur par d&eacute;faut), les autres utilisateurs
+        du serveur peuvent aussi lire ces fichiers, et s'immiscer dans vos sessions.
+       </para>
+      </warning>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>session.name</literal> sp&eacute;cifie le nom de la session,
+       qui sera utilis&eacute; comme nom de cookie. Par d&eacute;faut :
+       <literal>PHPSESSID</literal>.
+      </simpara>
+     </listitem>
+     <listitem>
+    <simpara>
+     <literal>session.auto_start</literal> indique qu'une session doit
+     commencer automatiquement lors de la premier requ&ecirc;te. Par
+     d&eacute;faut, la valeur est &agrave; <literal>0</literal> (inactiv&eacute;).
+    </simpara>
+     </listitem>
+     <listitem>
+    <simpara>
+     <literal>session.lifetime</literal> fixe la dur&eacute;e de vie,
+     en secondes, du cookie envoy&eacute; au client. La valeur 0 signifie
+     "jusqu'&agrave; ce que le client soit ferm&eacute;". Par d&eacute;faut
+     &agrave; <literal>0</literal> (inactiv&eacute;).
+    </simpara>
+     </listitem>
+     <listitem>
+    <simpara>
+     <literal>session.serialize_handler</literal> d&eacute;finit le
+     nom de la fonction qui sera utilis&eacute;e pour enregistrer et
+     relire les donn&eacute;s. Actuellement, c'est un format interne
+     de PHP (nom : <literal>php</literal>) et WDDX (nom :
+     <literal>wddx</literal>). WDDX n'est utilisable que si
+     PHP a &eacute;t&eacute; compil&eacute; avec le
+     <link linkend="ref.wddx">support WDDX</link>. Par d&eacute;faut,
+     c'est le mode <literal>php</literal> qui est s&eacute;lectionn&eacute;.
+     </simpara>
+     </listitem>
+     <listitem>
+    <simpara>
+     <literal>session.gc_probability</literal> pr&eacute;cise la
+     probabilit&eacute; que la routine gc (garbage collection) soit
+     lanc&eacute;e, en pourcentage. Par d&eacute;faut, la valeur est &agrave;
+     <literal>1</literal>.
+    </simpara>
+     </listitem>
+     <listitem>
+    <simpara>
+     <literal>session.gc_maxlifetime</literal> fixe la dur&eacute;e,
+     en secondes, au-del&agrave; de laquelle les donn&eacute;es
+     consid&eacute;r&eacute;es comme inutiles seront supprim&eacute;es.
+    </simpara>
+     </listitem>
+     <listitem>
+    <simpara>
+     <literal>session.referer_check</literal> repr&eacute;sente la sous-cha&icirc;ne
+     que vous utilisez pour v&eacute;rifier la provenance de l'internaute.
+     Si l'ent&ecirc;te HTTP Referer vous est fournie par le navigateur
+     et que cette sous-cha&icirc;ne n'est pas trouv&eacute;e, la session qui vous est
+     fournie sera consid&eacute;r&eacute;e comme invalide (car provenant
+     probablement d'un autre site que le votre). Par d&eacute;faut, cette 
+     cha&icirc;ne est vide.
+    </simpara>
+     </listitem>
+     <listitem>
+    <simpara>
+     <literal>session.entropy_file</literal> est le chemin jusqu'&agrave;
+     une source externe (fichier) d'entropie, qui sera utilis&eacute;e
+     lors de la cr&eacute;ation de l'identifiant de session. Par exemple,
+     <literal>/dev/random</literal> ou <literal>/dev/urandom</literal> qui
+     sont disponibles sur de nombreux syst&egrave;mes UNIX.
+    </simpara>
+     </listitem>
+     <listitem>
+    <simpara>
+     <literal>session.entropy_length</literal> pr&eacute;cise le
+     nombre d'octets qui seront lus dans le fichier ci-dessus.
+     Par d&eacute;faut, <literal>0</literal> (inactiv&eacute;).
+    </simpara>
+     </listitem>
+     <listitem>
+    <simpara>
+     <literal>session.use_cookies</literal> cookies indique si le module doit
+     utiliser des cookies pour enregistrer l'identifiant de session chez le client.
+     Par d&eacute;faut, <literal>1</literal> (activ&eacute;).
+    </simpara>
+     </listitem>
+    <listitem>
+      <simpara>
+       <literal>session.cookie_path</literal> sp&eacute;cifie le chemin &agrave;
+       utiliser avec session_cookie. Par d&eacute;faut, <literal>/</literal>.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>session.cookie_domain</literal> sp&eacute;cifie le
+       domaine &agrave; utiliser avec session_cookie. Par d&eacute;faut, rien du tout.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>session.cache_limiter</literal> sp&eacute;cifie le contr&ocirc;le du
+       cache, &agrave; utiliser avec les pages de session (nocache/private/public).
+       Par d&eacute;faut, <literal>nocache</literal>.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>session.cache_expire</literal> sp&eacute;cifie la dur&eacute;e de vie
+       des pages de session cach&eacute;es, en minutes, mais sans que cela
+       ait d'effets sur le limiteur "nocache". Par d&eacute;faut, <literal>180</literal>.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>session.use_trans_sid</literal> indique si le support du
+       SID est activ&eacute; ou pas, lors de la compilation avec l'option
+       <link linkend="install.configure.enable-trans-sid">
+       <literal>--enable-trans-sid</literal></link>.
+       Par d&eacute;faut, elle vaut <literal>1</literal> (activ&eacute;e).
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>url_rewriter.tags</literal> spefifies which html tags are
+       rewritten to include session id if transient sid support is enabled.
+       Defaults to <literal>a=href,area=href,frame=src,input=src,form=fakeentry</literal>
+      </simpara>
+     </listitem>
+     </itemizedlist>
+    <note>
+     <para>
+      La gestion des sessions a &eacute;t&eacute; ajout&eacute;e en PHP 4.0.
+     </para>
+    </note>
+   </para>
+  </partintro>
+&reference.session.functions;
+
+ </reference>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->
+

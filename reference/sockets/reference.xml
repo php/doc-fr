@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+ <reference id="ref.sockets">
+  <title>Sockets</title>
+  <titleabbrev>Sockets</titleabbrev>
+  <partintro>
+   &warn.experimental;
+   <simpara>
+    L'extension socket impl&eacute;mente une interface bas niveau avec les
+    fonctions de communication par socket. Cela permet de mettre en place
+    un serveur aussi bien qu'un client.
+   </simpara>
+   <para>
+    Les fonctions socket d&eacute;crites ici sont rassembl&eacute;es dans une extension
+    PHP. Pour &ecirc;tre activ&eacute;es, il faut utiliser l'option de compilation
+    <option role="configure">--enable-sockets</option> au script
+    <command>configure</command>.
+   </para>
+   <para>
+    Pour une interface client plus g&eacute;n&eacute;rique, reportez vous &agrave;
+    <function>fsockopen</function> et <function>pfsockopen</function>.
+   </para>
+   <para>
+    Lorsque vous utiliserez les fonctions de sockets qui sont d&eacute;crites ici,
+    gardez bien &agrave; l'esprit que m&ecirc;me si elles ont souvent des noms identiques
+    aux fonctions C, elles ont souvent des prototypes diff&eacute;rents. Lisez attentivement
+    la documentation pour &eacute;viter les confusions.
+   </para>
+   <para>
+   	Cela dit, ceux qui n'ont pas l'habitude de la programmation avec les sockets
+   	pourront trouver beaucoup de documentation pertinente dans les pages de
+   	manuel Unix, et de nombreux tutorial de programmation C sur le web, dont la
+   	plus part peuvent &ecirc;tre repris apr&egrave;s de l&eacute;g&egrave;re
+   	modifications, en PHP.
+   </para>
+   <para>
+    <example>
+     <title>Exemple de programmation Socket : serveur TCP/IP</title>
+     <para>
+      Cet exemple est un serveur perroquete : tout ce que vous lui envoyez
+      vous est retourn&eacute;. Changez les variables
+      <varname>address</varname> et <varname>port</varname> pour les adapter &agrave;
+      votre configuration, et lancez le script. Vous pouvez vous connecter
+      au serveur avec une commande telle que <command>telnet 192.168.1.53 10000</command>
+      (avec l'adresse et le port qui sont ceux de votre configuration).
+      Pour vous d&eacute;connecter, tapez 'quit'.
+     </para>
+     <programlisting role="php">
+&lt;?php
+error_reporting(E_ALL);
+/* On autorise le script &agrave; attendre les connexions ind&eacute;finiment. */
+set_time_limit(0);
+/* Modifiez ces valeurs pour qu'elles soient celles de votre configuration */
+$address = '192.168.1.53';
+$port = 10000;
+if (($sock = socket(AF_INET, SOCK_STREAM, 0)) &lt; 0) {
+    echo "socket() a &eacute;chou&eacute; : raison : " . strerror($sock) . "\n";
+}
+if (($ret = bind($sock, $address, $port)) &lt; 0) {
+    echo "bind() a &eacute;chou&eacute; : raison: " . strerror($ret) . "\n";
+}
+if (($ret = listen($sock, 5)) &lt; 0) {
+    echo "listen() a &eacute;chou&eacute; : raison: " . strerror($ret) . "\n";
+}
+do {
+    if (($msgsock = accept_connect($sock)) &lt; 0) {
+        echo "accept_connect() a &eacute;chou&eacute; : raison : " . strerror($msgsock) . "\n";
+        break;
+    }
+    do {
+        $buf = '';
+        $ret = read($msgsock, $buf, 2048);
+        if ($ret &lt; 0) {
+            echo "read() a &eacute;chou&eacute; : raison : " . strerror($ret) . "\n";
+            break 2;
+        }
+        if ($ret == 0) {
+            break 2;
+        }
+        $buf = trim($buf);
+        if ($buf == 'quit') {
+            close($msgsock);
+            break 2;
+        }
+        $talkback = "PHP: Vous avez dit '$buf'.\n";
+        write($msgsock, $talkback, strlen($talkback));
+        echo "$buf\n";
+    } while (<literal>TRUE</literal>);
+    close($msgsock);
+} while (<literal>TRUE</literal>);
+close($sock);
+?&gt;
+     </programlisting>
+    </example>
+   </para>
+   <para>
+    <example>
+     <title>Exemple avec les sockets : Client TCP/IP</title>
+     <para>
+      Cet exemple est un client HTTP basique. Il se connecte &agrave; une page
+      envoi les ent&ecirc;tes (requ&ecirc;te HEAD), affiche le retour, et quitte.
+     </para>
+     <programlisting role="php">
+&lt;?php
+error_reporting(E_ALL);
+echo "&lt;h2>TCP/IP Connection&lt;/h2>\n";
+/* Demande le port du service WWW. */
+$service_port = getservbyname('www', 'tcp');
+/* Demande l'IP du serveur de destination. */
+$address = gethostbyname('www.php.net');
+/* Cr&eacute;e la connexion TCP/IP. */
+$socket = socket(AF_INET, SOCK_STREAM, 0);
+if ($socket &lt; 0) {
+    echo "socket() a &eacute;chou&eacute; : raison : " . strerror($socket) . "\n";
+} else {
+    "socket() r&eacute;ussi: " . strerror($socket) . "\n";
+}
+echo "Connexion &agrave; '$address' on port '$service_port'...";
+$result = connect($socket, $address, $service_port);
+if ($result &lt; 0) {
+    echo "connect()  a &eacute;chou&eacute; : raison : : ($result) " . strerror($result) . "\n";
+} else {
+    echo "OK.\n";
+}
+$in = "HEAD / HTTP/1.0\r\n\r\n";
+$out = '';
+echo "Envoi des ent&ecirc;tes HTTP HEAD...";
+write($socket, $in, strlen($in));
+echo "OK.\n";
+echo "Lecture de la r&eacute;ponse :\n\n";
+while (read($socket, $out, 2048)) {
+    echo $out;
+}
+echo "Fermeture de la socket...";
+close($socket);
+echo "OK.\n\n";
+?&gt;
+      </programlisting>
+     </example>
+    </para>
+  </partintro>
+&reference.sockets.functions;
+
+ </reference>
+ <!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->
+
