@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.7 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
-<!-- splitted from ./fr/functions/dbx.xml, last change in rev 1.5 -->
-<!-- last change to 'dbx-query' in en/ tree in rev 1.3 -->
+<!-- $Revision: 1.8 $ -->
+<!-- EN-Revision: 1.16 Maintainer: yannick Status: ready -->
   <refentry id="function.dbx-query">
    <refnamediv>
     <refname>dbx_query</refname>
@@ -18,10 +15,12 @@
       <methodparam choice="opt"><type>int</type><parameter>flags</parameter></methodparam>
      </methodsynopsis>
     <simpara>
-      retourne un objet dbx_result_object ou 
+      <function>dbx_query</function> retourne un objet dbx_result_object ou 
      <literal>1</literal>  en cas de succès (un objet de résultat
      ne sera retourné que pour les requêtes SQL qui retournent un
-     résultat), ou 0 en cas d'erreur. 
+     résultat), ou 0 en cas d'erreur. L'objet résultant n'est retourné que si la requète
+     donnée par <parameter>sql_statement</parameter> produit un jeu d'enregistrements.
+     (i.e. une requète SELECT, même si le résultat est vide).
     </simpara>
     <example>
      <title>Comment gérer la valeur retournée par <function>dbx_query</function></title>
@@ -34,14 +33,10 @@ $link   = dbx_connect(DBX_ODBC, "", "db", "username", "password")
 $result = dbx_query($link, 'SELECT id, parentid, description FROM table');
 
 if ( is_object($result) ) {
-    // ... Faire quelquechose d'utile ici
-    // first, print out field names and types 
-    // then, draw a table filled with the returned field values
-}
-else if ( $result == 1 ) {
-    echo("Requête exécutée correctement, mais pas de résultat.");
-}
-else {
+    // ... Faire quelque chose d'utile ici
+    // premièrement, afficher les noms des champs et leurs types
+    // et tracer un tableau avec les valeurs retournées
+} else {
     exit("La requête a échoué");
 }
 
@@ -50,14 +45,12 @@ dbx_close($link);
 ]]>
      </programlisting>
     </example>
-
     <para>     
-     Le paramètre
-     <parameter>flags</parameter> sert à contrôler la quantité
+     Le paramètre <parameter>flags</parameter> sert à contrôler la quantité
      d'informations retournée. Il peut être n'importe quelle
      combinaisons par l'opérateur OR des constantes ci-après. Les constantes
      remplacent la configuration du &php.ini;.
-          <variablelist>
+     <variablelist>
       <varlistentry>
        <term>
         <constant>DBX_RESULT_INDEX</constant>
@@ -112,11 +105,30 @@ dbx_close($link);
       </varlistentry>
       <varlistentry>
        <term>
+        <constant>DBX_RESULT_UNBUFFERED</constant> (CVS uniquement)
+       </term>
+       <listitem>
+        <simpara>
+	 Ce flag ne crée pas de propriété <property>data</property> et 
+	 la propriété <property>rows</property> sera initialement
+	 positionnée à 0. Utilisez ce flag pour des jeux d'enregistrements importants
+	 et utilisez <function>dbx_fetch_row</function> our retrouver le résultat
+	 ligne par ligne.
+        </simpara>
+        <simpara>
+	 <function>dbx_fetch_row</function> retournera les lignes qui se conforment
+	 au flag de la requète. Par ailleurs, celà mettera à jours les lignes à chaque 
+	 appel de la fonction.
+        </simpara>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term>
         <constant>DBX_COLNAMES_UNCHANGED</constant> (disponible depuis PHP 4.3.0)
        </term>
        <listitem>
         <simpara>
-         La casse du nom des colonnes retournée ne sera pas modifiée.
+         La casse du nom des colonnes retournées ne sera pas modifiée.
         </simpara>
        </listitem>
       </varlistentry>
@@ -166,8 +178,6 @@ dbx_close($link);
       </listitem>
      </itemizedlist>
     </para>
-    <para> 
-    </para>
     <para>
      Un objet dbx_result_object a 5 membres (éventuellement 4, suivants
      les valeurs de <parameter>flags</parameter>) : 
@@ -181,9 +191,9 @@ dbx_close($link);
          Ceci est une ressource représentant la connexion à la 
          base de données, et il peut être utilisé (si nécessaire) avec
          les fonctions spécialisées de la base.
-         <example role="php">
+         <example>
           <title>Exemple avec <function>dbx_query</function></title>
-          <programlisting>
+          <programlisting role="php">
 <![CDATA[
 <?php
   $result = dbx_query($link, "SELECT id FROM table");
@@ -204,7 +214,7 @@ dbx_close($link);
          Ces deux membres contiennent respectivement 
          le nombre de colonnes et de lignes.
          <example>
-          <title>Nombre de ligne et colonnes avec <function>dbx_query</function></title>
+          <title>Nombre de lignes et colonnes avec <function>dbx_query</function></title>
           <programlisting role="php">
 <![CDATA[
 <?php
@@ -234,6 +244,7 @@ echo $result->cols; // nombre de champs
          <title>Listes les types et noms de colonnes avec dbplus</title>
          <programlisting role="php">
 <![CDATA[
+<?php
 $result = dbx_query ($link, 'SELECT id FROM table',
                      DBX_RESULT_INDEX | DBX_RESULT_INFO);
 
@@ -241,6 +252,7 @@ for ($i = 0; $i < $result->cols; $i++ ) {
     echo $result->info['name'][$i] . "\n";
     echo $result->info['type'][$i] . "\n";  
 }
+?>
 ]]>
          </programlisting>
         </example>
@@ -252,7 +264,7 @@ for ($i = 0; $i < $result->cols; $i++ ) {
        </term>
        <listitem>
         <simpara>
-         Ce membre contient les résultat obtenus, possiblement associés
+         Ce membre contient les résultats obtenus, possiblement associés
          avec le nom de colonne, en fonction de la valeur du paramètre 
          <parameter>flags</parameter>. Si <constant>DBX_RESULT_ASSOC</constant> 
          est activé, il est possible d'utiliser aussi
@@ -262,6 +274,7 @@ for ($i = 0; $i < $result->cols; $i++ ) {
          <title>Afficher le contenu d'une base avec dbplus</title>
          <programlisting role="php">
 <![CDATA[
+<?php
 $result = dbx_query ($link, 'SELECT id, parentid, description FROM table');
 
 echo "<table>\n";
@@ -273,6 +286,29 @@ foreach ( $result->data as $row ) {
     echo "</tr>\n";
 }
 echo "</table>\n";
+?>
+]]>
+         </programlisting>
+        </example>
+	<example>
+         <title>Comment utiliser les requètes UNBUFFERED</title>
+         <programlisting role="php">
+<![CDATA[
+<?php
+
+$result = dbx_query ($link, 'SELECT id, parentid, description FROM table', DBX_RESULT_UNBUFFERED);
+
+echo "<table>\n";
+while ($row = dbx_fetch_row($result)) {
+    echo "<tr>\n";
+    foreach ($row as $field) {
+        echo "<td>$field</td>";
+    }
+    echo "</tr>\n";
+}
+echo "</table>\n";
+
+?>
 ]]>
          </programlisting>
         </example>
@@ -284,6 +320,10 @@ echo "</table>\n";
      <para>
       Reportez-vous aussi à la documentation de la base de données que vous
       utilisez.
+     </para>
+     <para>
+      Les noms des colonnes pour les requètes sur des bases de données Oracle sont
+      retournés en minuscule.
      </para>
     </note>
     <para>
