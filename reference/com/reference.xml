@@ -1,34 +1,63 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.6 $ -->
-<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.7 $ -->
+<!-- EN-Revision: 1.7 Maintainer: didou Status: ready -->
 <reference id="ref.com">
- <title>Support COM pour Windows</title>
+ <title>COM and .Net (Windows)</title>
  <titleabbrev>COM</titleabbrev>
   <partintro> 
    <section id="com.intro">
     &reftitle.intro;
     <para>
-     COM est une technologie qui permet la réutilisation de code écrit
-     dans n'importe quel langage, en utilisant une convention d'appel
-     standardisée, et un masquage des détails d'implémentations derrière des API
-     (tels que le nom de la machine de stockage, ou le programme d'exécution).
-     Elle peut être considérée comme un super mécanisme d'appel
-     distant (Remote Procedure Call, RPC), avec des racines orientées objets.
-     COM sépare l'implémentation de l'interface.
-    </para> 
+     COM est un acronyme pour Component Object Model; c'est une couche orientée
+     objet (et services associés) au dessus de DCE RPC (un standard libre) qui 
+     défini une convention de nommage commune qui permet à un code écrit en 
+     n'importe quel langage de communiquer avec du code écrit dans un autre 
+     langage, sous peu que ces deux langages soient compatibles avec COM.
+     Les codes n'ont pas besoin de faire partie du même exécutable. le code peut
+     être chargé à partir d'une DLL, trouvé dans un autre processus fonctionnant
+     sur le même serveur, ou, avec DCOM (Distributed COM), trouvé sur une machine
+     distante, sans même que votre code ait à savoir où il se trouve.
+    </para>
     <para>
-     COM encourage le versionnage, la séparation de l'implémentation et de
-     l'interface, et le masquage des détails d'implémentation, tels que le
-     programme d'exécution ou le langage de programmation.
-    </para> 
+     Il y'a une partie de COM connue sous le nom de OLE Automation qui comprend un
+     jeu d'interfaces COM qui permettent de perdre l'attache aux objets COM, pour 
+     qu'ils puissent être introspectés et appelés en cours d'exécution sans savoir
+     au moment de la compilation comment l'objet fonctionne. L'extension COM de &php;
+     utilitise les interfaces OLE Automation pour vous permettre de créer et appeler des
+     objets compatibles depuis vos scripts. Techniquement parlant, cela devrait
+     vraiment s'appeler "the OLE Automation Extension for PHP", puisque tous les objets
+     COM ne sont pas forcément compatibles OLE.
+    </para>
+    <para>
+     Maintenant, pourquoi voudriez-vous ou devriez-vous utiliser COM ? COM est
+     l'une des méthodes les plus utilisées pour faire communiquer des applications
+     et des composants sur les plateformes Windows. en utilisant COM, vous pouvez
+     ouvrir un document Microsoft Word, remplir un fichier de template et sauvegarder
+     pour l'envoyer par email à votre visiteur. Vous pouvez aussi utiliser COM
+     pour effectuer des tâches administratives sur votre réseau et configurer 
+     IIS; ce ne sont que les utilisations les plus habituelles, vous pouvez faire
+     beaucoup plus avec COM.
+    </para>
+    <para>
+     Avec PHP 5, cette extension (et cette documentation) on été réécrits de A à Z
+     et la plupart des vieux problèmes et concepts portant à confusion ont été
+     supprimées. De plus, nous supportons l'instanciation et la création d'assemblées
+     .Net utilisant une couche d'intéropérabilité COM fourni par Microsoft.
+    </para>
+    <para>
+     Lisez bien <ulink url="&url.zend.comdotnet;">cet article</ulink>
+     pour un aperçu des modifications de cette extension dans PHP 5.
+    </para>
    </section>
 
    <section id="com.requirements">
     &reftitle.required;
     <para>
-     Les fonctions COM sont uniquement disponibles sur les versions
-     Windows de PHP. Elles ont été ajoutées à
-     partir de PHP 4.0.
+     Les fonctions COM sont uniquement disponibles pour les versions
+     Windows de PHP. 
+    </para>
+    <para>
+     Le support .NET requièrt &php; 5 et l'exécutable .NET.
     </para> 
    </section>
 
@@ -36,6 +65,126 @@
     &reftitle.install;
     &no.install;
     &windows.builtin;
+    <para>
+     Vous êtes responsables de l'installation du support des divers objets COM
+     que vous voulez utiliser (comme MS Word); nous ne pouvons et ne voulons pas
+     les inclure tous avec &php;.
+    </para>
+   </section>
+
+   <section id="com.foreach">
+    <title>For Each</title>
+
+    <para>
+     Avec &php; 5, vous pouvez utiliser la structure de controle <xref
+     linkend="control-structures.foreach"/> de &php; pour itérer à travers
+     le contenu d'un IEnumVariant COM/OLE standard. Cela signifie que vous
+     pouvez utiliser foreach aux endroits où vous auriez pu utiliser
+     <literal>For Each</literal> dans du code VB/ASP.
+    </para>
+
+   <para>
+    <example>
+     <title>For Each en ASP</title>
+     <programlisting role="asp">
+<![CDATA[
+<%
+Set domainObject = GetObject("WinNT://Domain")
+For Each obj in domainObject
+  Response.Write obj.Name & "<br />"
+Next
+%>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>while() ... Next() en PHP 4</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$domainObject = new COM("WinNT://Domain");
+while ($obj = $domainObject->Next()) {
+   echo $obj->Name . "<br />";
+}
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>foreach en PHP 5</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$domainObject = new COM("WinNT://Domain");
+foreach ($domainObject as $obj) {
+   echo $obj->Name . "<br />";
+}
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+   </section>
+
+   <section id="com.arrays">
+    <title>Tableaux et propriétées à la façon des tableaux de COM</title>
+
+    <para>
+     Plusieurs objets COM exposent leurs propriétés comme tableaux, ou en
+     utilisant un chemin d'accès à la façon des tableaux. En &php; 4, vous
+     pouvez utiliser la syntaxe de tableaux de &php; pour lire/écrire une
+     propriété de ce genre, mais une seule dimension est permise. Si vous 
+     voulez lire une propriété multi-dimensionnelle, vous pouvez accèder
+     à la propriété à travers une fonction ou chaque paramètre représente
+     une dimenssion de ce tableau, mais il n'y a aucun moyen d'écrire une
+     telle propriété.
+    </para>
+
+    <para>
+     &php; 5 introduit différentes nouvelles fonctionnalités  pour vous
+     faciliter la vie:
+
+     <itemizedlist>
+      <listitem>
+       <para>
+        Accédez aux tableaux multi-dimensionnels ou aux propriétés COM qui
+        requièrent plusieurs paramètres comme si vous accédiez à un tableau.
+        Vous pouvez aussi écrire ces propriétés en utilisant cette technique.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        Bouclez sur les SafeArrays ("vrais" tableaux) en utilisant la structure
+        de controle <xref linkend="control-structures.foreach"/>. Cela fonctionne
+        car un SafeArrays comportent des informations à propos de sa taille. Si
+        une propriété à la façon des tableaux implémente IEnumVariant alors vous
+        pouvez aussi utiliser foreach pour cette propriété; lisez <xref
+        linkend="com.foreach"/> pour plus d'informations à ce sujet.
+       </para>
+      </listitem>
+     </itemizedlist>
+    </para>
+
+   </section>
+
+   <section id="com.exceptions">
+    <title>Exceptions (PHP 5)</title>
+
+    <para>
+     Cette extension lancera des instances de la classe <literal>com_exception</literal>
+     pour toute erreur fatale reportée par COM. Toutes les exceptions COM ont une
+     propriété <literal>code</literal> qui correspond à la valeur de retour HRESULT
+     des diverses opérations COM. Vous pouvez utiliser ce code pour choisir de façon
+     automatique comment gérer cette exception.
+    </para>
+
    </section>
 
    &reference.com.ini;
@@ -49,6 +198,12 @@
      <ulink url="&url.comspecs;">spécifications COM</ulink> ou bien
      jetez un oeil au livre de Don Box (en anglais) : 
      <ulink url="&url.yacl;">Yet Another COM Library (YACL)</ulink>.
+     Vous pouvez trouver des informations utiles dans notre FAQ pour <xref
+     linkend="faq.com"/>.
+     Si vous voulez utiliser des applications MS Office sur le serveur, vous devez
+     lire les informations ici : <ulink
+     url="&url.msoffice.serverside;">Considerations for Server-Side Automation
+     of Office</ulink>.
     </para> 
    </section>
   </partintro> 
