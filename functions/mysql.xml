@@ -4,10 +4,26 @@
   <partintro>
    <simpara>
     Ces fonctions vous permettent d'acc&eacute;der aux bases de donn&eacute;es MySQL.
+    Afin de pouvoir les utiliser, vous devez compiler PHP avec le support
+    MySQL, en utilisant l'option <option role="configure">--with-mysql</option>.
+    Si vous utilisez cette fonction sans pr&eacute;ciser le chemin
+    d'acc&egrave;s &agrave; la base MySQL, PHP utilisera les librairies cliente MySQL
+    fournies en standard. Les utilisateurs qui font tourner d'autres
+    applications qui utilisent elles-m&ecirc;mes MySQL (par exemple, PHP 3 et
+    PHP 4 utilis&eacute;s comme des modules concurents apache, ou encore
+    auth-mysql), devrait toujours sp&eacute;cifier le chemin jusqu'&agrave; MySQL :
+    <option role="configure">--with-mysql=/path/to/mysql</option>.
+    Cela va forcer PHP &agrave; utiliser les librairies clientes install&eacute;es par
+    MySQL, et &eacute;vitera les conflits.
    </simpara>
    <simpara>
     Plus d'informations sont disponibles &agrave; 
     <ulink url="http://www.mysql.com/">http://www.mysql.com/</ulink>.
+   </simpara>
+   <simpara>
+    La documentation de MySQL est disponibles &agrave; <ulink
+    url="&url.mysql.docs;">&url.mysql.docs;</ulink>, ainsi qu'en fran&ccedil;ais
+    chez <ulink url="http://dev.nexen.net/docs/mysql/">nexen</ulink>.
    </simpara>
   </partintro>
 
@@ -284,7 +300,7 @@
     </para>
 
     <example>
-     <title>Exemple MySQL data seek</title>
+     <title>Exemple <function>mysql_data_seek</function></title>
      <programlisting role="php">
 &lt;?php
     $link = mysql_pconnect ("kron", "jutta", "geheim") {
@@ -318,6 +334,64 @@
 ?>
      </programlisting>
     </example>
+   </refsect1>
+  </refentry>
+  
+    <refentry id="function.mysql-db-name">
+   <refnamediv>
+    <refname>mysql_db_name</refname>
+    <refpurpose>Get result data</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>int <function>mysql_db_name</function></funcdef>
+      <paramdef>int <parameter>result</parameter></paramdef>
+      <paramdef>int <parameter>row</parameter></paramdef>
+      <paramdef>mixed 
+       <parameter>
+        <optional>field</optional>
+       </parameter>
+      </paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para> 
+     <function>mysql_db_name</function> prend comme premier argument
+     le pointeur de r&eacute;sultat issu de <function>mysql_list_dbs</function>. 
+     <parameter>row</parameter> est l'index dans le r&eacute;sultat.
+     </para>
+
+    <para>
+     Si une erreur survient, FALSE est retourn&eacute;. Utilisez
+     <function>mysql_errno</function> et
+     <function>mysql_error</function> pour conna&icirc;tre la nature de l'erreur.
+    </para>
+
+    <example>
+     <title>Exemple <function>mysql_db_name</function></title>
+     <programlisting role="php">
+&lt;?php 
+error_reporting(E_ALL);
+
+mysql_connect('dbhost', 'username', 'password');
+$db_list = mysql_list_dbs();
+
+$i = 0;
+$cnt = mysql_numrows($db_list);
+while ($i < $cnt) {
+    echo mysql_db_name($db_list, $i) . "\n";
+    $i++;
+}
+?>
+     </programlisting>
+    </example>
+
+    <para>
+     Pour des raisons de compatibilit&eacute; ascendante, <function>mysql_dbname</function>
+     est aussi accept&eacute;, mais obsol&egrave;te.
+    </para>
+
    </refsect1>
   </refentry>
 
@@ -527,6 +601,64 @@ while($row = mysql_fetch_array($result)) {
     echo $row["fullname"];
 }
 mysql_free_result($result);
+?>
+     </programlisting>
+    </example>
+   </refsect1>
+  </refentry>
+  
+  <refentry id="function.mysql-fetch-assoc">
+   <refnamediv>
+    <refname>mysql_fetch_assoc</refname> 
+    <refpurpose>
+     Lit une ligne de r&eacute;sultat dans un tableau associatif
+    </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>array <function>mysql_fetch_assoc</function></funcdef>
+      <paramdef>int <parameter>result</parameter></paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para> 
+     <function>mysql_fetch_assoc</function> retourne un tableau associatif
+     qui contient la ligne lue, ou bien FALSE, si il ne reste plus de lignes.
+    </para>
+    <para>
+     <function>mysql_fetch_assoc</function> est &eacute;quivalente &agrave; 
+     <function>mysql_fetch_array</function> utilis&eacute;e avec l'option MYSQL_ASSOC.
+     Elle ne retourne qu'un tableau associatif. C'est le fonctionnement
+     original de <function>mysql_fetch_array</function>. Si vous avez besoin
+     d'indices num&eacute;riques, utilisez <function>mysql_fetch_array</function>.
+    </para>
+    <para>
+     Si plusieurs colonnes on le m&ecirc;me nom, la derni&egrave;re aura la priorit&eacute;. 
+     Pour acc&eacute;der aux autres colonnes du m&ecirc;me nom, vous devez utiliser
+     <function>mysql_fetch_array</function> et les indices num&eacute;riques.
+    </para>
+    <para>
+     Une chose importante &agrave; noter est que <function>mysql_fetch_assoc</function>
+     n'est PAS significativement plus lente que 
+     <function>mysql_fetch_row</function>, alors qu'elle apporte un confort
+     d'utilisation important.
+    </para>
+    <para>
+     Pour plus de d&eacute;tails, reportez vous &agrave; 
+     <function>mysql_fetch_row</function> et <function>mysql_fetch_array</function>.
+    </para>
+    <example>
+     <title><function>mysql_fetch_assoc</function></title>
+     <programlisting role="php">
+&lt;?php 
+mysql_connect ($host, $user, $password);
+$result = mysql_db_query ("database","select * from table");
+while ($row = mysql_fetch_assoc ($result)) {
+    echo $row["user_id"];
+    echo $row["fullname"];
+}
+mysql_free_result ($result);
 ?>
      </programlisting>
     </example>
@@ -750,6 +882,38 @@ mysql_free_result($result);
     </para>
    </refsect1>
   </refentry>
+  
+    <refentry id="function.mysql-field-flags">
+   <refnamediv>
+    <refname>mysql_field_flags</refname>
+    <refpurpose>
+     Retourne le s&eacute;maphore associ&eacute; &agrave; la colonne sp&eacute;cifi&eacute;e dans le r&eacute;sultat courant.
+  </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>string <function>mysql_field_flags</function></funcdef>
+     <paramdef>int <parameter>result</parameter></paramdef>
+     <paramdef>int <parameter>field_offset</parameter></paramdef>
+    </funcsynopsis>
+    <para> 
+     <function>mysql_field_flags</function> retourne le s&eacute;maphore associ&eacute; au champs 
+     sp&eacute;cifi&eacute; par <parameter>field_offset</parameter>. Les s&eacute;maphores sont retourn&eacute;s
+     comme des mots, s&eacute;par&eacute;s par des espaces, ce qui les rend facile &agrave; s&eacute;parer, avec la 
+     commande <function>explode</function>.
+    </para>
+    <para>
+     Les valeurs suivantes (pour une version suffisamment r&eacute;cente de MySQL) sont 
+     disponibles : "not_null", "primary_key", "unique_key", "multiple_key", "blob", 
+     "unsigned", "zerofill", "binary", "enum", "auto_increment", "timestamp".
+    </para>
+    <para> 
+     Pour des raisons de compatibilit&eacute; ascendante, mysql_fieldflags() peut encore &ecirc;tre 
+     utilis&eacute;.
+    </para>
+   </refsect1>
+  </refentry>
 
   <refentry id="function.mysql-field-name">
    <refnamediv>
@@ -777,6 +941,31 @@ mysql_free_result($result);
     <para>
        Pour des raisons de compatibilit&eacute; ascendante, mysql_fieldname()
        peut encore &ecirc;tre utilis&eacute;.
+    </para>
+   </refsect1>
+  </refentry>
+  
+  
+  <refentry id="function.mysql-field-len">
+   <refnamediv>
+    <refname>mysql_field_len</refname> 
+    <refpurpose>
+     Retourne la longueur du champs sp&eacute;cifi&eacute;.
+  </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>int <function>mysql_field_len</function></funcdef>
+     <paramdef>int <parameter>result</parameter></paramdef>
+     <paramdef>int <parameter>field_offset</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>mysql_field_len</function> retourne la taille du champs sp&eacute;cifi&eacute;. 
+    </para>
+    <para>
+     Pour des raisons de compatibilit&eacute; ascendante, mysql_fieldlen() peut encore &ecirc;tre 
+     utilis&eacute;.
     </para>
    </refsect1>
   </refentry>
@@ -879,62 +1068,6 @@ mysql_close();
    </refsect1>
   </refentry>
 
-  <refentry id="function.mysql-field-flags">
-   <refnamediv>
-    <refname>mysql_field_flags</refname>
-    <refpurpose>
-     Retourne le s&eacute;maphore associ&eacute; &agrave; la colonne sp&eacute;cifi&eacute;e dans le r&eacute;sultat courant.
-  </refpurpose>
-   </refnamediv>
-   <refsect1>
-    <title>Description</title>
-    <funcsynopsis>
-     <funcdef>string <function>mysql_field_flags</function></funcdef>
-     <paramdef>int <parameter>result</parameter></paramdef>
-     <paramdef>int <parameter>field_offset</parameter></paramdef>
-    </funcsynopsis>
-    <para> 
-     <function>mysql_field_flags</function> retourne le s&eacute;maphore associ&eacute; au champs 
-     sp&eacute;cifi&eacute; par <parameter>field_offset</parameter>. Les s&eacute;maphores sont retourn&eacute;s
-     comme des mots, s&eacute;par&eacute;s par des espaces, ce qui les rend facile &agrave; s&eacute;parer, avec la 
-     commande <function>explode</function>.
-    </para>
-    <para>
-     Les valeurs suivantes (pour une version suffisamment r&eacute;cente de MySQL) sont 
-     disponibles : "not_null", "primary_key", "unique_key", "multiple_key", "blob", 
-     "unsigned", "zerofill", "binary", "enum", "auto_increment", "timestamp".
-    </para>
-    <para> 
-     Pour des raisons de compatibilit&eacute; ascendante, mysql_fieldflags() peut encore &ecirc;tre 
-     utilis&eacute;.
-    </para>
-   </refsect1>
-  </refentry>
-
-  <refentry id="function.mysql-field-len">
-   <refnamediv>
-    <refname>mysql_field_len</refname> 
-    <refpurpose>
-     Retourne la longueur du champs sp&eacute;cifi&eacute;.
-  </refpurpose>
-   </refnamediv>
-   <refsect1>
-    <title>Description</title>
-    <funcsynopsis>
-     <funcdef>int <function>mysql_field_len</function></funcdef>
-     <paramdef>int <parameter>result</parameter></paramdef>
-     <paramdef>int <parameter>field_offset</parameter></paramdef>
-    </funcsynopsis>
-    <para>
-     <function>mysql_field_len</function> retourne la taille du champs sp&eacute;cifi&eacute;. 
-    </para>
-    <para>
-     Pour des raisons de compatibilit&eacute; ascendante, mysql_fieldlen() peut encore &ecirc;tre 
-     utilis&eacute;.
-    </para>
-   </refsect1>
-  </refentry>
-
   <refentry id="function.mysql-free-result">
    <refnamediv>
     <refname>mysql_free_result</refname>
@@ -982,6 +1115,33 @@ mysql_close();
     </para>
    </refsect1>
   </refentry>
+  
+    <refentry id="function.mysql-list-dbs">
+   <refnamediv>
+    <refname>mysql_list_dbs</refname> 
+    <refpurpose>
+    Liste les bases de donn&eacute;es disponibles sur le serveur MySQL.
+  </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>int <function>mysql_list_dbs</function></funcdef>
+     <paramdef>int 
+      <parameter>
+       <optional>link_identifier</optional>
+      </parameter>
+     </paramdef>
+    </funcsynopsis>
+    <para>
+     <function>mysql_list_dbs</function> retournera un identifiant de r&eacute;sultat, qui contiendra les noms des bases de donn&eacute;es disponsibles sur le serveur MySQL. Utilisez la fonction <function>mysql_tablename</function> pour lire toutes les bases de donn&eacute;es.
+    </para>
+    <para>
+      Pour des raisons de compatibilit&eacute; ascendante, mysql_listdbs() est encore 
+      disponible.
+    </para>
+   </refsect1>
+  </refentry>
 
   <refentry id="function.mysql-list-fields">
    <refnamediv>
@@ -1019,33 +1179,6 @@ mysql_close();
     <para>
      Pour des raisons de compatibilit&eacute; ascendante, mysql_listfields() est encore 
      disponble.
-    </para>
-   </refsect1>
-  </refentry>
-
-  <refentry id="function.mysql-list-dbs">
-   <refnamediv>
-    <refname>mysql_list_dbs</refname> 
-    <refpurpose>
-    Liste les bases de donn&eacute;es disponibles sur le serveur MySQL.
-  </refpurpose>
-   </refnamediv>
-   <refsect1>
-    <title>Description</title>
-    <funcsynopsis>
-     <funcdef>int <function>mysql_list_dbs</function></funcdef>
-     <paramdef>int 
-      <parameter>
-       <optional>link_identifier</optional>
-      </parameter>
-     </paramdef>
-    </funcsynopsis>
-    <para>
-     <function>mysql_list_dbs</function> retournera un identifiant de r&eacute;sultat, qui contiendra les noms des bases de donn&eacute;es disponsibles sur le serveur MySQL. Utilisez la fonction <function>mysql_tablename</function> pour lire toutes les bases de donn&eacute;es.
-    </para>
-    <para>
-      Pour des raisons de compatibilit&eacute; ascendante, mysql_listdbs() est encore 
-      disponible.
     </para>
    </refsect1>
   </refentry>
@@ -1380,7 +1513,7 @@ $result = mysql_query ("SELECT my_col FROM my_tbl")
       nom de la table. La fonction <function>mysql_num_rows</function> peut &ecirc;tre 
       utilis&eacute;e pour d&eacute;terminer le nombre de tables dans le pointeur de r&eacute;sultat.
      <example>
-      <title>Exemple <function>Mysql_tablename</function></title>
+      <title>Exemple <function>mysql_tablename</function></title>
       <programlisting role="php">
 &lt;?php 
 mysql_connect ("localhost:3306");
