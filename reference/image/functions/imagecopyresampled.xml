@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.14 $ -->
-<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.15 $ -->
+<!-- EN-Revision: 1.6 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
  <refentry id="function.imagecopyresampled">
   <refnamediv>
@@ -11,16 +11,16 @@
    <title>Description</title>
     <methodsynopsis>
      <type>bool</type><methodname>imagecopyresampled</methodname>
-     <methodparam><type>resource</type><parameter>dst_im</parameter></methodparam>
-     <methodparam><type>resource</type><parameter>src_im</parameter></methodparam>
-     <methodparam><type>int</type><parameter>dstX</parameter></methodparam>
-     <methodparam><type>int</type><parameter>dstY</parameter></methodparam>
-     <methodparam><type>int</type><parameter>srcX</parameter></methodparam>
-     <methodparam><type>int</type><parameter>srcY</parameter></methodparam>
-     <methodparam><type>int</type><parameter>dstW</parameter></methodparam>
-     <methodparam><type>int</type><parameter>dstH</parameter></methodparam>
-     <methodparam><type>int</type><parameter>srcW</parameter></methodparam>
-     <methodparam><type>int</type><parameter>srcH</parameter></methodparam>
+     <methodparam><type>resource</type><parameter>dst_image</parameter></methodparam>
+     <methodparam><type>resource</type><parameter>src_image</parameter></methodparam>
+     <methodparam><type>int</type><parameter>dst_x</parameter></methodparam>
+     <methodparam><type>int</type><parameter>dst_y</parameter></methodparam>
+     <methodparam><type>int</type><parameter>src_x</parameter></methodparam>
+     <methodparam><type>int</type><parameter>src_y</parameter></methodparam>
+     <methodparam><type>int</type><parameter>dst_w</parameter></methodparam>
+     <methodparam><type>int</type><parameter>dst_h</parameter></methodparam>
+     <methodparam><type>int</type><parameter>src_w</parameter></methodparam>
+     <methodparam><type>int</type><parameter>src_h</parameter></methodparam>
     </methodsynopsis>
    <para>
     <function>imagecopyresampled</function> copie une zone
@@ -28,6 +28,9 @@
     l'image <parameter>dst_im</parameter>. Durant la copie,
     la zone est rééchantillonnée de manière à conserver la clarté
     de l'image durant une réduction.
+    &return.success;
+   </para>
+   <para>
     <parameter>dst_im</parameter> est l'image de destination,
     <parameter>src_im</parameter> est l'image source.
     Si les hauteurs et largeurs des source et destination
@@ -35,7 +38,8 @@
     de manière appropriée.
     Les coordonnées sont celles du coin supérieur gauche.
     <function>imagecopyresampled</function> peut servir à copier
-    des zones d'une image vers elle-même, mais si les régions se
+    des zones d'une image vers elle-même, (si <parameter>dst_image</parameter> 
+    est la même que <parameter>src_image</parameter>) mais si les régions se
     chevauchent, les résultats sont imprévisibles.
    </para>
    <note>
@@ -46,14 +50,97 @@
      calculer le nouveau nombre de couleurs. Avec une palette, si une nouvelle
      couleur ne peut être allouée, la couleur la plus proche (en théorie)
      est utilisée. Ce n'est pas toujours la couleur la plus proche visuellement.
-     Cela peut générer des problèmes étranges, comme des images blanches.
+     Celà peut générer des problèmes étranges, comme des images blanches.
      Pour éviter ce problème, passez en image TrueColor, comme celles 
      générée par la fonction <function>imagecreatetruecolor</function>.
     </para>
    </note>
    &note.gd.2;
+  </refsect1>
+
+  <refsect1>
+   &reftitle.examples;
+
    <para>
-    Voir aussi
+    <example>
+     <title>Exemple simple</title>
+     <para>
+      Cet exemple redimensionne une image à la moitié de sa taille originale.
+     </para>
+     <programlisting role="php">
+<![CDATA[
+<?php
+// Le fichier
+$filename = 'test.jpg';
+$percent = 0.5;
+
+// Content type
+header('Content-type: image/jpeg');
+
+// Calcul des nouvelles dimensions
+list($width, $height) = getimagesize($filename);
+$new_width = $width * $percent;
+$new_height = $height * $percent;
+
+// Redimensionnement
+$image_p = imagecreatetruecolor($new_width, $new_height);
+$image = imagecreatefromjpeg($filename);
+imagecopyresampled($image_p, $image, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
+
+// Affichage
+imagejpeg($image_p, null, 100);
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Redimensionnement proportionnel d'une image</title>
+     <para>
+      Cet exemple affichera une image avec une largeur ou une hauteur maximale
+      de 200 pixels.
+     </para>
+     <programlisting role="php">
+<![CDATA[
+<?php
+// Le fichier
+$filename = 'test.jpg';
+
+// Définition de la largeur et de la hauteur maximale
+$width = 200;
+$height = 200;
+
+// Content type
+header('Content-type: image/jpeg');
+
+// Cacul des nouvelles dimensions
+list($width_orig, $height_orig) = getimagesize($filename);
+
+if ($width && ($width_orig < $height_orig)) {
+    $width = ($height / $height_orig) * $width_orig;
+} else {
+    $height = ($width / $width_orig) * $height_orig;
+}
+
+// Redimensionnement
+$image_p = imagecreatetruecolor($width, $height);
+$image = imagecreatefromjpeg($filename);
+imagecopyresampled($image_p, $image, 0, 0, 0, 0, $width, $height, $width_orig, $height_orig);
+
+// Affichage
+imagejpeg($image_p, null, 100);
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </refsect1>
+
+  <refsect1>
+   &reftitle.seealso;
+   <para>
     <function>imagecopyresized</function>.
    </para>
   </refsect1>
