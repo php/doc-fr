@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.5 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
-<!-- splitted from ./fr/functions/info.xml, last change in rev 1.16 -->
-<!-- last change to 'dl' in en/ tree in rev 1.29 -->
+<!-- $Revision: 1.6 $ -->
+<!-- EN-Revision: 1.18 Maintainer: didou Status: ready -->
  <refentry id="function.dl">
   <refnamediv>
    <refname>dl</refname>
@@ -16,102 +13,118 @@
      <methodparam><type>string</type><parameter>library</parameter></methodparam>
     </methodsynopsis>
    <para>
-    <function>dl</function> charge l'extension PHP <parameter>library</parameter>
+    <function>dl</function> charge l'extension &php; <parameter>library</parameter>
     à la volée. Le paramètre <parameter>library</parameter>
     est <emphasis>seulement</emphasis> le nom de fichier de l'extension,
     qui dépend de votre plate-forme. Par exemple l'extension 
     <link linkend="ref.sockets">sockets</link> (si compilée comme module
     partagé, et non par défaut), sera appelée <filename>sockets.so</filename>
     sous Unix, et <filename>php_sockets.dll</filename> sous Windows.
-    </para>
-    <para>
-     &return.success;. Si la fonctionnalité de chargement de module n'est pas
-     disponible (voir Note), ou a été désactivé (soit en inactivant la directive
-     <literal>enable_dl</literal> ou en activant le &safemode;
-     dans le &php.ini;) une <constant>E_ERROR</constant> sera émise et
-     l'exécution du script sera stoppée. Si la fonction 
-     <function>dl</function> échoue parce que la librairie n'a pu être 
-     trouvée, <function>dl</function> retournera &false; et émettra un
-     message d'alerte. 
-    </para>
-    <para>
-     Utilisez la fonction <function>extension_loaded</function> pour vérifier 
-     qu'une extension est chargée ou non. Cette fonction travaille aussi bien
-     avec les extensions intégrées qu'avec les extensions dynamiquement
-     chargées (via le &php.ini;, ou via <function>dl</function>).
-    </para>
-    <para>
+   </para>
+   <para>
+    &return.success;. Si la fonctionnalité de chargement de module n'est pas
+    disponible (voir Note), ou a été désactivée (soit en désactivant la directive
+    <literal>enable_dl</literal> ou en activant le &safemode;
+    dans le &php.ini;) une <constant>E_ERROR</constant> sera émise et
+    l'exécution du script sera stoppée. Si la fonction 
+    <function>dl</function> échoue parce que la librairie n'a pu être 
+    trouvée, <function>dl</function> retournera &false; et émettra un
+    message d'alerte <constant>E_WARNING</constant>. 
+   </para>
+   <para>
+    Utilisez la fonction <function>extension_loaded</function> pour vérifier 
+    qu'une extension est chargée ou non. Cette fonction travaille aussi bien
+    avec les extensions natives qu'avec les extensions dynamiquement
+    chargées (via le &php.ini; ou <function>dl</function>).
+   </para>
+   <para>
     <example>
-    <title>Exemple avec <function>dl</function></title>
+     <title>Exemple avec <function>dl</function></title>
      <programlisting role="php">
 <![CDATA[
 <?php
-  if (!extension_loaded('gd')) {
-    if (!dl('gd.so')) {
-        exit;
-    }
+// Chargement pour toutes plate-formes
+if (!extension_loaded('sqlite')) {
+  if (strtoupper(substr(PHP_OS, 0, 3) == 'WIN')) {
+    dl('php_sqlite.dll');
+  } else {
+    dl('sqlite.so');
   }
+}
+
+// Mais la constante PHP_SHLIB_SUFFIX est disponible depuis PHP 4.3.0
+if (!extension_loaded('sqlite')) {
+  $prefix = (PHP_SHLIB_SUFFIX == 'dll') ? 'php_' : '';
+  dl($prefix . 'sqlite.' . PHP_SHLIB_SUFFIX);
+}
+
+?>
 ]]>
-      </programlisting>
-     </example>
-    </para>
+     </programlisting>
+    </example>
+   </para>
+   <para>
+    Le dossier à partir duquel sont chargées vos extensions dépend de votre
+    plate-forme : 
+   </para>
+   <para>
+    Windows - S'il n'est pas explicitement indiqué dans le fichier &php.ini;,
+    le dossier des extensions est <filename>c:\php4\extensions\</filename>.
+   </para>
+   <para>
+    Unix - Si il n'est pas explicitement indiqué dans le fichier &php.ini;,
+    le dossier des extensions dépend de 
+    <itemizedlist>
+     <listitem>
+      <simpara>
+       Si &php; a été compilé avec l'option <literal>--enable-debug</literal>
+       ou non
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       Si &php; a été compilé avec le support (expérimental) de ZTS (Zend
+       Thread Safety) ou non
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       de la constante interne <literal>ZEND_MODULE_API_NO</literal> 
+       (version interne de module d'API Zend, qui est en réalité la date
+       à laquelle une modification importante de l'API a été faite, comme
+       par exemple <literal>20010901</literal>)
+      </simpara>
+     </listitem>
+    </itemizedlist>
+    En prenant ces paramètres en considération, le dossier des extensions
+    vaut alors 
+    <literal>&lt;php-install-directory&gt;/lib/php/extension/&lt;debug-or-not&gt;-&lt;zts-or-not&gt;-ZEND_MODULE_API_NO</literal>,
+    i.e.
+    <filename>/usr/local/php/lib/php/extensions/debug-non-zts-20010901</filename>
+    ou
+    <filename>/usr/local/php/lib/php/extensions/no-debug-zts-20010901</filename>.
+   </para>
+   <note>
     <para>
-     Le dossier où sont rangées les extensions dépend de votre plate forme : 
+     <function>dl</function> <emphasis>n'est pas</emphasis> supportée sur les
+     serveur web multi-threadés. Utilisez la directive <literal>extensions</literal>
+     dans votre fichier &php.ini; lorsque vous vous trouvez dans un
+     environnement de ce type. Cependant, les versions <literal>CGI</literal> et
+     <literal>CLI</literal> <emphasis role="strong">ne sont pas</emphasis>
+     affectés !
     </para>
+   </note>
+   <note>
     <para>
-     Windows - Si il n'est pas explicitement indiqué dans le fichier &php.ini;,
-     le dossier des extensions est <filename>c:\php4\extensions\</filename>.
+     <function>dl</function> est sensible à la casse sur les plate-formes Unix.
     </para>
-    <para>
-     Unix - Si il n'est pas explicitement indiqué dans le fichier &php.ini;,
-     le dossier des extensions dépend de 
-     <itemizedlist>
-      <listitem>
-       <simpara>
-        Si &php; a été compilé avec l'option <literal>--enable-debug</literal>
-       </simpara>
-      </listitem>
-      <listitem>
-       <simpara>
-        Si PHP a été compilé avec le support (expérimental) de ZTS (Zend Thread Safety)
-       </simpara>
-      </listitem>
-      <listitem>
-       <simpara>
-        de la constante interne <literal>ZEND_MODULE_API_NO</literal> 
-        (version interne de module d'API Zend, qui est en réalité la date
-        à laquelle une modification importante de l'API a été faite, comme
-        par exemple <literal>20010901</literal>)
-       </simpara>
-      </listitem>
-     </itemizedlist>
-     En prenant ces paramètres en considération, le dossier des extensions
-     vaut alors 
-     <literal>&lt;php-install-directory&gt;/lib/php/extension/&lt;debug-or-not&gt;-&lt;zts-or-not&gt;-ZEND_MODULE_API_NO</literal>,
-     i.e.
-     <filename>/usr/local/php/lib/php/extensions/debug-non-zts-20010901</filename>
-     ou
-     <filename>/usr/local/php/lib/php/extensions/no-debug-zts-20010901</filename>.
-    </para>
-    <note>
-     <para>
-      <function>dl</function> <emphasis>n'est pas</emphasis> supporté sur les
-      serveur web multi-threadés. Utilisez la directive <literal>extensions</literal>
-      dans votre fichier &php.ini; lorsque vous vous trouvez dans un
-      environnement de ce type. Cependant, les versions <literal>CGI</literal> et
-      <literal>CLI</literal> <emphasis role="strong">ne sont pas</emphasis>!
-     </para>
-    </note>
-    <note>
-     <para>
-      <function>dl</function> est sensible à la casse sur les plate-formes Unix.
-     </para>
-    </note>
-    <para>
-     Voir aussi
-     <link linkend="ini.extension">directives de chargement d'extensions</link> et
-     <function>extension_loaded</function>.
-    </para>
+   </note>
+   &note.sm.disabled;
+   <para>
+    Voir aussi
+    <link linkend="ini.extension">directives de chargement d'extensions</link> et
+    <function>extension_loaded</function>.
+   </para>
   </refsect1>
  </refentry>
 
