@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.14 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.15 $ -->
+<!-- EN-Revision: 1.22 Maintainer: yannick Status: ready -->
 <section id="session.configuration">
  &reftitle.runtime;
  &extension.runtime;
@@ -35,6 +35,11 @@
      <row>
       <entry>session.gc_probability</entry>
       <entry>"1"</entry>
+      <entry>PHP_INI_ALL</entry>
+     </row>
+     <row>
+      <entry>session.gc_divisor</entry>
+      <entry>"100"</entry>
       <entry>PHP_INI_ALL</entry>
      </row>
      <row>
@@ -105,7 +110,7 @@
      <row>
       <entry>session.use_trans_sid</entry>
       <entry>"0"</entry>
-      <entry>PHP_INI_SYSTEM|PHP_INI_PERDIR</entry>
+      <entry>PHP_INI_SYSTEM | PHP_INI_PERDIR</entry>
      </row>
      <row>
       <entry>session.bug_compat_42</entry>
@@ -160,7 +165,8 @@
       Définit le nom du gestionnaire
       de session qui est utilisé pour stocker et relire les
       données. Par défaut, c'est le système intégré
-      par fichiers : <literal>files</literal>.
+      par fichiers : <literal>files</literal>. Voir aussi
+      <function>session_set_save_handler</function>.
      </para>
     </listitem>
    </varlistentry>
@@ -175,11 +181,25 @@
       au gestionnaire de sauvegarde. Si vous décidez de 
       choisir le gestionnaire par défaut (par fichier),
       cet argument sera utilisé comme dossier de sauvegarde
-      des sessions. Par défaut, il vaut <filename>/tmp</filename>. Si
-      le niveau d'imbrication de <literal>session.save_path</literal>
-      est supérieur à 2, le nettoyage des sessions 
-      obsolètes ne s'opérera pas.
+      des sessions. Par défaut, il vaut <filename>/tmp</filename>. 
+      Voir aussi <function>session_save_path</function>. 
      </para>
+     <para>
+      Il y a un argument optionel  <literal>N</literal> à cette directive qui détermine
+      la profondeur de répertoires où votre fichier de session sera stocké.
+      Par exemple, si vous définissez <literal>'5;/tmp'</literal>, votre fichier
+      sera situé dans <literal>/tmp/4/b/1/e/3/sess_4b1e384ad74619bd212e236e52a5a174If
+     </literal>. Si vous voulez utiliser <literal>N</literal>, vous devez créer
+     tous ces répertoires avant de les utiliser. Un petit script shell existe dans
+     <filename>ext/session</filename> pour réaliser ces créations et il se nomme
+     <filename>mod_files.sh</filename>. Notez également que si <literal>N</literal>
+     est utilisé et est supérieur à 0, alors la routine automatique gc (garbage collection)
+     ne sera pas exécuté ; voir une copie de &php.ini; pour plus d'informations.
+     Egalement, si vous utilisez <literal>N</literal>, assurez vous d'entourer
+     <literal>session.save_path</literal> de "double guillements" car le séparateur 
+     (<literal>;</literal>) est également utilisé pour les commentaires dans 
+     &php.ini;.
+    </para>
      <warning>
       <para>
        Si vous laissez cette option configurée avec un dossier
@@ -210,34 +230,21 @@
       qui sera utilisé comme nom de cookie. Il ne doit contenir que
       des caractères alphanumérique. Par défaut, c'est
       <literal>PHPSESSID</literal>.
+      Voir aussi <function>session_name</function>.
      </para>
     </listitem>
    </varlistentry>
    <varlistentry id="ini.session.auto-start">
     <term>
      <parameter>session.auto_start</parameter>
-     <type>integer</type>
+     <type>boolean</type>
     </term>
     <listitem>
      <para>
       Spécifie si le module
       de session doit démarrer automatiquement au début de
-      chaque script PHP. Par défaut, c'est <literal>0</literal>
+      chaque script &php;. Par défaut, c'est <literal>0</literal>
       (désactivé).
-     </para>
-    </listitem>
-   </varlistentry>
-   <varlistentry id="ini.session.cookie-lifetime">
-    <term>
-     <parameter>session.cookie_lifetime</parameter>
-     <type>integer</type>
-    </term>
-    <listitem>
-     <para>
-      Spécifie la durée de
-      vie du cookie en secondes. La valeur de <literal>0</literal>
-      siginifie : "Jusqu'à ce que le navigateur soit éteind".
-      La valeur par défaut est : 0.
      </para>
     </listitem>
    </varlistentry>
@@ -250,10 +257,10 @@
      <para>
       Définit le nom
       du gestionnaire qui est utilisé pour linéariser/délinéariser
-      les données. Actuellement, un format interne à PHP
+      les données. Actuellement, un format interne à &php;
       (nommé <literal>php</literal>) et WDDX (nommé
       <literal>wddx</literal>) sont supportés . WDDX est seulement 
-      disponible, si PHP a été compilé avec l'option
+      disponible, si &php; a été compilé avec l'option
       <link linkend="ref.wddx">WDDX</link>. Par défaut, c'est <literal>php</literal>.
      </para>
     </listitem>
@@ -265,11 +272,30 @@
     </term>
     <listitem>
      <para>
-      Spécifie la probabilité en pourcents que la routine gc (garbage collection)
+      Spécifie la probabilité en pourcents, en conjonction de 
+      <literal>session.gc_divisor</literal>, que la routine gc (garbage collection)
       soit démarrée à chaque requête. La valeur par défaut est <literal>1</literal>.
+      Voir <link
+      linkend="ini.session.gc-divisor">session.gc_divisor</link> pour plus de détails.
      </para>
     </listitem>
    </varlistentry>
+   <varlistentry id="ini.session.gc-divisor">
+   <term>
+    <parameter>session.gc_divisor</parameter>
+    <type>integer</type>
+   </term>
+   <listitem>
+    <simpara>
+     <literal>session.gc_divisor</literal> en conjonction de 
+     <literal>session.gc_divisor</literal> définie la probabilité que la routine gc 
+     (garbage collection) soit démarré à chaque début de session.
+     La probabilité est calculé en utilisant gc_probability/gc_divisor, e.g 
+     1/100 signifie qu'il y a 1% de chanse pour que la routine gc démarre à chaque
+     requête. La valeur par défaut est <literal>100</literal>.
+    </simpara>
+   </listitem>
+  </varlistentry>
    <varlistentry id="ini.session.gc-maxlifetime">
     <term>
      <parameter>session.gc_maxlifetime</parameter>
@@ -287,8 +313,11 @@
        Si vous utilisez le gestionnaire de session par fichier,
        qui est fourni par défaut votre système doit garder la trace des
        dates de dernier accès aux fichier (atime). La FAT de Windows ne le
-       fait pas, alors vous faudra trouver un autre système pour gérer
-       les sessions qui ont expirées.
+       fait pas, alors il vous faudra trouver un autre système pour gérer
+       les sessions qui ont expirées. Depuis &php; 4.2.3, on utilise
+       mtime (date de modification) au lieu de atime.
+       Donc, vous n'aurez plus de souci avec les systèmes de fichiers qui ne gèrent
+       pas atime.
       </simpara>
      </note>
     </listitem>
@@ -304,7 +333,7 @@
       que vous souhaitez retrouver dans tous les en-têtes HTTP Referer. Si
       cet en-tête a été envoyé par le client, et que la sous-chaîne n'a pas
       été trouvé, l'identifiant de session sera considéré comme invalide. 
-      Par défaut, cette option est la cha&Icirc;ne vide.
+      Par défaut, cette option est une chaîne vide.
      </para>
    </listitem>
   </varlistentry>
@@ -316,11 +345,11 @@
    <listitem>
      <para>
       Est un chemin jusqu'à
-       une source externe (un fichier), qui sera utilisée comme source
-       additionnelle d'entropie pour la création de l'identifiant
-       de session. Des exemples valides sont <literal>/dev/random</literal> et
-       <literal>/dev/urandom</literal>, qui sont disponibles sur
-       tous les systèmes Unix.
+      une source externe (un fichier), qui sera utilisée comme source
+      additionnelle d'entropie pour la création de l'identifiant
+      de session. Des exemples valides sont <literal>/dev/random</literal> et
+      <literal>/dev/urandom</literal>, qui sont disponibles sur
+      tous les systèmes Unix.
      </para>
    </listitem>
   </varlistentry>
@@ -332,15 +361,15 @@
    <listitem>
      <para>
       Spécifie le nombre d'octets
-       qui seront lus dans le fichier défini ci-dessus. Par défaut, il
-       vaut <literal>0</literal>, c'est à dire inactif.
+      qui seront lus dans le fichier défini ci-dessus. Par défaut, il
+      vaut <literal>0</literal>, c'est à dire inactif.
      </para>
    </listitem>
   </varlistentry>
   <varlistentry id="ini.session.use-cookies">
    <term>
     <parameter>session.use_cookies</parameter>
-    <type>integer</type>
+    <type>boolean</type>
    </term>
    <listitem>
      <para>
@@ -353,7 +382,7 @@
   <varlistentry id="ini.session.use-only-cookies">
    <term>
     <parameter>session.use_only_cookies</parameter>
-    <type>integer</type>
+    <type>boolean</type>
    </term>
    <listitem>
      <para>
@@ -363,10 +392,26 @@
       cette option vaut <literal>0</literal> (inactif, pour compatibilité ascendante).
       En l'activant, vous éviterez les attaques qui utilisent des
       identifiants de sessions dans les URL. Cette configuration a été ajoutée
-      en PHP 4.3.0.
+      en &php; 4.3.0.
      </para>
    </listitem>
   </varlistentry>
+  <varlistentry id="ini.session.cookie-lifetime">
+    <term>
+     <parameter>session.cookie_lifetime</parameter>
+     <type>integer</type>
+    </term>
+    <listitem>
+     <para>
+      Spécifie la durée de
+      vie du cookie en secondes. La valeur de <literal>0</literal>
+      siginifie : "Jusqu'à ce que le navigateur soit éteind".
+      La valeur par défaut est : 0. Voir aussi
+      <function>session_get_cookie_params</function> et
+      <function>session_set_cookie_params</function>.
+     </para>
+    </listitem>
+   </varlistentry>
   <varlistentry id="ini.session.cookie-path">
    <term>
     <parameter>session.cookie_path</parameter>
@@ -376,6 +421,9 @@
      <para>
       Spécifie le chemin utilisé
       lors de la création du cookie. Par défaut, il vaut <literal>/</literal>.
+      Voir aussi
+      <function>session_get_cookie_params</function> et
+      <function>session_set_cookie_params</function>.
      </para>
    </listitem>
   </varlistentry>
@@ -388,20 +436,24 @@
      <para>
       Spécifie le domaine utilisé
       lors de la création du cookie. Par défaut, il ne vaut rien.
+      Voir aussi
+      <function>session_get_cookie_params</function> et
+      <function>session_set_cookie_params</function>.
      </para>
    </listitem>
   </varlistentry>  
   <varlistentry id="ini.session.cookie-secure">
    <term>
     <parameter>session.cookie_secure</parameter>
-    <type>bool</type>
+    <type>boolean</type>
    </term>
    <listitem>
     <simpara>
      Spécifie que les cookies ne doivent être émis que sur des
      connexion sécurisée. Par défaut, cette option est à 
      <literal>off</literal>. Cette option a été ajoutée en
-     &php; 4.0.4. Voir aussi
+     &php; 4.0.4. 
+     Voir aussi
      <function>session_get_cookie_params</function> et
      <function>session_set_cookie_params</function>.
     </simpara>
@@ -419,6 +471,8 @@
        valeurs possibles sont : 
        none, nocache, private, private_no_expire, public. Par défaut, il vaut
        <literal>nocache</literal>.
+       Voir aussi
+      <function>session_cache_limiter</function>.
      </para>
    </listitem>
   </varlistentry>
@@ -430,33 +484,39 @@
    <listitem>
      <para>
       Spécifie la durée de
-       vie des données de sessions, en minute. Cette option n'a aucune
-       conséquence sur le contrôle de cache. Par défaut, il vaut
-       <literal>180</literal> (3 heures).
+      vie des données de sessions, en minute. Cette option n'a aucune
+      conséquence sur le contrôle de cache. Par défaut, il vaut
+      <literal>180</literal> (3 heures).
+      Voir aussi
+      <function>session_cache_expire</function>.
      </para>
    </listitem>
   </varlistentry>
   <varlistentry id="ini.session.use-trans-sid">
    <term>
     <parameter>session.use_trans_sid</parameter>
-    <type>integer</type>
+    <type>boolean</type>
    </term>
    <listitem>
-       <note>
-        <simpara>
-         En PHP 4.1.2 ou plus ancien, cette option est activée en utilisant
-         l'option de compilation <link linkend="install.configure.enable-trans-sid">
-          <literal>--enable-trans-sid</literal></link>.
-         Depuis PHP 4.2.0, trans-sid est toujours compilée.
-        </simpara>
-        <simpara>
-         Le système de gestion des sessions par URL pose un risque
-         supplémentaire de sécurité : un utilisateur peut envoyer
-         son URL avec l'identifiant de session par email à un ami,
-         ou bien le mettre dans ses signets. Cela diffusera alors
-         l'identifiant de session.
-        </simpara>
-       </note>
+    <simpara>
+     Spécifie si le support du SID est transparent ou pas. Par défaut vaut <literal>0</literal> 
+     (désactivé).
+    </simpara>
+    <note>
+     <simpara>
+      En &php; 4.1.2 ou plus ancien, cette option est activée en utilisant
+      l'option de compilation <link linkend="install.configure.enable-trans-sid">
+      <literal>--enable-trans-sid</literal></link>.
+      Depuis &php; 4.2.0, trans-sid est toujours compilée.
+     </simpara>
+     <simpara>
+      Le système de gestion des sessions par URL pose un risque
+      supplémentaire de sécurité : un utilisateur peut envoyer
+      son URL avec l'identifiant de session par email à un ami,
+      ou bien le mettre dans ses signets. Cela diffusera alors
+      l'identifiant de session.
+     </simpara>
+    </note>
    </listitem>
   </varlistentry>
   <varlistentry id="ini.session.bug-compat-42">
@@ -543,11 +603,18 @@
    </term>
    <listitem>
     <simpara>
-       Spécifie quels sont les balises HTML qui doivent 
-       être réécrites si le support transparent du SID
-       est activé. Par défaut, il vaut
-       <literal>a=href,area=href,frame=src,input=src,form=fakeentry</literal>.
+     Spécifie quels sont les balises HTML qui doivent 
+     être réécrites si le support transparent du SID
+     est activé. Par défaut, il vaut
+     <literal>a=href,area=href,frame=src,input=src,form=fakeentry,fieldset=</literal>.
     </simpara>
+    <note>
+     <simpara>
+      Si vous voulez vous conformer avec les spécifications XHTML, supprimer l'entrée
+      <literal>form</literal> et utiliser le tag &lt;fieldset&gt; autour de votre balise
+      form.
+     </simpara>
+    </note>
    </listitem>
   </varlistentry>
  </variablelist>
@@ -561,7 +628,7 @@
 
     <note>
      <para>
-      Depuis PHP 4.0.3, <link
+      Depuis &php; 4.0.3, <link
       linkend="ini.track-vars"><literal>track_vars</literal></link> est
       toujours activé.
      </para>
