@@ -96,8 +96,9 @@ ob_end_flush();
     </funcsynopsis>
     <para>
      <function>ob_start</function> d&eacute;marre la bufferisation de sortie.
-     Tant qu'elle est enclench&eacute;e, aucune donn&eacute;es n'est
-     envoy&eacute;e au client web, mais temporairement mis en buffer.
+     Tant qu'elle est enclench&eacute;e, aucune donn&eacute;e, hormis
+     les ent&ecirc;tes, n'est envoy&eacute;e au navigateur, mais
+     temporairement mis en buffer.
     </para>
     <para>
      Le contenu de ce buffer peut &ecirc;tre copi&eacute; dans une cha&icirc;ne
@@ -106,49 +107,119 @@ ob_end_flush();
      contraire, <function>ob_end_clean</function> effacera le contenu de ce buffer.
     </para>
     <para>
-     Une fonction optionnelle de callback peut &ecirc;tre sp&eacute;cifi&eacute;e en
-     troisi&egrave;me argument. <function>ob_start</function> prend une
+     Une fonction optionnelle de callback peut &ecirc;tre sp&eacute;cifi&eacute;e
+     en troisi&egrave;me argument. <function>ob_start</function> prend une
      cha&icirc;ne comme param&egrave;tre, et retourne une cha&icirc;ne.
-     Elle sera appel&eacute;e par <function>ob_end_flush</function> et
-     recevra le contenu du buffer de sortie. Elle doit retourner un nouveau contenu
-     pour le buffer de sortie : celui ci sera envoy&eacute; &agrave; la sortie
-     standard.
-    </para>
+     Elle sera appel&eacute;e par <function>ob_end_flush</function> ou
+     lorsque le buffer sera envoy&eacute; au navigateur &agrave; la fin du script et
+     recevra le contenu du buffer de sortie. Lorsque la fonction
+     <parameter>output_callback</parameter> est appel&eacute;e,
+     elle doit retourner un nouveau contenu pour le buffer de sortie :
+     celui-ci sera envoy&eacute; au navigateur.
+    <note>
+     <para>
+      En PHP 4.0.4, <function>ob_gzhandler</function> a &eacute;t&eacute;
+      introduit pour faciliter l'envoi de fichier compress&eacute;
+      avec gz aux navigateurs web qui supportent les pages
+      compress&eacute;es. <function>ob_gzhandler</function>
+      d&eacute;termine le type d'encodage accept&eacute; par un navigateur,
+      et retourne le contenu le plus ad&eacute;quat.
+     </para>
+    </note>
     <para>
-     Les buffers de sortie sont g&eacute;r&eacute;s par pile, c'est &agrave; dire que
-     vous pouvez appeler plusieurs <function>ob_start</function>
-     simultan&eacute;ment. Assurez-vous que vous appelez
-     <function>ob_end_flush</function> suffisamment souvent.
-     Si plusieurs fonctions de callback sont actives, les
-     contenus seront filtr&eacute;s s&eacute;quentiellement, dans l'ordre
-     d'embo&icirc;tement.
+     Les buffers de sortie sont g&eacute;r&eacute;s par pile, c'est
+     &agrave; dire que vous pouvez appeler plusieurs fois
+     <function>ob_start</function> simultan&eacute;ment.
+     Assurez-vous que vous appelez <function>ob_end_flush</function>
+     suffisamment souvent. Si plusieurs fonctions de callback
+     sont actives, les contenus seront filtr&eacute;s
+     s&eacute;quentiellement, dans l'ordre d'embo&icirc;tement.
     </para>
     <example>
-     <title>Exemple de callback</title>
+     <title>Exemple de callback avec fonction utilisateur</title>
      <programlisting role="php">
 &lt;?php
-function c($str) {
-  // Aa claar da la lana, man ama Paarrat..
-  return nl2br(ereg_replace("[aeiou]", "u", $str));
+function callback($buffer) {
+  // remplace toutes les pommes par des oranges
+  return (ereg_replace("pommes de terre", "carottes", $buffer));
 }
-function d($str) {
-  return strip_tags($str);
-}
+ob_start("callback");
 ?&gt;
-&lt;?php ob_start("c"); ?&gt;
-Au clair de la lune, mon ami Pierrot
-&lt;?php ob_start("d"); ?&gt;
-&lt;h1&gt;..Prete moi ta plume, pour ecrire un mot...&lt;/h1&gt;
-&lt;?php ob_end_flush(); ?&gt;
-... Ma chandelle est morte, je n'ai plus de feu
-&lt;?php ob_end_flush(); ?&gt;
-... Ouvre moi la porte, pour l'amour de Dieu
-&lt;?php ob_end_flush(); ?&gt;
+&lt;html&gt;
+&lt;body&gt;
+&lt;p&gt;C'est comme comparer des carottes et des pommes de terre.
+&lt;/body&gt;
+&lt;/html&gt;
+&lt;?php
+ ob_end_flush();
+?&gt;
      </programlisting>
     </example>
+     <para>
+     va afficher :
+     <informalexample>
+      <programlisting role="php">
+&lt;html&gt;
+&lt;body&gt;
+&lt;p&gt;C'est comme comparer des carottes et des carottes.
+&lt;/body&gt;
+&lt;/html&gt;
+      </programlisting>
+     </informalexample>
+    </para>
     <para>
      Voir aussi <function>ob_get_contents</function>,<function>ob_end_flush</function>,
-     <function>ob_end_clean</function>, et <function>ob_implicit_flush</function>
+     <function>ob_end_clean</function>, <function>ob_implicit_flush</function>
+     et <function>ob_gzhandler</function>.
+    </para>
+   </refsect1>
+  </refentry>
+  <refentry id="function.ob-gzhandler">
+   <refnamediv>
+    <refname>ob_gzhandler</refname>
+    <refpurpose>
+     ob_start callback function to gzip output buffer
+    </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>string <function>ob_gzhandler</function></funcdef>
+      <paramdef>string <parameter>buffer</parameter></paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>ob_gzhandler</function> est destin&eacute;e &agrave; &ecirc;tre utilis&eacute;e
+     comme fonction de callback par <function>ob_start</function>
+     pour faciliter l'envoi de donn&eacute;es compress&eacute;es aux navigateurs
+     qui supportent les pages compress&eacute;es. Avant que
+     <function>ob_gzhandler</function> envoie les donn&eacute;es compress&eacute;es,
+     il determine les types d'encodage qui sont support&eacute;s par le
+     navigateur ("gzip", "deflate" ou aucun) et retourne le
+     contenu des buffers de mani&egrave;re appropri&eacute;e. Tous les navigateurs
+     sont trait&eacute;s, car c'est aux navigateurs d'envoyer un ent&ecirc;te
+     indiquant les types de pages support&eacute;s.
+    </para>
+    <para>
+     <example>
+      <title>
+        Exemple d'envoi de page compress&eacute;e avec <function>ob_gzhandler</function>
+      </title>
+      <programlisting role="php">
+&lt;php
+ob_start("ob_gzhandler");
+?&gt;
+&lt;html&gt;
+&lt;body&gt;
+&lt;p&gt;Ceci devrait &ecirc;tre une page compress&eacute;e.
+&lt;/html&gt;
+&lt;/body&gt;
+      </programlisting>
+     </example>
+    </para>
+    <para>
+     Voir aussi <function>ob_start</function> et <function>ob_end_flush</function>.
     </para>
    </refsect1>
   </refentry>
@@ -278,7 +349,7 @@ Au clair de la lune, mon ami Pierrot
      l'envoi implicite (si <parameter>flag</parameter> est fourni.
      Par d&eacute;faut, il est activ&eacute;). L'envoi implicite
      signifie que toute fonction qui envoie des donn&eacute;es
-     au client web veront leurs donn&eacute;es envoy&eacute;es
+     au navigateur veront leurs donn&eacute;es envoy&eacute;es
      imm&eacute;diatement (la fonction <function>flush</function>
      est appel&eacute;e automatiquement).
     </para>
