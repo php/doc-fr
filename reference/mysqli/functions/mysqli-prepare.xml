@@ -1,24 +1,180 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.5 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
+<!-- $Revision: 1.6 $ -->
+<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
   <refentry id="function.mysqli-prepare">
    <refnamediv>
     <refname>mysqli_prepare</refname>
+    <refname>mysqli->prepare</refname>
     <refpurpose>
      Prépare une requête SQL pour l'exécution
     </refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
+    &title.procedural;
      <methodsynopsis>
-      <type>resource</type><methodname>mysqli_prepare</methodname>
-      <methodparam><type>resource</type><parameter>link</parameter></methodparam>
+      <type>mixed</type><methodname>mysqli_prepare</methodname>
+      <methodparam><type>object</type><parameter>link</parameter></methodparam>
       <methodparam><type>string</type><parameter>query</parameter></methodparam>
      </methodsynopsis>
+    &title.oop;
+     <classsynopsis>
+      <ooclass><classname>stmt</classname></ooclass>
+      <methodsynopsis>
+       <type>mixed</type>
+       <methodname>prepare</methodname>
+       <methodparam><type>string</type><parameter>query</parameter></methodparam>
+      </methodsynopsis>
+     </classsynopsis>
+     <para>
+      <function>mysqli_prepare</function> prépare la requète SQL
+      <parameter>query</parameter> et retourne une ressource à utiliser pour les futures
+      opérations sur le traitement. La requète doit être une requète SQL unique.
+     </para>
+     <note>
+      <para>
+       Vous ne devez pas ajouter de point virgule ou de <literal>\g</literal>
+       dans la requète.
+      </para>
+     </note>
+     <para>
+      Le paramètre <parameter>query</parameter> peut inclure un ou plusieurs paramètres 
+      de marques dans la requète SQL avec le caractère "point d'interrogation" 
+      (<literal>?</literal>) à la position appropriée.
+     </para>
+     <note>
+      <para>
+       Les marques ne sont autorisées uniquement dans certaines endroits des requètes SQL.
+       Par exemple, elles sont autorisées dans la liste VALUES() d'une requète INSERT (
+       pour spécifier les valeurs des colonnes pour une ligne), ou dans une comparaison
+       d'une clause WHERE pour spécifier une valeur de comparaison.
+      </para>
+      <para>
+       Cependant, elles ne sont pas autorisées pour les identifiants (comme les noms de
+       tables ou de colonnes), dans une liste de sélection où les noms des colonnes doivent
+       être retournés par une requète SELECT, ou pour spécifier un opérateur tel que
+       le signe égal (<literal>=</literal>).  La dernière restriction est nécessaire 
+       car il est impossible de déterminer le type de paramètre. En général, les paramètres ne sont
+       autorisés que dans les requètes DML (Data Manipulation Language) et non dans les
+       requètes DDL (Data Defination Language).
+      </para>
+     </note>
+     <para>
+      Les paramètres de marques doivent être liés à des variables utilisées dans
+      les fonctions <function>mysqli_stmt_bind_param</function> et/ou
+      <function>mysqli_stmt_bind_result</function> avant d'exécuter la requète ou de récupérer
+      les lignes.
+     </para>
+   </refsect1>
+   <refsect1>
+    &reftitle.returnvalues;
+    <para>
+     <function>mysqli_prepare</function> retourne un objet de traitement ou &false; si une erreur
+     survient.
+    </para>
+   </refsect1>
+   <refsect1>
+    &reftitle.seealso;
+    <para>
+     <function>mysqli_stmt_execute</function>,
+     <function>mysqli_stmt_fetch</function>,
+     <function>mysqli_stmt_bind_param</function>,
+     <function>mysqli_stmt_bind_result</function> et
+     <function>mysqli_stmt_close</function>.
+    </para>
+   </refsect1>
+   <refsect1>
+    &reftitle.examples;
+    <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-    &warn.undocumented.func;
+/* Vérification de la connexion */
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
 
+$city = "Amersfoort";
+
+/* Crée une requète préparée */
+if ($stmt = $mysqli->prepare("SELECT District FROM City WHERE Name=?")) {
+
+    /* Lecture des paramètres de marques */
+    $stmt->bind_param("s", $city);
+
+    /* Exécution de la  requète */
+    $stmt->execute();
+
+    /* Lecture des variables résultantes */
+    $stmt->bind_result($district);
+
+    /* Récupération des valeurs */
+    $stmt->fetch();
+
+    printf("%s est dans le district de %s\n", $city, $district);
+
+    /* Fermeture du traitement */
+    $stmt->close();
+} 
+
+/* Fermeture de la connexion */
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+    </example>
+    <example>
+     <title>Style procédural</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$link = mysqli_connect("localhost", "my_user", "my_password", "world");
+
+/* Vérification de la connexion */
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
+
+$city = "Amersfoort";
+
+/* Crée une requète préparée */
+if ($stmt = mysqli_prepare($link, "SELECT District FROM City WHERE Name=?")) {
+
+    /* Lecture des paramètres de marques */
+    mysqli_stmt_bind_param($stmt, "s", $city);
+
+    /* Exécution de la  requète */
+    mysqli_stmt_execute($stmt);
+
+    /* Lecture des variables résultantes */
+    mysqli_stmt_bind_result($stmt, $district);
+
+    /* Récupération des valeurs */
+    mysqli_stmt_fetch($stmt);
+
+    printf("%s est dans le district de %s\n", $city, $district);
+
+    /* Fermeture du traitement */
+    mysqli_stmt_close($stmt);
+} 
+
+/* Fermeture de la connexion */
+mysqli_close($link);
+?>
+]]>
+     </programlisting>
+    </example>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Amersfoort est dans le district de Utrecht
+]]>
+    </screen>
    </refsect1>
   </refentry>
 
