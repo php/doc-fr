@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.11 $ -->
-<!-- EN-Revision: 1.7 Maintainer: didou Status: ready -->
+<!-- $Revision: 1.12 $ -->
+<!-- EN-Revision: 1.8 Maintainer: didou Status: ready -->
 <!-- Reviewed: yes -->
  <refentry id="function.imap-open">
   <refnamediv>
@@ -38,8 +38,127 @@
     avec <function>imap_utf7_encode</function>.
    </para>
    <para>
-    <parameter>options</parameter> est un masque de bit, qui peut prendre une ou plusieurs des
-    valeurs suivantes :
+    Tous les noms commençant par <literal>{</literal> sont des noms distants et sont sous 
+    la forme <literal>"{" nom_systeme_distant [":" port] [flags] "}"
+     [nom_mailbox]</literal> où :
+     <itemizedlist>
+      <listitem>
+       <simpara>
+        <literal>nom_systeme_distant</literal> - Nom de domaine Internet ou une
+        adresse IP de serveur entouré de guillemets.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        <literal>port</literal> - numéro de port TCP (optionnel), 
+        la valeur par défaut est la valeur du port pour ce service.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        <literal>flags</literal> - flags optionnels, voir la table suivante.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        <literal>nom_mailbox</literal> - nom de la mailbox distante, par défaut : INBOX
+       </simpara>
+      </listitem>
+     </itemizedlist>
+    </para>
+    <para>
+     <table>
+      <title>Flags optionnels pour les noms</title>
+      <tgroup cols="2">
+       <thead>
+        <row>
+         <entry>Flag</entry>
+         <entry>Description</entry>
+        </row>
+       </thead>
+       <tbody>
+        <row>
+         <entry><literal>/service=</literal><emphasis>service</emphasis></entry>
+         <entry>service pourl'accès à la mailbox, par défaut : "imap"</entry>
+        </row>
+        <row>
+         <entry><literal>/user=</literal><emphasis>user</emphasis></entry>
+         <entry>nom de l'utilisateur distant pour l'identification sur le serveur</entry>
+        </row>
+        <row>
+         <entry><literal>/authuser=</literal><emphasis>user</emphasis></entry>
+         <entry>utilisateur distance d'identification ; si spécifié, ce sera le nom de l'utilisateur
+         dont le mot de passe est utilisé (e.g. administratur)</entry>
+        </row>
+        <row>
+         <entry><literal>/anonymous</literal></entry>
+         <entry>accès distant en anonyme</entry>
+        </row>
+        <row>
+         <entry><literal>/debug</literal></entry>
+         <entry>la télémétrie d'enregistrement du protocole dans les logs de déboguage de 
+         l'application</entry>
+        </row>
+        <row>
+         <entry><literal>/secure</literal></entry>
+         <entry>ne transmet pas un mot de passe en clair à travers le réseau</entry>
+        </row>
+        <row>
+         <entry><literal>/imap</literal>, <literal>/imap2</literal>,
+          <literal>/imap2bis</literal>, <literal>/imap4</literal>,
+          <literal>/imap4rev1</literal></entry>
+         <entry>équivalent de /service=imap</entry>
+        </row>
+        <row>
+         <entry><literal>/pop3</literal></entry>
+         <entry>équivalent de /service=pop3</entry>
+        </row>
+        <row>
+         <entry><literal>/nntp</literal></entry>
+         <entry>équivalent de /service=nntp</entry>
+        </row>
+        <row>
+         <entry><literal>/norsh</literal></entry>
+         <entry>ne pas utiliser rsh ou ssh pour établir une session de pré identification
+         IMAP</entry>
+        </row>
+        <row>
+         <entry><literal>/ssl</literal></entry>
+         <entry>utilise <literal>Secure Socket Layer</literal> pour crypter la 
+         session</entry>
+        </row>
+        <row>
+         <entry><literal>/validate-cert</literal></entry>
+         <entry>valide les certificats depuis le serveur TLS/SSL (c'est le comportement par 
+         défaut)</entry>
+        </row>
+        <row>
+         <entry><literal>/novalidate-cert</literal></entry>
+         <entry>ne pas valider les certificats depuis le serveur TLS/SSL, nécessaire si
+         le serveur utilise des certificats auto-signés</entry>
+        </row>
+        <row>
+         <entry><literal>/tls</literal></entry>
+         <entry>force l'utilisation de <literal>start-TLS</literal> pour crypter la session et
+         rejète les connexions aux serveurs qui ne le supporte pas</entry>
+        </row>
+        <row>
+         <entry><literal>/notls</literal></entry>
+         <entry>n'utilise pas <literal>start-TLS</literal> pour crypter la session,
+         y compris avec les serveurs qui le supporte</entry>
+        </row>
+        <row>
+         <entry><literal>/readonly</literal></entry>
+         <entry>demande un accès en lecture seule sur mailbox (IMAP uniquement ; ignoré sous 
+         NNTP, et une erreur avec SMTP et POP3)</entry>
+        </row>
+       </tbody>
+      </tgroup>
+     </table>
+    </para>
+   <para>
+    <parameter>options</parameter> est un masque de bit, qui peut prendre une ou 
+    plusieurs des valeurs suivantes :
     <itemizedlist>
      <listitem>
       <simpara>
@@ -59,8 +178,41 @@
      </listitem>
      <listitem>
       <simpara>
-       <constant>CL_EXPUNGE</constant> - Supprime automatiquement la boîte aux lettres de la
-       liste, lors de la terminaison du flux.
+       <constant>CL_EXPUNGE</constant> - Supprime automatiquement la boîte aux lettres 
+       de la liste, lors de la terminaison du flux (voir aussi 
+       <function>imap_delete</function> and
+       <function>imap_expunge</function>)
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <constant>OP_DEBUG</constant> - négociations de déboguage du protocole
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <constant>OP_SHORTCACHE</constant> - Cache court (elt uniquement)
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <constant>OP_SILENT</constant> - Ne pas transmettre les évènements (utilisation 
+       interne)
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <constant>OP_PROTOTYPE</constant> - Retourne le prototype du driver
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <constant>OP_EXPUNGE</constant> - Nettoye silencieusement le flux recyclé
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <constant>OP_SECURE</constant> - Ne pas effectuer des identifications non sécuritées
       </simpara>
      </listitem>
     </itemizedlist>
@@ -69,82 +221,36 @@
     Pour se connecter à un serveur <acronym>IMAP</acronym>, on peut utiliser la
     commande suivante :
     <example>
-     <title>
-      Connexion à un serveur <acronym>IMAP</acronym> avec 
-      <function>imap_open</function>
-     </title>
+     <title>Différentes utilisations de <function>imap_open</function></title>
      <programlisting role="php">
 <![CDATA[
 <?php
+// Pour se connecter à un serveur IMAP fonctionnant sur le port 143 de la
+// machine locale, faîtes ceci :
 $mbox  = imap_open("{localhost:143}INBOX","user_id","password");
-?>
-]]>
-     </programlisting>
-    </example>
-    Pour se connecter à un serveur <acronym>POP3</acronym> qui fonctionne sur
-    le port 110 de la machine locale on peut utiliser la commande suivante :
-    <example>
-     <title>
-      Connexion à un serveur <acronym>POP3</acronym> avec 
-      <function>imap_open</function>
-     </title>
-     <programlisting role="php">
-<![CDATA[
-<?php
+
+// Pour se connecter à un serveur POP3 fonctionnant sur le port 110 du
+// serveur local, faîtes ceci :
 $mbox = imap_open("{localhost:110/pop3}INBOX","user_id","password");
-?>
-]]>
-     </programlisting>
-    </example>
-    Pour se connecter à un serveur <acronym>IMAP</acronym> SSL ou
-    <acronym>POP3</acronym> SSL, ajoutez <literal>/ssl</literal> après
-    le protocole :
-    <example>
-     <title>
-      Connexion à un serveur <acronym>IMAP</acronym> SSL ou 
-      <acronym>POP3</acronym> SSL  avec <function>imap_open</function>
-     </title>
-     <programlisting role="php">
-<![CDATA[
-<?php
+
+// Pour se connecter à un serveur SSL IMAP ou POP3, ajoutez /ssl
+// après la spécification du protocole
 $mbox = imap_open("{localhost:993/imap/ssl}INBOX", "user_id", "password");
-?>
-]]>
-     </programlisting>
-    </example>
-    Pour se connecter à un serveur SSL IMAP ou POP3 avec un certificat
-    ajoutez <literal>/ssl/novalidate-cert</literal> après le protocole :
-    <example>
-     <title>
-      Connexion à un serveur <acronym>IMAP</acronym> SSL ou 
-      <acronym>POP3</acronym> SSL  avec <function>imap_open</function>
-      et un certificat
-     </title>
-     <programlisting role="php">
-<![CDATA[
-<?php
+     
+// Pour se connecter à un serveur SSL IMAP ou POP3 avec un certificat auto-signé
+// ajoutez /ssl/novalidate-cert après le protocole :
 $mbox = imap_open("{localhost:995/pop3/ssl/novalidate-cert}", "user_id", "password");
-?>
-]]>
-     </programlisting>
-    </example>
-    Pour se connecter à un serveur <acronym>NNTP</acronym> qui fonctionne sur
-    le port 119 de la machine locale on peut utiliser la commande:
-    <example>
-     <title>
-      Connexion à un serveur <acronym>NNTP</acronym> 
-      avec <function>imap_open</function>
-     </title>
-     <programlisting role="php">
-<![CDATA[
-<?php
+    
+// Pour se connecter à un serveur NNTP qui fonctionne sur
+// le port 119 de la machine locale on peut utiliser la commande:
 $nntp = imap_open("{localhost:119/nntp}comp.test","","");
+
+// Pour se connecter à un serveur distant, remplacez "localhost" par
+// le nom ou l'adresse IP de la machine.
 ?>
 ]]>
      </programlisting>
     </example>
-    Pour se connecter à un serveur distant, remplacez "localhost" par
-    le nom ou l'adresse IP de la machine.
    </para>
    <para>
     <example>
