@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.2 $ -->
-<!-- EN-Revision: 1.10 Maintainer: roms Status: ready -->
-<!-- Reviewed: no -->
+<!-- $Revision: 1.3 $ -->
+<!-- EN-Revision: 1.15 Maintainer: gui Status: ready -->
+<!-- Reviewed: yes -->
  <appendix id="migration5">
   <title>Migration de &php; 4 vers &php; 5</title>
 
@@ -9,30 +9,28 @@
    <title>Nouveautés de &php; 5</title>
    <para>
     Les modifications apportées à &php; 5 et au Zend Engine 2  
-    augmentent sensiblement les capacités et les performances de &php;. 
-    Nous avons cherché à ce que cette nouvelle version soit 
+    augmentent considérablement les capacités et les performances de &php;. 
+    Une attention toute particulière a été apportée pour que cette nouvelle version soit 
     la plus compatible possible avec les scripts antérieurs.
-    Ainsi la migration de votre code de &php; 4 vers &php; 5 devrait bien 
-    se passer. La plupart des scripts &php; 4 devraient être prêts à
+    Ainsi la migration de votre code de &php; 4 vers &php; 5 devrait être
+    aisée. La plupart des scripts &php; 4 devraient être prêts à
     fonctionner sans nécessiter la moindre modification. Il existe 
-    toutefois <link
-    linkend="migration5.incompatible">quelques différences</link>  et
-    vous devriez tester vos codes avant de changer de version sur vos 
-    environnements de production.
+    toutefois <link linkend="migration5.incompatible">quelques différences</link> 
+    et vous devriez tester vos codes avant de changer de version en production.
    </para>
   </section>
 
   <section id="migration5.incompatible">
    <title>Incompatibilités avec les version antérieures</title>
    <para>
-    Bien que la plupart des codes &php; 4 existants devraient fonctionner,
+    Bien que la plupart des scripts &php; 4 existants devraient fonctionner,
     il convient de noter quelques incompatibilités avec les versions 
     antérieures de &php; :
    </para>
    <itemizedlist>
     <listitem><simpara>
       <function>strrpos</function> et <function>strripos</function> utilisent 
-      maintenant une chaîne de caractères (un seul caractère auparavant)
+      maintenant la chaîne de caractères complète (un seul caractère auparavant)
       en tant qu'élément de recherche.
     </simpara></listitem>
     <listitem><simpara>
@@ -43,12 +41,14 @@
     <listitem><simpara>
       <function>array_merge</function> a été modifié pour n'accepter que des 
       tableaux. Pour chaque variable passée en paramètre autre qu'un tableau, 
-      un message <constant>E_WARNING</constant> sera envoyé.  
+      un message <constant>E_WARNING</constant> sera envoyé. Soyez attentifs
+      car votre script pourrait émettre des <constant>E_WARNING</constant> de
+      façon inopinée.
     </simpara></listitem>
     <listitem><simpara>
      La variable de serveur PATH_TRANSLATED n'est plus définie implicitement 
      avec Apache2 SAPI contrairement à auparavant (&php; 4) où elle était fixée
-     avec la même valeur que SCRIPT_FILENAME lorsqu' Apache ne 
+     avec la même valeur que SCRIPT_FILENAME lorsqu'Apache ne 
      la renseignait pas. Cette modification a été apportée afin d'être
      en conformité avec les <ulink
       url="&url.cgispecs;">specifications CGI</ulink>. Merci de consulter
@@ -58,13 +58,12 @@
     <listitem><simpara>
      La constante <constant>T_ML_CONSTANT</constant> n'est plus
      définie par l'extension <link linkend="ref.tokenizer">Tokenizer</link>. 
-     Si error_reporting est mis à <constant>E_ALL</constant>, &php; va générer
-     un notice. A la place de <constant>T_ML_CONSTANT</constant> pour /* */, 
-     la constante <constant>T_COMMENT</constant> est utilisée, d'ailleurs
-      // et /* */ sont maintenant assimilés en tant que constante 
-      <constant>T_COMMENT</constant>. Toutefois les commentaires de style &php;Doc
-       /** */ , qui à partir de &php; 5 sont parsés par &php;, sont reconnus en tant que 
-       <constant>T_DOC_COMMENT</constant>.
+     Si error_reporting est réglé à <constant>E_ALL</constant>, &php; va générer
+     un avertissement. Bien que <constant>T_ML_CONSTANT</constant> n'ait
+     jamais été utilisée, elle était définie dans &php; 4. Avec &php; 4 et
+     &php; 5, // et /* */ sont assimilés à la constante <constant>T_COMMENT</constant>.
+     Toutefois les commentaires de style &php;Doc /** */ , qui sont parsés
+     depuis &php; 5, sont reconnus en tant que <constant>T_DOC_COMMENT</constant>.
     </simpara></listitem>
     <listitem><simpara>
       $_SERVER est maintenant renseigné avec argc and argv si votre <link
@@ -73,8 +72,11 @@
        créé pas $_SERVER, il ne seront bien sûr pas renseignés.
        Cette modification à été effectuée afin que argc et argv soient 
        toujours accessibles dans la version CLI quelque soit la valeur de
-       <link
-       linkend="ini.variables-order">variables_order</link>.
+       <link linkend="ini.variables-order">variables_order</link>. Ainsi, la
+       version CLI renseignera dorénavant toujours les variables $argc et $argv.
+    </simpara></listitem>
+    <listitem><simpara>
+      Un objet sans propriété n'est plus considéré comme vide, "empty".
     </simpara></listitem>
     <listitem><simpara>
       Les classes doivent être déclarées avant d'être utilisées
@@ -92,6 +94,26 @@ var_dump(strrpos('ABCDEF','DEF')); //int(3)
 
 var_dump(strrpos('ABCDEF','DAF')); //bool(false)
 ?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+   <para>
+    <example>
+     <title>Un objet sans propriété n'est plus considéré comme vide, "empty".</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+class test { }
+$t = new test();
+
+var_dump(empty($t)); // echo bool(false)
+
+if (!$t) {
+    // Cette portion de code sera exécutée
+}
+?>
+
 ]]>
      </programlisting>
     </example>
@@ -137,8 +159,8 @@ class fubar {
     Ce comportement est similaire à celui de php-gtk.
    </para>
    <para>
-    Avec &php; 5 , la version CLI renseignera toujours les variables
-    globales argc et argv.
+    Avec &php; 5, la version CLI renseignera toujours les variables
+    globales $argc et $argv.
    </para>
   </section>
 
@@ -155,8 +177,7 @@ class fubar {
     La migration du fichier de configuration Apache est très facile. 
     Consultez l'exemple ci-dessous afin de connaître les modifications 
     que vous devez faire :
-    <example>
-     <title>Migration des fichiers de configuration</title>
+    <informalexample>
      <programlisting role="apache-conf">
 <![CDATA[
 # changez cette ligne :    
@@ -166,14 +187,13 @@ LoadModule php4_module /php/sapi/php4apache2.dll
 LoadModule php5_module /php/php5apache2.dll
 ]]>
      </programlisting>
-    </example>
+    </informalexample>
    </para>
    <para>
     Si votre serveur web utilise &php; en mode CGI, il vous faut noter que la version 
     CGI a changé de nom (php.exe devient php-cgi.exe). Voici la modification à faire 
     pour Apache :
-    <example>
-     <title>Migration des fichiers de configuration en mode CGI</title>
+    <informalexample>
      <programlisting role="apache-conf">
 <![CDATA[
 # changez cette ligne :    
@@ -183,11 +203,11 @@ Action application/x-httpd-php "/php/php.exe"
 Action application/x-httpd-php "/php/php-cgi.exe" 
 ]]>
      </programlisting>
-    </example>
+    </informalexample>
    </para>
    <para>
     Si vous utilisez un serveur web autre que Apache, vous devez également changer 
-    le nom du module ISAPI ou CGI.
+    le nom de fichier du module ISAPI ou du CGI.
    </para>
   </section>
 
@@ -209,8 +229,7 @@ Action application/x-httpd-php "/php/php-cgi.exe"
     </simpara></listitem>
     <listitem><simpara>
       <function>array_udiff</function> - Renvoie la différence entre deux
-      tableaux en utilisant une fonction de callback pour la comparaison des
-      valeurs
+      tableaux en utilisant une fonction de callback pour la comparaison des valeurs
     </simpara></listitem>
     <listitem><simpara>
       <function>array_udiff_assoc</function> - Renvoie la différence entre deux
@@ -236,12 +255,12 @@ Action application/x-httpd-php "/php/php-cgi.exe"
       modifiées par la requête précédente
     </simpara></listitem>
     <listitem><simpara>
-      <function>ibase_backup</function> - Lance une tâche de backup dans le
-      service manager
+      <function>ibase_backup</function> - Lance une tâche de sauvegarde dans le
+      gestionnaire de services et rend la main immédiatement
     </simpara></listitem>
     <listitem><simpara>
       <function>ibase_commit_ret</function> - Permet de commiter une transaction
-      sana avoir à la fermer
+      sans avoir à la fermer
     </simpara></listitem>
     <listitem><simpara>
       <function>ibase_db_info</function> - Renvoie des statistiques sur une
@@ -254,8 +273,8 @@ Action application/x-httpd-php "/php/php-cgi.exe"
       <function>ibase_errcode</function> - Renvoie un code d'erreur
     </simpara></listitem>
     <listitem><simpara>
-      <function>ibase_free_event_handler</function> - Annule un event handler 
-      enregistré
+      <function>ibase_free_event_handler</function> - Annule un gestionnaire
+      d'évênement enregistré
     </simpara></listitem>
     <listitem><simpara>
       <function>ibase_gen_id</function> - Incrémente le générateur donné et
@@ -271,15 +290,15 @@ Action application/x-httpd-php "/php/php-cgi.exe"
     </simpara></listitem>
     <listitem><simpara>
       <function>ibase_num_params</function> - Renvoie le nombre de paramètres
-      d'une requête
+      d'une requête préparée
     </simpara></listitem>
     <listitem><simpara>
       <function>ibase_param_info</function> - Renvoie des informations sur un
-      paramètre spécifique d'une requête
+      paramètre spécifique d'une requête préparée
     </simpara></listitem>
     <listitem><simpara>
-      <function>ibase_restore</function> - Lance un restore dans le
-      service manager
+      <function>ibase_restore</function> - Lance une restauration dans le
+      gestionnaire de services et rend la main immédiatement
     </simpara></listitem>
     <listitem><simpara>
       <function>ibase_rollback_ret</function> - Fais un Rollback sur une 
@@ -291,15 +310,15 @@ Action application/x-httpd-php "/php/php-cgi.exe"
     </simpara></listitem>
     <listitem><simpara>
       <function>ibase_service_attach</function> - Initie une connexion au 
-      service manager
+      gestionnaire de services
     </simpara></listitem>
     <listitem><simpara>
       <function>ibase_service_detach</function> - Arrête une connexion au
-      service manager
+      gestionnaire de services
     </simpara></listitem>
     <listitem><simpara>
       <function>ibase_set_event_handler</function> - Permet d'enregistrer
-      un fonction de callback appelée lors du post d'évènements
+      une fonction de callback appelée lorsque des évènements sont postés
     </simpara></listitem>
     <listitem><simpara>
       <function>ibase_wait_event</function> - Attend qu'un évènement
@@ -310,14 +329,14 @@ Action application/x-httpd-php "/php/php-cgi.exe"
    <para>iconv :</para>
    <itemizedlist>
     <listitem><simpara>
-      <function>iconv_mime_decode</function> - Décode un champ d'en tête MIME
+      <function>iconv_mime_decode</function> - Décode un champ d'en-tête MIME
     </simpara></listitem>
     <listitem><simpara>
       <function>iconv_mime_decode_headers</function> - Décode plusieurs champs
-       d'en tête MIME en une seule fois
+       d'en-tête MIME en une seule fois
     </simpara></listitem>
     <listitem><simpara>
-      <function>iconv_mime_encode</function> - Créé un champ d'en tête MIME
+      <function>iconv_mime_encode</function> - Créé un champ d'en-tête MIME
     </simpara></listitem>
     <listitem><simpara>
       <function>iconv_strlen</function> - Renvoie le nombre de caractères de 
@@ -375,10 +394,14 @@ Action application/x-httpd-php "/php/php-cgi.exe"
    <para>Autres :</para>
    <itemizedlist>
     <listitem><simpara>
-      <function>convert_uudecode</function> - décode une chaîne uuencoded 
+      <function>convert_uudecode</function> - décode une chaîne uu-encodée 
     </simpara></listitem>
     <listitem><simpara>
       <function>convert_uuencode</function> - encode une chaîne en uuencode
+    </simpara></listitem>
+    <listitem><simpara>
+      <function>curl_copy_handle</function> - Copie un desripteur Curl avec
+      toutes ses préférences
     </simpara></listitem>
     <listitem><simpara>
       <function>dba_key_split</function> - Sépare une clef sous 
@@ -386,18 +409,18 @@ Action application/x-httpd-php "/php/php-cgi.exe"
     </simpara></listitem>
     <listitem><simpara>
       <function>dbase_get_header_info</function> - Récupère les informations
-      d'en tête d'une base de données dBase
+      d'en-tête d'une base de données dBase
     </simpara></listitem>
     <listitem><simpara>
       <function>dbx_fetch_row</function> - Récupère une ligne à partir d'un
-      résultat de requête utilisant DBX_RESULT_UNBUFFERED
+      résultat de requête ayant le marqueur DBX_RESULT_UNBUFFERED
     </simpara></listitem>
     <listitem><simpara>
       <function>fbsql_set_password</function> - Change le mot de passe d' 
       un utilisateur donné
     </simpara></listitem>
     <listitem><simpara>
-      <function>file_put_contents</function> - Ecrit un chaîne dans un fichier
+      <function>file_put_contents</function> - Ecrit une chaîne dans un fichier
     </simpara></listitem>
     <listitem><simpara>
       <function>ftp_alloc</function> - Alloue de l'espace pour un fichier
@@ -408,11 +431,11 @@ Action application/x-httpd-php "/php/php-cgi.exe"
       toutes les interfaces déclarées
     </simpara></listitem>
     <listitem><simpara>
-      <function>get_headers</function> - Renvoie tous les en têtes envoyés 
+      <function>get_headers</function> - Renvoie tous les en-têtes envoyés 
       par le serveur en réponse à une requête HTTP
     </simpara></listitem>
     <listitem><simpara>
-      <function>headers_list</function> - Renvoie la liste des en tête de réponse
+      <function>headers_list</function> - Renvoie la liste des en-têtes de réponse
       envoyés (ou prêts à être envoyés)
     </simpara></listitem>
     <listitem><simpara>
@@ -424,7 +447,7 @@ Action application/x-httpd-php "/php/php-cgi.exe"
     </simpara></listitem>
     <listitem><simpara>
       <function>image_type_to_extension</function> - Renvoie l'extension 
-      image-type retournée par <function>getimagesize</function>,
+      de fichier pour le type d'image "image-type" retournée par <function>getimagesize</function>,
       <function>exif_read_data</function>,
       <function>exif_thumbnail</function>,
       <function>exif_imagetype</function>
@@ -434,7 +457,7 @@ Action application/x-httpd-php "/php/php-cgi.exe"
       utilisant un angle donné 
     </simpara></listitem>
     <listitem><simpara>
-      <function>imap_getacl</function> - Récupère la valeur ACL pour un boite 
+      <function>imap_getacl</function> - Récupère la valeur de l'ACL pour un boite 
       aux lettres donnée
     </simpara></listitem>
     <listitem><simpara>
@@ -442,12 +465,16 @@ Action application/x-httpd-php "/php/php-cgi.exe"
       utilisant SASL
     </simpara></listitem>
     <listitem><simpara>
+      <function>mb_list_encodings</function> - Retourne un tableau de tous les
+      encodages supportés
+    </simpara></listitem>
+    <listitem><simpara>
       <function>pcntl_getpriority</function> - Renvoie la priorité d'un 
       processus
     </simpara></listitem>
     <listitem><simpara>
-      <function>pcntl_wait</function> - Attends ou renvoie le status d'un 
-      processus enfant comme définit par la  fonction système waitpid()
+      <function>pcntl_wait</function> - Attend ou renvoie le statut d'un 
+      processus enfant comme défini par l'appel système waitpid()
     </simpara></listitem>
     <listitem><simpara>
       <function>pg_version</function> - Renvoie un tableau contenant les 
@@ -494,13 +521,19 @@ Action application/x-httpd-php "/php/php-cgi.exe"
     <listitem><simpara>
       <function>substr_compare</function> - Comparaison binaire, 
       optionnellement insensible à la casse, de deux chaînes de caractères à
-      partir d'un offset donné et pour un taille de caractères donnée.
+      partir d'un offset donné et pour une taille de caractères donnée.
     </simpara></listitem>
     <listitem><simpara>
-      <function>time_nanosleep</function> - Délai pour un nombre de secondes 
+      <function>time_nanosleep</function> - Attend un nombre de secondes 
       et de nano secondes
     </simpara></listitem>
    </itemizedlist>
+   <note>
+    <para>
+     L'API de l'extension <link linkend="ref.tidy">Tidy</link> a changé du
+     tout au tout.
+    </para>
+   </note>
   </section>
 
 
@@ -532,15 +565,15 @@ Action application/x-httpd-php "/php/php-cgi.exe"
      conversions des données binaires en éléments lisibles (de 4 à 6)
    </simpara></listitem>
     <listitem><simpara>
-     zend.ze2_compatibility_mode - Active le mode compatible Zend Engine 1 (&php; 4)
+     zend.ze1_compatibility_mode - Active le mode de compatibilité avec le Zend Engine 1 (&php; 4)
    </simpara></listitem>
    </itemizedlist>
   </section>
 
   <section id="migration5.databases">
-   <title>Databases</title>
+   <title>Bases de données</title>
    <para>
-    Certaines modifications ont été apportées sur le support des bases de données
+    Certaines modifications ont été apportées au support des bases de données
     (MySQL et SQLite).
    </para>
    <para>
@@ -550,7 +583,8 @@ Action application/x-httpd-php "/php/php-cgi.exe"
    </para>
    <para>
     Il existe également une nouvelle extension, <link linkend="ref.mysqli">MySQLi 
-    (Improved MySQL)</link>, créé pour fonctionner avec MySQL 4.1 et plus.
+    (Improved MySQL)</link>, créée pour fonctionner avec MySQL 4.1 et
+    supérieur.
    </para>
    <para>
     A partir de &php; 5, l'extension <link linkend="ref.sqlite">SQLite</link> est 
