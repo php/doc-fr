@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.2 $ -->
+<!-- $Revision: 1.3 $ -->
 <reference id="ref.cpdf">
  <title>ClibPDF</title>
  <titleabbrev>ClibPDF</titleabbrev>
- <partintro>
-  <simpara>
+
+  <partintro>
+   <section id="cpdf.intro">
+    &reftitle.intro;
+    <para>
    L'extension ClibPDF vous permet de cr&eacute;er des documents PDF avec PHP.
    Elle est disponible en t&eacute;l&eacute;chargement sur le site
    <ulink url="&url.fastio;">FastIO</ulink>, mais requiert l'achat d'une
    licence pour utilisation commerciale. Les fonctionnalit&eacute;s et API de
    ClibPDF sont tr&egrave;s similaires &agrave; <link linkend="ref.pdf">PDFlib</link>.
-  </simpara>
+  </para>
   <simpara>
    Cette documentation devrait &ecirc;tre lue avec le manuel ClibPDF
    sous la main, car il est beaucoup plus d&eacute;taill&eacute;.
@@ -19,7 +22,10 @@
    Beaucoup de fonctions sont natives de ClibPDF et se retrouvent dans
    le module PHP, et tout comme pdflib, elles ont le m&ecirc;me nom.
    Toutes les fonctions, hormis <function>cpdf_open</function> utilisent
-   un pointeur sur un document comme premier param&egrave;tre. Actuellement,
+   un pointeur sur un document comme premier param&egrave;tre. 
+  </simpara>
+  <simpara>
+   Actuellement,
    ce pointeur n'est pas utilis&eacute; en interne, car ClibPDF ne supporte
    pas la cr&eacute;ation de plusieurs documents PDF simultan&eacute;ment.
    En fait, il ne vaut mieux pas l'envisager, car les r&eacute;sultats sont
@@ -30,13 +36,6 @@
    la version 1.10). Si vous avez besoin de cette fonctionnalit&eacute;,
    utilisez pdflib.
   </simpara>
-  <note>
-   <simpara>
-    La fonction <function>cpdf_set_font</function> a chang&eacute;
-    depuis le PHP 3.0 pour supporter les polices asiatiques. Le
-    param&egrave;tre d'encodage n'est plus un entier, mais une cha&icirc;ne.
-   </simpara>
-  </note>
   <simpara>
    Une caract&eacute;ristique pratique de ClibPDF (et aussi de
    <link linkend="ref.pdf">PDFlib</link>) est celle de cr&eacute;er le document
@@ -59,16 +58,44 @@
    d&eacute;marrer. La page contient du texte qui utilise la
    police "Times-Roman" en taille 30, outlined. Le texte est soulign&eacute;.
   </simpara>
+  </section>
+   
+   <section id="cpdf.requirements">
+    &reftitle.required;
+    <para>
+     Pour utiliser les fontions ClibPDF vous devez installer la libriaire
+     ClibPDF. Elle est disponible au t&eacute;l&eacute;chargement sur le site de
+     <ulink url="&url.fastio;">FastIO</ulink>, mais elle impose l'achat d'une
+     license pour utilisation commerciale. PHP requiert que vous utilisiez
+     ClibPDF &gt;= 2.
+    </para>
+   </section>
+
+   &reference.cpdf.configure;
+
+   <section id="cpdf.configuration">
+    &reftitle.runtime;
+    &no.config;
+   </section>
+
+   &reference.cpdf.constants;
+   
+   <section id="cpdf.examples">
+    &reftitle.examples;
+
   <example>
    <title>Exemple simple ClibPDF</title>
    <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 $cpdf = cpdf_open(0);
-cpdf_page_init($cpdf, 1, 0, 595, 842);
+cpdf_page_init($cpdf, 1, 0, 595, 842, 1.0);
 cpdf_add_outline($cpdf, 0, 0, 0, 1, "Page 1");
+cpdf_begin_text($cpdf);
 cpdf_set_font($cpdf, "Times-Roman", 30, "WinAnsiEncoding");
 cpdf_set_text_rendering($cpdf, 1);
 cpdf_text($cpdf, "Times Roman outlined", 50, 750);
+cpdf_end_text($cpdf);
 cpdf_moveto($cpdf, 50, 740);
 cpdf_lineto($cpdf, 330, 740);
 cpdf_stroke($cpdf);
@@ -76,7 +103,8 @@ cpdf_finalize($cpdf);
 Header("Content-type: application/pdf");
 cpdf_output_buffer($cpdf);
 cpdf_close($cpdf);
-?&gt;
+?>
+]]>
    </programlisting>
   </example>
   <simpara>
@@ -87,41 +115,51 @@ cpdf_close($cpdf);
   <example>
    <title>Exemple pdfclock de la distribution pdflib 2.0</title>
    <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 $radius = 200;
 $margin = 20;
 $pagecount = 40;
+
 $pdf = cpdf_open(0);
 cpdf_set_creator($pdf, "pdf_clock.php3");
 cpdf_set_title($pdf, "Analog Clock");
-while($pagecount-- &gt; 0) {
+  
+while($pagecount-- > 0) {
   cpdf_page_init($pdf, $pagecount+1, 0, 2 * ($radius + $margin), 2 * ($radius + $margin), 1.0);
+  
   cpdf_set_page_animation($pdf, 4, 0.5, 0, 0, 0);  /* wipe */
+  
   cpdf_translate($pdf, $radius + $margin, $radius + $margin);
   cpdf_save($pdf);
   cpdf_setrgbcolor($pdf, 0.0, 0.0, 1.0);
-  /* indications des minutes */
+  
+  /* minute strokes */
   cpdf_setlinewidth($pdf, 2.0);
-  for ($alpha = 0; $alpha &lt; 360; $alpha += 6)
+  for ($alpha = 0; $alpha < 360; $alpha += 6)
     {
     cpdf_rotate($pdf, 6.0);
     cpdf_moveto($pdf, $radius, 0.0);
     cpdf_lineto($pdf, $radius-$margin/3, 0.0);
     cpdf_stroke($pdf);
     }
+  
   cpdf_restore($pdf);
   cpdf_save($pdf);
-  /* Indications des 5 minutes */
+ 
+  /* 5 minute strokes */
   cpdf_setlinewidth($pdf, 3.0);
-  for ($alpha = 0; $alpha &lt; 360; $alpha += 30)
+  for ($alpha = 0; $alpha < 360; $alpha += 30)
   {
     cpdf_rotate($pdf, 30.0);
     cpdf_moveto($pdf, $radius, 0.0);
     cpdf_lineto($pdf, $radius-$margin, 0.0);
     cpdf_stroke($pdf);
   }
+
   $ltime = getdate();
-  /* aiguille des heures */
+
+  /* draw hour hand */
   cpdf_save($pdf);
   cpdf_rotate($pdf, -(($ltime['minutes']/60.0) + $ltime['hours'] - 3.0) * 30.0);
   cpdf_moveto($pdf, -$radius/10, -$radius/20);
@@ -130,7 +168,8 @@ while($pagecount-- &gt; 0) {
   cpdf_closepath($pdf);
   cpdf_fill($pdf);
   cpdf_restore($pdf);
-  /* aiguille des minutes */
+
+  /* draw minute hand */
   cpdf_save($pdf);
   cpdf_rotate($pdf, -(($ltime['seconds']/60.0) + $ltime['minutes'] - 15.0) * 6.0);
   cpdf_moveto($pdf, -$radius/10, -$radius/20);
@@ -139,7 +178,8 @@ while($pagecount-- &gt; 0) {
   cpdf_closepath($pdf);
   cpdf_fill($pdf);
   cpdf_restore($pdf);
-  /* aiguille des secondes */
+
+  /* draw second hand */
   cpdf_setrgbcolor($pdf, 1.0, 0.0, 0.0);
   cpdf_setlinewidth($pdf, 2);
   cpdf_save($pdf);
@@ -148,20 +188,33 @@ while($pagecount-- &gt; 0) {
   cpdf_lineto($pdf, $radius, 0.0);
   cpdf_stroke($pdf);
   cpdf_restore($pdf);
-  /* Un petit cercle au centre */
+
+  /* draw little circle at center */
   cpdf_circle($pdf, 0, 0, $radius/30);
   cpdf_fill($pdf);
+
   cpdf_restore($pdf);
+
   cpdf_finalize_page($pdf, $pagecount+1);
 }
+
 cpdf_finalize($pdf);
-header("Content-type: application/pdf");
+Header("Content-type: application/pdf");
 cpdf_output_buffer($pdf);
 cpdf_close($pdf);
-?&gt;
+?>
+]]>
    </programlisting>
   </example>
- </partintro>
+   </section>
+
+   <section id="cpdf.seealso">
+    &reftitle.seealso;
+    <para>
+     Voir aussi la documentation de <link linkend="ref.pdf">PDFlib</link>.
+    </para>
+   </section>
+  </partintro>
 
 &reference.cpdf.functions;
 
