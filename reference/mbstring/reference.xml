@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.9 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.10 $ -->
+<!-- EN-Revision: 1.20 Maintainer: yannick Status: ready -->
 <reference id="ref.mbstring">
  <title>Chaînes de caractères multi-octets</title>
  <titleabbrev>Chaînes de caractères multi-octets</titleabbrev>
@@ -140,63 +140,72 @@ JIS, SJIS, ISO-2022-JP, BIG-5
       doivent contrôler les conversions, si des données binaires doivent
       être utilisées via HTTP.
      </para>
-     <para>
-      Si l'option <literal>enctype</literal> d'un formulaire HTML vaut
-      <literal>multipart/form-data</literal>,
-      <literal>mbstring</literal> ne convertira pas les données du POST. Dans ce
-      cas, les chaînes de caractères doivent être convertis manuellement.
-     </para>
+     <note>
+      <para>
+       Depuis la version 4.3.2 de &php;, il y a une limitation
+       dans l'utilisation des fonctionnalités <literal>mbstring</literal> : l'encodage ne sera pas effectué
+       dans les données transmises en méthode POST si l'attribut <literal>enctype</literal> de la balise
+       <literal>form</literal> vaut <literal>multipart/form-data</literal>.
+       Donc, vous devrez convertir les données entrantes vous même dans ce cas, si nécessaire.
+      </para>
+      <para>
+       Depuis la version 4.3.3 de &php;, si l'attribut <literal>enctype</literal> de la balise 
+       <literal>form</literal> vaut <literal>multipart/form-data</literal> et que la directive du 
+       &php.ini; est positionné à On, les variables et les noms de fichiers uploadés en méthode POST
+       seront convertis avec l'encodage interne. Sinon, la convertion ne sera pas faite.
+      </para>
+     </note>
      <para>
       <itemizedlist>
        <listitem>
-	<simpara>
-	 Entrée HTTP
-	</simpara>
-	<para>
-	 Il n'y a pas de moyen de contrôler la conversion des caractères
-	 HTTP en entrée, depuis un script PHP. Pour désactiver cette conversion,
-	 il faut le faire dès le fichier &php.ini;.
-	 <example>
-	  <title>
-	   Désactive la conversion HTTP dans le php.ini
-	  </title>
-	  <programlisting role="php">
+        <simpara>
+         Entrée HTTP
+        </simpara>
+        <para>
+         Il n'y a pas de moyen de contrôler la conversion des caractères
+         HTTP en entrée, depuis un script PHP. Pour désactiver cette conversion,
+         il faut le faire dès le fichier &php.ini;.
+         <example>
+          <title>
+           Désactive la conversion HTTP dans le php.ini
+          </title>
+          <programlisting role="php">
 <![CDATA[
 ;; Désactive la conversion HTTP
 mbstring.http_input = pass
 ;; Désactive la conversion HTTP (PHP 4.3.0 ou plus récent)
 mbstring.encoding_translation = Off
 ]]>
-	  </programlisting>
-	 </example>
-	</para>
-	<para>
-	 Lorsque vous utilisez PHP comme module Apache, il est possible
-	 d'annuler la configuration du &php.ini; pour
-	 chaque Virtual Host dans le fichier
-	 &httpd.conf; ou par dossier avec le fichier
-	 <literal>.htaccess</literal>. Reportez vous à la section de
-	 <link linkend="configuration">configuration</link> ainsi qu'au
-	 manuel Apache.
-	</para>
+          </programlisting>
+         </example>
+        </para>
+        <para>
+         Lorsque vous utilisez PHP comme module Apache, il est possible
+         d'annuler la configuration du &php.ini; pour
+         chaque Virtual Host dans le fichier
+         &httpd.conf; ou par dossier avec le fichier
+         <literal>.htaccess</literal>. Reportez vous à la section de
+         <link linkend="configuration">configuration</link> ainsi qu'au
+         manuel Apache.
+        </para>
        </listitem>
        <listitem>
-	<simpara>
-	 Sorties HTTP
-	</simpara>
-	<para>
-	 Il y a plusieurs moyens d'activer la conversion en sortie de script
-	 PHP. L'un d'entre eux utilise &php.ini;, un autre
-	 utilise <function>ob_start</function> avec la fonction
-	 <function>mb_output_handler</function> comme fonction de call-back.
-	</para>
-	<note>
-	 <para>
-	  Pour les utilisateurs PHP3-i18n, le système de conversion de
-	  <literal>mbstring</literal> diffère de celui de PHP3-i18n.
-	  Le jeu de caractère est converti avec un buffer de sortie.
-	 </para>
-	</note>
+        <simpara>
+         Sorties HTTP
+        </simpara>
+        <para>
+         Il y a plusieurs moyens d'activer la conversion en sortie de script
+         PHP. L'un d'entre eux utilise &php.ini;, un autre
+         utilise <function>ob_start</function> avec la fonction
+         <function>mb_output_handler</function> comme fonction de call-back.
+        </para>
+        <note>
+         <para>
+          Pour les utilisateurs PHP3-i18n, le système de conversion de
+          <literal>mbstring</literal> diffère de celui de PHP3-i18n.
+          Le jeu de caractère est converti avec un buffer de sortie.
+         </para>
+        </note>
        </listitem>
       </itemizedlist>
      </para>
@@ -231,12 +240,14 @@ mb_http_output('SJIS');
 // Commence la bufferisation et spécifie "mb_output_handler"
 // comme fonction de callback
 ob_start('mb_output_handler');
+
 ?>
 ]]>
        </programlisting>
       </example>
      </para>
     </section>
+    
     <section id="mbstring.supported-encodings">
      <title>Jeux de caractères supportés</title>
      <simpara>
@@ -250,42 +261,64 @@ ob_start('mb_output_handler');
       Les jeux de caractères suivants sont supportés par
       <literal>mbstring</literal> :
      </para>
-     <para>
-      <literal>UCS-4</literal>, <literal>UCS-4BE</literal>,
-      <literal>UCS-4LE</literal>, <literal>UCS-2</literal>,
-      <literal>UCS-2BE</literal>, <literal>UCS-2LE</literal>,
-      <literal>UTF-32</literal>, <literal>UTF-32BE</literal>,
-      <literal>UTF-32LE</literal>, <literal>UCS-2LE</literal>,
-      <literal>UTF-16</literal>, <literal>UTF-16BE</literal>,
-      <literal>UTF-16LE</literal>, <literal>UTF-8</literal>,
-      <literal>UTF-7</literal>, <literal>ASCII</literal>,
-      <literal>EUC-JP</literal>, <literal>SJIS</literal>,
-      <literal>eucJP-win</literal>, <literal>SJIS-win</literal>,
-      <literal>ISO-2022-JP</literal>, <literal>JIS</literal>,
-      <literal>ISO-8859-1</literal>, <literal>ISO-8859-2</literal>,
-      <literal>ISO-8859-3</literal>, <literal>ISO-8859-4</literal>,
-      <literal>ISO-8859-5</literal>, <literal>ISO-8859-6</literal>,
-      <literal>ISO-8859-7</literal>, <literal>ISO-8859-8</literal>,
-      <literal>ISO-8859-9</literal>, <literal>ISO-8859-10</literal>,
-      <literal>ISO-8859-13</literal>, <literal>ISO-8859-14</literal>,
-      <literal>ISO-8859-15</literal>, <literal>byte2be</literal>,
-      <literal>byte2le</literal>, <literal>byte4be</literal>,
-      <literal>byte4le</literal>, <literal>BASE64</literal>,
-      <literal>7bit</literal>, <literal>8bit</literal> et
-      <literal>UTF7-IMAP</literal>.
-     </para>
-     <para>
-      Depuis PHP 4.3.0, les jeux de caractèrs suivants sont ajoutés, mais restent
-      expérimentaux : 
-      <literal>EUC-CN</literal>, <literal>CP936</literal>, <literal>HZ</literal>, 
-      <literal>EUC-TW</literal>, <literal>CP950</literal>, <literal>BIG-5</literal>, 
-      <literal>EUC-KR</literal>, <literal>UHC</literal> (<literal>CP949</literal>), 
-      <literal>ISO-2022-KR</literal>,
-      <literal>Windows-1251</literal> (<literal>CP1251</literal>),
-      <literal>Windows-1252</literal> (<literal>CP1252</literal>),
-      <literal>CP866</literal> et
-      <literal>KOI8-R</literal>.
-     </para>
+     <itemizedlist>
+     <listitem><simpara>UCS-4</simpara></listitem>
+     <listitem><simpara>UCS-4BE</simpara></listitem>
+     <listitem><simpara>UCS-4LE</simpara></listitem>
+     <listitem><simpara>UCS-2</simpara></listitem>
+     <listitem><simpara>UCS-2BE</simpara></listitem>
+     <listitem><simpara>UCS-2LE</simpara></listitem>
+     <listitem><simpara>UTF-32</simpara></listitem>
+     <listitem><simpara>UTF-32BE</simpara></listitem>
+     <listitem><simpara>UTF-32LE</simpara></listitem>
+     <listitem><simpara>UTF-16</simpara></listitem>
+     <listitem><simpara>UTF-16BE</simpara></listitem>
+     <listitem><simpara>UTF-16LE</simpara></listitem>
+     <listitem><simpara>UTF-7</simpara></listitem>
+     <listitem><simpara>UTF7-IMAP</simpara></listitem>
+     <listitem><simpara>UTF-8</simpara></listitem>
+     <listitem><simpara>ASCII</simpara></listitem>
+     <listitem><simpara>EUC-JP</simpara></listitem>
+     <listitem><simpara>SJIS</simpara></listitem>
+     <listitem><simpara>eucJP-win</simpara></listitem>
+     <listitem><simpara>SJIS-win</simpara></listitem>
+     <listitem><simpara>ISO-2022-JP</simpara></listitem>
+     <listitem><simpara>JIS</simpara></listitem>
+     <listitem><simpara>ISO-8859-1</simpara></listitem>
+     <listitem><simpara>ISO-8859-2</simpara></listitem>
+     <listitem><simpara>ISO-8859-3</simpara></listitem>
+     <listitem><simpara>ISO-8859-4</simpara></listitem>
+     <listitem><simpara>ISO-8859-5</simpara></listitem>
+     <listitem><simpara>ISO-8859-6</simpara></listitem>
+     <listitem><simpara>ISO-8859-7</simpara></listitem>
+     <listitem><simpara>ISO-8859-8</simpara></listitem>
+     <listitem><simpara>ISO-8859-9</simpara></listitem>
+     <listitem><simpara>ISO-8859-10</simpara></listitem>
+     <listitem><simpara>ISO-8859-13</simpara></listitem>
+     <listitem><simpara>ISO-8859-14</simpara></listitem>
+     <listitem><simpara>ISO-8859-15</simpara></listitem>
+     <listitem><simpara>byte2be</simpara></listitem>
+     <listitem><simpara>byte2le</simpara></listitem>
+     <listitem><simpara>byte4be</simpara></listitem>
+     <listitem><simpara>byte4le</simpara></listitem>
+     <listitem><simpara>BASE64</simpara></listitem>
+     <listitem><simpara>HTML-ENTITIES</simpara></listitem>
+     <listitem><simpara>7bit</simpara></listitem>
+     <listitem><simpara>8bit</simpara></listitem>
+     <listitem><simpara>EUC-CN</simpara></listitem>
+     <listitem><simpara>CP936</simpara></listitem>
+     <listitem><simpara>HZ</simpara></listitem>
+     <listitem><simpara>EUC-TW</simpara></listitem>
+     <listitem><simpara>CP950</simpara></listitem>
+     <listitem><simpara>BIG-5</simpara></listitem>
+     <listitem><simpara>EUC-KR</simpara></listitem>
+     <listitem><simpara>UHC (CP949)</simpara></listitem>
+     <listitem><simpara>ISO-2022-KR</simpara></listitem>
+     <listitem><simpara>Windows-1251 (CP1251)</simpara></listitem>
+     <listitem><simpara>Windows-1252 (CP1252)</simpara></listitem>
+     <listitem><simpara>CP866 (IBM866)</simpara></listitem>
+     <listitem><simpara>KOI8-R</simpara></listitem>
+    </itemizedlist>
      <para>
       Les entrées du fichiers &php.ini;, qui acceptent des
       noms de jeux de caractères, acceptent aussi les valeurs
@@ -293,25 +326,21 @@ ob_start('mb_output_handler');
       &quot;<literal>pass</literal>&quot;.
       Les fonctions <literal>mbstring</literal>,qui acceptent des
       noms de jeux de caractères, acceptent aussi la valeur
-      &quot;<literal>auto</literal>&quot;/
+      &quot;<literal>auto</literal>&quot;.
      </para>
      <para>
       Si &quot;<literal>pass</literal>&quot; est utilisée, aucune conversion
       n'est effectuée.
      </para>
      <para>
-      Si &quot;<literal>auto</literal>&quot; est utilisée, elle est remplacée
-      par &quot;<literal>ASCII,JIS,UTF-8,EUC-JP,SJIS</literal>&quot;.
+      Si &quot;<literal>auto</literal>&quot; est défini, la liste sera étendue à la liste des encodages
+      définis par <link linkend="mbstring.configuration">NLS</link>.
+      Par exemple, si <literal>NLS</literal> vaut <literal>Japanese</literal>, les valeurs seront
+      &quot;<literal>ASCII,JIS,UTF-8,EUC-JP,SJIS</literal>&quot;.
      </para>
      <para>
       Voir aussi <function>mb_detect_order</function>.
      </para>
-     <note>
-      <para>
-       Un jeu de caractère supporté n'est pas forcément un bon choix comme
-       jeu de caractères interne.
-      </para>
-     </note>
     </section>
 
    
@@ -334,8 +363,8 @@ ob_start('mb_output_handler');
      <para>
       mbstring supporte aussi le remplacement de fonction, pour
       permettre le support des chaînes multi-octets sans modifier les
-      scripts PHP. En utilisant ce système de remplacement de fonctions,
-      certains fonctions PHP seront remplacées par leur équivalent
+      scripts &php;. En utilisant ce système de remplacement de fonctions,
+      certains fonctions &php; seront remplacées par leur équivalent
       de mbstring. Par exemple <function>mb_substr</function> remplacera
       <function>substr</function>. Ce système de remplacement transparent,
       permet un portage simple et efficace des applications.
@@ -385,6 +414,21 @@ ob_start('mb_output_handler');
           <entry><function>mb_substr</function></entry>
          </row>
          <row>
+         <entry>2</entry>
+         <entry><function>strtolower</function></entry>
+         <entry><function>mb_strtolower</function></entry>
+        </row>
+        <row>
+         <entry>2</entry>
+         <entry><function>strtoupper</function></entry>
+         <entry><function>mb_strtoupper</function></entry>
+        </row>
+        <row>
+         <entry>2</entry>
+         <entry><function>substr_count</function></entry>
+         <entry><function>mb_substr_count</function></entry>
+        </row>
+         <row>
           <entry>4</entry>
           <entry><function>ereg</function></entry>
           <entry><function>mb_ereg</function></entry>
@@ -408,11 +452,18 @@ ob_start('mb_output_handler');
           <entry>4</entry>
           <entry><function>split</function></entry>
           <entry><function>mb_split</function></entry>
-        	</row>
+         </row>
         </tbody>
        </tgroup>
       </table>
      </para>
+     <note>
+      <para>
+       Il n'est pas recommandé d'utiliser les options des fonctions d'overloading dans un contexte de
+       <literal>per-directory</literal>, car il n'est pas confirmé encore qu'elles sont suffisemment stables
+       dans un environnement de production et peuvent conduire à un résultat incohérent.
+      </para>
+     </note>
    </section>
 
 
@@ -447,26 +498,26 @@ ob_start('mb_output_handler');
     </listitem>
     <listitem>
      <simpara>
-      Certains encodage de caractères définissent des séquences de
-      début/fin pour les sections multi-octets.
+      Certains encodages de caractères définissent des séquences de
+      début/fin pour les sections multi-octets
+      (<literal>00h</literal> to <literal>7fh</literal>).
      </simpara>
     </listitem>
     <listitem>
      <simpara>
-      Les bases de données allouent des tailles de stockages différentes
-      de celles utilisées par PHP, même si le même encodage
-      de caractère est utilisé (par exemple, PostGreSQL).
+      ISO-2022-JP doit être utilisé pour les protocoles SMTP/NNTP, et les en-têtes ainsi que les entitiés
+      devraient être réencodés en accord avec la RFC correspodante.
+      Bien que celà ne soit pas requis, ca reste une bonne idée car beaucoups de user-agent populaires
+      ne peuvent pas reconnaître d'autre méthode d'encodage.
      </simpara>
     </listitem>
     <listitem>
      <simpara>
-      Le courrier électronique utilise généralement ISO-2022-JP.
-     </simpara>
-    </listitem>
-    <listitem>
-     <para>
-      Les sites web en &quot;i-mode&quot; utilisent Shift_JIS.
-     </para>
+      Les pages Web créées pour les téléphones portables comme
+      <ulink url="&url.imode;">i-mode</ulink>,
+      <ulink url="&url.vlife;">Vodafone live!</ulink>, ou <ulink url="&url.ezweb;">EZweb</ulink>
+      sont supposées utiliser l'encodage Shift_JIS.
+       </simpara>
     </listitem>
    </itemizedlist>
   </para>
@@ -479,26 +530,26 @@ ob_start('mb_output_handler');
        URL suivantes, pour d'autres ressouces complémentaires :
       <itemizedlist>
        <listitem>
-	<para>
-	 Unicode/UTF/UCS/etc
-	</para>
-	<para>
-     <ulink url="&url.unicode;">&url.unicode;</ulink>
-	</para>
+        <para>
+         Unicode/UTF/UCS/etc
+        </para>
+        <para>
+         <ulink url="&url.unicode;">&url.unicode;</ulink>
+        </para>
        </listitem>
        <listitem>
-	<para>
-	 Japonais/coréen/Chinois
-	</para>
-	<para>
-	 <literal>
-	 ftp://ftp.ora.com/pub/examples/nutshell/ujip/doc/cjk.inf
-	 </literal>
-	</para>
+        <para>
+         Japonais/coréen/Chinois
+        </para>
+        <para>
+        <ulink url="&url.oreilly.cjk-inf;">&url.oreilly.cjk-inf;</ulink>
+       </para>
        </listitem>
       </itemizedlist>
      </para>
   </section>
+  &reference.mbstring.encodings;
+  
  </partintro>
 
 &reference.mbstring.functions;
