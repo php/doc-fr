@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.5 $ -->
-<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.6 $ -->
+<!-- EN-Revision: 1.6 Maintainer: yannick Status: ready -->
   <refentry id="function.xslt-set-sax-handlers">
    <refnamediv>
     <refname>xslt_set_sax_handlers</refname>
@@ -237,10 +237,8 @@ xslt_free($xh);
      </example>
     </para>
     <para>
-     Chaque valeur du tableau <parameter>handlers</parameter> est soit
-     une chaîne de caractères contenant le nom de la fonction ou un tableau suivant le
-     format suivant :
-     <command>array(&amp;$obj, "methode")</command>.
+     Vous pouvez également utiliser la fonction <function>xslt_set_object</function> 
+     si vous voulez implémenter votre gestionnaire dans un objet.
     </para>
     <para>
      <example>
@@ -253,6 +251,30 @@ class data_sax_handler {
 
   var $buffer, $tag, $attrs;
 
+  var $_xh;
+
+  function data_sax_handler($xml, $xsl)
+  {
+      // notre ressource xslt
+      $this->_xh = xslt_create();
+
+      xslt_set_object($this->_xs, $this);
+
+      // configuration du gestionnaire sax
+      $handlers = array(
+        "document" => array('start_document', 'end_document'),
+        "element" => array('start_element', 'end_element'),
+        "character" => 'characters'
+      );
+
+      xslt_set_sax_handlers($this->_xh, $handlers);
+    
+      xslt_process($this->_xh, 'arg:/_xml', 'arg:/_xsl', NULL, array("/_xml"=>$xml, "/_xsl"=>$xsl));
+      xslt_free($this->_xh);
+
+
+  }  
+  
   function start_document() 
   {
         // début de la lecture du document
@@ -288,27 +310,7 @@ class data_sax_handler {
 
 }
 
-// notre gestionnaire xsl
-$xh = xslt_create();
-
-$handler = new data_sax_handler();
-// configuration des gestionnaire SAX
-$handlers = array(
-  "document" => array(
-    array(&$handler, 'start_document'),
-    array(&$handler, 'end_document')
-),
-  "element" => array(
-    array(&$handler, 'start_element'),
-    array(&$handler, 'end_element')
-),
-  "character" => array(&$handler, 'characters')
-);
-
-xslt_set_sax_handlers($xh, $handlers);
-    
-xslt_process($xh, 'arg:/_xml', 'arg:/_xsl', NULL, array("/_xml"=>$xml, "/_xsl"=>$xsl));
-xslt_free($xh);
+$exec = new data_sax_handler($xml, $xsl);
 
 ?>
 ]]>
