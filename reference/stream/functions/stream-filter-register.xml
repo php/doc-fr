@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.6 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.7 $ -->
+<!-- EN-Revision: 1.8 Maintainer: yannick Status: ready -->
   <refentry id="function.stream-filter-register">
    <refnamediv>
     <refname>stream_filter_register</refname>
@@ -44,7 +44,8 @@
     <para>
      Cette méthode est appelé à chaque fois que des données sont lues ou écrites
      dans le flux attaché (avec des fonctions comme <function>fread</function> ou
-     <function>fwrite</function>).  Le paramètre <parameter>in</parameter> est une ressource 
+     <function>fwrite</function>).  
+     Le paramètre <parameter>in</parameter> est une ressource 
      qui pointe sur une <literal>bucket brigade</literal> qui contient un ou plusieurs
      objet <literal>bucket</literal> contenant les données à filtrer.
      <parameter>out</parameter> est une autre ressource 
@@ -58,34 +59,92 @@
      Si le flux est en cours de fermeture (et par conséquent, cela sera le dernier
      passage dans la chaîne de filtres), le paramètre <parameter>closing</parameter> 
      vaudra &true; La méthode <methodname>filter</methodname> doit retourner l'une 
-     des trois valeurs suivantes : <constant>PSFS_PASS_ON</constant> indique la réussite,
-     et les données sont dans le paramètre <parameter>out</parameter>, une <literal>bucket brigade</literal>.
-     <constant>PSFS_FEED_ME</constant> indique que le filtre n'a aucune données à retourner, et
-     requiert d'autres données du flux.
-     <constant>PSFS_ERR_FATAL</constant> indique que le flux a rencontré une erreur
-     fatale, et ne peut continuer. Si aucune valeur n'est retournée par cette méthode,
-     <constant>PSFS_ERR_FATAL</constant> est utilisé.
+     des trois valeurs suivantes : 
+     <informaltable>
+      <tgroup cols="2">
+       <thead>
+        <row>
+         <entry>Valeur retournée</entry>
+         <entry>Signification</entry>
+        </row>
+       </thead>
+       <tbody>
+        <row>
+         <entry><constant>PSFS_PASS_ON</constant></entry>
+         <entry>
+          Indique la réussite ; les données sont dans le paramètre <parameter>out</parameter>, 
+          une <literal>bucket brigade</literal>.
+         </entry>
+        </row>
+        <row>
+         <entry><constant>PSFS_FEED_ME</constant></entry>
+         <entry>
+          Indique que le filtre n'a aucune données à retourner, et requiert d'autres données du flux.
+         </entry>
+        </row>
+        <row>
+         <entry><constant>PSFS_ERR_FATAL</constant> (défaut)</entry>
+         <entry>
+          Indique que le flux a rencontré une erreur fatale, et ne peut continuer. 
+          Si aucune valeur n'est retournée par cette méthode, 
+          <constant>PSFS_ERR_FATAL</constant> est utilisé.
+         </entry>
+        </row>
+       </tbody>
+      </tgroup>
+     </informaltable>
    </para>
     
     <methodsynopsis>
-     <type>void</type><methodname>oncreate</methodname>
+     <type>void</type><methodname>onCreate</methodname>
      <void/>
     </methodsynopsis>
-    <para>
+    <simpara>
      Cette méthode est appelée durant l'instantiation du filtre. Si votre 
      filtre alloue ou initialise d'autres ressources (comme des
-     buffers), c'est le moment de le faire.
+     buffers), c'est le moment de le faire. Votre implémentation de cette méthode doit retourner
+     &false; en cas d'erreur et &true; en cas de succès.
+    </simpara>
+    <para>
+     <informaltable>
+      <tgroup cols="2">
+       <thead>
+        <row>
+         <entry>Propriété</entry>
+         <entry>Contenu</entry>
+        </row>
+       </thead>
+       <tbody>
+        <row>
+         <entry><literal>FilterClass-&gt;filtername</literal></entry>
+         <entry>
+          Une chaîne contenant le nom du filtre est instancié.
+          Les filtres peuvent être enregistrés sous de noms multiples ainsi qu'avec des jokers.
+          Utilisez cette propriété pour déterminer qu'elle est le nom utilisé.
+         </entry>
+        </row>
+        <row>
+         <entry><literal>FilterClass-&gt;params</literal></entry>
+         <entry>
+          Le contenu du paramètre passé <parameter>params</parameter> à 
+          la fonction <function>stream_filter_append</function> ou la fonction
+          <function>stream_filter_prepend</function>.
+         </entry> 
+        </row>
+       </tbody>
+      </tgroup>
+     </informaltable>
     </para>
 
     <methodsynopsis>
-     <type>void</type><methodname>onclose</methodname>
+     <type>void</type><methodname>onClose</methodname>
      <void/>
     </methodsynopsis>
     <para>
      Cette méthode est appelée durant l'extinction du filtre (généralement,
      lorsque le flux est fermé), et est exécuté <emphasis>après</emphasis>
      l'appel de la fonction <literal>flush</literal>.  Si aucune ressource
-     a été allouée ou créée durant <literal>oncreate()</literal>,
+     a été allouée ou créée durant <literal>onCreate()</literal>,
      c'est le moment de les libérer.
     </para>
 
@@ -95,71 +154,137 @@
      qui réalise un chiffrement de type ROT-13 sur toutes les lettres 
      lue ou écrite dans le flux.
      <example> 
-      <title>Filtre ROT13 pour les flux</title>
+      <title>Filtre sur les lettres majuscules sur le flux foo-bar.txt stream</title>
       <programlisting role="php">
 <![CDATA[
 <?php
 
-/* Definition de notre classe de filtre */
-class rot13_filter extends php_user_filter {
-  function read($length) {
-    $tempstr = parent::read($length);
-    for($i = 0; $i < strlen($tempstr); $i++)
-      if (($tempstr[$i] >= 'A' AND $tempstr[$i] <= 'M') OR
-          ($tempstr[$i] >= 'a' AND $tempstr[$i] <= 'm')) $tempstr[$i] = chr(ord($tempstr[$i]) + 13);
-      else if (($tempstr[$i] >= 'N' AND $tempstr[$i] <= 'Z') OR
-               ($tempstr[$i] >= 'n' AND $tempstr[$i] <= 'z')) $tempstr[$i] = chr(ord($tempstr[$i]) - 13);
-    return $tempstr;
+/* Définition de la classe */
+class strtoupper_filter extends php_user_filter {
+  function filter($in, $out, &$consumed, $closing) 
+  {
+    while ($bucket = stream_bucket_make_writeable($in)) {
+      $bucket->data = strtoupper($bucket->data);
+      $consumed += $bucket->datalen;
+      stream_bucket_append($out, $bucket);
+    }
+    return PSFS_PASS_ON;
   }
+} 
 
-  function write($data) {
-    for($i = 0; $i < strlen($data); $i++)
-      if (($data[$i] >= 'A' AND $data[$i] <= 'M') OR
-          ($data[$i] >= 'a' AND $data[$i] <= 'm')) $data[$i] = chr(ord($data[$i]) + 13);
-      else if (($data[$i] >= 'N' AND $data[$i] <= 'Z') OR
-               ($data[$i] >= 'n' AND $data[$i] <= 'z')) $data[$i] = chr(ord($data[$i]) - 13);
-    return parent::write($data);
-  }
-}
-
-/* Enregistrement du filtre avec PHP */
-stream_filter_register("rot13", "rot13_filter")
-    or die("Impossible d'enregistrer le filtre");
+/* Enregistrement de notre filtre avec PHP */
+stream_filter_register("strtoupper", "strtoupper_filter")
+    or die("Erreur lors de l'enregistrement du filtre");
 
 $fp = fopen("foo-bar.txt", "w");
 
-/* Liaison du filtre avec le flux */
-stream_filter_append($fp, "rot13");
+/* Attachement du filtre enregistré au flux que l'on vient d'ouvrir */
+stream_filter_append($fp, "strtoupper");
 
-fwrite($fp, "Line1\n");
-fwrite($fp, "Word - 2\n");
-fwrite($fp, "Easy As 123\n");
+fwrite($fp, "Ligne1\n");
+fwrite($fp, "Mot - 2\n");
+fwrite($fp, "Facile comme 123\n");
 
 fclose($fp);
 
-/* Le filtre ne s'applique qu'au flux $fp
- * ce qui fait que cette lecture se fait sans déchiffrement
+/* Lecture du contenu
  */
 readfile("foo-bar.txt");
 
-/* affichage
- * ------
-
-Yvar1
-Jbeq - 2
-Rnfl Nf 123
-
- */
 ?>
 ]]>
       </programlisting>
+      &example.outputs;
+      <screen>
+<![CDATA[
+LIGNE1
+MOT - 2
+FACILE COMME 123
+]]>
+      </screen>
+     </example>
+    </para>
+    <para>
+     <example>
+      <title>Enregistrement d'une classe de filtre générique pour correspondre
+      avec de multiples noms de filtres.</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+
+/* Définition de la classe*/
+class string_filter extends php_user_filter {
+  var $mode;
+
+  function filter($in, $out, &$consumed, $closing) 
+  {
+    while ($bucket = stream_bucket_make_writeable($in)) {
+      if ($this->mode == 1) {
+        $bucket->data = strtoupper($bucket->data);
+      } elseif ($this->mode == 0) {
+        $bucket->data = strtolower($bucket->data);
+      }
+
+      $consumed += $bucket->datalen;
+      stream_bucket_append($out, $bucket);
+    }
+    return PSFS_PASS_ON;
+  }
+
+  function onCreate() 
+  {
+    if ($this->filtername == 'str.toupper') {
+      $this->mode = 1;
+    } elseif ($this->filtername == 'str.tolower') {
+      $this->mode = 0;
+    } else {
+      /* Quelques autres filtres str.* sont demandés,
+          traitement de l'erreur avec PHP */
+      return false;
+    }
+
+    return true;
+  }
+} 
+
+/* Enregistrement de notre filtre avec PHP */
+stream_filter_register("str.*", "string_filter")
+    or die("Failed to register filter");
+
+$fp = fopen("foo-bar.txt", "w");
+
+/* Attachement du filtre enregistré au flux que l'on vient d'ouvrir
+    Nous pouvons alternativement passer à str.tolower ici */
+stream_filter_append($fp, "str.toupper");
+
+fwrite($fp, "Ligne1\n");
+fwrite($fp, "Mot - 2\n");
+fwrite($fp, "Facile comme 123\n");
+
+fclose($fp);
+
+/* Lecture du contenu
+ */
+readfile("foo-bar.txt");
+
+?>
+]]>
+      </programlisting>
+      &example.outputs;
+      <screen>
+<![CDATA[
+LINE1
+MOT - 2
+FACILE COMME 123
+]]>
+      </screen>
      </example>
     </para>
     <simpara>
      Voir aussi
-     <function>stream_register_wrapper</function>,
+     <function>stream_wrapper_register</function>,
      <function>stream_filter_prepend</function> et
-     <function>stream_filter_append</function>
+     <function>stream_filter_append</function>.
     </simpara>
    </refsect1>
   </refentry>
