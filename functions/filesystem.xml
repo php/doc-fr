@@ -910,6 +910,14 @@ $fcontents = join( '', file( 'http://www.php.net' ) );
       <function>flock</function> retourne TRUE en cas de succ&egrave;s, et FALSE sinon. 
       (le verrou n'a pas pu &ecirc;tre obtenu).
     </simpara>
+    <warning>
+     <para>
+      Sur la plus part des OS, <function>flock</function> est impl&eacute;ment&eacute; au niveau
+      processus. Lors de l'utilisation des API d'un serveur multi-thread, comme
+      ISAPI, vous ne pouvez pas vous fier &agrave; <function>flock</function> pour prot&eacute;ger
+      vos fichiers contre des acc&egrave;s concurents du m&ecirc;me serveur.
+     </para>
+    </warning>
    </refsect1>
   </refentry>
 
@@ -990,7 +998,7 @@ $fcontents = join( '', file( 'http://www.php.net' ) );
       </listitem>
       <listitem>
        <simpara>
-	'a+' - Ouvre en lecture et &eacute;criture; place le pointeur de fichier au d&eacute;but du fichier et r&eacute;duit la taille du fichier &agrave; 0. Si le fichier n'existe pas, on tente de le cr&eacute;er.
+	'a+' - Ouvre en lecture et &eacute;criture; place le pointeur de fichier &agrave; la fin du fichier. Si le fichier n'existe pas, on tente de le cr&eacute;er.
        </simpara>
       </listitem>
      </itemizedlist>
@@ -1136,6 +1144,60 @@ fclose ($fd);
     </simpara>
    </refsect1>
   </refentry>
+  
+<refentry id="function.fscanf">
+   <refnamediv>
+    <refname>fscanf</refname>
+    <refpurpose>Analyse un fichier en fonction d'un format</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>mixed <function>fscanf</function></funcdef>
+      <paramdef>int <parameter>handle</parameter></paramdef>
+      <paramdef>string <parameter>format</parameter></paramdef>
+      <paramdef>string 
+       <parameter><optional>var1</optional></parameter>...
+      </paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>fscanf</function> est similaire &agrave; <function>sscanf</function>, 
+     mais elle prend comme entr&eacute;e un fichier, associ&eacute; &agrave; <parameter>handle</parameter>
+     et l'interpr&egrave;te en fonction du format <parameter>format</parameter>. Si 
+     seulement deux param&egrave;tres sont pass&eacute;s &agrave; la fonction, les valeurs pars&eacute;es
+     seront retourn&eacute;es sous forme de tableau. Si des arguments optionnels sont
+     pass&eacute;s, la fonction retournera le nombre de valeurs assign&eacute;es. Les options
+     doivent etre pass&eacute;es par r&eacute;f&eacute;rence.
+     <example>
+      <title>Exemple <function>Fscanf</function></title>
+      <programlisting role="php">
+$fp = fopen ("users.txt","r");
+while ($userinfo = fscanf ($fp, "%s\t%s\t%s\n")) {
+    list ($name, $profession, $countrycode) = $userinfo;
+    //... traitement des donn&eacute;es
+}
+fclose($fp);
+      </programlisting>
+     </example>
+     <example>
+      <title>users.txt</title>
+      <programlisting>
+janus  argonaute        gr
+rodin  sculpteur        fr
+som  oncle us
+leonard   inventeur it
+      </programlisting>
+     </example>
+    </para>
+    <para>
+     Voir aussi <function>fread</function>, <function>fgets</function>,
+     <function>fgetss</function>, <function>sscanf</function>,
+     <function>printf</function>, et <function>sprintf</function>.
+    </para>
+   </refsect1>
+  </refentry>
 
   <refentry id="function.fseek">
    <refnamediv>
@@ -1167,6 +1229,52 @@ fclose ($fd);
     </para>
    </refsect1>
   </refentry>
+  
+<refentry id="function.fstat">
+   <refnamediv>
+    <refname>fstat</refname>
+    <refpurpose>
+     Lit les informations sur un fichier &agrave; partir d'un pointeur de fichier
+    </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>array <function>fstat</function></funcdef>
+      <paramdef>int <parameter>fp</parameter></paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     Rassemble les informations sur le fichier dont on connait le pointeur
+     <parameter>fp</parameter>. Cette fonction est similaire &agrave; la fonction
+     <function>stat</function>, hormis le fait qu'elle utilise un pointeur de 
+     fichier, au lieu d'un nom de fichier.
+    </para>
+   <para>
+     Retourne un tableau avec les &eacute;l&eacute;ments suivants :
+     <orderedlist>
+      <listitem><simpara>volume </simpara></listitem>
+      <listitem><simpara>inode</simpara></listitem>
+      <listitem><simpara>mode de protection du inode </simpara></listitem>
+      <listitem><simpara>nombre de liens </simpara></listitem>
+      <listitem><simpara>id de l'utilisateur propri&eacute;taire </simpara></listitem>
+      <listitem><simpara>id du groupe propri&eacute;taire</simpara></listitem>
+      <listitem><simpara>type du volume de l' inode * </simpara></listitem>
+      <listitem><simpara>taille en octets </simpara></listitem>
+      <listitem><simpara>date du dernier acc&egrave;s </simpara></listitem>
+      <listitem><simpara>date de la derni&egrave;re modification </simpara></listitem>
+      <listitem><simpara>date du dernier changement </simpara></listitem>
+      <listitem><simpara>taille de bloc du syst&egrave;me pour les entr&eacute;es/sorties * </simpara></listitem>
+      <listitem><simpara>Nombre de blocs allou&eacute;s</simpara></listitem>
+     </orderedlist>
+     * - uniquement sur les syst&egrave;mes qui supporte le type st_blksize type¤les autres syst&egrave;mes (i.e. Windows) retourne -1</para>
+    <para>
+     Les r&eacute;sultats de cette fonction sont mis en cache . Reportez vous &agrave; la fonction 
+     <function>clearstatcache</function> pour plus de d&eacute;tails.
+    </para>
+    </refsect1>
+  </refentry>
 
   <refentry id="function.ftell">
    <refnamediv>
@@ -1193,6 +1301,31 @@ fclose ($fd);
     <para> 
      Voir aussi <function>fopen</function>, <function>popen</function>,
      <function>fseek</function> et <function>rewind</function>.
+    </para>
+   </refsect1>
+  </refentry>
+  
+  <refentry id="function.ftruncate">
+   <refnamediv>
+    <refname>ftruncate</refname>
+    <refpurpose>
+     Tronque une fichier
+    </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>int <function>ftruncate</function></funcdef>
+      <paramdef>int <parameter>fp</parameter></paramdef>
+      <paramdef>int <parameter>size</parameter></paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>ftruncate</function> prend le pointeur de fichier
+     <parameter>fp</parameter> et le tronque &agrave; la taille de 
+     <parameter>size</parameter>. La fonction retourne TRUE en cas
+     de succ&egrave;s, et false sinon.
     </para>
    </refsect1>
   </refentry>
@@ -1233,36 +1366,56 @@ fclose ($fd);
     </simpara>
    </refsect1>
   </refentry>
-
+  
   <refentry id="function.set-file-buffer">
    <refnamediv>
     <refname>set_file_buffer</refname>
     <refpurpose>
-    Met en place un buffer sur le pointeur de fichier courant.
+	 Fixe la bufferisation de fichier
     </refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
     <funcsynopsis>
-     <funcdef>int <function>fwrite</function></funcdef>
-     <paramdef>int <parameter>fp</parameter></paramdef>
-     <paramdef>int <parameter>buffer</parameter></paramdef>
+     <funcprototype>
+      <funcdef>int <function>set_file_buffer</function></funcdef>
+      <paramdef>int <parameter>fp</parameter></paramdef>
+      <paramdef>int <parameter>buffer</parameter></paramdef>
+     </funcprototype>
     </funcsynopsis>
     <simpara>
-     <function>set_file_buffer</function> ajoute un buffer pour les op&eacute;rations d'&eacute;criture 
-      du fichier <parameter>fp</parameter> avec un buffer de <parameter>buffer</parameter>
-      octets. Si buffer est &agrave; 0 alors les op&eacute;rations d'&eacute;criture ne seront pas  
-      bufferis&eacute;es.
+     L'&eacute;criture de fichier avec <function>fwrite</function> utilise normalement
+     un buffer de 8K. Cela signifie que si deux processus essaie d'&eacute;crire
+     dans le m&ecirc;me fichier, ils font une pause tous les 8ko pour laisser le temps
+     &agrave; l'autre d'&eacute;crire &agrave; son tour. <function>set_file_buffer</function>
+     permet de modifier la taille du buffer de sortie pour le pointeur de
+     fichier <parameter>fp</parameter> &agrave; <parameter>buffer</parameter> octets.
+     Si <parameter>buffer</parameter> vaut 0, l'&eacute;criture se fera sans buffer.
+     Cela force l'&eacute;criture de toutes les donn&eacute;es par un processus avant que 
+     les autres puisse acc&eacute;der au fichier.
     </simpara>
     <simpara>
-      La fonction retourne 0 en cas de succ&egrave;s, ou EOF si ce n'est pas possible.
+     La fonction retourne 0 en cas de succ&egrave;s, ou EOF si la requ&ecirc;te ne peut pas
+     &ecirc;tre honor&eacute;e.
     </simpara>
+    <para>
+     L'exemple suivant montre comment utiliser la fonction 
+     <function>set_file_buffer</function> pour cr&eacute;er un fichier sans buffer.
+     <example>
+      <title>Exemple avec <function>set_file_buffer</function></title>
+      <programlisting role="php">
+$fp=fopen($file, "w");
+if($fp){
+  set_file_buffer($fp, 0);
+  fputs($fp, $output);
+  fclose($fp);
+}
+      </programlisting>
+     </example>
+    </para>
+
     <simpara>
-       Notez que par d&eacute;faut, la fonction <function>fopen</function> utilise un buffer 
-       de 8ko.
-    </simpara>
-    <simpara>
-     Voir aussi <function>fopen</function>.
+     Voir aussi <function>fopen</function>, <function>fwrite</function>.
     </simpara>
    </refsect1>
   </refentry>
@@ -1434,6 +1587,46 @@ fclose ($fd);
    </refsect1>
   </refentry>
 
+<refentry id="function.is-uploaded-file">
+   <refnamediv>
+    <refname>is_uploaded_file</refname>
+    <refpurpose>Indique si le fichier a &eacute;t&eacute; t&eacute;l&eacute;charg&eacute; par HTTP POST</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>bool <function>is_uploaded_file</function></funcdef>
+      <paramdef>string <parameter>filename</parameter></paramdef>
+     </funcprototype>
+    </funcsynopsis>
+
+    <para>
+     Cette fonction est disponible &agrave; partir des version PHP 3.0.16 et 
+     4.0.2.
+    </para>
+
+    <para>
+     Retourne true si le fichier <varname>filename</varname> a &eacute;t&eacute; 
+     t&eacute;l&eacute;charg&eacute; par HTTP POST. Cela est tr&egrave;s utile pour vous assurer qu'un
+     utilisateur n'essaie pas d'acc&eacute;der intentionnellement &agrave; un fichier
+     auquel il n'a pas droit (comme <filename>/etc/passwd</filename>).
+    </para>
+
+    <para>
+     Ce type de v&eacute;rfication est sp&eacute;cialement important si il est possible 
+     que les fichiers t&eacute;l&eacute;charg&eacute;s r&eacute;v&eacute;lent leur contenu &agrave; l'utilisateur,
+     ou m&ecirc;me aux utilisateurs du m&ecirc;me syst&egrave;me.
+    </para>
+
+    <para>
+     Voir aussi <function>move_uploaded_file</function>, et la section
+     <link linkend="features.file-upload">Chargement de fichier</link>
+     pour un exemple simple.
+    </para>
+   </refsect1>
+  </refentry>
+
   <refentry id="function.link">
    <refnamediv>
     <refname>link</refname>
@@ -1519,6 +1712,58 @@ mkdir ("/path/to/my/dir", 0700);
     </para>
     <para>
      Voir aussi <function>rmdir</function>.
+    </para>
+   </refsect1>
+  </refentry>
+
+<refentry id="function.move-uploaded-file">
+   <refnamediv>
+    <refname>move_uploaded_file</refname>
+    <refpurpose>D&eacute;place un fichier t&eacute;l&eacute;charg&eacute;.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>bool <function>move_uploaded_file</function></funcdef>
+      <paramdef>string <parameter>filename</parameter></paramdef>
+      <paramdef>string <parameter>destination</parameter></paramdef>
+     </funcprototype>
+    </funcsynopsis>
+
+    <para>
+     Cette fonction est disponible &agrave; partir des version PHP 3.0.16 et 
+     4.0.2.
+    </para>
+
+    <para>
+     Cette fonction s'assure que le fichier <parameter>filename</parameter>
+     est un fichier t&eacute;l&eacute;charg&eacute; par HTTP POST. Si le fichier est valide, il
+     est d&eacute;plac&eacute; jusqu'&agrave; <parameter>destination</parameter>.
+    </para>
+
+    <para>
+     Si <parameter>filename</parameter> n'est pas valide, rien ne se passe,
+     et <function>move_uploaded_file</function> retournera false.
+    </para>
+
+    <para>
+     Si <parameter>filename</parameter> est un fichier t&eacute;l&eacute;charg&eacute;, mais que 
+     pour une raison quelconque, il ne peut &ecirc;tre d&eacute;plac&eacute;, rien ne se passe, et
+     <function>move_uploaded_file</function> retourne <literal>false</literal>. 
+     De plus, une alerte sera affich&eacute;e.
+    </para>
+
+    <para>
+     Ce type de v&eacute;rfication est sp&eacute;cialement important si il est possible 
+     que les fichiers t&eacute;l&eacute;charg&eacute;s r&eacute;v&eacute;lent leur contenu &agrave; l'utilisateur,
+     ou m&ecirc;me aux utilisateurs du m&ecirc;me syst&egrave;me.
+    </para>
+
+    <para>
+     Voir aussi <function>move_uploaded_file</function>, et la section
+     <link linkend="features.file-upload">Chargement de fichier</link>
+     pour un exemple simple.
     </para>
    </refsect1>
   </refentry>
@@ -1828,6 +2073,37 @@ $fp = popen ("/bin/ls", "r");
    </refsect1>
   </refentry>
 
+<refentry id="function.realpath">
+   <refnamediv>
+    <refname>realpath</refname>
+    <refpurpose>Retourne le chemin canonique absolu</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>string <function>realpath</function></funcdef>
+      <paramdef>string <parameter>path</parameter></paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>realpath</function> r&eacute;soud tous les liens symbolique, et
+     remplace toutes les r&eacute;f&eacute;rences '/./', '/../' et  '/' de 
+     <parameter>path</parameter> puis retourne le chemin canonique absolu
+     ainsi trouv&eacute;. Le r&eacute;sultat ne contient aucun lien symbolique,
+     '/./' ou '/../'.
+    </para>
+    <para>
+     <example>
+      <title>Exemple <function>realpath</function></title>
+      <programlisting role="php">
+$real_path = realpath ("../../index.php");
+      </programlisting>
+     </example>
+    </para>
+   </refsect1>
+  </refentry>
+
   <refentry id="function.symlink">
    <refnamediv>
     <refname>symlink</refname>
@@ -1889,6 +2165,38 @@ $fp = popen ("/bin/ls", "r");
 $tmpfname = tempnam ("/tmp", "FOO");
       </programlisting>
      </example>
+    </para>
+   </refsect1>
+  </refentry>
+  
+  <refentry id="function.tmpfile">
+   <refnamediv>
+    <refname>tmpfile</refname>
+    <refpurpose>Cr&eacute;e un fichier temporaire</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>int <function>tmpfile</function></funcdef>
+      <paramdef>void</paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <refname>tmpfile</refname> cr&eacute;e un fichier temporaire
+     avec un nom unique, ouvert en &eacute;criture, et retourne un
+     pointeur de fichier, identique &agrave; ceux retourn&eacute; par 
+     <function>fopen</function>.
+     Ce fichier sera automatiquement effac&eacute; lorsqu'il sera 
+     ferm&eacute; (avec <function>fclose</function>), ou lorsque le fichier
+     sera termnin&eacute;.
+    </para>
+    <para>
+     Pour plus de d&eacute;tails, consultez votre documentation syst&egrave;me sur la
+     fonction <literal>tmpfile(3)</literal>, et sur <filename>stdio.h</filename>.
+    </para>
+    <para>
+     Voir aussi <function>tempnam</function>.
     </para>
    </refsect1>
   </refentry>
