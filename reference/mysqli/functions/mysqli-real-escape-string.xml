@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.6 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
+<!-- $Revision: 1.7 $ -->
+<!-- EN-Revision: 1.7 Maintainer: yannick Status: ready -->
   <refentry id="function.mysqli-real-escape-string">
    <refnamediv>
     <refname>mysqli_real_escape_string</refname>
+    <refname>mysqli->real_escape_string</refname>
     <refpurpose>
      Protège les caractères spéciaux d'une chaîne pour l'utiliser dans une
      requête SQL, en prenant en compte le jeu de caractères courant de la 
@@ -13,17 +13,120 @@
    </refnamediv>
    <refsect1>
     <title>Description</title>
+     &title.procedural;
      <methodsynopsis>
       <type>string</type><methodname>mysqli_real_escape_string</methodname>
-      <methodparam><type>resource</type><parameter>link</parameter></methodparam>
+      <methodparam><type>object</type><parameter>link</parameter></methodparam>
       <methodparam><type>string</type><parameter>escapestr</parameter></methodparam>
      </methodsynopsis>
-
-     &warn.undocumented.func;
-     
+     &title.oop;
+     <classsynopsis>
+      <ooclass><classname>mysqli</classname></ooclass>
+      <methodsynopsis>
+       <type>string</type>
+       <methodname>real_escape_sring</methodname>
+       <methodparam><type>string</type><parameter>escapestr</parameter></methodparam>
+      </methodsynopsis>
+     </classsynopsis>
      <para>
-      Voir aussi <function>mysqli_character_set_name</function>.
+      <function>mysqli_real_escape_string</function> est utilisé pour créer une chaîne SQL
+      valide qui pourra être utilisée dans une requète SQL. La chaîne de caractères 
+      <literal>escapestr</literal> est encodé en une chaîne SQL échappé, en tenant compte
+      du jeu de caractères courant de la connexion. 
      </para>
+     <para>
+      Les caractères encodés sont <literal>NUL (ASCII 0), \n, \r, \, ', ", and Control-Z</literal>. 
+     </para>
+   </refsect1>
+   <refsect1>
+    &reftitle.returnvalues;
+    <para>
+     Retourne une chaîne échappée.
+    </para>
+   </refsect1>
+   <refsect1>
+    &reftitle.seealso;
+    <para>
+     <function>mysqli_character_set_name</function>.
+    </para>
+   </refsect1>
+   <refsect1>
+    &reftitle.examples;
+    <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
+
+/* Vérification de la connexion */
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
+
+$mysqli->query("CREATE TEMPORARY TABLE myCity LIKE City");
+
+$city = "'s Hertogenbosch";
+
+/* cette requète échoue car nous n'avons pas échappé $city */
+if (!$mysqli->query("INSERT into myCity (Name) VALUES ('$city')")) {
+    printf("Erreur : %s\n", $mysqli->sqlstate);
+}
+
+$city = $mysqli->real_escape_string($city);
+
+/* cette requète, par contre, réussira car nous avons échappé $city */
+if ($mysqli->query("INSERT into myCity (Name) VALUES ('$city')")) {
+    printf("%d ligne inséré.\n", $mysqli->affected_rows);
+} 
+
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+    </example>
+    <example>
+     <title>Style procédural</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$link = mysqli_connect("localhost", "my_user", "my_password", "world");
+
+/* Vérification de la connexion */
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
+
+mysqli_query($link, "CREATE TEMPORARY TABLE myCity LIKE City");
+
+$city = "'s Hertogenbosch";
+
+/* cette requète échoue car nous n'avons pas échappé $city */
+if (!mysqli_query($link, "INSERT into myCity (Name) VALUES ('$city')")) {
+    printf("Error: %s\n", mysqli_sqlstate($link));
+}
+
+$city = mysqli_real_escape_string($link, $city);
+
+/* this query with escaped $city will work */
+if (mysqli_query($link, "INSERT into myCity (Name) VALUES ('$city')")) {
+    printf("%d ligne inséré.\n", mysqli_affected_rows($link));
+} 
+
+mysqli_close($link);
+?>
+]]>
+     </programlisting>
+    </example>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Erreur : 42000
+1 ligne inséré.
+]]>
+    </screen>
    </refsect1>
   </refentry>
 
