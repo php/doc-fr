@@ -1,21 +1,112 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.5 $ -->
+<!-- $Revision: 1.6 $ -->
 <!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
 <appendix id="wrappers">
  <title>Liste des protocoles supportés</title>
  <para>
-  Cette section recense une liste de protocole gérant des URL,
-  qui sont intégrés dans les fonctions ayant accès aux fichiers,
-  dans PHP. Par exemple, les fonctions 
+  Cette section recense une liste de protocolesw gérant les URL,
+  qui sont intégrés dans les fonctions d'accès aux fichiers,
+  dans &php;. Par exemple, les fonctions 
   <function>fopen</function> et <function>copy</function>.
-  Ces fonctionnalités sont compilées comme des pilotes externes,
-  et à partir de PHP 4.3.0, vous pouvez créer vos propres
-  pilotes, avec la fonction <function>stream_register_wrapper</function>.
+  Ces fonctionnalités sont compilées comme des gestionnaires externes,
+  et à partir de &php; 4.3.0, vous pouvez créer vos propres
+  gestionnaires, avec la fonction <function>stream_register_wrapper</function>.
  </para>
+
+ <section id="wrappers.file">
+  <title>Système de fichiers</title>
+  <simpara>
+   Toutes les versions de &php;
+   Explicitement avec le protocole <filename>file://</filename> depuis &php; 4.3.0.
+  </simpara>
+
+  <itemizedlist>
+   <listitem><simpara><filename>/path/to/file.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>relative/path/to/file.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>fileInCwd.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>C:/path/to/winfile.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>C:\path\to\winfile.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>\\smbserver\share\path\to\winfile.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>file:///path/to/file.ext</filename></simpara></listitem>
+  </itemizedlist>
+
+  <simpara>
+   <filename>file://</filename> est le gestionnaire par défaut de &php; 
+   et il représente les fichiers locaux. Lorsqu'un chemin relatif eest
+   spécifié (un chemin qui ne commence pas par /, \, \\, ou une lettre de 
+   lecteur Windows), le chemin sera calculé relativement à la position courante.
+   Dans de nombreux cas, c'est le dossier de résidence du script, à moins qu'il
+   n'ait été modifié. En utilisant la version CLI, le chemin sera calculé
+   par rapport au dossier d'appel du script.
+  </simpara>
+
+  <simpara>
+   Avec certaines fonctions comme <function>fopen</function> et
+   <function>file_get_contents</function>,
+   <literal>include_path</literal> peut être scanné pour y trouver les
+   fichiers, si un chemin relatif est fourni.
+  </simpara>
+
+  <para>
+   <table>
+    <title>Liste des gestionnaires</title>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>Attribut</entry>
+       <entry>Supporté</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>Restreint par <literal>allow_url_fopen</literal>.</entry>
+       <entry>Non</entry>
+      </row>
+      <row>
+       <entry>Autorise les lectures</entry>
+       <entry>Oui</entry>
+      </row>
+      <row>
+       <entry>Autorise les écritures</entry>
+       <entry>Oui</entry>
+      </row>
+      <row>
+       <entry>Autorise l'ajout</entry>
+       <entry>Oui</entry>
+      </row>
+      <row>
+       <entry>Autorise simultanément les lectures et écritures</entry>
+       <entry>Oui</entry>
+      </row>
+      <row>
+       <entry>Supporte <function>stat</function></entry>
+       <entry>Oui</entry>
+      </row>
+      <row>
+       <entry>Supporte <function>unlink</function></entry>
+       <entry>Oui</entry>
+      </row>
+      <row>
+       <entry>Supporte <function>rename</function></entry>
+       <entry>Oui</entry>
+      </row>
+      <row>
+       <entry>Supporte <function>mkdir</function></entry>
+       <entry>Oui</entry>
+      </row>
+      <row>
+       <entry>Supporte <function>rmdir</function></entry>
+       <entry>Oui</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+ </section>
 
  <section id="wrappers.http">
   <title>HTTP et HTTPS</title>
-   <simpara>PHP 3, PHP 4. <filename>https://</filename> depuis PHP 4.3</simpara>
+   <simpara>&php; 3, &php; 4. <filename>https://</filename> depuis &php; 4.3</simpara>
 
   <itemizedlist>
    <listitem><simpara><filename>http://exemple.com</filename></simpara></listitem>
@@ -33,15 +124,43 @@
    fichier &php.ini;, ou via le contexte de flux, il sera aussi 
    utilisé dans votre requête.
   </simpara>
+   &warn.ssl-non-standard;
   <simpara>
-   Les redirections sont supportées depuis PHP 4.0.5; si vous utilisez
-   une version plus ancienne, vous devrez ajouter vous même les 
-   slash finaux dans vos URL.
+   Les redirections sont supportées depuis &php; 4.0.5; si vous utilisez
+   une version plus ancienne, vous devrez ajouter vous-même les 
+   slash finaux dans vos URL. S'il est important de connaître l'URL
+   de la ressource qui vous a fourni le document, une fois que
+   toutes les redirections ont été suivies, vous devez analyser
+   les entêtes de réponses retournés par le flux.
   </simpara>
+  <example>
+   <title>http:// et redirections</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$url = 'http://www.exemple.com/redirecting_page.php';
+
+$fp = fopen($url, 'r');
+
+/* Avant PHP 4.3.0 utilisez $http_response_header 
+   au lieu de stream_get_meta_data() */
+foreach(stream_get_meta_data($fp) as $response) {
+
+  /* Redirections? */
+  if (substr(strtolower($response), 0, 10) == 'location: ') {
+    /* modification de $url avec la nouvelle URL */
+    $url = substr($response, 10);
+  }
+}
+
+?>
+]]>
+   </programlisting>
+  </example>  
   <simpara>
    Le flux donne l'accès au corps (<emphasis>body</emphasis>)
    de la ressource. Les en-têtes sont stockés dans la variable
-   <varname>$http_response_header</varname>. Depuis PHP 4.3.0,
+   <varname>$http_response_header</varname>. Depuis &php; 4.3.0,
    les en-têtes sont aussi accessibles avec la fonction 
    <function>stream_get_meta_data</function>.
   </simpara>
@@ -50,7 +169,8 @@
    dans des fichiers ouverts via le protocole HTTP.
   </simpara>
   <note>
-   <simpara>HTTPS est supporté depuis PHP 4.3, si vous avez compilé
+   <simpara>
+    HTTPS est supporté depuis &php; 4.3, si vous avez compilé
    le support d'OpenSSL.
    </simpara>
   </note>
@@ -58,7 +178,7 @@
 
  <section id="wrappers.ftp">
   <title>FTP and FTPS</title>
-  <simpara>PHP 3, PHP 4.  <filename>ftps://</filename> depuis PHP 4.3</simpara>
+  <simpara>&php; 3, &php; 4.  <filename>ftps://</filename> depuis &php; 4.3</simpara>
 
   <itemizedlist>
    <listitem><simpara><filename>ftp://example.com/pub/file.txt</filename></simpara></listitem>
@@ -80,14 +200,14 @@
    existe déjà, utilisez <function>ftp_connect</function>.
   </simpara>
   <simpara>
-   <filename>ftps://</filename> a été introduit en PHP 4.3.  
+   <filename>ftps://</filename> a été introduit en &php; 4.3.  
    C'est le même que <filename>ftp://</filename>, mais il tente d'établir
    une connexion sécurisée avec le serveur FTP. Si le serveur ne le supporte
    pas, la connexion sera une connexion non sécurisée.
   </simpara>
   <note>
    <simpara>
-    FTPS est supporté depuis PHP 4.3.0, si vous avez compilé le 
+    FTPS est supporté depuis &php; 4.3.0, si vous avez compilé le 
     support d'OpenSSL.
    </simpara>
   </note>
@@ -95,10 +215,10 @@
  </section>
 
  <section id="wrappers.php">
-  <title>Flôts d'entrée/sortie</title>
+  <title>Flux d'entrée/sortie</title>
   <simpara>
-   PHP 3.0.13 et plus réscent, <filename>php://output</filename> 
-   et <filename>php://input</filename> depuis PHP 4.3
+   &php; 3.0.13 et plus récent, <filename>php://output</filename> 
+   et <filename>php://input</filename> depuis &php; 4.3
   </simpara>
 
   <itemizedlist>
@@ -112,7 +232,7 @@
   <simpara>
    <filename>php://stdin</filename>, <filename>php://stdout</filename> 
    et <filename>php://stderr</filename> donne accès au flux correspondant
-   d'entrée ou de sortie du processus PHP.
+   d'entrée ou de sortie du processus &php;.
   </simpara>
   <simpara>
    <filename>php://output</filename> vous permet d'écrire dans le
@@ -151,19 +271,20 @@
      (<emphasis>obligatoire</emphasis>) Ce paramètre doit être situé à la fin
      de votre chaîne <filename>php://filter</filename> et doit pointer sur le 
      flux à filtrer.
-     <informalexample>
+     <example>
+      <title>php:// et les filtres</title>
       <programlisting role="php">
 <![CDATA[
 <?php
 /* Ceci est l'équivalent de :
-   readfile("http://www.example.com");
+   readfile("http://www.exemple.com");
    puisqu'aucun filtre n'est spécifié */
 
 readfile("php://filter/resource=http://www.exemple.com");
 ?>
 ]]>
       </programlisting>
-     </informalexample>
+     </example>
     </para>
    </listitem>
    <listitem>
@@ -171,7 +292,8 @@ readfile("php://filter/resource=http://www.exemple.com");
      <literal>/read=&lt;liste de filtres de la chaîne de lecture&gt;</literal>
      (<emphasis>optionnel</emphasis>) Ce paramètre prend un ou plusieurs noms de
      filtres, séparés par le caractère pipe <literal>|</literal>.
-     <informalexample>
+     <example>
+      <title>php:// et filtres de lecture</title>
       <programlisting role="php">
 <![CDATA[
 <?php
@@ -185,7 +307,7 @@ readfile("php://filter/read=string.toupper|string.rot13/resource=http://www.exem
 ?>
 ]]>
       </programlisting>
-     </informalexample>
+     </example>
     </para>
    </listitem>
    <listitem>
@@ -193,7 +315,8 @@ readfile("php://filter/read=string.toupper|string.rot13/resource=http://www.exem
      <literal>/write=&lt;liste de filtres de la chaîne d'écriture&gt;</literal>
      (<emphasis>optionnel</emphasis>) Ce paramètre prend un ou plusieurs noms de
      filtres, séparés par le caractère pipe <literal>|</literal>.
-     <informalexample>
+     <example>
+      <title>php:// et filtres d'écritures</title>
       <programlisting role="php">
 <![CDATA[
 <?php
@@ -204,7 +327,7 @@ file_set_contents("php://filter/write=string.rot13/resource=exemple.txt","Bonjou
 ?>
 ]]>
       </programlisting>
-     </informalexample>
+     </example>
     </para>
    </listitem>
    <listitem>
@@ -220,11 +343,11 @@ file_set_contents("php://filter/write=string.rot13/resource=exemple.txt","Bonjou
  </section>
 
  <section id="wrappers.compression">
-  <title>Flôts compressés</title>
-  <simpara><filename>zlib:</filename> PHP 4.0.4 - PHP 4.2.3 (systèmes avec
+  <title>Flux compressés</title>
+  <simpara><filename>zlib:</filename> &php; 4.0.4 - &php; 4.2.3 (systèmes avec
   fopencookie uniquement)</simpara>
   <simpara><filename>compress.zlib://</filename> et 
-  <filename>compress.bzip2://</filename> depuis PHP 4.3.0 et plus récent.</simpara>
+  <filename>compress.bzip2://</filename> depuis &php; 4.3.0 et plus récent.</simpara>
 
   <itemizedlist>
    <listitem><simpara><filename>zlib:</filename></simpara></listitem>
@@ -236,7 +359,7 @@ file_set_contents("php://filter/write=string.rot13/resource=exemple.txt","Bonjou
    <filename>zlib:</filename> fonctionne comme <function>gzopen</function>, hormis
    le fait que le flux peut être utilisé directement avec <function>fread</function> 
    et les autres fonctions de système de fichier. Cette notation est obsolète
-   depuis PHP 4.3.0, étant données les ambiguités dues aux noms de fichiers
+   depuis &php; 4.3.0, étant données les ambiguités dues aux noms de fichiers
    contenant des deux points ':'. Utilisez plutôt <filename>compress.zlib://</filename>.
   </simpara>
 
