@@ -1,12 +1,206 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
  <sect1 id="language.oop5.exceptions">
   <title>Exceptions</title>
 
   <para>
-   .
+   &php; 5 a une gestion des exceptions similaire à ce qu'offrent les autres langages
+   de programmation. Une exception peut être jetée, essayée et attrapée dans &php;.
+   Un block d'essai doit inclure au moins un block de capture. De multiples blocks de capture
+   peuvent être utilisés pour attraper différents types de classes ; l'exception continuera
+   après que le dernier block de capture ne soit défini dans la séquence. Les exceptions
+   peuvent être jetées dans les blocks de capture.
   </para>
+  <para>
+   Lorsqu'une exception est jetée, le code suivant le traitement ne sera pas exécuté et
+   &php; tentera de trouver le premier block de capture correspondant. Si une exception 
+   n'est pas attrapé, une erreur fatale issue de &php; sera envoyée avec un message
+   spécifiant que l'exception n'a pu être attrapée à moins qu'un gestionnaire ne soit défini
+   avec la fonction <function>set_exception_handler</function>.
+  </para>
+   <example>
+    <title>Jeter une exception</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+try {
+  $error = 'Toujours jeter cette erreur';
+  throw new Exception($error);
+
+  // le code suivant une exception n'est pas exécuté.
+  echo 'Jamais exécuté';
+}
+catch (Exception $e) {
+  echo "Capture de l'exception : ",  $e, "\n";
+}
+
+/* continue execution */
+?>
+]]>
+    </programlisting>
+   </example>
+
+  <sect2 id="language.oop5.execptions.extending">
+   <title>Exceptions étendues</title>
+   <para>
+    Une classe Exception définie par l'utilisateur peut être définie en étendant
+    la classe Exception interne. Les membres et les propriétés suivantes montrent
+    ce qui est accessible dans la classe enfant qui est dérivée de la classe exception
+    interne.
+   </para>
+   <example>
+    <title>La classe Exception interne</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Exception {
+
+  protected $message = 'exception inconnu'; // message de l'exception
+  protected $code = 0;                      // code de l'exception défini par l'utilisateur
+  protected $file;                          // nom du fichier source de l'exception
+  protected $line;                          // ligne de la source de l'exception
+
+  function __construct(string $message=NULL, int code=0);
+
+  final function getMessage();              // message de l'exception
+  final function getCode();                 // code de l'exception
+  final function getFile();                 // nom du fichier source
+  final function getTrace();                // un tableau de backtrace()
+  final function getTraceAsString();        // chaîne formattée de trace
+
+  /* Overrideable */
+  function _toString();                     // chaîne formattée pour l'affichage
+   
+}
+?>
+]]>
+    </programlisting>
+   </example>
+   <para>
+    Si une classe étend la classe Exception interne et redéfinie le <link
+    linkend="language.oop5.decon">constructeur</link>, il est vivement recommandé
+    qu'elle appelle aussi <link
+    linkend="language.oop5.paamayim-nekudotayim">parent::__construct()</link> 
+    pour s'assurer que toutes les données disponibles ont été proprement assignées. La méthode <link
+    linkend="language.oop5.magic">__toString()</link> peut être réécrite pour fournir 
+    un affichage personnalisé lorsque l'objet est présenté comme une chaîne.
+   </para>
+   <example>
+    <title>Etendre la classe Exception</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+class MyException extends Exception {
+
+  /* Redéfinissez l'exception ainsi le message n'est pas facultatif */
+  public function __construct($message, $code = 0) {
+
+    // traitement personnalisé que vous voulez réaliser ...
+    // ...
+    
+    /* assurez vous que tout a été assigné proprement */
+    parent::__construct($message, $code);
+  }
+
+  /* chaîne personnalisé représentant l'objet */
+  public function __toString() {
+    return __CLASS__ . ": [{$this->code}]: {$this->message}\n";
+  }
+
+  public function customFunction() {
+    echo "Une fonction personnalisée pour ce type d'exception\n";
+  }
+
+}
+
+class TestException {
+
+  public $var;
+
+  const THROW_NONE    = 0;
+  const THROW_CUSTOM  = 1;
+  const THROW_DEFAULT = 2;
+
+
+  function __construct($avalue = self::THROW_NONE) {
+
+    switch ($avalue) {
+      case self::THROW_CUSTOM:
+        // jète une exception personnalisé
+        throw new MyException('1 est un paramètre invalide', 5);
+        break;
+
+      case self::THROW_DEFAULT:
+        // jète l'exception par défaut.
+        throw new Exception('2 n\'est pas autorisé en tant que paramètre', 6);
+
+        break;
+
+      default: 
+        // Aucune exception, l'objet sera créé.
+        $this->var = $avalue;
+        break;
+
+    }
+
+  }
+
+}
+
+$o = null;
+
+try {
+  $o = new TestException(TestException::THROW_CUSTOM);
+}
+catch (MyException $e) {            /* Devrait être attrapée */
+  echo "Capture mon exception\n", $e;
+  $e->customFunction();
+}
+catch (Exception $e) {              /* Sauté */
+  echo "Capture l'exception par défaut\n", $e;
+}
+var_dump($o);                       /* continue l'exécution */
+echo "\n\n";
+
+try {
+  $o = new TestException(TestException::THROW_DEFAULT);
+}
+catch (MyException $e) {            /* Ne correspond pas à ce type */
+  echo "Capture mon exception\n", $e;
+  $e->customFunction();
+}
+catch (Exception $e) {              /* Devrait être attrapée */
+  echo "Capture l'exception par défaut\n", $e;
+}
+var_dump($o);                       /* continue l'exécution */
+echo "\n\n";
+
+
+try {
+  $o = new TestException(TestException::THROW_CUSTOM);
+}
+catch (Exception $e) {              /* Devrait être attrapée */
+  echo "Capture l'exception par défaut\n", $e;
+}
+var_dump($o);                       /* continue l'exécution */
+echo "\n\n";
+
+try {
+  $o = new TestException();
+}
+catch (Exception $e) {              /* sauté, aucune exception */
+  echo "Capture l'exception par défaut\n", $e;
+}
+var_dump($o);                       /* continue l'exécution */
+echo "\n\n";
+
+
+]]>
+    </programlisting>
+   </example>
+  </sect2>
 
  </sect1>
  
