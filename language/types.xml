@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.39 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.40 $ -->
+<!-- EN-Revision: 1.136 Maintainer: dams Status: ready -->
   <chapter id="language.types">
 	<title>Les types</title>
   <sect1 id="language.types.intro">
@@ -342,7 +342,7 @@ $large_number =  2147483648;
 var_dump($large_number);
 // affiche : float(2147483648)
 
-// this goes also for hexadecimal specified integers:
+// cette méthode spécifie une entier héxadécimal :
 var_dump( 0x80000000 );
 // affiche : float(2147483648)
 
@@ -519,10 +519,24 @@ var_dump(round(25/7));
 <![CDATA[
 <?php
   $a = 1.234;
-  $a = 1.2e3;
+  $b = 1.2e3;
+  $c = 7E-10;
 ?>
 ]]>
      </programlisting>
+     <para>
+      Formellement :
+     </para>
+     <programlisting role="php">
+LNUM          [0-9]+
+DNUM          ([0-9]*[\.]{LNUM}) | ({LNUM}[\.][0-9]*)
+EXPONENT_DNUM ( ({LNUM} | {DNUM}) [eE][+-]? {LNUM})
+     </programlisting>
+    <para>
+    La taille des nombres décimaux dépend de la plate-forme.
+    Un maximum de ~1.8e308 avec une précision de 14 décimales
+    est une configuration répandue : c'est le format 64 bits IEEE.
+   </para>
     </example>
    </para>
    <warning id="warn.float-precision">
@@ -796,7 +810,7 @@ EOD;
   echo <<<EOT
   Mon nom est "$name". J'affiche des $foo->foo.
   Maintenant, j'affiche un {$foo->bar[1]}.
-  Ceci se traduit par un 'A' majuscule: \x41
+  Ceci se traduit par un 'A' majuscule : \x41
 EOT;
 ?>
 ]]>
@@ -1235,9 +1249,9 @@ echo $arr[12];    // 1
       sera interprèté comme <literal>'08'</literal>).
      </para>
      <para>
-      Une valeur peut être n'importe quoi.
+      Une valeur de tableau peut être n'importe quoi.
       <example>
-       <title>Création d'un tableau</title>
+       <title>Création d'un tableau associatif</title>
        <programlisting role="php">
 <![CDATA[
 <?php
@@ -1331,6 +1345,87 @@ unset($arr);    // Ceci efface tout le tableau
        </programlisting>
       </example>
      </para>
+     <note>
+      <para>
+       Comme indiqué ci-dessus, si vous fournissez des crochets
+       sans spécifier de clé, le plus grand index existant et entier
+       est recherché, et la nouvelle clé générée est cette valeur
+       maximum + 1. Si aucune clé entière n'exist, la valeur sera
+       alors <literal>0</literal>. Si vous spécifiez une clé qui est 
+       déjà existante, vous écraserez le contenu précédent.
+      </para>
+      <para>
+       <warning>
+        <simpara>
+         Depuis &php; 4.3.0, la génération d'index a changé. Si vous ajoutez
+         un élément et que la valeur maximale de la clé est négative,
+         alors la prochaine clé générée est <literal>0</literal>. Auparavant,
+         c'était la plus grande valeur + 1, négative ou pas.
+         Cela reste le comportement pour les clés positives.
+        </simpara>
+       </warning>
+      </para>
+      <para>
+       Notez que le maximum théorique <emphasis>n'a pas besoin
+       d'exister au moment de la génération</emphasis>. Il peut simplement
+       avoir existé auparavant. 
+      </para>
+
+      <example>
+       <title>La génération automatique de clé peut utiliser un ancien maximum</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+// Crée un simple tableau
+$array = array(1, 2, 3, 4, 5);
+print_r($array);
+
+// On efface tous les éléments, mais on laisse le tableau
+foreach ($array as $i => $value) {
+    unset($array[$i]);
+}
+print_r($array);
+
+// On ajoute une valeur : notez que la nouvelle clé est 5
+// et non pas 0, comme on l'attendrait.
+$array[] = 6;
+print_r($array);
+
+// Re-indexation :
+$array = array_values($array);
+$array[] = 7;
+print_r($array);
+?>
+]]> 
+       </programlisting>
+       &example.outputs;
+       <screen>
+<![CDATA[
+Array
+(
+    [0] => 1
+    [1] => 2
+    [2] => 3
+    [3] => 4
+    [4] => 5
+)
+Array
+(
+)
+Array
+(
+    [5] => 6
+)
+Array
+(
+    [0] => 6
+    [1] => 7
+)
+]]>
+       </screen>
+      </example>       
+
+     </note>
     </sect3>
    </sect2><!-- end syntax -->
    <sect2 id="language.types.array.useful-funcs">
@@ -1397,6 +1492,62 @@ $b = array_values($a);
       cela fonctionne car la constante indéfinie est transformée en chaîne ayant la
       même valeur.
      </para>
+     <note>
+      <simpara>
+       Cela ne signifie pas que vous devez <emphasis>toujours</emphasis> 
+       mettre les clés entre guillemets. Vous n'allez pas 
+       utiliser les guillemets avec les clés qui sont des
+       <link linkend="language.constants">constantes</link> ou des
+       <link linkend="language.variables">variables</link>, car cela 
+       empêchera &php; de les interprêter correctement.
+      </simpara>
+      <example>
+       <title>Ne pas mettre les clés de tableaux entre guillemets</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors', true);
+ini_set('html_errors', false);
+// Tableau simple :
+$array = array(1, 2);
+$count = count($array);
+for ($i = 0; $i < $count; $i++) {
+    echo "\nChecking $i : \n";
+    echo "Mauvais : " . $array['$i'] . "\n";
+    echo "Bon : " . $array[$i] . "\n";
+    echo "Mauvais : {$array['$i']}\n";
+    echo "Bon : {$array[$i]}\n";
+}
+?>
+]]>
+       </programlisting>
+      &example.outputs;
+       <screen>
+<![CDATA[
+Checking 0: 
+
+Notice: Undefined index:  $i in /Users/iboom/Desktop/CVS/docs/mysql/mysql.fr/- on line 10
+Mauvais : 
+Bon : 1
+
+Notice: Undefined index:  $i in /Users/iboom/Desktop/CVS/docs/mysql/mysql.fr/- on line 12
+Mauvais : 
+Bon : 1
+
+Checking 1: 
+
+Notice: Undefined index:  $i in /Users/iboom/Desktop/CVS/docs/mysql/mysql.fr/- on line 10
+Mauvais : 
+Bon : 2
+
+Notice: Undefined index:  $i in /Users/iboom/Desktop/CVS/docs/mysql/mysql.fr/- on line 12
+Mauvais : 
+Bon : 2
+]]>        
+       </screen>
+      </example>
+     </note>
      <para>
       D'autres exemples : 
       <example>
@@ -1639,15 +1790,18 @@ $empty = array();
   foreach ( $couleurs as $couleur ){
     echo "Aimez-vous la couleur $couleur?\n";
   }
-/* Affiche :
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
 Aimez-vous la couleur rouge?
 Aimez-vous la couleur bleu?
 Aimez-vous la couleur vert?
 Aimez-vous la couleur jaune?
-*/
-?>
 ]]>
-     </programlisting>
+     </screen>
     </example>
     <para>
      Notez qu'il n'est pas possible actuellement de modifier les
@@ -1670,7 +1824,11 @@ Aimez-vous la couleur jaune?
     $couleurs[$cle] = strtoupper($couleur);
   }
   print_r($couleurs);
-/* Affiche :
+]]>
+      </programlisting>
+      &example.outputs;
+      <screen>
+<![CDATA[
 Array
 (
     [0] => ROUGE
@@ -1678,10 +1836,8 @@ Array
     [2] => VERT
     [3] => JAUNE
 )
-*/
-?>
 ]]>
-      </programlisting>
+      </screen>
      </example>
     </para>
     <para>
@@ -1693,17 +1849,19 @@ Array
 <?php
   $firstquarter  = array(1 => 'Janvier', 'Février', 'Mars');
   print_r($firstquarter);
-/* Affiche:
+]]>
+      </programlisting>
+      &example.outputs;
+            <screen>
+<![CDATA[
 Array
 (
     [1] => 'Janvier'
     [2] => 'Février'
     [3] => 'Mars'
 )
-*/
-?>
-]]>
-      </programlisting>
+]]>   
+      </screen>
      </example>
     </para>
     <example>
@@ -1775,6 +1933,27 @@ $juices["pomme"]["vert"] = "bon";
 ]]>
      </programlisting>
     </example>
+    <para>
+     Soyez conscients que l'assignation de valeur dans un tableau
+     entraine automatiquement la copie de valeurs. Vous devez utiliser
+     l'opérateur de référence pour copier un tableau par référence.
+     <example>
+      <title>Copie dans un tableau par référence</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+$arr1 = array(2, 3);
+$arr2 = $arr1;
+$arr2[] = 4; // $arr2 est modifié changed,
+             // $arr1 vaut toujours array(2, 3)
+             
+$arr3 = &$arr1;
+$arr3[] = 4; // maintenant $arr1 et $arr3 sont identiques
+?>
+]]>
+      </programlisting>
+     </example>
+    </para>
    </sect2>
   </sect1>
   <sect1 id="language.types.object">
@@ -1968,24 +2147,24 @@ $bar->faire_foo();
 <![CDATA[
 <?php 
 
-// simple callback example
+// Exemple simple de fonction de callback
 function foobar() {
-    echo "hello world!";
+    echo "Bonjour le monde!";
 }
 call_user_function("foobar"); 
 
-// method callback examples
+// Exemple de méthode de callback
 class foo {
   function bar() {
-    echo "hello world!";
+    echo "Bonjour le monde!";
   }
 }
 
 $foo = new foo;
 
-call_user_function(array($foo, "bar")); // object method call
+call_user_function(array($foo, "bar")); // appel d'une méthode d'objet
 
-call_user_function(array("foo", "bar")); // static class method call
+call_user_function(array("foo", "bar")); // appel d'une méthode statique de classe
 
 ?>
 ]]>
@@ -2048,10 +2227,9 @@ examples:
    <simpara>
      Si les deux derniers exemples vous semblent obscurs ou si vous
      voulez forcer une variable a être évaluée
-     avec un certain type, reportez-vous au paragraphe Conversion de
-     type ci-dessous. Si vous voulez changer le type d'une variable,
-     intéressez-vous à aux fonctions de
-     <link linkend="language.types.string.conversion">conversion de chaînes</link>.
+     avec un certain type, reportez-vous au paragraphe <link
+    linkend="language.types.string.conversion"> Conversion de
+     types</link>.
    </simpara>
    <simpara>
 	Si vous voulez forcer le type d'une variable, vous pouvez
@@ -2060,24 +2238,10 @@ examples:
 	vous voulez changer le type d'une variable, utilisez
 	<function>settype</function>.
    </simpara>
-   <para>
-    Pour tester les exemples de cette section, il suffit d'en faire
-    un copier/coller, et d'insérer les lignes dans un script &php;.
-      <example>
-       <title>Exploitation des exemples</title>
-     <programlisting role="php">
-<![CDATA[
-<?php
-  echo "\$foo==$foo; le type est " . gettype( $foo ) . "<br>\n";
-?>
-]]>
-     </programlisting>
-    </example>
-   </para>
    <note>
     <para>
      Le comportement de la conversion automatique est actuellement
-     indéfinie.
+     indéfini.
     </para>
     <para>
       <example>
@@ -2127,7 +2291,7 @@ $a{1} = "f";   // $a vaut maintenant "afc"
     <title>Transtypage</title>
     <para>
       La conversion de type en &php; fonctionne de la même
-      manière qu'en C: le nom du type désiré
+      manière qu'en C : le nom du type désiré
       est écrit entre parenthèses devant la variable
       à transtyper ("cast").
       <example>
@@ -2143,7 +2307,7 @@ $a{1} = "f";   // $a vaut maintenant "afc"
      </example>
     </para>
     <para>
-     Les conversions autorisées sont:
+     Les conversions autorisées sont :
      <itemizedlist>
       <listitem>
        <simpara><literal>(int)</literal>, <literal>(integer)</literal> - type entier</simpara>
@@ -2168,7 +2332,7 @@ $a{1} = "f";   // $a vaut maintenant "afc"
     <para>
       Il est à noter que les tabulations et les espaces
       sont autorisés à l'intérieur des
-      parenthèses, donc les lignes suivantes sont équivalentes:
+      parenthèses, donc les lignes suivantes sont équivalentes :
       <example>
        <title>Transtypage et espaces</title>
       <programlisting role="php">
