@@ -1,0 +1,432 @@
+ <reference id="ref.fdf">
+  <title>Forms Data Format</title>
+  <titleabbrev>FDF</titleabbrev>
+
+  <partintro>
+
+   <simpara>
+     Forms Data Format (FDF) est un format de fomulaire pour les documents PDF.
+     Vous pouvez lire la documentation (en anglais) &agrave; 
+     <ulink url="http://partners.adobe.com/asn/developer/acrosdk/forms.html">http://partners.adobe.com/asn/developer/acrosdk/forms.html</ulink>
+     pour plus de d&eacute;tails sur les tenants et les aboutissants.
+   </simpara>
+
+   <note><simpara>
+     Actuellement, Adobe ne fournit que libc5, compatible Linux. Les tests avec glibc2 
+     ont donn&eacute; des "segmentation fault". Si quelqu'un est arriv&eacute; &agrave; un r&eacute;sultat,
+     envoyez nous vos infos.
+   </simpara></note>
+
+   <note><simpara>
+    Si vous rencontrez des probl&egrave;mes de configuration avec fdftk, v&eacute;rifier que le 
+    header FdfTk.h et la librairie libFdfTk.so sont bien l&agrave; o&uacute; ils doivent &ecirc;tre. 
+    Ils devraient &ecirc;tre plac&eacute;s dans le dossier <filename>fdftk-dir/include</filename> 
+    et <filename>fdftk-dir/lib</filename>. Cela ne sera pas le cas si vous avez 
+    simplement d&eacute;compress&eacute; la distribution.
+   </simpara></note>
+
+   <simpara>
+    L'esprit de FDF est similaire &agrave; celui des formulaires HTML. Les diff&eacute;rences r&eacute;sident 
+    dans les moyens de transmission des donn&eacute;es au serveur, lorsque le bouton "submit" 
+    (soumettre) est press&eacute; (ce qui est du ressort de Form Data Format) et le format de 
+    formulaire lui m&ecirc;me (qui est plutot du ressort de Portable Document Format, PDF). 
+    G&eacute;rer des donn&eacute;es FDF est un des objectifs des fonctions FDF. Mais il y en a 
+    d'autres.
+
+    Vous pouvez aussi prendre un formulaire PDF, et pr&eacute;-remplir les champs, sans 
+    modifier le formulaire lui m&ecirc;me. Dans ce cas, on va cr&eacute;er un document FDF 
+    (<function>fdf_create</function>), remplir les champs 
+    (<function>fdf_set_value</function>) et l'associer &agrave; un fichier PDF 
+    (<function>fdf_set_file</function>). Finalement, le tout sera envoy&eacute; au client,
+    avec le type MIME "application/vnd.fdf". Le module "Acrobat reader" 
+    de votre navigateur va reconna&icirc;tre ce type MIME, et lire le fichier PDF, puis le 
+    remplis avec FDF.
+   </simpara>
+   
+   <simpara>
+    Les exemples suivants montre comme &eacute;valuer les donn&eacute;es du formulaire.
+   </simpara>
+   <simpara></simpara>
+    <example>
+     <title>Evaluer un document FDF</title>
+     <programlisting>
+&lt;?php
+// Sauver le fichier FDF dans un fichier temporaire.
+$fdffp = fopen("test.fdf", "w");
+fwrite($fdffp, $HTTP_FDF_DATA, strlen($HTTP_FDF_DATA));
+fclose($fdffp);
+
+// Ouvrir le fichier temporaire, et utiliser les donn&eacute;es.
+// Le formulaire pdf contenait diff&eacute;rents fichiers texte, avec pour nom : 
+// volume, date, comment, publisher, preparer, ainsi que deux bo&icirc;tes &agrave; cocher,
+// show_publisher et show_preparer.
+$fdf = fdf_open("test.fdf");
+$volume = fdf_get_value($fdf, "volume");
+echo "La valeur du champs volume &eacute;tait : '&lt;B>$volume&lt;/B>'&lt;BR>";
+
+$date = fdf_get_value($fdf, "date");
+echo "La valeur du champs date &eacute;tait '&lt;B>$date&lt;/B>'&lt;BR>";
+
+$comment = fdf_get_value($fdf, "comment");
+echo "La valeur du champs comment &eacute;tait '&lt;B>$comment&lt;/B>'&lt;BR>";
+
+if(fdf_get_value($fdf, "show_publisher") == "On") {
+  $publisher = fdf_get_value($fdf, "publisher");
+  echo "La valeur du champs publisher &eacute;tait : '&lt;B>$publisher&lt;/B>'&lt;BR>";
+} else
+  echo "La valeur du champs ne doit pas &ecirc;tre affich&eacute;e.&lt;BR>";
+
+if(fdf_get_value($fdf, "show_preparer") == "On") {
+  $preparer = fdf_get_value($fdf, "preparer");
+  echo "La valeur du champs preparer &eacute;tait  '&lt;B>$preparer&lt;/B>'&lt;BR>";
+} else
+  echo "La valeur du champs Preparer ne doit pas &ecirc;tre affich&eacute;.&lt;BR>";
+fdf_close($fdf);
+?>
+     </programlisting>
+    </example>
+
+  </partintro>
+
+  <refentry id="function.fdf-open">
+   <refnamediv>
+    <refname>fdf_open</refname>
+    <refpurpose>Ouvre un document FDF.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>int <function>fdf_open</function></funcdef>
+     <paramdef>string <parameter>filename</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     La fonction <function>fdf_open</function> ouvre un fichier avec formulaire.
+     Le fichier doit contenir les donn&eacute;es retourn&eacute;es par le formulaire PDF. 
+     Actuellement, le fichier doit &ecirc;tre cr&eacute;&eacute;e 'manuellement', en utilisant la fonction 
+     <function>fopen</function> et en y &eacute;crivant le contenu du tableau HTTP_FDF_DATA 
+     avec la fonction <function>fwrite</function>.
+     Un m&eacute;canisme comparable aux formulaires HTML qui cr&eacute;ent une variable pour chaque 
+     champs entrant, n'existe pas.
+    </para>
+    <para>
+    <example>
+     <title>Acc&eacute;der aux donn&eacute;es du formulaire</title>
+     <programlisting>
+&lt;?php
+// Sauver le fichier FDF dans un fichier temporaire.
+$fdffp = fopen("test.fdf", "w");
+fwrite($fdffp, $HTTP_FDF_DATA, strlen($HTTP_FDF_DATA));
+fclose($fdffp);
+
+// Ouvrir le fichier temporaire, et utiliser les donn&eacute;es.
+$fdf = fdf_open("test.fdf");
+...
+fdf_close($fdf);
+?>
+     </programlisting>
+    </example></para>
+
+    <para>
+      Voir aussi <function>fdf_close</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.fdf-close">
+   <refnamediv>
+    <refname>fdf_close</refname>
+    <refpurpose>Ferme une document FDF.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>fdf_close</function></funcdef>
+     <paramdef>int <parameter>fdf_document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>fdf_close</function> ferme le document FDF.</para>
+
+    <para>
+      Voir aussi <function>fdf_open</function>.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.fdf-create">
+   <refnamediv>
+    <refname>fdf_create</refname>
+    <refpurpose>Cr&eacute;e un nouveau document FDF.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>int <function>fdf_create</function></funcdef>
+     <paramdef>void <parameter></parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>fdf_create</function> cr&eacute;e un nouveau document FDF. 
+     Cette fonction est n&eacute;cessaire pour ceux qui veulent pr&eacute; remplir les champs d'un     
+     formulaire dans un fichier PDF.
+</para>
+    <para>
+    <example>
+     <title>Pr&eacute; rempir un formulaire PDF</title>
+     <programlisting>
+&lt;?php
+$outfdf = fdf_create();
+fdf_set_value($outfdf, "volume", $volume, 0);
+
+fdf_set_file($outfdf, "http:/testfdf/resultlabel.pdf");
+fdf_save($outfdf, "outtest.fdf");
+fdf_close($outfdf);
+Header("Content-type: application/vnd.fdf");
+$fp = fopen("outtest.fdf", "r");
+fpassthru($fp);
+unlink("outtest.fdf");
+?>
+     </programlisting>
+    </example></para>
+
+    <para>
+     Voir aussi <function>fdf_close</function>, <function>fdf_save</function>,
+              et <function>fdf_open</function>.</para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.fdf-save">
+   <refnamediv>
+    <refname>fdf_save</refname>
+    <refpurpose>Sauver un document FDF.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>int <function>fdf_save</function></funcdef>
+     <paramdef>string <parameter>filename</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>fdf_save</function> sauve un document FDF.
+     Le FDF Toolkit fournit un moyen d'envoyer le contenu d'un document FDF &agrave; au 
+     fichier de sortie stdout si le param&egrave;tre <parameter>filename</parameter> vaut '.'. 
+     Ceci ne fonctionne pas si PHP est sous la forme d'un module Apache.
+     Dans ce cas, il faudra &eacute;crire le r&eacute;sultat dans un fichier, et utiliser 
+     <function>fpassthru</function> pour l'afficher au client.
+    </para>
+
+    <para>
+     Voir aussi <function>fdf_close</function> et pour avoir un exemple 
+              <function>fdf_create</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.fdf-get-value">
+   <refnamediv>
+    <refname>fdf_get_value</refname>
+    <refpurpose>Mot la valeur d'un champs.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>string <function>fdf_get_value</function></funcdef>
+     <paramdef>int <parameter>fdf_document</parameter></paramdef>
+     <paramdef>string <parameter>fieldname</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>fdf_get_value</function> retourne la valeur d'un champs.
+    </para>
+
+    <para>
+      Voir aussi <function>fdf_set_value</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.fdf-set-value">
+   <refnamediv>
+    <refname>fdf_set_value</refname>
+    <refpurpose>Fixe la valeur d'un champs.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>fdf_set_value</function></funcdef>
+     <paramdef>int <parameter>fdf_document</parameter></paramdef>
+     <paramdef>string <parameter>fieldname</parameter></paramdef>
+     <paramdef>string <parameter>value</parameter></paramdef>
+     <paramdef>int <parameter>isName</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>fdf_set_value</function> fixe la valeur d'un champs.
+     Le dernier param&egrave;tre determine si la valeur doit &ecirc;tre convertie en nom PDF 
+     (<parameter>isName</parameter> = 1) ou affecter une cha&icirc;ne PDF &agrave; un contr&ocirc;le 
+     (<parameter>isName</parameter> = 0).
+    </para>
+
+    <para>
+      Voir aussi <function>fdf_get_value</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.fdf-next-field-name">
+   <refnamediv>
+    <refname>fdf_next_field_name</refname>
+    <refpurpose>Lit le nom du champs suivant.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>string <function>fdf_next_field_name</function></funcdef>
+     <paramdef>int <parameter>fdf_document</parameter></paramdef>
+     <paramdef>string <parameter>fieldname</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>fdf_next_field_name</function> retourne le nom du champs apr&egrave;s le champs
+     <parameter>fieldname</parameter> ou le nom du premier champs, si le second 
+     param&egrave;tre est NULL.
+    </para>
+
+    <para>
+      Voir aussi <function>fdf_set_value</function> et <function>fdf_get_value</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.fdf-set-ap">
+   <refnamediv>
+    <refname>fdf_set_ap</refname>
+    <refpurpose>Fixe l'apparence d'un champs.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>fdf_set_ap</function></funcdef>
+     <paramdef>int <parameter>fdf_document</parameter></paramdef>
+     <paramdef>string <parameter>field_name</parameter></paramdef>
+     <paramdef>int <parameter>face</parameter></paramdef>
+     <paramdef>string <parameter>filename</parameter></paramdef>
+     <paramdef>int <parameter>page_number</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>fdf_set_ap</function> fixe l'apparence d'un champs
+     (i.e. la valeur de la cl&eacute; /AP).
+     Les valeurs possibles de <parameter>face</parameter> sont
+     sont 1=FDFNormalAP, 2=FDFRolloverAP, 3=FDFDownAP.</para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.fdf-set-status">
+   <refnamediv>
+    <refname>fdf_set_status</refname>
+    <refpurpose>Fixe la valeur de la cl&eacute; /STATUS.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>fdf_set_status</function></funcdef>
+     <paramdef>int <parameter>fdf_document</parameter></paramdef>
+     <paramdef>string <parameter>status</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>fdf_set_status</function> fixe la valeur de la cl&eacute; /STATUS.</para>
+
+    <para>
+      Voir aussi <function>fdf_get_status</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.fdf-get-status">
+   <refnamediv>
+    <refname>fdf_get_status</refname>
+    <refpurpose>Lit la valeur de la cl&eacute; /STATUS.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>string <function>fdf_get_status</function></funcdef>
+     <paramdef>int <parameter>fdf_document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>fdf_get_status</function> retourne la valeur de la cl&eacute; /STATUS.
+    </para>
+    <para>
+      Voir aussi <function>fdf_set_status</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.fdf-set-file">
+   <refnamediv>
+    <refname>fdf_set_file</refname>
+    <refpurpose>Fixe la valeur de la cl&eacute; /F.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>fdf_set_file</function></funcdef>
+     <paramdef>int <parameter>fdf_document</parameter></paramdef>
+     <paramdef>string <parameter>filename</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>fdf_set_file</function> Fixe la valeur de la cl&eacute; /F. la cl&eacute; /F est 
+      simplement une r&eacute;f&eacute;rence sur un formulaire PDF qui doit &ecirc;tre pr&eacute;-remplis.
+      Dans un environnement web, c'est une URL (e.g. http:/testfdf/resultlabel.pdf).
+    </para>
+
+    <para>
+     Voir aussi <function>fdf_get_file</function> et pour un exemple, 
+             <function>fdf_create</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.fdf-get-file">
+   <refnamediv>
+    <refname>fdf_get_file</refname>
+    <refpurpose>Lit la valeur de la cl&eacute; /F.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>string <function>fdf_get_file</function></funcdef>
+     <paramdef>int <parameter>fdf_document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>fdf_set_file</function> lit la valeur de la cl&eacute; /F.
+    </para>
+    <para>
+      Voir aussi <function>fdf_set_file</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+ </reference>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+sgml-parent-document:nil
+sgml-default-dtd-file:"../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->

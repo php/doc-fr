@@ -1,0 +1,2012 @@
+ <reference id="ref.cpdf">
+  <title>Fonctions ClibPDF</title>
+  <titleabbrev>ClibPDF</titleabbrev>
+
+  <partintro>
+
+   <simpara>
+     ClibPDF vous permet de cr&eacute;er des documents PDF avec PHP. Cette librairie est 
+     disponible &agrave; <ulink url="http://www.fastio.com">FastIO</ulink> mais n'est pas 
+     gratuite. Vous devez lire la licence avant de l'utiliser. Si vous ne pouvez pas 
+     accepter la licence, essayez plut&ocirc;t pdflib de Thomas Merz, qui est aussi tr&egrave;s 
+     puissante.
+
+     Les fonctionnalit&eacute;s de ClibPDF et ses API sont tr&egrave;s similaires &agrave; celles de Thomas 
+     Merz's pdflib mais, selon FastIO, ClibPDF est plus rapide, et cr&eacute;e des documents
+     plus compacts.
+
+     Cela peut avoir chang&eacute; depuis la version 2.0 de pdflib. Un test de vitesse 
+     (avec pdfclock.c issue des exemples de pdflib 2.0 transform&eacute; en script PHP) ne 
+     montre aucune diff&eacute;rence de vitesse. La taille des fichiers est similaire si la 
+     compression n'est pas utilis&eacute;e. Il vaut mieux alors essayer les deux, et choisir 
+     celui qui vous convient le mieux.
+   </simpara>
+
+   <simpara>
+     Cette documentation devrait &ecirc;tre lue avec le manuel ClibPDF sous la main, car il
+     est beaucoup plus d&eacute;taill&eacute;.
+    </simpara>
+
+   <simpara>
+     Beaucoup de fonctions sont natives de ClibPDF et se retrouvent dans le module 
+     PHP module, et tout comme pdflib, elles ont le m&ecirc;me nom. Toutes les fonctions, 
+     hormis <function>cpdf_open</function> utilisent un pointeur sur un document comme 
+     premier param&egrave;tre. 
+     Actuellement, ce pointeur n'est pas utilis&eacute; en interne, car ClibPDF ne supporte 
+     pas la cr&eacute;ation de plusieurs documents PDF simultan&eacute;ment. En fait, il ne vaut 
+     mieux pas l'envisager, car les r&eacute;sultats sont al&eacute;atoires. Je ne veux m&ecirc;me pas 
+     imaginer les probl&egrave;mes qui pourrait se poser avec les environnements multi-tâches. 
+     Selon l'auteur de ClibPDF, cette situation va changer dans les procha&icirc;nes versions
+     (lorsque cette documentation a &eacute;t&eacute; traduite, c'&eacute;tait la version 1.10). 
+     Si vous avez besoin de cette fonctionnalit&eacute;, utilisez pdflib.
+   </simpara>
+
+   <note><simpara>
+     La fonction <function>cpdf_set_font</function> a chang&eacute; depuis le PHP 3.0
+     pour supporter les polices asiatiques. Le param&egrave;tre d'encodage n'est plus un     
+     entier, mais une cha&icirc;ne.
+   </simpara></note>
+
+   <simpara>
+     Un des gros avantage de ClibPDF sur pdflib est la possibilit&eacute; de cr&eacute;er 
+     compl&eacute;tement un document sans passer par des fichiers temporaires. Il est aussi 
+     possible d'utiliser des coordonn&eacute;es avec une unit&eacute; de longeur pr&eacute;d&eacute;finie.
+     C'est une fonctionnalit&eacute; bien pratique mais qui peut &ecirc;tre simul&eacute;e avec 
+    <function>pdf_translate</function>.
+   </simpara>
+
+   <simpara>
+     La plus part des fonctions sont tr&egrave;s simples d'emploi. Le plus difficile est 
+     probablement de cr&eacute;er un document PDF simple. L'exemple suivant devrait vous aider 
+     &agrave; d&eacute;marrer. La page contient du texte qui utilise la police "Times-Roman" en 
+     taille 30, outlined. Le texte est soulign&eacute;.
+   </simpara>
+
+    <example>
+     <title>Exemple simple ClibPDF</title>
+     <programlisting>
+&lt;?php
+$cpdf = cpdf_open(0);
+cpdf_page_init($cpdf, 1, 0, 595, 842);
+cpdf_add_outline($cpdf, 0, 0, 0, 1, "Page 1");
+cpdf_set_font($cpdf, "Times-Roman", 30, "WinAnsiEncoding");
+cpdf_set_text_rendering($cpdf, 1);
+cpdf_text($cpdf, "Times Roman outlined", 50, 750);
+cpdf_moveto($cpdf, 50, 740);
+cpdf_lineto($cpdf, 330, 740);
+cpdf_stroke($cpdf);
+cpdf_finalize($cpdf);
+Header("Content-type: application/pdf");
+cpdf_output_buffer($cpdf);
+cpdf_close($cpdf);
+?>
+    </programlisting>
+  </example>
+
+  <simpara>
+     La distribution pdflib contient un exemple plus complet, qui cr&eacute;e des s&eacute;ries
+     de pages avec une horloge. Voici cet exemple converti en script PHP qui utilise
+     l'extension ClibPDF : 
+  </simpara>
+
+  <example>
+   <title>Exemple pdfclock de la distribution pdflib 2.0</title>
+   <programlisting>
+&lt;?php
+$radius = 200;
+$margin = 20;
+$pagecount = 40;
+
+$pdf = cpdf_open(0);
+cpdf_set_creator($pdf, "pdf_clock.php3");
+cpdf_set_title($pdf, "Analog Clock");
+  
+while($pagecount-- > 0) {
+  cpdf_page_init($pdf, $pagecount+1, 0, 2 * ($radius + $margin), 2 * ($radius + $margin), 1.0);
+  
+  cpdf_set_page_animation($pdf, 4, 0.5, 0, 0, 0);  /* wipe */
+  
+  cpdf_translate($pdf, $radius + $margin, $radius + $margin);
+  cpdf_save($pdf);
+  cpdf_setrgbcolor($pdf, 0.0, 0.0, 1.0);
+  
+  /* minute strokes */
+  cpdf_setlinewidth($pdf, 2.0);
+  for ($alpha = 0; $alpha < 360; $alpha += 6)
+    {
+    cpdf_rotate($pdf, 6.0);
+    cpdf_moveto($pdf, $radius, 0.0);
+    cpdf_lineto($pdf, $radius-$margin/3, 0.0);
+    cpdf_stroke($pdf);
+    }
+  
+  cpdf_restore($pdf);
+  cpdf_save($pdf);
+ 
+  /* 5 minute strokes */
+  cpdf_setlinewidth($pdf, 3.0);
+  for ($alpha = 0; $alpha < 360; $alpha += 30)
+  {
+    cpdf_rotate($pdf, 30.0);
+    cpdf_moveto($pdf, $radius, 0.0);
+    cpdf_lineto($pdf, $radius-$margin, 0.0);
+    cpdf_stroke($pdf);
+  }
+
+  $ltime = getdate();
+
+  /* draw hour hand */
+  cpdf_save($pdf);
+  cpdf_rotate($pdf, -(($ltime['minutes']/60.0) + $ltime['hours'] - 3.0) * 30.0);
+  cpdf_moveto($pdf, -$radius/10, -$radius/20);
+  cpdf_lineto($pdf, $radius/2, 0.0);
+  cpdf_lineto($pdf, -$radius/10, $radius/20);
+  cpdf_closepath($pdf);
+  cpdf_fill($pdf);
+  cpdf_restore($pdf);
+
+  /* draw minute hand */
+  cpdf_save($pdf);
+  cpdf_rotate($pdf, -(($ltime['seconds']/60.0) + $ltime['minutes'] - 15.0) * 6.0);
+  cpdf_moveto($pdf, -$radius/10, -$radius/20);
+  cpdf_lineto($pdf, $radius * 0.8, 0.0);
+  cpdf_lineto($pdf, -$radius/10, $radius/20);
+  cpdf_closepath($pdf);
+  cpdf_fill($pdf);
+  cpdf_restore($pdf);
+
+  /* draw second hand */
+  cpdf_setrgbcolor($pdf, 1.0, 0.0, 0.0);
+  cpdf_setlinewidth($pdf, 2);
+  cpdf_save($pdf);
+  cpdf_rotate($pdf, -(($ltime['seconds'] - 15.0) * 6.0));
+  cpdf_moveto($pdf, -$radius/5, 0.0);
+  cpdf_lineto($pdf, $radius, 0.0);
+  cpdf_stroke($pdf);
+  cpdf_restore($pdf);
+
+  /* draw little circle at center */
+  cpdf_circle($pdf, 0, 0, $radius/30);
+  cpdf_fill($pdf);
+
+  cpdf_restore($pdf);
+
+  cpdf_finalize_page($pdf, $pagecount+1);
+}
+
+cpdf_finalize($pdf);
+Header("Content-type: application/pdf");
+cpdf_output_buffer($pdf);
+cpdf_close($pdf);
+?>
+    </programlisting>
+  </example>
+  </partintro>
+
+  <refentry id="function.cpdf-global-set-document-limits">
+   <refnamediv>
+    <refname>cpdf_global_set_document_limits</refname>
+    <refpurpose>Fixe les limites d'un document PDF.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_global_set_document_limits</function></funcdef>
+     <paramdef>int <parameter>maxpages</parameter></paramdef>
+     <paramdef>int <parameter>maxfonts</parameter></paramdef>
+     <paramdef>int <parameter>maximages</parameter></paramdef>
+     <paramdef>int <parameter>maxannotations</parameter></paramdef>
+     <paramdef>int <parameter>maxobjects</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>cpdf_global_set_document_limits</function> permet de fixer plusieurs
+     limites au document PDF. Cette fonction doit &ecirc;tre appel&eacute; avant 
+     <function>cpdf_open</function> pour &ecirc;tre effective. Elle fixe les limites de tous 
+     les documents ouverts apr&egrave;s.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_open</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-creator">
+   <refnamediv>
+    <refname>cpdf_set_creator</refname>
+    <refpurpose>Fixe le cr&eacute;ateur d'un document PDF.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_creator</function></funcdef>
+     <paramdef>string <parameter>creator</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_creator</function> fixe le cr&eacute;ateur d'un document PDF.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_set_subject</function>,
+              <function>cpdf_set_title</function>,
+              <function>cpdf_set_keywords</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-title">
+   <refnamediv>
+    <refname>cpdf_set_title</refname>
+    <refpurpose>Fixe le titre d'un document PDF.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_title</function></funcdef>
+     <paramdef>string <parameter>title</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_title</function> fixe le titre d'un document PDF.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_set_subject</function>,
+              <function>cpdf_set_creator</function>,
+              <function>cpdf_set_keywords</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-subject">
+   <refnamediv>
+    <refname>cpdf_set_subject</refname>
+    <refpurpose>Fixe le sujet d'un document PDF.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_subject</function></funcdef>
+     <paramdef>string <parameter>subject</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_subject</function> fixe le sujet d'un document PDF.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_set_title</function>,
+              <function>cpdf_set_creator</function>,
+              <function>cpdf_set_keywords</function>.
+     </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-keywords">
+   <refnamediv>
+    <refname>cpdf_set_keywords</refname>
+    <refpurpose>Fixe les mot cl&eacute;s d'un document PDF.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_keywords</function></funcdef>
+     <paramdef>string <parameter>keywords</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_keywords</function> fixe les mot cl&eacute;s d'un document PDF.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_set_title</function>,
+              <function>cpdf_set_creator</function>,
+              <function>cpdf_set_subject</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-open">
+   <refnamediv>
+    <refname>cpdf_open</refname>
+    <refpurpose>Oouvre un nouveau document PDF.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>int <function>cpdf_open</function></funcdef>
+     <paramdef>int <parameter>compression</parameter></paramdef>
+     <paramdef>string <parameter>filename</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>cpdf_open</function> ouvre un nouveau document PDF. Le premier param&egrave;tre 
+     active ou pas la compression, suivant qu'il vaut 0 ou 1. Le deuxi&egrave;me param&egrave;tre,
+     optionnel, choisit le fichier de destination du document. Si il est omis, le 
+     document sera &eacute;crit en m&eacute;moire, et pourra &ecirc;tre &eacute;crit dans un fichier avec 
+     <function>cpdf_save_to_file</function> ou envoy&eacute; &agrave; l'affichage avec 
+     <function>cpdf_output_buffer</function>.
+
+     <note><simpara>
+       La valeur retourn&eacute;e sera n&eacute;cessaire pour les autres fonctions de ClibPDF comme
+       premier param&egrave;tre.
+     </simpara>
+     <simpara>
+       La librairie ClibPDF prend le nom de fichier "-" comme synonyme de stdout.
+       Si PHP est compil&eacute; comme un module apache, cela ne fonctionnera pas,
+       car la m&eacute;thode d'envoie des donn&eacute;es de ClibPDF ne fonctionne pas avec Apache. 
+       Vous pouvez r&eacute;soudre ce probl&egrave;me en ne fournissant pas de nom de fichier, et en
+       utilisant la fonction <function>cpdf_output_buffer</function> pour afficher
+       le document PDF.
+      </simpara></note>
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_close</function>,
+              <function>cpdf_output_buffer</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-close">
+   <refnamediv>
+    <refname>cpdf_close</refname>
+    <refpurpose>Ferme un fichier PDF.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_close</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_close</function> ferme un fichier PDF. Ce doit &ecirc;tre la derni&egrave;re 
+      fonction appel&eacute;e, et elle appara&icirc;t m&ecirc;me apr&egrave;s <function>cpdf_finalize</function>, 
+      <function>cpdf_output_buffer</function> et <function>cpdf_save_to_file</function>.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_open</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-page-init">
+   <refnamediv>
+    <refname>cpdf_page_init</refname>
+    <refpurpose>Commence une nouvelle page.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_page_init</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>int <parameter>page number</parameter></paramdef>
+     <paramdef>int <parameter>orientation</parameter></paramdef>
+     <paramdef>double <parameter>height</parameter></paramdef>
+     <paramdef>double <parameter>width</parameter></paramdef>
+     <paramdef>double <parameter>unit</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_page_init</function> commence une nouvelle page, avec la hauteur
+      <parameter>height</parameter> et la largeur <parameter>width</parameter>. 
+      La page a le num&eacute;ro <parameter>page number</parameter> et l'orientation 
+      <parameter>orientation</parameter>. <parameter>orientation</parameter>
+      vaut 0 pour portrait et 1 pour paysage. Le dernier param&egrave;tre, optionnel, 
+      <parameter>unit</parameter>, fixe l'unit&eacute; pour le syst&egrave;me de coordonn&eacute;es.
+      Cette valeur doit &ecirc;tre un nombre de points postscript, par unit&eacute;. Etant donn&eacute; que
+      un pouce (inch) vaut 72 points, une valeur de 72 vaudra un pouce (inch). Par 
+      d&eacute;faut, cette valeur vaut 72.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_set_current_page</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-finalize-page">
+   <refnamediv>
+    <refname>cpdf_finalize_page</refname>
+    <refpurpose>Termine une page.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_finalize_page</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>int <parameter>page number</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_finalize_page</function> termine la  page de num&eacute;ro 
+      <parameter>page number</parameter>.
+      Cette fonction fait que qu'une sauvegarde m&eacute;moire. Les pages termin&eacute;es prennent
+      moins de place, mais ne peuvent plus &ecirc;tre modifi&eacute;es.
+     </para>
+
+    <para>
+      Voir aussi <function>cpdf_page_init</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-finalize">
+   <refnamediv>
+    <refname>cpdf_finalize</refname>
+    <refpurpose>Termine un document.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_finalize</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_finalize</function> termine un document. Vous devez toujours 
+      appeler <function>cpdf_close</function> apr&egrave;s.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_close</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-output-buffer">
+   <refnamediv>
+    <refname>cpdf_output_buffer</refname>
+    <refpurpose>Envoie le document PDF dans un buffer m&eacute;moire.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_output_buffer</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_output_buffer</function> envoie le document PDF dans un buffer 
+      m&eacute;moire de stdout. Le document doit avoir &eacute;t&eacute; cr&eacute;&eacute; en m&eacute;moire, ce qui est le cas 
+      si <function>cpdf_open</function> a &eacute;t&eacute; appel&eacute;e dans param&egrave;tre de nom de fichier.
+    </para>
+     
+    <para>
+      Voir aussi <function>cpdf_open</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-save-to-file">
+   <refnamediv>
+    <refname>cpdf_save_to_file</refname>
+    <refpurpose>Ecrit un document PDF dans un fichier.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_save_to_file</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>string <parameter>filename</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_save_to_file</function> 'crit un document PDF dans un fichier,
+      si il a &eacute;t&eacute; cr&eacute;&eacute; en m&eacute;moire.  Cette fonction n'est pas n&eacute;cessaire si un
+      nom de fichier a &eacute;t&eacute; fourni lors de l'appel &agrave; <function>cpdf_open</function>.
+    </para>
+     
+    <para>
+     Voir aussi <function>cpdf_output_buffer</function>,
+              <function>cpdf_open</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-current-page">
+   <refnamediv>
+    <refname>cpdf_set_current_page</refname>
+    <refpurpose>Fixe la page courante.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_current_page</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>int <parameter>page number</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_current_page</function> fixe la page courante, o&uacute; toutes les
+      procha&icirc;nes op&eacute;rations vont avoir lieu. On peut changer de page jusqu'&agrave; ce qu'une 
+      page soit termin&eacute;e avec <function>cpdf_finalize_page</function>.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_finalize_page</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-begin-text">
+   <refnamediv>
+    <refname>cpdf_begin_text</refname>
+    <refpurpose>D&eacute;marre une section de texte.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_begin_text</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_begin_text</function> d&eacute;marre une section de texte.
+      Elle doit &ecirc;tre termin&eacute;e avec <function>cpdf_end_text</function>.
+
+     <example>
+      <title>Affichage de texte</title>
+      <programlisting>
+&lt;?php cpdf_begin_text($pdf);
+cpdf_set_font($pdf, 16, "Helvetica", "WinAnsiEncoding");
+cpdf_text($pdf, 100, 100, "Some text");
+cpdf_end_text($pdf) ?>
+</programlisting></example></para>
+
+    <para>
+      Voir aussi <function>cpdf_end_text</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-end-text">
+   <refnamediv>
+    <refname>cpdf_end_text</refname>
+    <refpurpose>Termine une section de texte.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_end_text</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_end_text</function> termine une section de texte, commenc&eacute;e avec
+      <function>cpdf_begin_text</function>.
+
+     <example>
+      <title>Affichage de texte</title>
+      <programlisting>
+&lt;?php cpdf_begin_text($pdf);
+cpdf_set_font($pdf, 16, "Helvetica", "WinAnsiEncoding");
+cpdf_text($pdf, 100, 100, "Some text");
+cpdf_end_text($pdf) ?>
+</programlisting></example></para>
+
+    <para>
+      Voir aussi <function>cpdf_begin_text</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-show">
+   <refnamediv>
+    <refname>cpdf_show</refname>
+    <refpurpose>Imprime un texte &agrave; la position courante.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_show</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>string <parameter>text</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_show</function> imprime la cha&icirc;ne <parameter>text</parameter>, &agrave; 
+      la position courante.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_text</function>,
+              <function>cpdf_begin_text</function>,
+              <function>cpdf_end_text</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-show-xy">
+   <refnamediv>
+    <refname>cpdf_show_xy</refname>
+    <refpurpose>Affiche un texte &agrave; une position.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_show_xy</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>string <parameter>text</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_show_xy</function> imprime la cha&icirc;ne <parameter>text</parameter>, 
+      &agrave; la position de coordonn&eacute;es (<parameter>x-koor</parameter>, 
+      <parameter>y-koor</parameter>). Le dernier param&egrave;tre optionnel est une unit&eacute; de 
+      longueur. Si il prend la valeur de 0 (ou si il est omis), c'est la valeur par 
+      d&eacute;faut (72) qui est utilis&eacute;. 
+
+    <note>
+     <simpara>
+       The function <function>cpdf_show_xy</function> est identique &agrave; 
+       <function>cpdf_text</function> sans les options.
+     </simpara>
+    </note>
+   </para>
+
+    <para>
+      Voir aussi <function>cpdf_text</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-text">
+   <refnamediv>
+    <refname>cpdf_text</refname>
+    <refpurpose>Imprime un texte avec des options.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_text</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>string <parameter>text</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+     <paramdef>double <parameter>orientation</parameter></paramdef>
+     <paramdef>int <parameter>alignmode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_text</function> imprime le text <parameter>text</parameter> &agrave; la 
+      position de coordonn&eacute;es (<parameter>x-koor</parameter>, 
+      <parameter>y-koor</parameter>). Le param&egrave;tre <parameter>mode</parameter> est une 
+      unit&eacute; de longueur. Si il prend la valeur de 0 (ou si il est omis), c'est la 
+      valeur par d&eacute;faut (72) qui est utilis&eacute;. 
+    </para>
+    <Para>
+      Le param&egrave;tre optionel <parameter>orientation</parameter> est un angle de 
+      rotation du texte, en degr&eacute;s. Le param&egrave;tre optionnel 
+      <parameter>alignmode</parameter> d&eacute;termine l'alignement du texte. Reportez vous 
+      &agrave; la doc de ClibPDF, pour les valeurs possibles.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_show_xy</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-font">
+   <refnamediv>
+    <refname>cpdf_set_font</refname>
+    <refpurpose>Selectionne la police courante, et sa taille.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_font</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>string <parameter>font name</parameter></paramdef>
+     <paramdef>double <parameter>size</parameter></paramdef>
+     <paramdef>string <parameter>encoding</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_font</function> Selectionne la police courante, sa taille,
+      et l'encodage. Actuellement, seules les polices postscript sont support&eacute;es.
+      Le dernier param&egrave;tre <parameter>encoding</parameter> peut prendre les valeurs 
+      suivantes : "MacRomanEncoding", "MacExpertEncoding", "WinAnsiEncoding",
+      et "NULL". "NULL" signifie qu'il faut utiliser l'encodage par d&eacute;faut. Reportez vous 
+      &agrave; la doc de ClibPDF, pour plus d'informations, notamment sur les polices 
+      asiatiques.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-leading">
+   <refnamediv>
+    <refname>cpdf_set_leading</refname>
+    <refpurpose>Fixe la distance entre deux lignes.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_leading</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>distance</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_leading</function> fixe la distance entre deux lignes.
+      Cela servira si le texte est affich&eacute; par <function>cpdf_continue_text</function>.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_continue_text</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-text-rendering">
+   <refnamediv>
+    <refname>cpdf_set_text_rendering</refname>
+    <refpurpose>D&eacute;termines le rendu du texte.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_text_rendering</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_text_rendering</function> d&eacute;termines le rendu du texte.
+       Les valeurs possibles pour <parameter>mode</parameter> sont : 
+       0=texte plein, 1=texte stroke, 2=texte plein et stroke, 3=invisible,
+       4=texte plein et ajout&eacute; au chemin, 5=texte stroke et ajout&eacute; au chemin,
+       6=texte plein et stroke et ajout&eacute; au chemin, 7=et ajout&eacute; au chemin.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-horiz-scaling">
+   <refnamediv>
+    <refname>cpdf_set_horiz_scaling</refname>
+    <refpurpose>Fixe l'&eacute;chelle horizontale du texte.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_horiz_scaling</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>scale</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_horiz_scaling</function> fixe l'&eacute;chelle horizontale du 
+      texte &agrave; <parameter>scale</parameter> %.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-text-rise">
+   <refnamediv>
+    <refname>cpdf_set_text_rise</refname>
+    <refpurpose>Fixe l'&eacute;l&eacute;vation du texte.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_text_rise</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>value</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_text_rise</function> fixe l'&eacute;l&eacute;vation du texte &agrave; 
+      <parameter>value</parameter> unit&eacute;s.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-text-matrix">
+   <refnamediv>
+    <refname>cpdf_set_text_matrix</refname>
+    <refpurpose>Fixe la matrice du texte.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_text_matrix</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>array <parameter>matrix</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_text_matrix</function> fixe la matrice du texte, qui d&eacute;crit 
+      la transformation appliqu&eacute;e &agrave; police.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-text-pos">
+   <refnamediv>
+    <refname>cpdf_set_text_pos</refname>
+    <refpurpose>Fixe la position du texte.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_text_pos</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_text_pos</function> Fixe la position du texte pour le      
+      prochain appel &agrave; <function>cpdf_show</function>.
+    </para>
+
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;. 
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_show</function>,
+              <function>cpdf_text</function>.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-char-spacing">
+   <refnamediv>
+    <refname>cpdf_set_char_spacing</refname>
+    <refpurpose>Fixe l'espacement des caract&egrave;res.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_char_spacing</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>space</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+       <function>cpdf_set_char_spacing</function> fixe l'espacement des caract&egrave;res.
+    </para>
+    <para>
+     Voir aussi <function>cpdf_set_word_spacing</function>,
+              <function>cpdf_set_leading</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-word-spacing">
+   <refnamediv>
+    <refname>cpdf_set_word_spacing</refname>
+    <refpurpose>Fixe l'espacement des mots.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_word_spacing</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>space</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_word_spacing</function> fixe l'espacement des caract&egrave;res.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_set_char_spacing</function>,
+              <function>cpdf_set_leading</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-continue-text">
+   <refnamediv>
+    <refname>cpdf_continue_text</refname>
+    <refpurpose>Imprime le texte &agrave; la ligne suivante.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_continue_text</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>string <parameter>text</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_continue_text</function> imprime le texte 
+      <parameter>text</parameter> &agrave; la ligne suivante.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_show_xy</function>,
+              <function>cpdf_text</function>,
+              <function>cpdf_set_leading</function>,
+              <function>cpdf_set_text_pos</function>.</para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-stringwidth">
+   <refnamediv>
+    <refname>cpdf_stringwidth</refname>
+    <refpurpose>Retourne la taille de la cha&icirc;ne.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>double <function>cpdf_stringwidth</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>string <parameter>text</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_stringwidth</function> retourne la taille de la cha&icirc;ne
+      <parameter>text</parameter>. Une police doit avoir d&eacute;j&agrave; &eacute;t&eacute; choisie.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_set_font</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-save">
+   <refnamediv>
+    <refname>cpdf_save</refname>
+    <refpurpose>Sauve l'environnement courant.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_save</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_save</function> sauve l'environnement courant. Cette fonction
+      est similaire &agrave; la commande postscript gsave. Tr&egrave;s pratique quand vous devez 
+      faire des translations et rotations sur un objet, mais sans affecter les autres.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_restore</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-restore">
+   <refnamediv>
+    <refname>cpdf_restore</refname>
+    <refpurpose>Restaures un environnement.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_restore</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_restore</function> restaure l'environnement sauv&eacute; par 
+      <function>cpdf_save</function>. Cette fonction est similaire &agrave; la commande 
+      postscript grestore. Tr&egrave;s pratique quand vous devez faire des translations et 
+      rotations sur un objet, mais sans affecter les autres.
+
+     <example>
+      <title>Sauver/Restaurer</title>
+      <programlisting>
+&lt;?php cpdf_save($pdf);
+// plein de transformations, translations, ...
+cpdf_restore($pdf) ?>
+</programlisting></example></para>
+
+    <para>
+      Voir aussi <function>cpdf_save</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-translate">
+   <refnamediv>
+    <refname>cpdf_translate</refname>
+    <refpurpose>Modifie l'origine du syst&egrave;me de coordon&eacute;es.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_translate</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_translate</function> modifie l'origine du syst&egrave;me de coordon&eacute;es
+      en placant l'origine aux coordonn&eacute;es (<parameter>x-koor</parameter>,
+      <parameter>y-koor</parameter>).
+    </para>
+
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il 
+      prend la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;. 
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-scale">
+   <refnamediv>
+    <refname>cpdf_scale</refname>
+    <refpurpose>Modifie l'echelle.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_scale</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>x-scale</parameter></paramdef>
+     <paramdef>double <parameter>y-scale</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_scale</function> modifie l'echelle dans les deux direction.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-rotate">
+   <refnamediv>
+    <refname>cpdf_rotate</refname>
+    <refpurpose>Effectue une rotation.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_rotate</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>angle</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_rotate</function> effectue une rotation, d'un angle de 
+      <parameter>angle</parameter> degr&eacute;s.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-setflat">
+   <refnamediv>
+    <refname>cpdf_setflat</refname>
+    <refpurpose>Fixe la platitude (flatness).</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setflat</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>value</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+       <function>cpdf_setflat</function> fixe la platitude (flatness),
+       entre 0 et 100.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-setlinejoin">
+   <refnamediv>
+    <refname>cpdf_setlinejoin</refname>
+    <refpurpose>Fixe le param&egrave;tre linejoin.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setlinejoin</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>long <parameter>value</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>cpdf_setlinejoin</function> fixe le param&egrave;tre linejoin &agrave; une valeur
+entre 0 et 2. 0 = miter, 1 = round, 2 = bevel.</para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-setlinecap">
+   <refnamediv>
+    <refname>cpdf_setlinecap</refname>
+    <refpurpose>Fixe le param&egrave;tre linecap.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setlinecap</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>int <parameter>value</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_setlinecap</function> fixe le param&egrave;tre linecap
+      &agrave; une valeur entre 0 et 2. 0 = butt end, 1 = round,
+      2 = projecting square.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-setmiterlimit">
+   <refnamediv>
+    <refname>cpdf_setmiterlimit</refname>
+    <refpurpose>Fixe le param&egrave;tre miter limit.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setmiterlimit</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>value</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_setmiterlimit</function> Fixe le param&egrave;tre miter limit
+      &agrave; une valeur sup&eacute;rieure ou &eacute;gale &agrave; 1.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-setlinewidth">
+   <refnamediv>
+    <refname>cpdf_setlinewidth</refname>
+    <refpurpose>Fixe la largeur de ligne.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setlinewidth</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>width</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_setlinewidth</function>Fixe la largeur de ligne &agrave; la valeur de 
+      <parameter>width</parameter>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-setdash">
+   <refnamediv>
+    <refname>cpdf_setdash</refname>
+    <refpurpose>Fixe le motif de pointill&eacute;.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setdash</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>white</parameter></paramdef>
+     <paramdef>double <parameter>black</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>cpdf_setdash</function> fixe le motif de pointill&eacute; &agrave;
+     <parameter>white</parameter> unit&eacute; de blanc et <parameter>black</parameter> unit&eacute;s
+de noir. Si les deux sont &agrave; 0, une ligne pleine est affich&eacute;e.</para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-moveto">
+   <refnamediv>
+    <refname>cpdf_moveto</refname>
+    <refpurpose>Fixe le point courant.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_moveto</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_moveto</function> fixe le point courant aux coordonn&eacute;es
+      (<parameter>x-koor</parameter>, <parameter>y-koor</parameter>).
+    </para>
+
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;e.  
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-rmoveto">
+   <refnamediv>
+    <refname>cpdf_rmoveto</refname>
+    <refpurpose>Fixe le point courant relativement.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_rmoveto</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>cpdf_rmoveto</function> Fixe le point courant aux coordonn&eacute;es
+     (<parameter>x-koor</parameter>, <parameter>y-koor</parameter>), relativement.
+    </para>
+
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;e. 
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_moveto</function>.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-curveto">
+   <refnamediv>
+    <refname>cpdf_curveto</refname>
+    <refpurpose>Dessine une courbe.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_curveto</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>x1</parameter></paramdef>
+     <paramdef>double <parameter>y1</parameter></paramdef>
+     <paramdef>double <parameter>x2</parameter></paramdef>
+     <paramdef>double <parameter>y2</parameter></paramdef>
+     <paramdef>double <parameter>x3</parameter></paramdef>
+     <paramdef>double <parameter>y3</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_curveto</function> dessine une courbe de Bezier, entre le point
+      courant et le point (<parameter>x3</parameter>, <parameter>y3</parameter>), en
+      utilisant les points de contr&ocirc;le 
+      (<parameter>x1</parameter>, <parameter>y1</parameter>) et 
+      (<parameter>x2</parameter>, <parameter>y2</parameter>).
+    </para>
+
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;e.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_moveto</function>,
+              <function>cpdf_rmoveto</function>,
+              <function>cpdf_rlineto</function>,
+              <function>cpdf_lineto</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-lineto">
+   <refnamediv>
+    <refname>cpdf_lineto</refname>
+    <refpurpose>Dessine une ligne.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_lineto</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_lineto</function> dessine une ligne entre le point courant et
+      le point de coordonn&eacute;es (<parameter>x-koor</parameter>, <parameter>y-koor</parameter>).
+    </para>
+
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_moveto</function>,
+              <function>cpdf_rmoveto</function>,
+              <function>cpdf_curveto</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-rlineto">
+   <refnamediv>
+    <refname>cpdf_rlineto</refname>
+    <refpurpose>Dessine une ligne, relativement.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_rlineto</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_rlineto</function> dessine une ligne entre le point courant
+      et le point de coordonn&eacute;es relatives (<parameter>x-koor</parameter>, <parameter>y-koor</parameter>).
+    </para>
+
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_moveto</function>,
+              <function>cpdf_rmoveto</function>,
+              <function>cpdf_curveto</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-circle">
+   <refnamediv>
+    <refname>cpdf_circle</refname>
+    <refpurpose>Dessine un cercle.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_circle</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>double <parameter>radius</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_circle</function> dessine un cercle de centre
+      (<parameter>x-koor</parameter>, <parameter>y-koor</parameter>)
+      et de rayon <parameter>radius</parameter>.
+    </para>
+
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_arc</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-arc">
+   <refnamediv>
+    <refname>cpdf_arc</refname>
+    <refpurpose>Dessine un arc de cercle.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_arc</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>double <parameter>radius</parameter></paramdef>
+     <paramdef>double <parameter>start</parameter></paramdef>
+     <paramdef>double <parameter>end</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_arc</function> Dessine un arc de cercle, dont le centre est au
+      point (<parameter>x-koor</parameter>, <parameter>y-koor</parameter>)
+      et l'angle est <parameter>radius</parameter>, commencant &agrave; l'angle 
+      <parameter>start</parameter> et finissant &agrave; l'angle <parameter>end</parameter>.
+    </para>
+
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;. 
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_circle</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-rect">
+   <refnamediv>
+    <refname>cpdf_rect</refname>
+    <refpurpose>Dessine un rectangle.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_rect</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>double <parameter>width</parameter></paramdef>
+     <paramdef>double <parameter>height</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_rect</function> Dessine un rectangle dont le coin inf&eacute;rieur droit
+      est au point  (<parameter>x-koor</parameter>, <parameter>y-koor</parameter>).
+      La largeur est <parameter>width</parameter>.
+      La hauteur est<parameter>height</parameter>.
+    </para>
+
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-closepath">
+   <refnamediv>
+    <refname>cpdf_closepath</refname>
+    <refpurpose>Ferme le chemin.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_closepath</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_closepath</function> ferme le chemin courant.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-stroke">
+   <refnamediv>
+    <refname>cpdf_stroke</refname>
+    <refpurpose>Dessine une ligne le long du chemin.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_stroke</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_stroke</function> dessine une ligne le long du chemin.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_closepath</function>,
+              <function>cpdf_closepath_stroke</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-closepath-stroke">
+   <refnamediv>
+    <refname>cpdf_closepath_stroke</refname>
+    <refpurpose>Ferme le fichier et dessine une ligne le long du chemin.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_closepath_stroke</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_closepath_stroke</function> est une combinaison de 
+      <function>cpdf_closepath</function> et <function>cpdf_stroke</function>.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_closepath</function>,
+              <function>cpdf_stroke</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-fill">
+   <refnamediv>
+    <refname>cpdf_fill</refname>
+    <refpurpose>Remplis le chemin courant.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_fill</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_fill</function> rempli l'int&eacute;rieur du chemin courant
+      avec la couleur courante.
+     </para>
+
+    <para>
+     Voir aussi <function>cpdf_closepath</function>,
+              <function>cpdf_stroke</function>,
+              <function>cpdf_setgray_fill</function>,
+              <function>cpdf_setgray</function>,
+              <function>cpdf_setrgbcolor_fill</function>,
+              <function>cpdf_setrgbcolor</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-fill-stroke">
+   <refnamediv>
+    <refname>cpdf_fill_stroke</refname>
+    <refpurpose>Remplis le chemin, et dessine le bord.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_fill_stroke</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_fill_stroke</function> remplis l'int&eacute;rieur du chemin avec la
+      couleur courante, et dessine le chemin.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_closepath</function>,
+              <function>cpdf_stroke</function>,
+              <function>cpdf_fill</function>,
+              <function>cpdf_setgray_fill</function>,
+              <function>cpdf_setgray</function>,
+              <function>cpdf_setrgbcolor_fill</function>,
+              <function>cpdf_setrgbcolor</function>.
+     </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-closepath-fill-stroke">
+   <refnamediv>
+    <refname>cpdf_closepath_fill_stroke</refname>
+    <refpurpose>Remplis le chemin, dessine le bord et ferme le chemin.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_closepath_fill_stroke</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_closepath_fill_stroke</function> remplis le chemin, dessine le 
+      bord et ferme le chemin.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_closepath</function>,
+              <function>cpdf_stroke</function>,
+              <function>cpdf_fill</function>,
+              <function>cpdf_setgray_fill</function>,
+              <function>cpdf_setgray</function>,
+              <function>cpdf_setrgbcolor_fill</function>,
+              <function>cpdf_setrgbcolor</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-clip">
+   <refnamediv>
+    <refname>cpdf_clip</refname>
+    <refpurpose>Aligne les dessins sur le chemin courant.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_clip</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_clip</function> aligne les dessins sur le chemin courant.
+    </para>
+
+   </refsect1>
+  </refentry>
+  
+  <refentry id="function.cpdf-setgray-fill">
+   <refnamediv>
+    <refname>cpdf_setgray_fill</refname>
+    <refpurpose>Choisit un niveau de gris comme couleur de remplissage.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setgray_fill</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>value</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_setgray_fill</function> Choisit un niveau de gris comme couleur 
+      de remplissage.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_setrgbcolor_fill</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+  
+  <refentry id="function.cpdf-setgray-stroke">
+   <refnamediv>
+    <refname>cpdf_setgray_stroke</refname>
+    <refpurpose>Choisit un niveau de gris comme couleur de dessin.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setgray_stroke</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>gray value</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_setgray_stroke</function> choisit un niveau de gris comme couleur 
+      de dessin.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_setrgbcolor_stroke</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+  
+  <refentry id="function.cpdf-setgray">
+   <refnamediv>
+    <refname>cpdf_setgray</refname>
+    <refpurpose>Choisit un niveau de gris comme couleur de dessin et de remplissage.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setgray</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>gray value</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>cpdf_setgray_stroke</function> choisit un niveau de gris comme couleur 
+      de dessin et de remplissage.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_setrgbcolor_stroke</function>,
+              <function>cpdf_setrgbcolor_fill</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+  
+  <refentry id="function.cpdf-setrgbcolor-fill">
+   <refnamediv>
+    <refname>cpdf_setrgbcolor_fill</refname>
+    <refpurpose>Choisit une couleur rgb comme couleur de remplissage.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setrgbcolor_fill</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>red value</parameter></paramdef>
+     <paramdef>double <parameter>green value</parameter></paramdef>
+     <paramdef>double <parameter>blue value</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_setrgbcolor_fill</function> choisit une couleur rgb comme couleur 
+      de remplissage.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_setrgbcolor_stroke</function>,
+              <function>cpdf_setrgbcolor</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+  
+  <refentry id="function.cpdf-setrgbcolor-stroke">
+   <refnamediv>
+    <refname>cpdf_setrgbcolor_stroke</refname>
+    <refpurpose>Choisit une couleur rgb comme couleur de dessin.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setrgbcolor_stroke</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>red value</parameter></paramdef>
+     <paramdef>double <parameter>green value</parameter></paramdef>
+     <paramdef>double <parameter>blue value</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_setrgbcolor_stroke</function> choisit une couleur rgb comme 
+      couleur de dessin.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_setrgbcolor_fill</function>,
+              <function>cpdf_setrgbcolor</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+  
+  <refentry id="function.cpdf-setrgbcolor">
+   <refnamediv>
+    <refname>cpdf_setrgbcolor</refname>
+    <refpurpose>Choisit une couleur rgb comme couleur de dessin et de remplissage.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_setrgbcolor</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>red value</parameter></paramdef>
+     <paramdef>double <parameter>green value</parameter></paramdef>
+     <paramdef>double <parameter>blue value</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_setrgbcolor_stroke</function> choisit une couleur rgb comme 
+      couleur de dessin et de remplissage.
+    </para>
+
+    <para>
+     Voir aussi <function>cpdf_setrgbcolor_stroke</function>,
+              <function>cpdf_setrgbcolor_fill</function>.
+    </para>
+
+   </refsect1>
+  </refentry>
+  
+  <refentry id="function.cpdf-add-outline">
+   <refnamediv>
+    <refname>cpdf_add_outline</refname>
+    <refpurpose>Ajoute un signet &agrave; la page courante.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_add_outline</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>string <parameter>text</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_add_outline</function> ajoute un signet &agrave; la page courante,
+      avec le texte <parameter>text</parameter> qui pointe sur la page courante.
+
+     <example>
+      <title>Ajouter une mise en relief</title>
+      <programlisting>
+&lt;?php
+$cpdf = cpdf_open(0);
+cpdf_page_init($cpdf, 1, 0, 595, 842);
+cpdf_add_outline($cpdf, 0, 0, 0, 1, "Page 1");
+// ...
+// quelques dessin
+// ...
+cpdf_finalize($cpdf);
+Header("Content-type: application/pdf");
+cpdf_output_buffer($cpdf);
+cpdf_close($cpdf);
+?>
+    </programlisting>
+  </example>
+</para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-set-page-animation">
+   <refnamediv>
+    <refname>cpdf_set_page_animation</refname>
+    <refpurpose>Fixe l'animation de la transition entre les pages.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_set_page_animation</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>int <parameter>transition</parameter></paramdef>
+     <paramdef>double <parameter>duration</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_set_page_animation</function> Fixe l'animation de la transition 
+      entre les pages.
+    </para>
+
+    <para>
+     La valeur du param&egrave;tre de transition <parameter>transition</parameter> peut &ecirc;tre 
+     <simplelist>
+      <member>
+       0 pour aucune,
+      </member>
+      <member>
+       1 pour deux lignes en travers de l'&eacute;cran, qui r&eacute;v&egrave;lent la procha&icirc;ne page,
+      </member>
+      <member>
+       2 pour plusieurs lignes en travers de l'&eacute;cran, qui r&eacute;v&egrave;lent la procha&icirc;ne page,
+      </member>
+      <member>
+       3 pour une bo&icirc;te qui r&eacute;v&egrave;le la procha&icirc;ne page,
+      </member>
+      <member>
+       4 pour une seule ligne en travers de l'&eacute;cran, qui r&eacute;v&egrave;le la procha&icirc;ne page,
+      </member>
+      <member>
+       5 pour l'ancienne page qui se dissout
+      </member>
+      <member>
+       6 pour un effet de dissolution d'un angle &agrave; l'autre
+      </member>
+      <member>
+       7 pour le remplacement simple (par d&eacute;faut)
+      </member>
+     </simplelist></para>
+
+    <para>
+      La valeur de <parameter>duration</parameter> est le nombre de secondes avant le
+      passage &agrave; la page suivante.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-import-jpeg">
+   <refnamediv>
+    <refname>cpdf_import_jpeg</refname>
+    <refpurpose>Ouvre une image JPEG.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>int <function>cpdf_import_jpeg</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>string <parameter>file name</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>double <parameter>angle</parameter></paramdef>
+     <paramdef>double <parameter>width</parameter></paramdef>
+     <paramdef>double <parameter>height</parameter></paramdef>
+     <paramdef>double <parameter>x-scale</parameter></paramdef>
+     <paramdef>double <parameter>y-scale</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_import_jpeg</function> ouvre une image JPG, enregistr&eacute; dans 
+      le fichier <parameter>file name</parameter>. Le format de l'image doit &ecirc;tre JPEG.
+      L'image est plac&eacute;e dans la page courante, aux coordonn&eacute;es 
+      (<parameter>x-koor</parameter>, <parameter>y-koor</parameter>).
+      L'image subira une rotation d'un angle de <parameter>angle</parameter> degr&eacute;s.
+    </para>
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;e.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_place_inline_image</function>.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-place-inline-image">
+   <refnamediv>
+    <refname>cpdf_place_inline_image</refname>
+    <refpurpose>Places une image dans la page.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_place_inline_image</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>int <parameter>image</parameter></paramdef>
+     <paramdef>double <parameter>x-koor</parameter></paramdef>
+     <paramdef>double <parameter>y-koor</parameter></paramdef>
+     <paramdef>double <parameter>angle</parameter></paramdef>
+     <paramdef>double <parameter>width</parameter></paramdef>
+     <paramdef>double <parameter>height</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>cpdf_place_inline_image</function> places une image cr&eacute;&eacute;e par un 
+      script PHP, dans la page, &agrave; la position 
+      (<parameter>x-koor</parameter>, <parameter>y-koor</parameter>). 
+      L'image peut &ecirc;tre mise &agrave; l'&eacute;chelle, en m&ecirc;me temps.
+    </para>
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;.
+    </para>
+
+    <para>
+      Voir aussi <function>cpdf_import_jpeg</function>.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.cpdf-add-annotation">
+   <refnamediv>
+    <refname>cpdf_add_annotation</refname>
+    <refpurpose>Ajoute une annotation.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>void <function>cpdf_add_annotation</function></funcdef>
+     <paramdef>int <parameter>pdf document</parameter></paramdef>
+     <paramdef>double <parameter>llx</parameter></paramdef>
+     <paramdef>double <parameter>lly</parameter></paramdef>
+     <paramdef>double <parameter>urx</parameter></paramdef>
+     <paramdef>double <parameter>ury</parameter></paramdef>
+     <paramdef>string <parameter>title</parameter></paramdef>
+     <paramdef>string <parameter>content</parameter></paramdef>
+     <paramdef>int <parameter>mode</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>cpdf_add_annotation</function> ajoute une note, dont le coin inf&eacute;rieur 
+     droit est (<parameter>llx</parameter>, <parameter>lly</parameter>) et le coin 
+     sup&eacute;rieur droit est (<parameter>urx</parameter>, <parameter>ury</parameter>).
+    </para>
+
+    <para>
+      Le param&egrave;tre <parameter>mode</parameter> est une unit&eacute; de longueur. Si il prend 
+      la valeur de 0 (ou si il est omis), c'est la valeur par d&eacute;faut (72) qui est 
+      utilis&eacute;.
+    </para>
+   </refsect1>
+  </refentry>
+
+ </reference>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+sgml-parent-document:nil
+sgml-default-dtd-file:"../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->

@@ -1,0 +1,190 @@
+ <reference id="ref.http">
+  <title>Fonctions HTTP</title>
+  <titleabbrev>HTTP</titleabbrev>
+
+  <partintro>
+  <simpara>
+    Ces fonctions permettent de travailler sur les informations transmises au navigateur, 
+    via le protocole HTTP.
+  </simpara>
+  </partintro>
+
+  <refentry id="function.header">
+   <refnamediv>
+    <refname>header</refname>
+    <refpurpose>Envoie un ent&ecirc;te HTTP.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>int <function>header</function></funcdef>
+     <paramdef>string <parameter>string</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      La fonction <function>Header</function> permet de sp&eacute;cifier un ent&ecirc;te HTTP lors 
+      de l'envoi des fichiers HTML. Reportez vous &agrave; <ulink url="&spec.http1.1;">HTTP 1.1
+      Specification</ulink> pour plus d'informations sur les ent&ecirc;tes HTTP. NB : la 
+      fonction <function>Header</function> doit &ecirc;tre appel&eacute;e avant la premi&egrave;re balise 
+      HTML, et avant n'importe quel envoi de commande PHP. C'est une erreur tr&egrave;s 
+      courante que de lire du code avec la fonction <function>include</function> ou 
+      avec auto_prepend et d'avoir des espace ou des lignes vides dans ce code qui 
+      produisent un d&eacute;but de sortie avant que <function>header</function> n'ai &eacute;t&eacute; appel&eacute;.
+   </para>
+
+    <para>
+      Il y a cependant deux ent&ecirc;tes sp&eacute;ciaux. Le premier est &quot;Location&quot;.
+      Non seulement il renvoie un ent&ecirc;te au client, mais en plus, il envoie un statut
+      de redirectoin &agrave; Apache. Du point de vue de l'auteur de script, cela importe peu,
+      mais pour ceux qui connaissent les rouages internes d'Apache, c'est primordial.
+      <informalexample><programlisting role="php">
+header("Location: http://www.php.net");  /* Redirige le client vers le site PHP */
+exit;  /* Assure que le code ci dessous n'est jamais ex&eacute;cut&eacute;. */
+</programlisting></informalexample></para>
+    <para>
+      Le deuxi&egrave;me type d'appel sp&eacute;cial regroupe tous les ent&ecirc;tes qui commencent par 
+      &quot;HTTP/&quot; (la casse n'est pas importante). Par exemple, si vosu avez
+      votre page d'erreur 404 Apache qui pointent sur un script PHP, c'est une bonne id&eacute;e
+      que de vous assurez que le script PHP g&eacute;n&eacute;re une erreur 404. La premi&egrave;re chose &agrave;
+      dans votre script est  :
+     <informalexample><programlisting role="php">
+header("http/1.0 404 Not Found");
+	 </programlisting></informalexample>
+	</para>
+
+    <para>
+     Les scripts PHP g&eacute;n&eacute;rent souvent du HTML dynamiquement, qui ne doit pas &ecirc;tre mis en
+     cache, ni par le client, ni par les proxy interm&eacute;diaires. On peut forcer la 
+     d&eacute;sactivation du cache de nombreux clients et proxy avec
+     <informalexample><programlisting role="php">
+  header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");             // Date du pass&eacute;
+  header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT"); // toujours modifi&eacute;
+  header("Cache-Control: no-cache, must-revalidate");           // HTTP/1.1
+  header("Pragma: no-cache");                                   // HTTP/1.0
+</programlisting></informalexample></para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.setcookie">
+   <refnamediv>
+    <refname>setcookie</refname>
+    <refpurpose>Envoie un cookie</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>int <function>setcookie</function></funcdef>
+     <paramdef>string <parameter>name</parameter></paramdef>
+     <paramdef>string <parameter>value</parameter></paramdef>
+     <paramdef>int <parameter>expire</parameter></paramdef>
+     <paramdef>string <parameter>path</parameter></paramdef>
+     <paramdef>string <parameter>domain</parameter></paramdef>
+     <paramdef>int <parameter>secure</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>setcookie</function> d&eacute;finit un cookie qui sera envoy&eacute; avec le reste
+     des ent&ecirc;tes. Les cookies doivent passer avant tout autre ent&ecirc;te (c'est une restriction
+     des cookies, pas de PHP). Cela vous impose d'appeler cette fonction avant toute 
+     balise <literal>&lt;html></literal> ou <literal>&lt;head></literal>.
+    </para>
+
+    <para>
+     Tous les arguments sauf <parameter>name</parameter> (nom) sont optionnels.
+     Si seul le nom est pr&eacute;sent, le cookie portant ce nom sera supprim&eacute; du client.
+     Vous pouvez aussi utiliser une cha&icirc;ne vide comme valeur, pour ignorer un argument.
+     Le param&egrave;tre <parameter>expire</parameter> est un timestamp UNIX, du m&ecirc;me genre que
+     celui retourn&eacute; par <function>time</function> ou <function>mktime</function>.
+     Le param&egrave;tre <parameter>secure</parameter> indique que le cookie doit &ecirc;tre uniquement
+     transmis &agrave; travers une connexion HTTPS s&eacute;curis&eacute;e.</para>
+
+    <para>  
+     Erreurs communes:
+    </para>
+
+    <simpara>
+     Les cookies ne seront accessibles qu'au chargement de la procha&icirc;ne page.
+    </simpara> 
+
+    <simpara>
+     Les appels multiples &agrave; <function>setcookie</function> dans la m&ecirc;me page seront 
+     r&eacute;alis&eacute;s dans l'ordre inverse. Si vous essayez d'effacer un cookie avant d'ins&eacute;rer
+     une autre valeur, il faut placer l'insertion avant l'effacement.
+    </simpara>
+
+    <para>
+     Quelques exemples :
+     <example>
+      <title>Exemples <function>setcookie</function></title>
+      <programlisting role="php">
+setcookie("TestCookie","Test Value");
+setcookie("TestCookie",$value,time()+3600);  /* expire in 1 hour */
+setcookie("TestCookie",$value,time()+3600,"/~rasmus/",".utoronto.ca",1);
+</programlisting></example></para>
+
+    <para>
+     Notez que la partie "valeur" du cookie sera automatiquement encod&eacute;e URL lorsque
+     vous envoyez le cookie, et lorsque vous le recevez, il sera automatiquement d&eacute;cod&eacute;,
+     et affect&eacute; &agrave; la variable du m&ecirc;me nom que le cookie. Pour voir le r&eacute;sultat, essayez
+     les scripts suivants : 
+
+<informalexample><programlisting role="php">
+echo $TestCookie;
+echo $HTTP_COOKIE_VARS["TestCookie"];
+</programlisting></informalexample></para>
+
+	<para>
+	 Vous pouvez aussi utiliser les cookies avec des tableaux, en utilisant la
+         notation des tableaux. Cela a pour effet de cr&eacute;er autant de cookie que votre
+         tableau a d'&eacute;l&eacute;ments, mais lorsque les cookies seront re&ccedil;us par PHP, les valeurs
+         seront plac&eacute;es dans un tableau : 
+	 <informalexample>
+	  <programlisting role="php">
+setcookie( "cookie[three]", "cookiethree" );
+setcookie( "cookie[two]", "cookietwo" );
+setcookie( "cookie[one]", "cookieone" );
+if ( isset( $cookie ) ) {
+   while( list( $name, $value ) = each( $cookie ) ) {
+	  echo "$name == $value&lt;br&gt;\n";
+   }
+}
+	  </programlisting>
+	 </informalexample>
+
+	</para>
+
+    <para>
+     Pour d'autres informations sur les cookies, jetez un oeil sur 
+     <ulink url="&spec.cookies;">&spec.cookies;</ulink>.
+    </para>
+
+    <simpara>
+     Microsoft Internet Explorer 4 utilis&eacute; avec le Service Pack 1 ne g&egrave;re pas bien
+     les cookies qui poss&egrave;dent un param&egrave;tre <parameter>path</parameter>.
+    </simpara>
+
+    <simpara>
+     Netscape Communicator 4.05 et Microsoft Internet Explorer 3.x
+     semblent ne pas g&eacute;rer correctement les cookies lorsque <parameter>path</parameter>
+     et <parameter>time></parameter> ne sont pas fournis.
+    </simpara>
+
+   </refsect1>
+  </refentry>
+
+ </reference>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+sgml-parent-document:nil
+sgml-default-dtd-file:"../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->

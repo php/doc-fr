@@ -1,0 +1,1534 @@
+<reference id="ref.pcre">
+  <title>Expressions r&eacute;guli&egrave;res compatibles Perl</title>
+  <titleabbrev>PCRE</titleabbrev>   
+
+  <partintro>
+   <para>
+     La syntaxe des masques utilis&eacute;s dans ces fonctions ressemble fort &agrave; celle de Perl. 
+     Les expressions seront entour&eacute;es de d&eacute;limiteurs, slash (/), par exemple. N'importe 
+     quel caract&egrave;re peut servir de d&eacute;limiteur, tant qu'il n'est pas alphanum&eacute;rique 
+     ou n'est pas un backslash (\). Si un d&eacute;limiteur doit &ecirc;tre utilis&eacute; dans 
+     l'expression, il faudra l'&eacute;chapper avec un backslash.
+   </para>
+
+   <para>
+     Le d&eacute;limiteur final peut &ecirc;tre suivi d'options qui affecteront la recherche. 
+     <link linkend="pcre.pattern.modifiers">Options de recherche</link>.
+   </para>
+
+   <para>
+    <example>
+     <title>Exemples de masques valides</title>
+     <itemizedlist>
+      <listitem><simpara>/<\/\w+>/</simpara></listitem>
+      <listitem><simpara>|(\d{3})-\d+|Sm</simpara></listitem>
+      <listitem><simpara>/^(?i)php[34]/</simpara></listitem>
+     </itemizedlist>
+    </example>
+   </para>
+   
+   <para>
+    <example>
+     <title>Exemples de masques invalides</title>
+     <itemizedlist>
+      <listitem><simpara>/href='(.*)' - d&eacute;limiteur final manquant </simpara></listitem>
+      <listitem><simpara>/\w+\s*\w+/J - option 'J' inconnue </simpara></listitem>
+      <listitem><simpara>1-\d3-\d3-\d4| - d&eacute;limiteur initial manquant</simpara>
+      </listitem>
+     </itemizedlist>
+    </example>
+   </para>
+
+   <note>
+    <simpara>
+      Les expressions r&eacute;guli&egrave;res Perl sont disponibles depuis la PHP 4 et PHP 3.0.9.
+    </simpara>
+   </note>
+
+  </partintro>
+  
+  <refentry id="function.preg-match">
+   <refnamediv>
+    <refname>preg_match</refname>
+    <refpurpose>Expression r&eacute;guli&egrave;re standard.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>int <function>preg_match</function></funcdef>
+     <paramdef>string <parameter>pattern</parameter></paramdef>
+     <paramdef>string <parameter>subject</parameter></paramdef>
+     <paramdef>array <parameter><optional>matches</optional></parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>preg_match</function> analyse <parameter>subject</parameter> 
+     pour trouver l'expression <parameter>pattern</parameter>.
+    </para>
+
+    <para>
+     Si <parameter>matches</parameter> est fourni, il sera rempli par les r&eacute;sultats 
+     de la recherche. $matches[0] contiendra le texte qui satisfait le masque complet, 
+     $matches[1] contiendra le texte qui satisfait la premi&egrave;re parenth&egrave;se capturante, 
+     etc..
+    </para>
+
+    <para>
+      Retourne TRUE si la recherche &agrave; r&eacute;ussie, et FALSE sinon (notamment en cas d'erreur).
+    </para>
+
+    <para>
+     <example>
+      <title>Extraction d'un num&eacute;ro de page d'une cha&icirc;ne.</title>
+      <programlisting>
+if (preg_match("/page\s+#(\d+)/i", "Go to page #9.", $parts))
+    print "La page suivante est $parts[1]";
+else
+    print "Page introuvable.";
+      </programlisting>
+     </example>
+
+     Voir aussi <function>preg_match_all</function>, <function>preg_replace</function>
+     et <function>preg_split</function>.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.preg-match-all">
+   <refnamediv>
+    <refname>preg_match_all</refname>
+    <refpurpose>Expression r&eacute;guli&egrave;re globale.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>int <function>preg_match_all</function></funcdef>
+     <paramdef>string <parameter>pattern</parameter></paramdef>
+     <paramdef>string <parameter>subject</parameter></paramdef>
+     <paramdef>array <parameter>matches</parameter></paramdef>
+     <paramdef>int <parameter><optional>order</optional></parameter></paramdef>
+    </funcsynopsis>
+    <para>
+     <function>preg_match_all</function> analyse <parameter>subject</parameter> 
+     pour trouver l'expression <parameter>pattern</parameter> et met les r&eacute;sultats dans 
+     <parameter>matches</parameter>, dans l'ordre sp&eacute;cifi&eacute; par <parameter>order</parameter>.
+    </para>
+
+    <para>
+     Apr&egrave;s avoir trouv&eacute; un premier r&eacute;sultat, la recherche continue jusqu'&agrave; la fin de la 
+     cha&icirc;ne.
+    </para>
+
+    <para>
+     <parameter>order</parameter> peut prendre une des deux valeurs suivantes :
+     <variablelist>
+      <varlistentry>
+       <term>PREG_PATTERN_ORDER</term>
+       <listitem>
+	<para>
+          L'ordre est tel que $matches[0] est un tableau qui contient les r&eacute;sultats qui 
+          satisfont le masque complet, $matches[1] est un tableau qui contient les 
+          r&eacute;sultats qui satisfont la premi&egrave;re parenth&egrave;se capturante, etc.. 
+	 <informalexample>
+	  <programlisting>
+preg_match_all("|&lt;[^>]+>(.*)&lt;/[^>]+>|U", "&lt;b>example: &lt;/b>&lt;div align=left>a test&lt;/div>", $out, PREG_PATTERN_ORDER);
+print $out[0][0].", ".$out[0][1]."\n";
+print $out[1][0].", ".$out[1][1]."\n"
+	  </programlisting>
+	 </informalexample>
+
+	 Cet exemple va afficher : 
+	 <informalexample>
+	  <programlisting>
+&lt;b>example: &lt/b>, &lt;div align=left>ceci est un test&lt;/div>
+example: , this is a test
+	  </programlisting>
+	 </informalexample>
+
+          Ainsi, $out[0] est un tableau qui contient les r&eacute;sultats qui satisfont le 
+          masque complet, et $out[1] est un tableau qui contient les balises entre 
+          < et >.
+	</para>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term>PREG_SET_ORDER</term>
+       <listitem>
+	<para>
+          Les r&eacute;sultats sont class&eacute;s de telle fa&ccedil;on que $matches[0] contient la 
+          premi&egrave;re s&eacute;rie de r&eacute;sultat, $matches[1] contient la deuxi&egrave;me s&eacute;rie de 
+          r&eacute;sultat, etc... 
+
+	 <informalexample>
+	  <programlisting>
+preg_match_all("|&lt;[^>]+>(.*)&lt;/[^>]+>|U", "&lt;b>exemple: &lt;/b>&lt;div align=left>a test&lt;/div>", $out, PREG_SET_ORDER);
+print $out[0][0].", ".$out[0][1]."\n";
+print $out[1][0].", ".$out[1][1]."\n"
+	  </programlisting>
+	 </informalexample>
+
+	 Cet exemple va afficher : 
+	 <informalexample>
+	  <programlisting>
+&lt;b>example: &lt;/b>, exemple: 
+&lt;div align=left>this is a test&lt;/div>, this is a test
+	  </programlisting>
+	 </informalexample>
+
+ 	 Dans ce cas, $matches[0] est la premi&egrave;re s&eacute;rie de r&eacute;sultat, et $matches[0][0] contient le texte qui satisfait le masque complet, $matches[0][1] contient le texte de la premi&egrave;re parenth&egrave;se capturante, etc÷. De m&ecirc;me, $matches[1] contient le texte qui satisfait le masque complet, etc. *
+        </para>
+       </listitem>
+      </varlistentry>
+     </variablelist></para>
+
+    <para>
+      Si <parameter>order</parameter> est omis, PREG_PATTERN_ORDER est utilis&eacute; par 
+      d&eacute;faut.
+    </para>
+
+    <para>
+       Retourne le nombre de r&eacute;sultat qui satisfont le masque complet, ou FALSE en cas 
+       d'&eacute;chec ou d'erreur.
+    </para>
+
+    <para>
+     <example>
+      <title>Extraction de tous les num&eacute;ros de t&eacute;l&eacute;phone d'un texte.</title>
+      <programlisting>
+preg_match_all("/\(?  (\d{3})?  \)?  (?(1)  [\-\s] ) \d{3}-\d{4}/x",
+               "Call 555-1212 or 1-800-555-1212", $phones);
+      </programlisting>
+     </example></para>
+
+    <simpara>
+     Voir aussi <function>preg_match</function>, <function>preg_replace</function>
+     et <function>preg_split</function>.
+    </simpara>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.preg-replace">
+   <refnamediv>
+    <refname>preg_replace</refname>
+    <refpurpose>Rechercher et remplacer par expression r&eacute;guli&egrave;re standard.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>mixed <function>preg_replace</function></funcdef>
+     <paramdef>mixed <parameter>pattern</parameter></paramdef>
+     <paramdef>mixed <parameter>replacement</parameter></paramdef>
+     <paramdef>mixed <parameter>subject</parameter></paramdef>
+    </funcsynopsis>
+    <para>
+      <function>preg_replace</function> analyse <parameter>subject</parameter> pour 
+      trouver l'expression <parameter>pattern</parameter> et remplace les r&eacute;sultats par 
+      <parameter>replacement</parameter>.
+    </para>
+
+    <para>
+     <parameter>replacement</parameter> peut contenir des r&eacute;f&eacute;rences de la forme 
+      <literal>\\<replaceable>n</replaceable></literal>. Ces r&eacute;f&eacute;rences seront 
+      remplac&eacute;es par le texte captur&eacute; par la <replaceable>n</replaceable>'-i&egrave;me 
+      parenth&egrave;se capturante du masque. <replaceable>n</replaceable> peut prendre 
+      des valeurs de 0 &agrave; 99, et <literal>\\0</literal> correspond au texte de qui 
+      satisfait le masque complet. Les parenth&egrave;ses ouvrantes sont compt&eacute;es de gauche 
+      &agrave; droit (en commencant &agrave; 1) pour d&eacute;terminer le num&eacute;ro de parenth&egrave;se capturante.
+    </para>
+
+    <para>
+      Si la recherche n'aboutit &agrave; aucun r&eacute;sultat, <parameter>subject</parameter> sera 
+      inchang&eacute;.
+    </para>
+    
+    <para>
+      Tous les param&egrave;tres de <function>preg_replace</function> peuvent &ecirc;tre des 
+      tableaux :
+    </para>
+
+    <para>
+      Si <parameter>subject</parameter> est un tableau, alors l'op&eacute;ration sera 
+      appliqu&eacute;e &agrave; chacun des &eacute;l&eacute;ments du tableau, et le tableau sera retourn&eacute;.
+    </para>
+
+    <para>
+      Si <parameter>pattern</parameter> et <parameter>replacement</parameter>
+      sont des tableaux, alors <function>preg_replace</function> prend une valeur de 
+      chaque tableau, et l'utilise pour faire la recherche et le remplacement. 
+      Si <parameter>replacement</parameter> a moins d'&eacute;l&eacute;ments que <parameter>pattern</parameter>,
+      alors la cha&icirc;ne vide est utilis&eacute; pour le reste des valeurs. 
+      Si <parameter>pattern</parameter> est un tableau, et que 
+      <parameter>replacement</parameter> est une cha&icirc;ne, alors cette cha&icirc;ne sera 
+      utilis&eacute;e pour chaque valeur de <parameter>pattern</parameter>.
+      Le contraire n'aurait pas de sens.
+   </para>
+
+    <para>
+      <literal>/e</literal> force <function>preg_replace</function> &agrave; traiter 
+      <parameter>replacement</parameter> comme du code PHP une fois que les 
+      substitutions ad&eacute;quates ont &eacute;t&eacute; faites. Conseil :assurez vous que 
+      <parameter>replacement</parameter> est un code PHP valide, car sinon, PHP 
+      trouvera une erreur d'analyse (parse error) dans cette ligne. 
+     <note>
+      <para>
+        Cette option a &eacute;t&eacute; ajout&eacute;e en PHP 4.0.
+      </para>
+     </note>
+    </para>
+
+    <para>
+     <example>
+      <title>Remplacement de plusieurs valeurs</title>
+      <programlisting>
+$patterns = array("/(19|20\d{2})-(\d{1,2})-(\d{1,2})/", "/^\s*{(\w+)}\s*=/");
+$replace = array("\\3/\\4/\\1", "$\\1 =");
+print preg_replace($patterns, $replace, "{startDate} = 1999-5-27");
+      </programlisting>
+     </example>
+
+    Cet exemple va afficher :
+
+     <programlisting>
+      $startDate = 5/27/1999
+     </programlisting>
+
+     <example>
+      <title>Utilisation de l'option /e </title>
+      <programlisting>
+preg_replace("/(<\/?)(\w+)([^>]*>)/e", "'\\1'.strtoupper('\\2').'\\3'", $html_body);
+      </programlisting>
+
+      <para>
+        Cela va mettre en majuscule toutes les balises HTML du texte.
+      </para>
+     </example></para>
+
+    <para>
+     Voir aussi <function>preg_match</function>, <function>preg_match_all</function> 
+     et <function>preg_split</function>.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.preg-split">
+   <refnamediv>
+    <refname>preg_split</refname>
+    <refpurpose>Eclatement d'une cha&icirc;ne par expression r&eacute;guli&egrave;re.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>array preg_split</funcdef>
+     <paramdef>string <parameter>pattern</parameter></paramdef>
+     <paramdef>string <parameter>subject</parameter></paramdef>
+     <paramdef>int <parameter><optional>limit</optional></parameter></paramdef>
+     <paramdef>int <parameter><optional>flags</optional></parameter></paramdef>
+    </funcsynopsis>
+    
+    <note>
+     <para>
+       Le param&egrave;tre <parameter>flags</parameter> a &eacute;t&eacute; ajout&eacute; dans PHP Beta 3.</para>
+    </note>
+
+    <para>
+      Retourne un tableau contenant les sous cha&icirc;nes de <parameter>subject</parameter>, 
+      s&eacute;par&eacute;es par les cha&icirc;nes qui v&eacute;rifient <parameter>pattern</parameter>.
+    </para>
+
+    <para>
+      Si <parameter>limit</parameter> est donn&eacute;, seules les <parameter>limit</parameter>
+      premi&egrave;res cha&icirc;nes seront retourn&eacute;es.
+    </para>
+
+    <para>
+      Si le flag est PREG_SPLIT_NO_EMPTY, alors seul les sous cha&icirc;nes non nulles
+      seront retourn&eacute;es.
+    </para>
+
+    <para>
+     <example>
+      <title>Eclatement d'une cha&icirc;ne de recherche.</title>
+      <programlisting>
+$keywords = preg_split("/[\s,]+/", "hypertext language, programming");
+      </programlisting>
+     </example>
+
+     Voir aussi <function>preg_match</function>, <function>preg_match_all</function> 
+     et <function>preg_replace</function>.
+    </para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.preg-quote">
+   <refnamediv>
+    <refname>preg_quote</refname>
+    <refpurpose>Echappement des caract&egrave;res sp&eacute;ciaux des expressions r&eacute;guli&egrave;res.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>string <function>preg_quote</function></funcdef>
+     <paramdef>string <parameter>str</parameter></paramdef>
+    </funcsynopsis>
+
+    <para>
+     <function>preg_quote</function> ajoute un backslash devant tous les caract&egrave;res de 
+     la cha&icirc;ne <parameter>str</parameter>. Cela est tr&egrave;s utile si vous avez une cha&icirc;ne 
+     qui va servir de masque, mais qui est g&eacute;n&eacute;r&eacute;e durant l'ex&eacute;cution.
+    </para>
+
+    <para>
+     Les caract&egrave;res sp&eacute;ciaux qui seront &eacute;chapp&eacute;s :
+     <screen>. \\ + * ? [ ^ ] $ ( ) { } = ! < > | :</screen>
+
+    <note>
+     <para>
+       Cette fonction a &eacute;t&eacute; ajout&eacute;e dans PHP 3.0.9.
+     </para>
+    </note></para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="function.preg-grep">
+   <refnamediv>
+    <refname>preg_grep</refname>
+    <refpurpose>Retourne un tableau avec les r&eacute;sultat de la recherche.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcdef>array <function>preg_grep</function></funcdef>
+     <paramdef>string <parameter>pattern</parameter></paramdef>
+     <paramdef>array <parameter>input</parameter></paramdef>
+    </funcsynopsis>
+
+    <para>
+     <function>preg_grep</function> retourne un tableau qui contient les &eacute;l&eacute;ments 
+     de <parameter>input</parameter>qui satisfont le masque 
+     <parameter>pattern</parameter>.
+    </para>
+
+    <para>
+     <example>
+      <title>Exemple avec <function>preg_grep</function></title>
+      <programlisting>
+preg_grep("/^(\d+)?\.\d+$/", $array); // recherche les nombres &agrave; virgule flottante
+      </programlisting>
+     </example>
+
+    <note>
+     <para>
+       Cette fonction a &eacute;t&eacute; ajout&eacute;e dans PHP 4.0.</para>
+    </note></para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="pcre.pattern.modifiers">
+   <refnamediv>
+    <refname>Options de recherche</refname>
+    <refpurpose>Options disponibles pour les expressions r&eacute;guli&egrave;res.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <para>
+     Les options de PCRE sont list&eacute;es ci dessous. Les noms entre parenth&egrave;ses sont les 
+     noms internes &agrave; PCRE.
+    </para>
+
+    <para>
+     <blockquote>
+      <variablelist>
+       <varlistentry>
+	<term><emphasis>i</emphasis> (PCRE_CASELESS)</term>
+	<listitem>
+	 <simpara>
+ 	  Effectue une recherche insensible &agrave; la casse. 
+         </simpara>
+	</listitem>
+       </varlistentry>
+       
+       <varlistentry>
+	<term><emphasis>m</emphasis> (PCRE_MULTILINE)</term>
+	<listitem>
+	 <simpara>
+               Par d&eacute;faut, PCRE traite la cha&icirc;ne sujet comme une seule ligne (m&ecirc;me si 
+               cette cha&icirc;ne contient des retours chariot). Le m&eacute;ta-caract&egrave;re "d&eacute;but de 
+               ligne" (^) ne sera valable qu'une seule fois, au d&eacute;but de la ligne, et 
+               le m&eacute;ta caract&egrave;re "fin de ligne " ($) ne sera valable qu'&agrave; la fin de la 
+               cha&icirc;ne, ou avant le retour chariot final (&agrave; moins que l'option E ne soit 
+               mise). C'est le m&ecirc;me fonctionnement qu'en Perl. 
+         </simpara> 
+	 <simpara>
+               Lorsque cette option est mise, " d&eacute;but de ligne " et " fin de ligne " 
+               correspondront alors aux caract&egrave;res suivant et pr&eacute;c&eacute;dent imm&eacute;diatement un 
+               caract&egrave;re de nouvelle ligne, en plus du d&eacute;but et de la fin de la cha&icirc;ne. 
+               C'est le m&ecirc;me fonctionnement que l'option Perl /m. 
+               Si il n'y a pas de caract&egrave;re de nouvelle ligne "\n" dans la cha&icirc;ne sujet, 
+               ou si il n'y a aucune occurrence de ^ ou $ dans le masque, cette option 
+               ne sert &agrave; rien.
+         </simpara>
+	</listitem>
+       </varlistentry>
+       
+       <varlistentry>
+	<term><emphasis>s</emphasis> (PCRE_DOTALL)</term>
+	<listitem>
+	 <simpara>
+               Avec cette option, le m&eacute;ta caract&egrave;re point (.) remplace n'importe quel 
+               caract&egrave;re, y compris les nouvelles lignes. Sans cette option, le 
+               caract&egrave;re point ne remplace pas les nouvelles lignes. Cette option est 
+               &eacute;quivalente &agrave; l'option Perl /s. Une classe de caract&egrave;re n&eacute;gative telle 
+               que [^a] acceptera toujours les caract&egrave;res de nouvelles lignes, 
+               ind&eacute;pendamment de cette option. 
+         </simpara>
+	</listitem>
+       </varlistentry>
+      
+       <varlistentry>
+	<term><emphasis>x</emphasis> (PCRE_EXTENDED)</term>
+	<listitem>
+	 <simpara>
+               Avec cette option, les caract&egrave;res d'espacement sont ignor&eacute;s, sauf 
+               lorsqu'ils sont &eacute;chapp&eacute;s, ou &agrave; l'int&eacute;rieur d'une classe de caract&egrave;re, et 
+               tous les caract&egrave;res entre # non &eacute;chapp&eacute;s et en dehors d'une classe de 
+               caract&egrave;re, et le prochain caract&egrave;re de nouvelle ligne sont ignor&eacute;s. C'est 
+               l'&eacute;quivalent Perl de l'option /x : elle permet l'ajout de commentaires 
+               dans les masques compliqu&eacute;s. Notez bien, cependant, que cela ne 
+               s'appliquent qu'aux caract&egrave;res de donn&eacute;es. Les caract&egrave;res d'espacement 
+               ne doivent jamais appara&icirc;tre dans les s&eacute;quences sp&eacute;ciales d'un masque, 
+               comme par exemple dans la s&eacute;quence (?( qui introduit une parenth&egrave;se 
+               conditionnelle. 
+	 </simpara>
+	</listitem>
+       </varlistentry>
+
+       <varlistentry>
+	<term><emphasis>e</emphasis></term>
+	<listitem>
+	 <simpara>
+               Avec cette option, <function>preg_replace</function> effectue la 
+               substitution normale des \\ dans la cha&icirc;ne de remplacement, puis 
+               l'&eacute;value comme un code PHP, et utilise le r&eacute;sultat pour remplacer la 
+               cha&icirc;ne de recherche. 
+         </simpara>
+	 <simpara>
+	       Seule <function>preg_replace</function> utilise cette option. Elle est 
+               ignor&eacute;e par les autres. 
+	 <note>
+	  <para>
+	       Cette option a &eacute;t&eacute; ajout&eacute;e dans PHP 4.0.
+          </para>
+	 </note> 
+	 </simpara>
+	</listitem>
+       </varlistentry>
+
+       <varlistentry>
+	<term><emphasis>A</emphasis> (PCRE_ANCHORED)</term>
+	<listitem>
+	 <simpara>
+           Avec cette option, le masque est ancr&eacute; de force, c'est &agrave; dire que le masque 
+           doit s'appliquer entre le d&eacute;but et la fin de la cha&icirc;ne sujet pour &ecirc;tre 
+           consid&eacute;r&eacute; comme trouv&eacute;. Il est possible de r&eacute;aliser le m&ecirc;me effet en 
+           ajoutant les m&eacute;ta-caract&egrave;res ad&eacute;quats, ce qui est la seule mani&egrave;re de le 
+           faire en Perl.
+         </simpara>
+	</listitem>
+       </varlistentry>
+
+       <varlistentry>
+	<term><emphasis>E</emphasis> (PCRE_DOLLAR_ENDONLY)</term>
+	<listitem>
+	 <simpara>
+           Avec cette option, le m&eacute;ta-caract&egrave;re $ ne sera valable qu'&agrave; la fin de la 
+           cha&icirc;ne sujet. Sans cette option, $ est aussi valable avant une nouvelle 
+           ligne, si cette derni&egrave;re est le dernier caract&egrave;re de la cha&icirc;ne. Cette option 
+           est ignor&eacute;e si l'option  <emphasis>m</emphasis> est mise. Il n'y a pas 
+           d'&eacute;quivalent en Perl.
+         </simpara>
+	</listitem>
+       </varlistentry>
+
+       <varlistentry>
+	<term><emphasis>S</emphasis></term>
+	<listitem>
+	 <simpara>
+           Lorsqu'un masque est utilis&eacute; plusieurs fois, cela vaut la peine de passer 
+           quelques instants de plus pour l'analyser et optimiser le code pour acc&eacute;l&eacute;rer 
+           les traitements ult&eacute;rieurs. Cette option force cette analyse plus pouss&eacute;e. 
+           Actuellement, cette analyse n'est utile que pour les masques non ancr&eacute;s, qui 
+           ne commencent pas par un caract&egrave;re fixe.
+         </simpara>
+	</listitem>
+       </varlistentry>
+
+       <varlistentry>
+	<term><emphasis>U</emphasis> (PCRE_UNGREEDY)</term>
+	<listitem>
+	 <simpara>
+           Cette option inverse la tendance &agrave; la gourmandise des expressions r&eacute;guli&egrave;res. 
+           Vous pouvez aussi inverser cette tendance au coup par coup avec un ?. 
+           De m&ecirc;me, si cette option est mise, le ? rendra gourmand une s&eacute;quence. Cette 
+           option n'est pas compatible avec Perl. Elle peut aussi &ecirc;tre mise dans le 
+           masque avec l'option (?U).
+         </simpara>
+	</listitem>
+       </varlistentry>
+
+       <varlistentry>
+	<term><emphasis>X</emphasis> (PCRE_EXTRA)</term>
+	<listitem>
+	 <simpara>
+	  Cette option ajoute d'autres fonctionnalit&eacute;s incompatible avec le PCRE de 
+          Perl. Tous les backslash suivis d'une lettre qui n'aurai pas de signification 
+          particuli&egrave;re cause une erreur, permettant la r&eacute;servation de ces combinaisons 
+          pour des ajouts fonctionnels ult&eacute;rieurs. Par d&eacute;faut, comme en Perl, les 
+          backslash suivi d'une lettre sans signification particuli&egrave;re sont trait&eacute;s 
+          comme des valeurs lit&eacute;rales. Actuellement, cette option ne d&eacute;clenche pas 
+          d'autres fonctions.
+         </simpara>
+	</listitem>
+       </varlistentry>
+      </variablelist>
+     </blockquote></para>
+   </refsect1>
+  </refentry>
+
+  <refentry id="pcre.pattern.syntax">
+   <refnamediv>
+    <refname>Syntaxe des masques</refname>
+    <refpurpose>Fonctionnement des expressions r&eacute;guli&egrave;res.</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <literallayout>
+      La biblioth&egrave;que PCRE est un ensemble de fonctions qui impl&eacute;mentent la recherche 
+      par expressions r&eacute;guli&egrave;res, en utilisant la m&ecirc;me syntaxe et la m&ecirc;me s&eacute;mantique 
+      que le Perl 5, avec quelques nuances (voir ci-dessous). L'impl&eacute;mentation actuelle 
+      est celle de Perl 5.005. 
+    </literallayout></refsect1>
+
+   <refsect1>
+    <title>Diff&eacute;rences avec Perl</title>
+    <literallayout>
+     Les diff&eacute;rences avec le Perl 5.005 sont pr&eacute;sent&eacute;e ici :
+
+     1. Par d&eacute;faut, un caract&egrave;re d'espacement correspond &agrave; n'importe quel caract&egrave;re 
+        que la fonction C isspace() reconna&icirc;t, bien qu'il soit possible de recompiler 
+        la biblioth&egrave;que PCRE avec d'autres tables de caract&egrave;res. Normalement, isspace() 
+        retourne TRUE pour les espaces, les retours chariot, les nouvelles lignes, les 
+        formfeed, les tabulations verticales et horizontales. Le Perl 5 n'accepte plus 
+        la tabulation verticale comme caract&egrave;re d'espacement. La s&eacute;quence \v qui &eacute;tait 
+        dans la documentation Perl depuis longtemps n'a jamais &eacute;t&eacute; reconnue. Cependant, 
+        la tabulation verticale elle-m&ecirc;me &eacute;tait reconnue comme un caract&egrave;re d'espacement 
+        jusqu'&agrave; la version 5.002. Avec les version 5.004 et 5.005, l'option \s l'ignore.
+
+     2. PRCE ne tol&egrave;re pas la r&eacute;p&eacute;tition de quantificateurs dans les expressions. Perl 
+        le permet, mais cela ne signifie pas ce que vous pourriez penser. Par exemple, 
+        (?!a){3} ne s'interpr&egrave;te pas : les trois caract&egrave;res suivants ne sont pas des 
+        "a". En fait, cela s'interpr&egrave;te comme : le caract&egrave;re suivant n'est pas "a" trois 
+        fois. 
+
+     3. Les occurrences de sous-masques qui interviennent dans des assertions n&eacute;gatives 
+        sont compt&eacute;es, mais elles ne sont pas enregistr&eacute;es dans le vecteur 
+        d'occurrences. Perl modifie ses variables num&eacute;riques pour toutes les occurrences 
+        de sous masque, avant que l'assertion ne v&eacute;rifie le masque entier, et 
+        uniquement si les sous masques ne trouvent qu'une seule occurrence. 
+
+     4. Bien que les caract&egrave;res nul soient tol&eacute;r&eacute;s dans la cha&icirc;ne de recherche, ils ne 
+        sont pas accept&eacute;s dans le masque, car le masque est utilis&eacute; comme une cha&icirc;ne C 
+        standard, termin&eacute;e par le caract&egrave;re nul. Il faut donc utiliser la s&eacute;quence 
+        d'&eacute;chappement "\0" dans le masque pour rechercher les caract&egrave;res nul. 
+
+     5. Les s&eacute;quence d'&eacute;chappement suivantes ne sont pas support&eacute;es par le Perl: \l, 
+        \u, \L, \U, \E, \Q. En fait, elles sont impl&eacute;ment&eacute;es par la gestion intrins&egrave;que 
+        de cha&icirc;nes du Perl, et ne font pas partie de ses caract&egrave;res sp&eacute;ciaux. 
+     
+     6. L'assertion \G du Perl n'est pas support&eacute;e car elle n'est pas pertinente pour 
+        faire des recherches avec des masques uniques. 
+
+     7. De mani&egrave;re assez &eacute;vidente, PCRE n'accepte pas la construction (?{code}) 
+
+     8. Au moment de l'&eacute;criture de PCRE, Perl 5.005_02 avait quelques comportement 
+        &eacute;tranges avec la capture des cha&icirc;nes lorsqu'une partie du masque est redoubl&eacute;e. 
+        Par exemple, "aba" avec le masque /^(a(b)?)+$/ va affecter &agrave; $2 la valeur "b", 
+        mais la m&ecirc;me manipulation avec "aabbaa" et /^(aa(bb)?)+$/ laissera $2 vide. 
+        Cependant, si le masque est remplac&eacute; par /^(aa(b(b))?)+$/ alors $2 (et 
+        d'ailleurs $3) seront correctement affect&eacute;s. Avec le Perl 5.004, $2 sera 
+        correctement affect&eacute; dans les deux cas, et c'est aussi vrai avec PCRE. Si Perl 
+        &eacute;volue vers un autre comportement coh&eacute;rent, PCRE s'adaptera probablement 
+
+     9. Une autre diff&eacute;rence encore non r&eacute;solue est le fait qu'en Perl 5.005_02 le 
+        masque /^(a)?(?(1)a|b)+$/ accepte la cha&icirc;ne "a", tandis que PCRE ne l'accepte 
+        pas. Cependant, que ce soit avec Perl ou PCRE /^(a)?a/ et "a" laisseront $1 
+        vide. 
+
+     10. PCRE propose quelques extensions aux expressions r&eacute;guli&egrave;res du Perl.
+         (a) Bien que les assertions avec retour (lookbehind) soit oblig&eacute;e d'apparier
+             une cha&icirc;ne de longueur fixe, toutes les assertions avec retour peuvent avoir 
+             une longueur diff&eacute;rente. Perl 5.005 leur impose d'avoir toutes la m&ecirc;me longueur.
+         (b) Si PCRE_DOLLAR_ENDONLY est mis, et que PCRE_MULTILINE n'est pas mis, le 
+             m&eacute;ta caract&egrave;re $ ne s'applique qu'&agrave; la fin physqiue de la cha&icirc;ne, et non 
+             pas avant les caract&egrave;res de nouvelle ligne.
+         (c) Si PCRE_EXTRA est mis, un backslash suivi d'une lettre sans signification 
+             sp&eacute;ciale est consid&eacute;r&eacute;e comme une erreur. 
+         (d) SI PCRE_UNGREEDY est mis, la "gourmandise" des quantificateurs de 
+             r&eacute;p&eacute;tition est invers&eacute;es, ce qui est rend non gourmand par d&eacute;faut, mais si 
+             ils sont suivis de ?, il seront gourmands.
+    </literallayout>
+   </refsect1>
+
+   <refsect1>
+    <title>D&eacute;tails sur les expressions r&eacute;guli&egrave;res</title>
+    <literallayout>
+       La syntaxe et la s&eacute;mantique des expressions r&eacute;guli&egrave;re support&eacute;es par PCRE sont 
+       d&eacute;crites ci-dessous. Les expressions r&eacute;guli&egrave;res sont aussi d&eacute;crites dans la 
+       documentation Perl, et dans un grand nombre d'autres livres, avec de nombreux 
+       exemples. Jeffrey Friedl's "Mastering Regular Expressions", &eacute;dit&eacute; chez O'Reilly 
+       (ISBN 1-56592-257-3), les d&eacute;crits en profondeur. Cette description est organis&eacute;e 
+       comme une documentation de r&eacute;f&eacute;rence.
+
+       Une expression r&eacute;guli&egrave;re est un masque, qui est appliqu&eacute; sur une cha&icirc;ne sujet, 
+       de gauche &agrave; droite. La plus part des caract&egrave;res se repr&eacute;sentent eux-m&ecirc;mes. Un 
+       exemple trivial : un masque qui serait 
+
+       Le rapide renard gris
+
+       Pourra correspondre &agrave; une partie de la cha&icirc;ne sujet qui sera identique au masque. 
+       La puissance des expressions r&eacute;guli&egrave;res provient de leur capacit&eacute; &agrave; autoriser des 
+       alternatives et des quantificateur de r&eacute;p&eacute;titions dans le masque. Ils sont encod&eacute;s 
+       dans le masque par des <emphasis>meta</emphasis>-<emphasis>characters</emphasis>, 
+       qui ne repr&eacute;sentent pas ce qu'ils sont, mais sont interpr&eacute;t&eacute;s d'une certaine 
+       mani&egrave;re.
+
+       Il y a deux sortes de m&eacute;ta-caract&egrave;res : ceux qui sont reconnus n'importe o&uacute; dans 
+       un masque, hormis entre crochets, et ceux qui sont reconnus entre crochets. A 
+       l'ext&eacute;rieur des crochets, les m&eacute;ta caract&egrave;res sont :
+
+       \     Caract&egrave;re d'&eacute;chappement, avec de multiples usages.
+       ^      Le d&eacute;but de la cha&icirc;ne sujet (ou de ligne, en mode multiligne)
+       $      La fin de la cha&icirc;ne sujet (ou de ligne, en mode multiligne)
+       .      Remplace n'importe quel caract&egrave;re, hormis le caract&egrave;re de nouvelle ligne 
+              (par d&eacute;faut) ;
+       [      Caract&egrave;re de d&eacute;but de d&eacute;finition de classe
+       ]      Caract&egrave;re de fin de d&eacute;finition de classe
+       |      Caract&egrave;re de d&eacute;but d'alternative 
+       (      Caract&egrave;re de d&eacute;but de sous masque
+       )      Caract&egrave;re de fin de sous masque
+       ?      Etend le sens de (
+              mais aussi quantificateur de 0 ou 1
+              mais aussi quantificateur de minimisation
+       *     Quantificateur de 0 ou plus
+       +     Quantificateur de 1 ou plus
+       {     Caract&egrave;re de d&eacute;but de quantificateur minimum/maximum
+
+
+      La partie du masque qui est entour&eacute;e de crochet et appel&eacute; une classe de caract&egrave;res. Dans les classes de caract&egrave;res, les seul m&eacute;ta caract&egrave;res autoris&eacute;s sont 
+
+       \      Caract&egrave;re d'&eacute;chappement, avec de multiples usages
+       ^      n&eacute;gation de la classe, mais uniquement si plac&eacute; tout au d&eacute;but de la 
+              classe
+       -      indique un intervalle de caract&egrave;res
+       ]      termine la classe de caract&egrave;res
+
+       La section suivante d&eacute;crit l'utilisation de chaque m&eacute;ta caract&egrave;res :
+
+BACKSLASH
+       Le caract&egrave;re backslash a de nombreuses utilisations. En premier lieu, si il est 
+       suivi d'un caract&egrave;re non alpha num&eacute;rique, il ne prendra pas la signification 
+       sp&eacute;ciale qui y est rattach&eacute;e. Cette utilisation du backslash comme caract&egrave;re 
+       d'&eacute;chappement s'applique &agrave; l'int&eacute;rieur et &agrave; l'ext&eacute;rieur des classes de caract&egrave;res.
+
+       Par exemple, pour recherche le caract&egrave;re &eacute;toile "*", il faut &eacute;crire dans le 
+       masque : "\*". Cela s'applique dans tous les cas, que le caract&egrave;re qui suive 
+       soit un m&eacute;ta-caract&egrave;re ou non. C'est un moyen sur pour s'assurer qu'un caract&egrave;re 
+       sera recherch&eacute; pour sa valeur lit&eacute;rale, plutot que pour sa valeur sp&eacute;ciale. En 
+       particulier, pour rechercher les backslash, il faut &eacute;crire : "\\".
+
+       Si un masque est utilis&eacute; avec l'option PCRE_EXTENDED, les espaces blancs du masque, 
+       mais qui ne sont pas dans une classe de caract&egrave;res, et les caract&egrave;res entre 
+       di&egrave;ses "#", ainsi que les nouvelles lignes sont ignor&eacute;es. Le backslash peut &ecirc;tre 
+       utilis&eacute; pour &eacute;chapper et ainsi rechercher un espace ou un di&egrave;se.
+
+       La deuxi&egrave;me utilit&eacute; du backslash est de pouvoir coder des caract&egrave;res invisibles 
+       dans les masques. Il n'y a pas de restriction sur la place de ces caract&egrave;res 
+       invisibles, hormis pour le caract&egrave;re nul qui doit terminer le masque. Lors de la 
+       pr&eacute;paration du masque, il est souvent plus pratique d'utiliser les s&eacute;quences d'&eacute;chappement 
+       suivantes, plut&ocirc;t que le caract&egrave;re binaire qu'elle repr&eacute;sente :
+
+       \a     alarme, c'est &agrave; dire le caract&egrave;re BEL (hex 07)
+       \cx    "control-x", avec x qui peut &ecirc;tre n'importe quel caract&egrave;re.
+       \e     escape (hex 1B)
+       \f     formfeed (hex 0C)
+       \n     nouvelle ligne (hex 0A)
+       \r     retour chariot (hex 0D)
+       \t     tabulation (hex 09)
+       \xhh   caract&egrave;re en hexad&eacute;cimal, de code hh
+       \ddd   caract&egrave;re en octal, de code ddd, ou r&eacute;f&eacute;rence arri&egrave;re
+
+       Dans la s&eacute;quence "\cx" si "x" est en minuscule, il est converti en majuscule. 
+       Puis, le bit 6 (hex 40) est invers&eacute;. Ainsi "\cz" devient 1A, mais "\c{" devient 
+       hex 3B, tandis que "\c;" devient hex 7B.
+
+       Apr&egrave;s "\x", deux caract&egrave;res hexad&eacute;cimaeux sont lus (les lettres peuvent &ecirc;tre en 
+       majuscule ou minuscule).
+       Apr&egrave;s "\0", deux caract&egrave;res octal sont lus. Dans chacun des cas, le 
+       m&eacute;ta-caract&egrave;re tente de lire autant de caract&egrave;re que possible. Ainsi la s&eacute;quence 
+       "\0\x\07", sera comprise comme deux caract&egrave;res nuls, suivi d'un caract&egrave;re alarme 
+       (BEL). Assurez vous que vous fournissez suffisamment de chiffres apr&egrave;s le 
+       m&eacute;ta-caract&egrave;re.
+
+       La gestion de la s&eacute;quence "\y", avec y &lt;> 0 est plutot compliqu&eacute;e. En dehors 
+       des caract&egrave;res de classes, PCRE va lire y et tous les caract&egrave;res qui suivent 
+       comme des chiffres d&eacute;cimaux. Si y est plus petit que 10, ou bien si il y a d&eacute;j&agrave; 
+       eu au moins autant de parenth&egrave;ses ouvrantes auparavant, la s&eacute;quence est prise 
+       pour une <emphasis>r&eacute;f&eacute;rence de retour</emphasis>. Le d&eacute;tail sera vu ult&eacute;rieurement, 
+       apr&egrave;s la section sur les sous-masques. 
+
+       A l'int&eacute;rieur d'un caract&egrave;re de classe, ou si y est plus grand que 10, et qu'il 
+       n'y a pas eu assez de parenth&egrave;ses ouvrantes auparavant, PCRE lis jusqu'&agrave; 3 
+       chiffres octals &agrave; la suite du backslash, et g&eacute;n&eacute;re un octet unique, &agrave; partir 
+       des 8 bits de poids faible de la s&eacute;quence. Tous les chiffres qui suivent ne sont 
+       pas interpr&eacute;t&eacute;s, et se representent eux-m&ecirc;mes. Par exemple, 
+
+       \040   est une autre mani&egrave;re d'&eacute;crire un espace
+       \40    est identique, dans la mesure o&uacute; il n'y a pas 40 parenth&egrave;ses 
+              ouvrantes auparavant. 
+       \7     est toujours une r&eacute;f&eacute;rence de retour.
+       \11    peut &ecirc;tre une r&eacute;f&eacute;rence de retour, ou une tabulation, tandis que 
+              \011 est toujours une tabulation 
+       \011   est toujours une tabulation 
+       \0113  est une tabulation suivi du caract&egrave;re "3"
+       \113   est le caract&egrave;re 113 (&eacute;tant donn&eacute; qu'il ne peut y avoir plus de 
+              99 r&eacute;f&eacute;rence de arri&egrave;re)
+       \377   est un octet dont tous les bits sont &agrave; 1 
+       \81    peut &ecirc;tre soit une r&eacute;f&eacute;rence de arri&egrave;re, soit le caract&egrave;re NULL, suivi des 
+              caract&egrave;res "8" et "1"
+
+       Les valeurs octales sup&eacute;rieures ou &eacute;gales &agrave; 100 ne doivent pas &ecirc;tre introduite 
+       par un 0, car seuls les trois premiers octets seront lus.
+
+       Toutes les s&eacute;quences qui d&eacute;finissent une valeur d'un seul octet peuvent &ecirc;tre 
+       utilis&eacute; dans les classes de caract&egrave;res, et &agrave; l'ext&eacute;rieur. De plus, dans une 
+       classe de caract&egrave;re, la s&eacute;quence "\b" est interpr&eacute;t&eacute;e comme un caract&egrave;re effacer 
+       (backspace, hex 08). A l'ext&eacute;rieur d'une classe de caract&egrave;res, il peut avoir 
+       d'autres significations (voir ci-dessous).
+
+       On peut encore se servir de backslash pour pr&eacute;ciser des types g&eacute;n&eacute;riques de 
+       valeurs :
+
+       \d     tout caract&egrave;re d&eacute;cimal 
+       \D     tout caract&egrave;re qui n'est pas un caract&egrave;re d&eacute;cimal 
+       \s     tout caract&egrave;re blanc 
+       \S     tout caract&egrave;re qui n'est pas un caract&egrave;re blanc
+       \w     tout caract&egrave;re de "mot" 
+       \W     tout caract&egrave;re qui n'est pas un caract&egrave;re de "mot"
+
+       Chaque paire pr&eacute;c&eacute;dente d&eacute;finit une partition de la table des caract&egrave;res : 
+       les deux ensembles sont disjoints. Un caract&egrave;re satisfera soit un m&eacute;ta-caract&egrave;re, 
+       soit l'autre.
+
+       Un caract&egrave;re de "mot" sera une lettre, un chiffre ou le caract&egrave;re soulign&eacute;, 
+       c'est &agrave; dire un caract&egrave;re qui pourra &ecirc;tre une partie d'un mot Perl. La 
+       d&eacute;finition des lettres et chiffres est d&eacute;finie par les tables de caract&egrave;res de 
+       PCRE, et peut varier suivant la table locale de caract&egrave;re (voir "Tables de 
+       caract&egrave;res locales ", ci-dessus. Par exemple, dans la configuration fran&ccedil;ais ("fr"), 
+       certains caract&egrave;res ont des codes sup&eacute;rieurs &agrave; 128, pour les caract&egrave;res accentu&eacute;s, 
+       et ils seront compris par le m&eacute;ta caract&egrave;re \w.
+
+       Ces s&eacute;quences de caract&egrave;res peuvent appara&icirc;tre &agrave; l'int&eacute;rieur ou &agrave; l'ext&eacute;rieur des 
+       classes de caract&egrave;res. Elles remplacent &agrave; chaque fois un caract&egrave;re du type 
+       correspondant. Si cette s&eacute;quence est mis en fin de masque, et qu'il n'y a plus 
+       de caract&egrave;re &agrave; comparer dans la cha&icirc;ne sujet, la recherche &eacute;choue.
+
+       La quatri&egrave;me utilisation du backslash intervient lors d'assertions simples. 
+       Une assertion impose une condition &agrave; un certain point, sans remplacer de 
+       caract&egrave;re. L'utilisation de sous-masques pour r&eacute;aliser des assertions plus 
+       complexes est d&eacute;crites plus bas. Les assertions avec backslash sont les 
+       suivantes : 
+
+       \b     limite de mot 
+       \B     pas limite de mot 
+       \A     d&eacute;but de la cha&icirc;ne sujet (ind&eacute;pendant du mode multi-lignes)
+       \Z     fin de la cha&icirc;ne sujet ou nouvelle ligne &agrave; la fin de la cha&icirc;ne sujet 
+              (ind&eacute;pendant du mode multi-lignes)
+       \z     fin de la cha&icirc;ne sujet (ind&eacute;pendant du mode multi-lignes)
+
+       Ces assertions ne peuvent pas appara&icirc;tre dans une classe de caract&egrave;re 
+       (mais "\b" a une autre signification &agrave; l'int&eacute;rieur d'une classe de caract&egrave;res).
+       Une limite de mot est un emplacement dans la cha&icirc;ne sujet ou un caract&egrave;re et 
+       son suivant ne sont pas en m&ecirc;me temps des caract&egrave;res de mot, ou le contraire 
+       (on peut le voir comme \w\W ou \W\w), ou encore le premier ou le dernier 
+       caract&egrave;re est un caract&egrave;re mot.
+
+       Les assertions \A, \Z, et \z diff&egrave;rent des m&eacute;ta caract&egrave;res ^et $ dans la mesure 
+       o&uacute; ils ne sont pas d&eacute;pendants des options, notamment PCRE_NOTBOL ou PCRE_NOTEOL. 
+       La diff&eacute;rence entre \Z et \z tient au fait que \Z recherche les positions avant 
+       les nouvelles lignes et &agrave; la fin de la cha&icirc;ne sujet, tandis que \z ne recherche 
+       que la fin de la cha&icirc;ne.
+
+CIRCUMFLEX et DOLLAR
+       En dehors d'une classe de caract&egrave;re, avec les options par d&eacute;faut, 
+
+       ^ est une assertion qui n'est vraie que si elle est plac&eacute;e tout au d&eacute;but de la 
+       cha&icirc;ne. A l'int&eacute;rieur d'une classe de caract&egrave;re, ^a un tout autre sens (voir 
+       ci-dessous). 
+
+       ^ n'a pas besoin d'&ecirc;tre le premier caract&egrave;re du masque, si plusieurs alternatives 
+       sont propos&eacute;es, mais il doit &ecirc;tre plac&eacute; en premier dans chaque alternative. 
+       Si toutes les alternatives commencent par ^, alors le masque est dit ancr&eacute; 
+       (il y a une autre construction qui porte cette appellation). 
+
+       $ est une assertion qui n'est vraie que si elle est plac&eacute;e tout en fin de cha&icirc;ne 
+       ou juste avant un caract&egrave;re de nouvelle ligne qui serait le dernier caract&egrave;re de 
+       la cha&icirc;ne. A l'int&eacute;rieur d'une classe de caract&egrave;re, ^a un tout autre sens (voir 
+       ci-dessous). 
+
+       $ n'a pas besoin d'&ecirc;tre le dernier caract&egrave;re du masque, si plusieurs alternatives 
+       sont propos&eacute;es, mais il doit &ecirc;tre plac&eacute; en dernier dans chaque alternative. Si 
+       toutes les alternatives finissent par $, alors le masque est dit ancr&eacute; (il y 
+       a une autre construction qui porte cette appellation). $ n'a pas de valeur particuli&egrave;re 
+       dans une classe de caract&egrave;res.
+
+       La signification de $ peut changer, de mani&egrave;re &agrave; l'amener &agrave; ce qu'il ne puisse se 
+       trouver qu'en toute fin de la cha&icirc;ne sujet. Cela se fait en ajoutant l'option 
+       PCRE_DOLLAR_ENDONLY au moment de la compilation, ou de l'ex&eacute;cution. Cette option 
+       est inop&eacute;rante sur \Z.
+
+       La signification de ^ peut changer, de mani&egrave;re &agrave; l'amener &agrave; ce qu'il puisse se 
+       trouver imm&eacute;diatement avant et imm&eacute;diatement apr&egrave;s un caract&egrave;re de nouvelle ligne 
+       "\n". Cela se fait en ajoutant l'option PCRE_MULTILINE au moment de la compilation, 
+       ou de l'ex&eacute;cution. Par exemple, le masque /^abc$/ accepte la cha&icirc;ne "def\nabc" 
+       uniquement en mode multi-lignes. Par cons&eacute;quent, toutes les parties du masques qui 
+       commencent par "^" ne sont pas ancr&eacute;es, en mode multi ligne. L'option 
+       PCRE_DOLLAR_ENDONLY est ignor&eacute;e si l'option PCRE_MULTILINE est choisie.
+
+       Notez que les m&eacute;ta caract&egrave;res \A, \Z, et \z peuvent servir &agrave; r&eacute;p&eacute;rer le d&eacute;but et 
+       la fin du sujet, et toutes les parties du masque qui commenceront par \A seront 
+       toujours ancr&eacute;es, avec l'option PCRE_MULTILINE ou non.
+
+FULL STOP (PERIOD, DOT)
+
+       En dehors d'une classe de caract&egrave;res, un point remplace n'importe quel caract&egrave;re, 
+       m&ecirc;me invisible et &agrave; l'exception du caract&egrave;re de nouvelle ligne. Avec l'option 
+       PCRE_DOTALL le point remplace n'importe quel caract&egrave;re, m&ecirc;me le caract&egrave;re de 
+       nouvelle ligne. La gestion des points et compl&egrave;tement ind&eacute;pendante de ^et $. 
+       Le seul point commun est que les deux ont un comportement particulier vis &agrave; vis 
+       des caract&egrave;re de nouvelle ligne. Le point n'a pas de comportement particulier 
+       dans une classe de caract&egrave;res.
+
+SQUARE BRACKETS
+       Un crochet ouvrant introduit une classe de caract&egrave;re, et le crochet fermant la 
+       conclut. Le crochet fermant n'a pas de signification en lui m&ecirc;me. Si le crochet 
+       fermant est n&eacute;cessaire &agrave; l'int&eacute;rieur d'une classe de caract&egrave;res, il faut qu'il 
+       soit le premier caract&egrave;re (apr&egrave;s un ^ &eacute;ventuel) ou &eacute;chapp&eacute; avec un backslash.
+
+       Une classe de caract&egrave;re remplace un seul caract&egrave;re dans la cha&icirc;ne sujet, &agrave; moins 
+       que le premier caract&egrave;re de la classe soit un ^, qui repr&eacute;sente une n&eacute;gation : 
+       le caract&egrave;re ne doit pas se trouver dans la classe. Si ^ est n&eacute;cessaire dans la 
+       classe, il suffit qu'il ne soit pas le premier caract&egrave;re, ou bien qu'il soit 
+       &eacute;chapp&eacute; avec un backslash.
+
+       Par exemple, le caract&egrave;re [aeiou] remplace n'importe quelle voyelle minuscule, 
+       tandis que [^aeiou] remplace n'importe quelle caract&egrave;re qui n'est pas une voyelle 
+       minuscule. ^ est une notation pratique pour sp&eacute;cifier des caract&egrave;res qui sont 
+       dans une classe, en ne citant que ceux qui n'y sont pas. Le comportement est 
+       inchang&eacute;.
+
+       Avec l'option d'insensibilit&eacute; &agrave; la casse, toutes les lettres d'une classe de 
+       caract&egrave;re repr&eacute;sentent en m&ecirc;me temps la majuscule et la minuscule. Par exemple, 
+       [aeiou] repr&eacute;sentera "A" ou "a", et [^aeiou] n'acceptera pas "A", tandis que sans 
+       l'option, elle l'accepterait.
+
+       Le caract&egrave;re de nouvelle ligne n'est pas trait&eacute; de mani&egrave;re sp&eacute;ciale dans les 
+       classes de caract&egrave;re, quelque soit l'option PCRE_DOTALL ou PCRE_MULTILINE. 
+       Une classe telle que [^a] acceptera toujours une nouvelle ligne. 
+
+       Le signe moins (-) est utilis&eacute; pour sp&eacute;cifier un intervalle de caract&egrave;res, dans 
+       une classe. Par exemple, [d-m] remplace toutes les lettres entre d et m inclus. 
+       Si le caract&egrave;re moins est requis dans une classe, il faut l'&eacute;chapper avec un 
+       backslash, ou le faire appara&icirc;tre &agrave; une position ou il ne pourra pas &ecirc;tre 
+       interpr&eacute;t&eacute; comme une indication d'intervalle, c'est &agrave; dire au d&eacute;but ou &agrave; la fin 
+       de la classe. 
+       
+       Il n'est pas possible d'avoir le caract&egrave;re "]" comme fin d'intervalle. Un masque 
+       tel que [W-]46] est compris comme la classe de caract&egrave;re contenant deux caract&egrave;res 
+       ("W" et "-") suivi de la cha&icirc;ne litt&eacute;rale "46]", ce qui fait qu'il va accepter 
+       "W46]" ou "-46]". Cependant, si "]" est &eacute;chapp&eacute; avec un backslash, le masque 
+       [W-\]46] est interpr&eacute;t&eacute; comme une classe d'un seul caract&egrave;re, contenant un 
+       intervalle de caract&egrave;re. La valeur octale ou hexad&eacute;cimale de "]" peuvent aussi 
+       &ecirc;tre utilis&eacute;e pour d&eacute;terminer les limites de l'intervalle.
+
+       Les intervalles travaillent sur des s&eacute;quences ASCII. Elles peuvent aussi &ecirc;tre 
+       pr&eacute;cis&eacute;es avec des valeurs num&eacute;riques, par exemple [\000-\037]. Si cet intervalle 
+       inclus des lettres utilis&eacute;es avec une option d'insensibilit&eacute; de casse, les 
+       majuscules ou minuscules correspondantes seront aussi incluses. Par exemple, 
+       [W-c] est &eacute;quivalent &eacute; [][\^_`wxyzabc], avec l'option d'insensibilit&eacute; de casse. 
+       Si la table locale de caract&egrave;re est "fr", [\xc8-\xcb] correspond aux caract&egrave;res 
+       accentu&eacute;s.
+
+       Les types de caract&egrave;res \d, \D, \s, \S, \w, et \W peuvent aussi intervenir dans 
+       les classes de caract&egrave;res. Par exemple, [\dABCDEF] acceptera n'importe quel caract&egrave;re 
+       hexad&eacute;cimal. Un accent circonflexe peut aussi &ecirc;tre utilis&eacute; pour sp&eacute;cifier adroitement 
+       des ensembles de caract&egrave;res plus restrictifs : par exemple [^\W_] accepte toutes 
+       les lettres et les chiffres, mais pas les soulign&eacute;s.
+
+       Tous les caract&egrave;res non alphanum&eacute;riques autres que \, -, ^ (plac&eacute; en d&eacute;but de cha&icirc;ne) 
+       et ] n'ont pas de significations particuli&egrave;re, mais ils ne perdront rien &agrave; &ecirc;tre 
+       &eacute;chapp&eacute;s.
+
+VERTICAL BAR
+       La barre verticale sert &agrave; s&eacute;parer des alternatives. Par exemple, dans le masque 
+
+dupont|martin
+
+       recherche soit "dupont", soit " martin ". Le nombre d'alternative n'est pas 
+       limit&eacute;, et il est m&ecirc;me possible d'utiliser la cha&icirc;ne vide. Lors de la recherche, 
+       toutes les alternatives sont essay&eacute;es, de gauche &agrave; droit, et la premi&egrave;re qui est 
+       accept&eacute;e, est utilis&eacute;e. Si les alternatives sont dans un sous masque, elle ne 
+       r&eacute;ussiront que si le masque principal r&eacute;ussi aussi.
+
+
+INTERNAL OPTION SETTING
+       Les options PCRE_CASELESS, PCRE_MULTILINE, PCRE_DOTALL, et PCRE_EXTENDED peuvent 
+       &ecirc;tre chang&eacute;e depuis le masque lui-m&ecirc;me, avec des s&eacute;quences mises "(?" et ")". 
+       Les options sont 
+
+i pour PCRE_CASELESS
+m pour PCRE_MULTILINE
+s pour PCRE_DOTALL
+x pour PCRE_EXTENDED
+
+       Par exemple, (?im) rend le masque insensible &agrave; la casse, et multi-lignes. Il est 
+       possible d'annuler ces options en les faisant pr&eacute;c&eacute;der par un signe - : par 
+       exemple (?im-sx), ajoutera les options PCRE_CASELESS et PCRE_MULTILINE mais 
+       annulera les options PCRE_DOTALL et PCRE_EXTENDED. Si une option appara&icirc;t avant 
+       et apr&egrave;s le signe moins, l'option sera annul&eacute;e.
+
+       Le domaine d'application de ces options d&eacute;pend de la position de la s&eacute;quence 
+       d'option. Pour toutes les s&eacute;quences d'options qui sont hors des sous masques 
+       (d&eacute;finis plus loin), l'effet est le m&ecirc;me que si l'option avait &eacute;t&eacute; fix&eacute;e d&egrave;s le 
+       d&eacute;but de la recherche. Les exemples suivants se comportent tous de la m&ecirc;me 
+       fa&ccedil;ons : 
+
+       (?i)abc
+       a(?i)bc
+       ab(?i)c
+       abc(?i)
+
+       et sont parfaitement &eacute;quivalents au masque abc avec l'option PCRE_CASELESS. 
+       En d'autres termes, mettre des s&eacute;quences d'options dans le corps principal du 
+       masque revient &agrave; appliquer l'option &agrave; tout le masque, sauf ordre contraire dans 
+       les sous masques. Si il y a plusieurs s&eacute;quences d'option qui portent sur la m&ecirc;me 
+       optin, la derni&egrave;re s'appliquera.
+
+       Si une option intervient dans un sous-masque, le comportement est diff&eacute;rent. 
+       C'est un changement de comportement apparu en Perl 5.005. Une option &agrave; l'int&eacute;rieur 
+       d'un sous masque n'affecte que cette partie du masque, ce qui fait que 
+       
+       (a(?i)b)c
+
+       acceptera abc et aBc mais aucune autre cha&icirc;ne (en supposant que PCRE_CASELESS 
+       n'est pas utilis&eacute;). Cela signifie que les options permettent d'avoir diff&eacute;rente 
+       configuration de recherche pour diff&eacute;rentes parties du masque. Une s&eacute;quence 
+       d'option dans une alternative affecte toute l'alternative. Par exemple : 
+
+       (a(?i)b|c)
+       
+       accepte "ab", "aB", "c", et "C", m&ecirc;me si, comme dans le cas de "C", la premi&egrave;re 
+       alternative qui porte l'option n'est pas prise en compte. Sinon, cela risque 
+       d'introduire des comportements tr&egrave;s &eacute;tranges : 
+
+       Les options sp&eacute;cifiques &agrave; PCRE telles que PCRE_UNGREEDY et PCRE_EXTRA peuvent 
+       &ecirc;tre modifi&eacute;es de la m&ecirc;me mani&egrave;re, en utilisant respectivement les caract&egrave;res 
+       U et X. L'option (?X) est particuli&egrave;re, car elle doit toujours intervenir avant 
+       toutes les autres options, m&ecirc;me au niveau du masque entier. Il vaut mieux la 
+       mettre au d&eacute;but du masque.
+
+
+
+SUBPATTERNS
+
+       Les sous masques sont d&eacute;limit&eacute;s par des parenth&egrave;ses, et peuvent &ecirc;tre imbriqu&eacute;es. 
+       Ajouter des sous masques a deux utilit&eacute;s : 
+
+     1. D&eacute;limiter des alternatives. Par exemple, le masque
+
+       cat(aract|erpillar|)
+
+       acceptera les mots "char", "chardon", ou "charmant". Sans les parenth&egrave;ses, il 
+       n'accepterait que "chardon", "mant" ou la cha&icirc;ne vide.
+
+     2. Le sous masque est consid&eacute;r&eacute; comme capturante : Lorsqu'une cha&icirc;ne sujet est accept&eacute;e par le masque complet, les sous masques sont transmis &agrave; l'appelant gr‚ce &agrave; un vecteur de sous masques. Les parenth&egrave;ses ouvrantes sont compt&eacute;es de gauche &agrave; droite, (commencant &agrave; 1).
+
+       Par exemple, soit la cha&icirc;ne sujet "le roi soleil " qui est utilis&eacute;e avec le 
+       masque suivant :
+
+       Le ((roi|prince) (soleil|charmant))
+
+       les sous masques captur&eacute; sont "roi soleil ", "roi", et "soleil", num&eacute;rot&eacute;s 
+       respectivement 1, 2, et 3.
+
+       L'ubiquit&eacute; des parenth&egrave;ses n'est pas toujours simple d'emploi. Il y a des 
+       moments o&uacute; regrouper des sous masques est n&eacute;cessaire, sans pour autant capturer 
+       la valeur trouv&eacute;e. Si une parenth&egrave;se ouvrante est suivie de "?:", le sous masque 
+       ne capture pas la cha&icirc;ne assortie, et ne sera pas compt&eacute; lors de la num&eacute;rotation 
+       des captures. Par exemple, avec la cha&icirc;ne "le prince charmant", utilis&eacute; avec le 
+       masque pattern
+
+       Le (( ?roi|prince) (soleil|charmant))
+
+       les cha&icirc;nes captur&eacute;es seront "prince charmant " et "charmant", num&eacute;rot&eacute;s 
+       respectivement 1 et 2. Le nombre maximal de cha&icirc;ne captur&eacute;es est de 99, et le 
+       nombre total de sous masque (capturant ou non) ne doit pas d&eacute;passer 200.
+
+
+(?i:samedi|dimanche)
+(?:(?i) samedi | dimanche)
+
+       De plus, comme les s&eacute;quences d'options sont valables sur toute une alternative, 
+       le masque ci dessus acceptera aussi "DIMANCHE" que "Dimanche".
+
+REPETITION
+       
+       les R&eacute;p&eacute;titions sont sp&eacute;cifi&eacute;es avec des quantificateurs, qui peuvent &ecirc;tre plac&eacute;s 
+       &agrave; la suite des caract&egrave;res suivants :
+
+
+       Un caract&egrave;re unique, m&ecirc;me s'il s'agit d'un m&eacute;ta caract&egrave;re 
+       Une classe de caract&egrave;res 
+       Une r&eacute;f&eacute;rence de retour (Voir section suivante)
+       Un sous masque avec parenth&egrave;ses (a moins que ce ne soit une assertion, voir plus 
+       loin)
+
+       Les quantificateurs g&eacute;n&eacute;raux pr&eacute;cisent un nombre minimum et maximum de r&eacute;p&eacute;titions 
+       possibles, donn&eacute;s par deux nombres entre accolades, et s&eacute;par&eacute;s par une virgule. 
+       Ces nombres doivent &ecirc;tre plus petit que 65536, et le premier nombre doit &ecirc;tre 
+       &eacute;gal ou inf&eacute;rieur au second. Par exemple 
+
+       z{2,4}
+
+       accepte "zz", "zzz", ou "zzzz". L'accolade fermante n'a pas de signification par 
+       elle m&ecirc;me. Si le second nombre est omis, mais que la virgule est l&agrave;, cela 
+       signifie qu'il n'y a pas de limite sup&eacute;rieure. Si le second nombre et la virgule 
+       sont omis, le quantificateur correspond au nombre exact de r&eacute;p&eacute;tition attendues. 
+       Par exemple :
+
+       [aeiou]{3,}
+
+       accepte n'importe quelle succession d'au moins 3 voyelles minuscules, tandis 
+       que 
+
+       \d{8}
+
+       n'accepte que 8 chiffres exactements. Une accolade ouvrante qui appara&icirc;t &agrave; une 
+       position o&uacute; un quantificateur n'est pas accept&eacute;, ou si la syntaxe des 
+       quantificateurs n'est pas respect&eacute;e, elle sera consid&eacute;r&eacute;e litt&eacute;rale. Par exemple, 
+       {,6} n'est pas un quantificateur, mais une cha&icirc;ne de 4 caract&egrave;res.
+
+       Le quantificateur {0} est autoris&eacute;, mais l'expression est alors ignor&eacute;e.
+
+* &eacute;quivalent &agrave; {0,}
++ &eacute;quivalent &agrave; {1,}
+? &eacute;quivalent &agrave; {0,1}
+
+       Il est possible de constituer des boucles infinies en cr&eacute;ant un sous masque 
+       sans caract&egrave;res, mais pourvu d'un quantificateur sans limite sup&eacute;rieure. 
+       Par exemple 
+
+       (a?)*
+
+       Les versions plus anciennes de Perl et PCRE g&eacute;n&eacute;raient alors une erreur 
+       au moment de la compilation. Cependant, &eacute;tant donn&eacute; qu'il existe des situations 
+       o&uacute; ces constructions peuvent &ecirc;tre utiles, ces masques sont d&eacute;sormais autoris&eacute;s. 
+       Cependant, si la r&eacute;p&eacute;tion du sous masque ne trouve aucun caract&egrave;re, la boucle est 
+       interrompue.
+
+       Par d&eacute;faut, les quantificateurs sont "gourmands", c'est &agrave; dire, qu'ils cherchent 
+       d'abord &agrave; trouve le nombre maximal de r&eacute;p&eacute;titions qui autorise le succ&egrave;s de la 
+       recherche. L'exemple classique pos&eacute; par cette gourmandise est la recherche de 
+       commentaire d'un programme en C. Les commentaires apparaissent entre les 
+       s&eacute;quences /* et */ et &agrave; l'int&eacute;rieur de ces d&eacute;limiteurs, les * et / sont autoris&eacute;s. 
+       Appliquer le masque 
+
+       /\*.*\*/
+
+       &agrave; la cha&icirc;ne 
+
+       /* first commet */  not comment  /* second comment */
+
+       ne peut r&eacute;ussir, car le masque travaille sur toute la cha&icirc;ne, &agrave; cause de la 
+       gourmandise du caract&egrave;re .*.
+
+       Cependant, un quantificateur suivi d'un point d'interrogation cesse d'&ecirc;tre 
+       gourmand, et au contraire, ne recherche que le nombre minimum de r&eacute;p&eacute;tition. 
+       Dans ces conditions, le masque 
+
+       /\*.*?\*/
+
+       trouvera bien les commentaires du code C. La signification des autres 
+       quantificateurs n'est pas chang&eacute;e. Attention &agrave; ne pas confondre l'utilisation du 
+       point d'interrogation ici avec son utilisation comme quantificateur lui m&ecirc;me. A 
+       cause cette ambiguit&eacute;, il peut appara&icirc;tre des situations o&uacute; il faut le doubler :
+       
+       \d??\d
+
+       Ce masque va tenter de lire un seul chiffre, mais le cas &eacute;ch&eacute;ant, il acceptera 2 
+       chiffres pour permettre &agrave; la recherche d'aboutir.
+
+       Si l'option PCRE_UNGREEDY est mise, (une option qui n'est pas disponible avec 
+       Perl) alors les quantificateurs sont non gourmand par d&eacute;faut, mais peuvent &ecirc;tre 
+       rendu gourmand au cas par cas, en ajoutant un point d'interrogation apr&egrave;s. En 
+       d'autres termes, cette option inverse le comportement par d&eacute;faut.
+
+       Lorsqu'un sous masque est quantifi&eacute; avec un nombre minimum de r&eacute;p&eacute;tition, qui 
+       soit plus grand que 1, ou avec un maximum de r&eacute;p&eacute;tition, le masque compil&eacute; aura 
+       besoin de plus de place de stockage, proportionnellement au minimum et au 
+       maximum.
+
+       Si un masque commence par..* ou .{0,} et que l'option PCRE_DOTALL (&eacute;quivalent 
+       en Perl &agrave; /s) est mise, c'est &agrave; dire en autorisant le remplacement des nouvelles 
+       lignes par un m&eacute;ta caract&egrave;re, alors le masque est implicitement ancr&eacute;, car tout 
+       ce qui suit va &ecirc;tre mang&eacute; par la premi&egrave;re s&eacute;quence, et se comportera comme si le 
+       masque se terminait par le m&eacute;ta caract&egrave;re \A. Dans le cas o&uacute; on sait d'avance qu'il 
+       n'y aura pas de caract&egrave;re de nouvelle ligne, mettre l'option PCRE_DOTALL et commencer 
+       le masque par.* permet d'optmiser le masque. Alternativement, on peut utiliser 
+       ^ pour ancrer explicitement le masque.
+
+       Lorsqu'un sous masque capturant est r&eacute;p&eacute;t&eacute;, la valeur captur&eacute;e est la derni&egrave;re. 
+       Par exemple, apr&egrave;s que
+
+       (inter[net]{3}\s*)+
+
+*)+
+
+       ai &eacute;t&eacute; appliqu&eacute; &agrave; "internet interne" la valeur de la cha&icirc;ne captur&eacute;e est 
+       "interne". Cependant, si il y a des sous masques imbriqu&eacute;s, la valeur captur&eacute;e 
+       correspondante peut l'avoir &eacute;t&eacute; lors des pr&eacute;c&eacute;dentes it&eacute;rations. Par exemple :
+
+       /(a|(b))+/
+
+       accepte "aba" et la deuxi&egrave;me valeur captur&eacute;e est 
+
+R&eacute;f&eacute;rences arri&egrave;res (back references)
+
+       En dehors des classes de caract&egrave;res, un backslash suivi d'un nombre plus grand 
+       que 0 (et possiblement plusieurs chiffres) est une r&eacute;f&eacute;rence arri&egrave;re (c'est &agrave; 
+       dire vers la gauche) dans le masque, en supposant qu'il y ait suffisamment de 
+       sous masques capturant pr&eacute;c&eacute;dent.
+
+       Cependant, si le nombre d&eacute;cimal suivant le backslash est plus petit que 10, il 
+       sera toujours consid&eacute;r&eacute; comme une r&eacute;f&eacute;rence arri&egrave;re, et cela g&eacute;n&eacute;rera une erreur 
+       si le nombre de capture n'est pas suffisant. En d'autres termes, il faut qu'il existe 
+       suffisamment de parenth&egrave;ses ouvrantes &agrave; gauche de la r&eacute;f&eacute;rence, surtout si la 
+       r&eacute;f&eacute;rence est inf&eacute;rieure &agrave; 10. Reportez vous &agrave; la section "Backslash" pour avoir 
+       de plus amples d&eacute;tails &agrave; propos du nombre de chiffres qui suivent le backslash.
+
+       La r&eacute;f&eacute;rence arri&egrave;re remplace ce qui a &eacute;t&eacute; captur&eacute; par un sous masque dans le 
+       masque courant, plut&ocirc;t que remplace le sous masque lui m&ecirc;me. Ainsi 
+
+       (calme|rapide) et \1ment
+
+       trouvera "calme et calmement " et "rapide et rapidement ", mais pas 
+       " calme et rapidement ". Si la recherche tiens compte de la casse, alors la 
+       casse de la cha&icirc;ne captur&eacute;e sera importante. Par exemple, 
+
+       ((?i)rah)\s+\1
+
+       trouve "rah rah" et "RAH RAH", mais pas "RAH rah", m&ecirc;me si le sous masque 
+       capturant initial ne tenait pas compte de la casse.
+
+       Il peut y avoir plusieurs r&eacute;f&eacute;rences arri&egrave;res dans le m&ecirc;me sous masque. Si un 
+       sous masque n'a pas &eacute;t&eacute; utilis&eacute; dans une recherche, alors les r&eacute;f&eacute;rences arri&egrave;res 
+       &eacute;choueront. Par exemple 
+
+       (a|(bc))\2
+
+       ne r&eacute;ussira jamais si la cha&icirc;ne sujet commence par "a" plut&ocirc;t que par "bc".
+       
+       Etant donn&eacute; qu'il peyt y avoir jusqu'&agrave; 99 r&eacute;f&eacute;rences arri&egrave;res, tous les chiffres 
+       apr&egrave;s le backslash sont consid&eacute;r&eacute;s comment faisant potentiellement partie de la 
+       r&eacute;f&eacute;rence arri&egrave;re. Si le masque recherche un chiffre apr&egrave;s la r&eacute;f&eacute;rence, alors il 
+       faut imp&eacute;rativement utiliser des d&eacute;limiteurs pour terminer la r&eacute;f&eacute;rence arri&egrave;re. Si 
+       l'option PCRE_EXTENDED est mise, on peut utiliser un espace. Sinon, un 
+       commentaire vide fait l'affaire.
+
+       Une r&eacute;f&eacute;rence arri&egrave;re qui intervient &agrave; l'int&eacute;rieur de parenth&egrave;ses auquel 
+       elle fait r&eacute;f&eacute;rence &eacute;chouera d&egrave;s que le sous masque sera utilis&eacute;. Par exemple, 
+       (a\1) &eacute;chouera toujours. Cependant, ces r&eacute;f&eacute;rences peuvent &ecirc;tre utiles dans les 
+       sous masques r&eacute;p&eacute;titifs. Par exemple, le masque 
+
+       (a|b\1)+
+
+       pourra convenir pour "a", "aba", "ababaa" etc. A chaque it&eacute;ration du sous masque, 
+       la r&eacute;f&eacute;rence arri&egrave;re utilise le r&eacute;sultat du dernier sous masque. Pour que cela 
+       fonctionne, il faut que la premi&egrave;re it&eacute;ration n'ai pas besoin d'utiliser la 
+       r&eacute;f&eacute;rence arri&egrave;re. Cela arrive avec les alternatives, comme dans l'exemple ci 
+       dessus, ou avec un quantificateur de minimum 0.
+       
+Les assertions
+       
+       Une assertion est un test sur les caract&egrave;res suivants ou pr&eacute;c&eacute;dent celui qui est 
+       en cours d'&eacute;tude. Ce test ne consomme par de caract&egrave;re (ie, on ne d&eacute;place pas le 
+       pointeur de caract&egrave;res). Les assertions simples sont cod&eacute;es avec \b, \B, \A, \Z, 
+       \z, ^ et $, et sont d&eacute;crite pr&eacute;c&eacute;demment. Il existe cependant un type 
+       d'assertion plus complexe, cod&eacute;es sous la forme de sous masques. Il en existe 
+       deux types : ceux qui travaille au dela de la position courante, et ceux qui 
+       travaille en de&ccedil;a. 
+
+       \w+(?=;)
+
+       Une assertion se comporte comme un sous masque, hormis le fait qu'elle ne 
+       d&eacute;place pas le pointeur de position. Les assertions avant commencent par (?= pour 
+       les assertions positives et par (?! pour des assertions n&eacute;gatives. Par exemple : 
+
+       foo(?!bar)
+
+       s'assure qu'un mot est suivi d'un point virgule, mais n'inclus pas le point 
+       virgule dans la capture. D'autre part,
+
+       (?!foo)bar
+
+       en est proche, mais ne trouve pas une occurrence de "bar" qui soit pr&eacute;c&eacute;d&eacute;e par 
+       quelque chose d'autre que "foo"; il trouve toutes les occurrences de "bar", 
+       quelque soit ce qui le pr&eacute;c&eacute;de, car l'assertion (?!foo) est toujours vraie 
+       quand les trois caract&egrave;res suivants sont "bar". Une assertion arri&egrave;re est ici n&eacute;cessaire. 
+       Ces assertions commencent par (?<= pour les assertions positives, et (?&lt;! 
+       pour les assertions n&eacute;gatives. Par exemple : 
+
+       (?&lt;!foo)bar
+
+       trouve les occurrences de "bar" qui ne sont pas pr&eacute;c&eacute;d&eacute;es par "foo". Le contenu 
+       d'une r&eacute;f&eacute;rence arri&egrave;re est limit&eacute; de tel fa&ccedil;on que les cha&icirc;nes qu'il utilise 
+       sont toujours de la m&ecirc;me taille. Cependant, lorsqu'il y a plusieurs alternatives, 
+       elles n'ont pas besoin d'&ecirc;tre de la m&ecirc;me taille.
+
+       (?&lt;=bullock|donkey)
+
+       est autoris&eacute;, tandis que
+
+       (?&lt;!dogs?|cats?)
+
+       provoque une erreur de compilation. Les alternatives qui ont des longueurs 
+       diff&eacute;rentes ne sont autoris&eacute;es qu'au niveau sup&eacute;rieur des assertions arri&egrave;res. C'est 
+       une am&eacute;lioration du fonctionnement de Perl 5.005, qui impose aux alternatives 
+       d'avoir toutes la m&ecirc;me taille. Une assertion telle que 
+
+       (?&lt;=ab(c|de))
+
+       n'est pas autoris&eacute;e, car l'assertion de bas niveau (la deuxi&egrave;me, ici) a deux 
+       alternatives de longueurs diff&eacute;rentes. Pour la rendre acceptable, il faut &eacute;crire 
+
+       (?&lt;=abc|abde)
+
+       L' impl&eacute;mentation des assertions arri&egrave;res d&eacute;place temporairement le pointeur 
+       de position vers l'arri&egrave;re, et cherche &agrave; v&eacute;rifier l'assertion. Si le nombre de 
+       caract&egrave;re est diff&eacute;rent, la position ne sera pas correcte, et l'assertion 
+       &eacute;chouera. La combinaison d'assertions arri&egrave;res avec des sous masques peut &ecirc;tre 
+       particuli&egrave;rement pratique &agrave; fin des cha&icirc;nes. Un exemple est donn&eacute; &agrave; la fin de 
+       cette section.
+
+       Plusieurs assertions peuvent intervenir successivement. Par exemple 
+
+       (?&lt;=\d{3})(?&lt;!999)foo
+
+       recherche les cha&icirc;nes "foo" pr&eacute;c&eacute;d&eacute;e par trois chiffres qui ne sont pas "999".
+
+       De plus, les assertions peuvent &ecirc;tre imbriqu&eacute;es : 
+
+       (?&lt;=(?&lt;!foo)bar)baz
+
+       recherche les occurrences de "baz" qui sont pr&eacute;c&eacute;d&eacute;es par "bar", qui, &agrave; son tour, 
+       n'est pas pr&eacute;c&eacute;d&eacute; par "foo".
+
+       Les assertions ne sont pas capturantes, et ne peuvent pas &ecirc;tre r&eacute;p&eacute;t&eacute;es. Si une 
+       assertion contient des sous masques capturants en son sein, ils seront compris 
+       dans le nombre de sous masques capturants du masque entier. La capture est 
+       r&eacute;alis&eacute;e pour les assertions positives, mais cela n'a pas de sens pour les 
+       assertions n&eacute;gatives.
+
+       200 assertions au maximum sont autoris&eacute;es.
+
+       Sous masques uniques (ONCE-ONLY SUBPATTERNS)
+
+       Avec les quantificateurs de r&eacute;p&eacute;titions, l'&eacute;chec d'une recherche conduit 
+       normalement &agrave; une autre recherche, avec un nombre diff&eacute;rent de r&eacute;p&eacute;titions, pour 
+       voir si le masque ne s'applique pas dans d'autres conditions. Parfois, il 
+       est pratique d'&eacute;viter ce comportement, soit pour changer la nature de la recherche, 
+       soit pour la faire abandonner plus t&ocirc;t, si on pense qu'il n'est pas besoin 
+       d'aller plus loin.
+
+       Consid&eacute;rons par exemple, le masque \d+foo appliqu&eacute; &agrave; la ligne 
+
+123456bar
+
+       Apr&egrave;s avoir tent&eacute; d'utiliser les 6 chiffres suivi de "foo" qui fait &eacute;chouer, 
+       l'action habituelle sera de r&eacute;essayer avec 5 chiffres, puis avec 4, et ainsi de 
+       suite jusqu'&agrave; l'&eacute;chec final. Un sous masque &eacute;valu&eacute; une seule fois permettrait 
+       d'indiquer que lorsqu'une partie du masque est trouv&eacute;e, elle n'a pas besoin 
+       d'&ecirc;tre r&eacute;&eacute;valu&eacute;e &agrave; chaque tentative. Ceci conduirait &agrave; ce que la recherche 
+       &eacute;choue imm&eacute;diatement apr&egrave;s le premier test. Ces assertions ont leur propre 
+       notation, commencant avec (?>comme ceci :
+
+(?>\d+)bar
+
+       Apr&egrave;s avoir tent&eacute; d'utiliser les 6 chiffres suivi de "foo" qui fait &eacute;chouer, 
+       l'action habituelle sera de r&eacute;essayer avec 5 chiffres, puis avec 4, et ainsi de 
+       suite jusqu'&agrave; l'&eacute;chec final. Un sous masque &eacute;valu&eacute; une seule fois permettrait 
+       d'indiquer que lorsqu'une partie du masque est trouv&eacute;e, elle n'a pas besoin 
+       d'&ecirc;tre r&eacute;&eacute;valu&eacute;e &agrave; chaque tentative. Ceci conduirait &agrave; ce que la recherche 
+       &eacute;choue imm&eacute;diatement apr&egrave;s le premier test. Ces assertions ont leur propre
+       notation, commencant avec (?>comme ceci :
+
+       (?&gt;\d+)bar
+
+       Ce type de parenth&egrave;ses verrouille le sous masque qu'il contient un fois qu'il 
+       a &eacute;t&eacute; trouv&eacute;, et emp&ecirc;che un &eacute;chec ult&eacute;rieur d'y repasser, mais autorise &agrave; 
+       revenir plus loin en arri&egrave;re. 
+
+       Une autre description est que les sous masques de ce type recherche les cha&icirc;nes 
+       de caract&egrave;res, et les ancre le sous masque &agrave; l'int&eacute;rieur de la cha&icirc;ne.
+
+       Les sous masques uniques ne sont pas capturants. Des cas simples comme ceux 
+       pr&eacute;sent&eacute;s ci dessus peuvent &ecirc;tre pris comme des situations maximisantes, qui 
+       r&eacute;servent le maximum de caract&egrave;res. En effet, alors que \d+ et \d+? ajustent 
+       le nombre de chiffres trouv&eacute;s de mani&egrave;re &agrave; laisser la possibilit&eacute; au masque de 
+       r&eacute;ussir, (?&gt;\d+) ne peut retenir que la s&eacute;quence enti&egrave;re de chiffres. 
+
+       Cette construction peut contenir un nombre arbitraire de sous masques complexes, 
+       et ils peuvent &ecirc;tre imbriqu&eacute;s.
+
+       Les sous masques uniques ne peuvent &ecirc;tre utilis&eacute;s qu'avec les assertions 
+       arri&egrave;res, pour effectuer une recherche efficace en fin de cha&icirc;ne. Consid&eacute;rons 
+       un masque simple tel que 
+
+       abcd$
+
+       appliqu&eacute; &agrave; une tr&egrave;s longue cha&icirc;ne qui ne lui correspond pas. A cause du syst&egrave;me 
+       de recherche de gauche &agrave; droite, PCRE va commencer par rechercher un "a" dans 
+       la cha&icirc;ne sujet, puis v&eacute;rifier si ce qui suit convient au reste du masque. Si 
+       le masque est sp&eacute;cifi&eacute; sous la forme 
+
+       ^.*abcd$
+
+       alors, la s&eacute;quence.* remplace en premier lieu la cha&icirc;ne enti&egrave;re, et &eacute;choue, 
+       repart en arri&egrave;re, et remplace tous les caract&egrave;res sauf le dernier, &eacute;choue, 
+       retourne en arri&egrave;re, prend un caract&egrave;re de moins, etc... et ainsi de suite. 
+       Encore une fois, la recherche du "a" passe en revue toute la cha&icirc;ne de gauche 
+       &agrave; droite, ce qui n'est pas tr&egrave;s efficace. Par contre, si le masque &eacute;tait &eacute;crit 
+
+       ^(?&gt;.*)(?&lt;=abcd)
+
+       alors il n'y aurait pas de retour en arri&egrave;re, pour satisfaire la s&eacute;quence.*; 
+       car elle ne peut que remplacer toute la cha&icirc;ne. L'assertion arri&egrave;re cons&eacute;cutive 
+       va alors faire un test sur les 4 derniers caract&egrave;res. Si elle &eacute;choue, la 
+       recherche est imm&eacute;diatement interrompue. Pour les cha&icirc;nes tr&egrave;s longues, cette 
+       approche fait la diff&eacute;rence en terme de performance et de temps de recherche.
+
+Les sous masques conditionnels (CONDITIONAL SUBPATTERNS)
+
+       Il est possible de lier un sous masque &agrave; un une condition, ou de choisir entre 
+       deux sous masques alternatifs, en fonction du r&eacute;sultat d'une assertion, ou 
+       suivant les r&eacute;sultats de recherche pr&eacute;c&eacute;dents. Les deux formes possibles de sous 
+       masques conditionnels sont 
+
+(?(condition)masque positif)
+(?(condition) masque positif | masque n&eacute;gatif)
+
+       Si les conditions sont satisfaites, le masque positif est utilis&eacute;, sinon, le 
+       masque n&eacute;gatif est utilis&eacute;, si pr&eacute;sent. Si il y a plus de deux alternatives, une 
+       erreur est g&eacute;n&eacute;r&eacute;e &agrave; la compilation. 
+
+       Il y a deux types de conditions. Si le texte entre les parenth&egrave;ses est une 
+       s&eacute;quence de chiffre, alors la condition est satisfaite si le sous masque 
+       correspondant &agrave; ce num&eacute;ro a r&eacute;ussi. Consid&eacute;rons le masque suivant, qui contient 
+       des espaces non significatif pour le rendre plus compr&eacute;hensible (on supposera 
+       l'option PCRE_EXTENDED mise) et qui est divis&eacute; en trois parties pour simplifier 
+       les explications
+
+       ( \( )?    [^()]+    (?(1) \) )
+
+       La premi&egrave;re partie recherche une parenth&egrave;se ouvrante optionnelle, et si elle 
+       existe, elle est captur&eacute;e. La deuxi&egrave;me partie recherche un s&eacute;quence de caract&egrave;res 
+       qui ne contient pas de parenth&egrave;ses. La troisi&egrave;me partie est conditionn&eacute;e &agrave; la 
+       premi&egrave;re, et s'assure que si il y avait une parenth&egrave;se ouvrante, il en existe une 
+       fermante. Si une parenth&egrave;se ouvrante a &eacute;t&eacute; trouv&eacute;e, elle a &eacute;t&eacute; captur&eacute;e, et donc 
+       la premi&egrave;re capture existe, et la condition est ex&eacute;cut&eacute;e. Sinon, elle est ignor&eacute;e. 
+       Ce masque recherche donc une s&eacute;quence de lettre, &eacute;ventuellement mis entre parenth&egrave;se.
+
+       Si la condition n'est pas une s&eacute;quence de nombre, il faut que ce soit une 
+       assertion. Ce peut &ecirc;tre une assertion positive ou n&eacute;gative, arri&egrave;re ou avant. 
+       Consid&eacute;rons le masque suivant (m&ecirc;me conditions que le pr&eacute;c&eacute;dent) et avec deux 
+       alternatives en seconde ligne :
+
+(?(?=[^a-z]*[a-z])
+\d{2}[a-z]{3}-\d{2} | \d{2}-\d{2}-\d{2} )
+
+       La condition est une assertion avant positive, qui recherche une s&eacute;quence optionnelle 
+       de caract&egrave;re non-lettre. En d'autres termes, elle teste la presence d'au moins 
+       une lettre dans la cha&icirc;ne sujet. Si une lettre est trouv&eacute;e, la recherche se 
+       poursuit avec la premi&egrave;re alternative, et sinon, avec la seconde. Ce masque 
+       recherche des cha&icirc;nes de la forme dd-aaa-dd ou dd-dd-dd, avec aaa qui sont des 
+       lettres, et dd qui sont des chiffres
+
+COMMENTS
+
+       La s&eacute;quence (?# marque le d&eacute;but des commentaires, qui se termine &agrave; la 
+       procha&icirc;ne parenth&egrave;se fermante. Les parenth&egrave;ses imbriqu&eacute;es ne sont pas autoris&eacute;es. 
+       Les caract&egrave;res entre ces d&eacute;limiteurs ne jouent alors aucun r&ocirc;le 
+       dans le masque. 
+
+       Si l'option PCRE_EXTENDED est mise, les caract&egrave;res di&egrave;ses # non &eacute;chapp&eacute;s en 
+       dehors d'une classe de caract&egrave;res introduisent un commentaire qui continuera 
+       jusqu'&agrave; la procha&icirc;ne ligne dans le masque.
+
+PERFORMANCE
+
+       Certaines s&eacute;quences de recherches sont plus efficaces que d'autres. Ainsi, il 
+       est plus efficace d'utiliser une classe de caract&egrave;res telle que [aeiou] plut&ocirc;t 
+       qu'une alternative (a|e|i|o|u).
+
+       En g&eacute;n&eacute;ral, le masque le plus simple, qui permette la recherche d&eacute;sir&eacute;e est 
+       g&eacute;n&eacute;ralement le plus efficace. Le livre de Jeffrey Friedl's contient de 
+       nombreuses &eacute;tudes &agrave; propos de l'optimisation des expressions r&eacute;guli&egrave;res. 
+
+       Lorsqu'un masque commence par.* et que l'option PCRE_DOTALL est mise, le masque 
+       est implicitement ancr&eacute; par PCRE, &eacute;tant donn&eacute; qu'il ne peut que rechercher au 
+       d&eacute;but de la cha&icirc;ne. Cependant, si option PCRE_DOTALL n'est pas mise, PCRE ne 
+       peut faire aucune optimisation ca le m&eacute;ta-caract&egrave;res point (). ne remplace pas une 
+       nouvelle ligne, et si la cha&icirc;ne sujet contient des nouvelles lignes, le masque 
+       peut trouver une solution qui serait situ&eacute;e juste apr&egrave;s une de ces nouvelles 
+       lignes, et non pas seulement au d&eacute;but de la cha&icirc;ne sujet. Par exemple, le masque, 
+
+        (.*) second
+
+       acceptera la cha&icirc;ne "premier \net second" (avec \n qui remplace la nouvelle ligne), 
+       et la premi&egrave;re cha&icirc;ne captur&eacute;e sera "et". Afin d'effectuer la recherche, PCRE 
+       va essayer d'appliquer le masque &agrave; partir de chaque d&eacute;but de ligne. 
+
+       Si vous utilisez un tel masque avec des cha&icirc;nes qui ne contiennent pas de 
+       caract&egrave;res de nouvelles lignes, les meilleures performances seront atteintes 
+       avec l'option PCRE_DOTALL, ou en ancrant le masque avec ^.*. Cela &eacute;vite &agrave; PCRE 
+       de scanner toute la cha&icirc;ne pour rechercher un caract&egrave;re de nouvelle ligne et 
+       recommencer la recherche.
+
+    </literallayout>
+   </refsect1>
+  </refentry>
+</reference>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+sgml-parent-document:nil
+sgml-default-dtd-file:"../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->
