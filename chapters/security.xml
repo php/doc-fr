@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.21 $ -->
+<!-- $Revision: 1.22 $ -->
  <chapter id="security">
   <title>S&eacute;curit&eacute;</title>
   <simpara>
@@ -208,8 +208,10 @@
       gr&acirc;ce aux directives suivantes :
     </simpara>
     <programlisting role="apache-conf">
-Action.php-script /cgi-bin/php
-AddHandler.php-script .php
+<![CDATA[
+Action php-script /cgi-bin/php
+AddHandler php-script .php
+]]>
     </programlisting>
     <simpara>
       Cette option a uniquement &eacute;t&eacute; test&eacute;e avec Apache et
@@ -300,7 +302,9 @@ AddHandler.php-script .php
       rajouter la ligne suivante :
      <informalexample>
       <programlisting role="cgi">
+<![CDATA[
 #!/usr/local/bin/php
+]]>
       </programlisting>
      </informalexample>
      dans tous les fichiers contenant des tags PHP. Vous devrez aussi rendre le
@@ -397,8 +401,8 @@ AddHandler.php-script .php
      <programlisting role="php">
 <![CDATA[
 <?php
-// efface un fichier dans un dossier racine
-$username = $HTTP_POST_VARS['user_submitted_name'];
+// Efface un fichier dans un dossier racine
+$username = $_POST['user_submitted_name'];
 $homedir = "/home/$username";
 $file_to_delete = "$userfile";
 unlink ($homedir/$userfile);
@@ -452,7 +456,7 @@ echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
 <![CDATA[
 <?php
 // Efface un fichier sur le disque o&ugrave; l'utilisateur &agrave; le droit d'aller
-  $username = $HTTP_SERVER_VARS['REMOTE_USER'];
+  $username = $_SERVER['REMOTE_USER'];
 // utilise un m&eacute;canisme d'authentification
   $homedir = "/home/$username";
   $file_to_delete = basename("$userfile");
@@ -477,7 +481,7 @@ echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
      <programlisting role="php">
 <![CDATA[
 <?php
-  $username = $HTTP_SERVER_VARS['REMOTE_USER'];;
+  $username = $_SERVER['REMOTE_USER'];;
   $homedir = "/home/$username";
   if (!ereg('^[^./][^/]*$', $username))
     die('Erreur de nom de fichier');
@@ -879,12 +883,14 @@ $result = mssql_query($query);
          <title>Une navigation de fiches plus s&eacute;curitaire</title>
          <programlisting role="php">
 <![CDATA[
+<?php
 settype($offset, 'integer');
 $query = "SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET $offset;";
 
 // notez que %d dans la cha&icirc;ne de format : %s serait inutile
 $query = sprintf("SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET %d;",
                  $offset);
+?>
 ]]>
          </programlisting>
         </example>
@@ -948,7 +954,7 @@ $query = sprintf("SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET %d
      <title>Attaque de site avec une page HTML personnalis&eacute;e</title>
      <programlisting role="php">
 <![CDATA[
-<form method="post" action="http://www.site.cible.com/?username=badfoo&amp;password=badfoo">
+<form method="post" action="http://www.site.cible.com/?username=badfoo&password=badfoo">
 <input type="hidden" name="username" value="badfoo">
 <input type="hidden" name="password" value="badfoo">
 </form>
@@ -976,7 +982,7 @@ $query = sprintf("SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET %d
      <title>Exploiter des variables classiques de d&eacute;bogage</title>
      <programlisting role="php">
 <![CDATA[
-<form method="post" action="http://www.site.cible.com/?errors=Y&amp;showerrors=1"&amp;debug=1">
+<form method="post" action="http://www.site.cible.com/?errors=Y&showerrors=1"&debug=1">
 <input type="hidden" name="errors" value="Y">
 <input type="hidden" name="showerrors" value="1">
 <input type="hidden" name="debug" value="1">
@@ -1067,7 +1073,7 @@ $query = sprintf("SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET %d
     &eacute;crire un script PHP, les b&eacute;n&eacute;fices peuvent en &ecirc;tre
     nettement plus interessants.
     <example>
-     <title>Travailler avec register_globals actif</title>
+     <title>Travailler avec register_globals = on</title>
      <programlisting role="php">
 <![CDATA[
 <?php
@@ -1084,11 +1090,11 @@ if ($good_login == 1) {
      </programlisting>
     </example>
     <example>
-     <title>Travailler avec register_globals actif</title>
+     <title>Travailler avec register_globals = off</title>
      <programlisting role="php">
 <![CDATA[
 <?php
-  if($HTTP_COOKIE_VARS["username"]){
+  if($_COOKIE["username"]){
 // ne peut provenir que d'un cookie, corrompu ou pas
     $good_login = 1;
 // Impossible &agrave; parasiter
@@ -1109,14 +1115,14 @@ if ($good_login == 1) {
      <programlisting role="php">
 <![CDATA[
 <?php
-  if ($HTTP_COOKIE_VARS['username'] &amp;&amp;
-      !$HTTP_POST_VARS['username'] &amp;&amp;
-      !$HTTP_GET_VARS['username'] ) {
+  if ($_COOKIE['username'] &&
+      !$_POST['username'] &&
+      !$_GET['username'] ) {
     // D'autres v&eacute;rifications pour v&eacute;rifier l'origine du nom d'utilisateur fourni
     $good_login = 1;
     fpassthru ("/donn&eacute;es/tr&egrave;s/tr&egrave;s/sensibles/index.html");
   } else {
-   mail("admin@example.com", "Tentative de piratage", $HTTP_SERVER_VARS['REMOTE_ADDR']);
+   mail("admin@example.com", "Tentative de piratage", $_SERVER['REMOTE_ADDR']);
    echo "Probl&egrave;me de s&eacute;curit&eacute;, l'administrateur est alert&eacute;.";
    exit;
   }
@@ -1221,17 +1227,21 @@ if ($good_login == 1) {
     informations d&eacute;routantes comme ceci :
     <example>
      <title>Masquer PHP avec un autre langage</title>
-     <programlisting role="php">
-// Faire que le code PHP ressemble &agrave; un autre type
+     <programlisting role="apache-conf">
+<![CDATA[
+# Faire que le code PHP ressemble &agrave; un autre langage
 AddType application/x-httpd-php .asp .py .pl
+]]>
      </programlisting>
     </example>
     Ou masquez le compl&egrave;tement :
     <example>
      <title>Masquer PHP avec des types inconnus</title>
-     <programlisting role="php">
-// Faire que le code PHP ressemble &agrave; un autre langage qui n'existe pas
+     <programlisting role="apache-conf">
+<![CDATA[
+# Faire que le code PHP ressemble &agrave; un autre langage qui n'existe pas
 AddType application/x-httpd-php .bop .foo .133t
+]]>
      </programlisting>
     </example>
     Ou encore, cachez-le sous forme de html. Cela a un l&eacute;ger impact n&eacute;gatif
@@ -1239,9 +1249,11 @@ AddType application/x-httpd-php .bop .foo .133t
     analys&eacute;s et trait&eacute;s par le moteur PHP :
     <example>
      <title>Utiliser le type html pour les extensions PHP</title>
-     <programlisting role="php">
-// Faire que le code PHP ressemble &agrave; du html
+     <programlisting role="apache-conf">
+<![CDATA[
+# Faire que le code PHP ressemble &agrave; du html
 AddType application/x-httpd-php .htm .html
+]]>
      </programlisting>
     </example>
     Pour que cela fonctionne efficacement, pensez &agrave; renommer tous vos
