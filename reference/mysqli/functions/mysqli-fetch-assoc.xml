@@ -1,23 +1,33 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.7 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
+<!-- $Revision: 1.8 $ -->
+<!-- EN-Revision: 1.12 Maintainer: yannick Status: ready -->
   <refentry id="function.mysqli-fetch-assoc">
    <refnamediv>
     <refname>mysqli_fetch_assoc</refname>
+    <refname>mysqli->fetch_assoc</refname>
     <refpurpose>
      Récupère une ligne de résultat sous forme de tableau associatif
     </refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
+     &title.procedural;
      <methodsynopsis>
       <type>array</type><methodname>mysqli_fetch_assoc</methodname>
-      <methodparam><type>resource</type><parameter>result</parameter></methodparam>
+      <methodparam><type>object</type><parameter>result</parameter></methodparam>
      </methodsynopsis>
+    &title.oop;
+     <classsynopsis>
+      <ooclass><classname>result</classname></ooclass>
+      <methodsynopsis>
+       <type>array</type>
+       <methodname>fetch_assoc</methodname>
+       <methodparam><type>void</type><parameter></parameter></methodparam>
+      </methodsynopsis>
+     </classsynopsis>
     <para>
      Retourne un tableau associatif qui correspond à la ligne 
-     récupérée ou &false; s'il n'y a plus de lignes.
+     récupérée ou &false; s'il n'y a plus de ligne.
     </para>
     <para>
      La fonction <function>mysqli_fetch_assoc</function> est utilisée
@@ -36,61 +46,98 @@
      doit être utilisée à la place.
     </para>
     &database.field-case;
+    </refsect1>
+   <refsect1>
+    &reftitle.returnvalues;
+    <para>
+     Retourne un tableau qui correspond à la ligne sélectionnée ou &null; si il n'y a plus de ligne dans
+     le jeux de résultats.
+    </para>
+   </refsect1>
+   <refsect1>
+    <title>Voir aussi</title>
+    <para>
+     <function>mysqli_fetch_array</function>,
+     <function>mysqli_fetch_row</function>,
+     <function>mysqli_fetch_object</function>.
+    </para>
+   </refsect1>
+   <refsect1>
+    <title>Exemple</title>
     <example>
-     <title>Exemple étendu avec <function>mysqli_fetch_assoc</function></title>
+     <title>Style orienté objet</title>
      <programlisting role="php">
 <![CDATA[
 <?php
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-    $conn = mysqli_connect("localhost", "mysql_user", "mysql_password");
-    
-    if (!$conn) {
-        echo "Impossible de se connecter : " . mysqli_error();
-        exit;
-    }
-    
-    if (!mysqli_select_db("mydbname")) {
-        echo "Impossible de sélectionner mydbname: " . mysqli_error();
-        exit;
-    }
-    
-    $sql = "SELECT id as userid, fullname, userstatus 
-            FROM   sometable
-            WHERE  userstatus = 1";
+/* Vérification de la connexion */
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
+ 
+$query = "SELECT Nom, CodePays FROM Ville ORDER by ID DESC LIMIT 50,5";
 
-    $result = mysqli_query($sql);
+if ($result = $mysqli->query($query)) {
 
-    if (!$result) {
-        echo "Impossible d'exécuter la requête ($sql) : " . mysqli_error();
-        exit;
-    }
-    
-    if (mysqli_num_rows($result) == 0) {
-        echo "Pas de lignes trouvées, je stoppe";
-        exit;
+    /* Tableau associatif de la ligne sélectionnée */
+    while ($row = $result->fetch_assoc()) {
+        printf ("%s (%s)\n", $row["Nom"], $row["CodePays"]);
     }
 
-    // Tant qu'il y'a des lignes, les placer dans $row en tableau associatif
-    // Note : Si vous ne récupérez qu'une ligne, pas besoin de boucle
-    // Note : Si vous placez extract($row); dans la boucle, vous créerez
-    //        alors $userid, $fullname, et $userstatus
+    /* Libération du jeux de résultats */
+    $result->close();
+}
+
+/* Fermeture de la connexion */
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+    </example>
+    <example>
+     <title>Style procédural</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$link = mysqli_connect("localhost", "my_user", "my_password", "world");
+
+/* Vérification de la connexion */
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
+
+$query = "SELECT Nom, CodePays FROM Ville ORDER by ID DESC LIMIT 50,5";
+
+if ($result = mysqli_query($link, $query)) {
+
+    /* Tableau associatif de la ligne sélectionnée */
     while ($row = mysqli_fetch_assoc($result)) {
-        echo $row["userid"];
-        echo $row["fullname"];
-        echo $row["userstatus"];
+        printf ("%s (%s)\n", $row["Nom"], $row["CodePays"]);
     }
-	    
-    mysqli_free_result($result);
 
+    /* Libération du jeux de résultats */
+    mysqli_free_result($result);
+}
+
+/* Fermeture de la connexion */
+mysqli_close($link);
 ?>
 ]]>
      </programlisting>
     </example>
-    <para>
-     Voir aussi <function>mysqli_fetch_array</function>,
-     <function>mysqli_fetch_row</function> et
-     <function>mysqli_fetch_object</function>.
-    </para>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Rennes (FRA)
+Bordeaux (FRA)
+Rouen (FRA)
+Paris (FRA)
+Saint-Savin (FRA)
+]]>
+    </screen>
    </refsect1>
   </refentry>
 
