@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.5 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.6 $ -->
+<!-- EN-Revision: 1.10 Maintainer: didou Status: ready -->
   <refentry id="function.stream-filter-append">
    <refnamediv>
     <refname>stream_filter_append</refname>
@@ -13,7 +13,7 @@
       <methodparam><type>resource</type><parameter>stream</parameter></methodparam>
       <methodparam><type>string</type><parameter>filtername</parameter></methodparam>
       <methodparam choice="opt"><type>int</type><parameter>read_write</parameter></methodparam>
-      <methodparam choice="opt"><type>string</type><parameter>params</parameter></methodparam>
+      <methodparam choice="opt"><type>mixed</type><parameter>params</parameter></methodparam>
      </methodsynopsis>
     <para>
      <function>stream_filter_append</function> ajoute le filtre 
@@ -26,7 +26,7 @@
      la fonction <function>stream_filter_prepend</function>.
     </para>
     <para>
-     Par défaut, <function>stream_filter_prepend</function> va ajouter
+     Par défaut, <function>stream_filter_append</function> va ajouter
      le filtre à la liste de filtre de lecture si le fichier a été ouvert
      en mode lecture (<literal>r</literal> et/ou <literal>+</literal>). Le
      filtre sera aussi attaché à la liste des filtres de lecture
@@ -46,47 +46,54 @@
       <programlisting role="php">
 <![CDATA[
 <?php
-/* Open a test file for reading and writting */
-$fp = fopen("test.txt","rw");
+// Ouverture d'un fichier de test en lecture/écriture
+$fp = fopen("test.txt", "rw");
 
-/* Apply the ROT13 filter to the
- * write filter chain, but not the
- * read filter chain */
+/* On applique le filtre ROT13 au flux d'écriture, mais pas à
+ * celui de lecture */
 stream_filter_append($fp, "string.rot13", STREAM_FILTER_WRITE);
 
-/* Write a simple string to the file
- * it will be ROT13 transformed on the
- * way out */
+/* On ajoute un simple chaîne dans le fichier, il sera
+ * transformé par ROT13 à l'écriture */
 fwrite($fp, "This is a test\n");
 
-/* Back up to the beginning of the file */
+/* On revient au début du fichier */
 rewind($fp);
 
-/* Read the contents of the file back out.
- * Had the filter been applied to the
- * read filter chain as well, we would see
- * the text ROT13ed back to its original state */
+/* On lit le contenu du fichier.
+ * Si on appliquait le filtre ROT13 nous aurions la
+ * chaîne dans son étât d'origine */
 fpassthru($fp);
 
 fclose($fp);
 
-/* Expected Output
-   ---------------
+/* Résultat attendu
+   ----------------
 
 Guvf vf n grfg
 
- */
+*/
 ?>
 ]]>
       </programlisting>
      </example>
     </para>
-     <note>
-     <title>Quand utiliser des filtres personnalisés</title>
+    <note>
+     <title>Quand vous utilisez des filtres personnalisés</title>
      <simpara>
-      <function>stream_register_filter</function> doit être appelé avant
-      <function>stream_filter_prepend</function> pour enregistrer le filtre
+      <function>stream_register_filter</function> doit être appelée avant
+      <function>stream_filter_append</function> pour enregistrer le filtre
       sous le nom de <parameter>filtername</parameter>.
+     </simpara>
+    </note>
+    <note> 
+     <simpara>
+      Les données du flux (locales et distantes) sont retournées en morceaux,
+      les données non acheminées étant conservées dans le tampon interne.
+      Lorsqu'un nouveau filtre est ajouté à la fin du flux, les données dans
+      le tampon interne sont passées dans le nouveau filtre à ce moment là.
+      Ceci est différent du comportement de
+      <function>stream_filter_prepend</function>.
      </simpara>
     </note>
     <simpara>
