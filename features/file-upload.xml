@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.30 $ -->
-<!-- EN-Revision: 1.79 Maintainer: dams Status: ready -->
+<!-- $Revision: 1.31 $ -->
+<!-- EN-Revision: 1.80 Maintainer: dams Status: ready -->
  <chapter id="features.file-upload">
   <title>Gestion des chargements de fichier</title>
   
@@ -8,15 +8,19 @@
    <title>Chargements de fichiers par méthode POST </title>
    
    <simpara>
+    Cette fonctionnalité permet aux personnes d'uploader à la fois du texte
+    et des fichiers binaires. Avec les fonctions d'authentifications et de manipulation
+    de fichiers de &php;, vous avez le contrôle total pour définir qui a le droit d'uploader
+    mais aussi ce qui sera fait du fichier une fois qu'il sera uploader.
+   </simpara>
+   <simpara>
     &php; est capable de recevoir des fichiers émis par
     un navigateur conforme à la norme RFC-1867
     (c'est-à-dire <productname>Netscape Navigator 3</productname> ou supérieur, 
     <productname>Microsoft Internet Explorer 3</productname> avec un patch 
-    de Microsoft, ou supérieur sans le patch). Cette fonctionnalité permet de charger des
-    fichiers textes ou binaires. Avec l'authentification et les fonctions
-    de manipulation des fichiers, vous avez un contrôle total
-    sur le chargement et la gestion des fichiers chargés.
+    de Microsoft, ou supérieur sans le patch).
    </simpara>
+   
    <note>
     <title>Notes de configuration</title>
     <para>
@@ -28,161 +32,135 @@
      <link linkend="ini.max-input-time">max_input_time</link> dans &php.ini;
     </para>
    </note>
+   
    <para>
-    Notez bien que &php; supporte aussi le chargement par la
-    méthode PUT comme dans le navigateur <productname>Netscape Composer</productname>
+    &php; supporte aussi le chargement par la méthode PUT comme dans le navigateur 
+    <productname>Netscape Composer</productname>
     et <productname>Amaya</productname> du W3C. Reportez-vous au chapitre sur le
     <link linkend="features.file-upload.put-method">support de la
     méthode PUT</link>.
    </para>
-   <para>
-    Un écran de chargement de fichiers peut être constitué
-    en créant un formulaire de la manière suivante :
-   </para>
+   
    <para>
     <example>
      <title>Formulaire de chargement de fichier</title>
+     <para>
+      Un écran d'upload de fichier peut être construit
+      en créant un formulaire spécifique qui peut ressembler à ceci :
+     </para>
      <programlisting role="html">
 <![CDATA[
+<!-- Le type d'encodage des données, enctype, DOIT être spécifié comme ce qui suit -->
 <form enctype="multipart/form-data" action="_URL_" method="post">
- <input type="hidden" name="MAX_FILE_SIZE" value="30000" />
- Envoyez ce fichier : <input name="userfile" type="file" />
- <input type="submit" value="Envoyer le fichier" />
+  <!-- MAX_FILE_SIZE doit précéder le champs input de type file -->
+  <input type="hidden" name="MAX_FILE_SIZE" value="30000" />
+  <!-- Le nom de l'élément input détermine le nom dans le tableau $_FILES -->  
+  Envoyez ce fichier : <input name="userfile" type="file" />
+  <input type="submit" value="Envoyer le fichier" />
 </form>
 ]]>
      </programlisting>
-    </example>
-   </para>
-   <para>
-    Le paramètre <varname>_URL_</varname> doit pointer sur un fichier &php;.
-    L'option <literal>MAX_FILE_SIZE</literal> cachée doit précéder
-    le nom du fichier à charger, et représente la taille
-    maximale en octets du  fichier à charger. Assurez-vous également que votre 
-    formulaire de chargement a bien
-    <literal>enctype="multipart/form-data"</literal> sinon, le chargement ne fonctionnera pas.
-    <warning>
-     <para>
-      Le champ <literal>MAX_FILE_SIZE</literal> est là à titre de conseil au navigateur, bien
-      que &php; va également l'utiliser.
-      Il est très facile de contourner cette restriction. Ne comptez pas
-      sur le respect de cette configuration par le navigateur! La configuration
-      de &php; sur la taille maximale à respecter (<link 
-      linkend="ini.upload-max-filesize">upload_max_filesize</link>)
-      ne peut être contournée, elle. Vous devez ajouter la variable 
-      <literal>MAX_FILE_SIZE</literal> à votre formulaire dans tous les cas car
-      il prévient le chargement de gros fichiers qui demanderait un long délai 
-      d'attente au client et ainsi fera échouer le script.
-     </para>
-    </warning>
-   </para>
-   
-   <para>
-    Les variables définies après un téléchargement 
-    de fichiers diffèrent beaucoup de version en version. La variable 
-    <link linkend="reserved.variables.files"><varname>$_FILES</varname></link>
-    existe depuis &php; 4.1.0. Le tableau <varname>$HTTP_POST_FILES</varname>
-    existe depuis &php; 4.0.0. Ces tableaux contiennent toutes les données
-    sur les fichiers téléchargés. L'utilisation de la 
-    variable <varname>$_FILES</varname> est recommandée. Si la directive &php; 
-    <link linkend="ini.register-globals">register_globals</link> vaut
-    <emphasis>on</emphasis>, les variables reliées existeront aussi.
-    <link linkend="ini.register-globals">register_globals</link> 
-    vaut par défaut <emphasis>off</emphasis> depuis &php; 
-    <ulink url="&url.php.release4.2.0;">4.2.0</ulink>.
-   </para>
-   <para>
-    Le contenu du tableau <link linkend="reserved.variables.files"><varname>$_FILES</varname></link>
-    est détaillé dans notre exemple ci-dessous. Notez que l'on suppose que le nom
-    de la variable du fichier téléchargé est <literal>userfile</literal>, tel que
-    défini dans le formulaire ci-dessus, mais peut être n'importe quel nom.
-    <variablelist>
-     <varlistentry>
-      <term><varname>$_FILES['userfile']['name']</varname></term>
-      <listitem>
-       <para>
-        Le nom original du fichier, tel que sur la machine du client web.
-       </para>
-      </listitem>
-     </varlistentry>
-     <varlistentry>
-      <term><varname>$_FILES['userfile']['type']</varname></term>
-      <listitem>
-       <para>
-        Le type MIME du fichier, si le navigateur a fourni cette information.
-        Par exemple, cela pourra être <literal>"image/gif"</literal>.
-        </para>
-      </listitem>
-     </varlistentry>
-     <varlistentry>
-      <term><varname>$_FILES['userfile']['size']</varname></term>
-      <listitem>
-       <para>
-        La taille, en octets, du fichier téléchargé.
-       </para>
-      </listitem>
-     </varlistentry>
-     <varlistentry>
-      <term><varname>$_FILES['userfile']['tmp_name']</varname></term>
-      <listitem>
-       <para>
-        Le nom temporaire du fichier qui sera chargé sur la machine serveur.
-       </para>
-      </listitem>
-     </varlistentry>
-     <varlistentry>
-      <term><varname>$_FILES['userfile']['error']</varname></term>
-      <listitem>
-       <para>
-        Le code d'erreur 
-        <link linkend="features.file-upload.errors"><literal>error code</literal></link>
-        associé au téléchargement de fichier. <literal>['error']</literal>
-        a été introduit en &php; 4.2.0
-       </para>
-      </listitem>
-     </varlistentry>
-    </variablelist>
-   </para>
-   <note>
     <para>
-     Dans les versions de &php; antérieure à la version 4.1.0, la variable
-     <varname>$_FILES</varname> s'appelait <varname>$HTTP_POST_FILES</varname> et 
-     ce n'était pas une variable 
-     <link linkend="language.variables.superglobals">auto-globale</link> 
-     comme l'est <varname>$_FILES</varname>. &php; 3 ne supporte pas
-     <varname>$HTTP_POST_FILES</varname>.
+     <varname>_URL_</varname> dans l'exemple précédent doit être remplacé et 
+     pointé vers un fichier &php;.
     </para>
-   </note>
-   <para>
-    Lorsque <link linkend="ini.register-globals">register_globals</link>
-    vaut <emphasis>on</emphasis> dans le &php.ini;, des variables supplémentaires
-    sont rendues disponibles. Par exemple 
-    <varname>$userfile_name</varname> vaut 
-    <varname>$_FILES['userfile']['name']</varname>,
-    <varname>$userfile_type</varname> vaut 
-    <varname>$_FILES['userfile']['type']</varname>, etc.  Gardez à l'esprit
-    que depuis &php; 4.2.0, <link linkend="ini.register-globals">register_globals</link> 
-    vaut <emphasis>off</emphasis> par défaut. Il n'est pas prudent de
-    supposer que cette directive vaut <emphasis>on</emphasis>.
-   </para>
-   <para>
-    Le fichier téléchargé sera stocké temporairement dans le dossier
-    temporaire du système, à moins qu'un autre dossier soit fourni avec
-    la directive <link linkend="ini.upload-tmp-dir">upload_tmp_dir</link> du
-    &php.ini;. Le dossier par défaut du serveur peut être changé
-    dans l'environnement via la variable <envar>TMPDIR</envar>.
-    Modifier la valeur de cette variable avec la fonction <function>putenv</function>
-    dans un script &php; sera sans effet. Cette variable d'environnement
-    peut aussi être utilisée pour s'assurer que d'autres opérations
-    fonctionnent aussi sur les fichiers téléchargés.
-    <example>
-     <title>Validation de téléchargement de fichiers</title>
-     <para>
-      Voyez aussi les fonctions
-      <function>is_uploaded_file</function> et
-      <function>move_uploaded_file</function> pour plus d'informations.
-      L'exemple suivant va télécharger un fichier venant d'un formulaire.
-     </para>
-     <programlisting role="php">
+    <para>
+     Le champs caché <literal>MAX_FILE_SIZE</literal> (mesuré en octets) doit précédé
+     le champs input de type file et sa valeur représente la taille maximale acceptée du fichier.
+     Ceci est concidéré comme un conseil pour le navigateur, bien
+     que &php; l'utilise également.
+     Il est très facile de contourner cette restriction. Ne comptez pas
+    sur le respect de cette configuration par le navigateur! La configuration
+     de &php; sur la taille maximale à respecter (<link 
+     linkend="ini.upload-max-filesize">upload_max_filesize</link>)
+     ne peut être contournée, elle. Vous devez ajouter la variable 
+     <literal>MAX_FILE_SIZE</literal> à votre formulaire dans tous les cas car
+     il prévient le chargement de gros fichiers qui demanderait un long délai 
+     d'attente au client et ainsi fera échouer le script.
+    </para>
+    <para>
+     Assurez-vous que votre formulaire d'upload de fichier contienne 
+     <literal>enctype="multipart/form-data"</literal> sinon, le fichier uploadé ne fonctionnera pas.     
+    </para>
+   </example> 
+  </para>
+  
+  <para>
+   La variable globale <link linkend="reserved.variables.files">$_FILES</link> existe
+   depuis &php; 4.1.0 (Utilisez <varname>$HTTP_POST_FILES</varname> si vous utilisez une
+   version plus ancienne). Ce tableau devrait contenir toutes les informations du fichier uploadé.
+  </para>
+  
+  <para>
+   Le contenu du tableau <link linkend="reserved.variables.files">$_FILES</link>
+   est détaillé dans notre exemple ci-dessous. Notez que l'on suppose que le nom
+   de la variable du fichier téléchargé est <literal>userfile</literal>, tel que
+   défini dans le formulaire ci-dessus, mais peut être n'importe quel nom.
+   <variablelist>
+    <varlistentry>
+     <term><varname>$_FILES['userfile']['name']</varname></term>
+     <listitem>
+      <para>
+       Le nom original du fichier, tel que sur la machine du client web.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><varname>$_FILES['userfile']['type']</varname></term>
+     <listitem>
+      <para>
+       Le type MIME du fichier, si le navigateur a fourni cette information.
+       Par exemple, cela pourra être <literal>"image/gif"</literal>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><varname>$_FILES['userfile']['size']</varname></term>
+     <listitem>
+      <para>
+       La taille, en octets, du fichier téléchargé.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><varname>$_FILES['userfile']['tmp_name']</varname></term>
+     <listitem>
+      <para>
+       Le nom temporaire du fichier qui sera chargé sur la machine serveur.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><varname>$_FILES['userfile']['error']</varname></term>
+     <listitem>
+      <para>
+       Le code d'erreur 
+       <link linkend="features.file-upload.errors"><literal>error code</literal></link>
+       associé au téléchargement de fichier. Cet élément a été introduit en &php; 4.2.0
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+  <para>
+   Le fichier téléchargé sera stocké temporairement dans le dossier
+   temporaire du système, à moins qu'un autre dossier soit fourni avec
+   la directive <link linkend="ini.upload-tmp-dir">upload_tmp_dir</link> du
+   &php.ini;. Le dossier par défaut du serveur peut être changé
+   dans l'environnement via la variable <envar>TMPDIR</envar>.
+   Modifier la valeur de cette variable avec la fonction <function>putenv</function>
+   dans un script &php; sera sans effet. Cette variable d'environnement
+   peut aussi être utilisée pour s'assurer que d'autres opérations
+   fonctionnent aussi sur les fichiers téléchargés.
+   <example>
+    <title>Validation de téléchargement de fichiers</title>
+    <para>
+     Voyez aussi les fonctions
+     <function>is_uploaded_file</function> et
+     <function>move_uploaded_file</function> pour plus d'informations.
+     L'exemple suivant va télécharger un fichier venant d'un formulaire.
+    </para>
+    <programlisting role="php">
 <![CDATA[
 <?php 
 // En PHP < 4.1.0, $HTTP_POST_FILES doit être utilisé 
@@ -195,25 +173,27 @@ echo '<pre>';
 if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploadfile)) {
     echo "Le fichier est valide, et a été téléchargé 
            avec succès. Voici plus d'informations :\n";
-    print_r($_FILES);
 } else {
     echo "Attaque par upload potentielle. Voici plus d'informations :\n";
-    print_r($_FILES);
 }
+
+echo 'Voici quelques informations de déboguage :';
+print_r($_FILES);
+
 echo '</pre>';
 
 ?>
 ]]>
-     </programlisting>
-    </example>
-   </para>
-   <simpara>
-    Le script &php; qui reçoit le fichier chargé doit pouvoir
-    gérer le fichier de manière appropriée. Vous
-    pouvez utiliser la variable <varname>$_FILES['userfile']['size']</varname> pour recaler
-    tous les fichiers qui sont trop gros ou trop petits. Vous pouvez utiliser
-    la variable <varname>$_FILES['userfile']['type']</varname> pour recaler les fichiers qui
-    n'ont pas le bon type. 
+    </programlisting>
+   </example>
+  </para>
+  <simpara>
+   Le script &php; qui reçoit le fichier chargé doit pouvoir
+   gérer le fichier de manière appropriée. Vous
+   pouvez utiliser la variable <varname>$_FILES['userfile']['size']</varname> pour recaler
+   tous les fichiers qui sont trop gros ou trop petits. Vous pouvez utiliser
+    la variable <varname>$_FILES['userfile']['type']</varname> pour recaler 
+    les fichiers qui n'ont pas le bon type. 
     Depuis &php; 4.2.0, vous pouvez utiliser l'information dans 
     <varname>$_FILES['userfile']['error']</varname> et adapter votre politique
     en fonction des <link linkend="features.file-upload.errors">code d'erreur</link>.
