@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.5 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.6 $ -->
+<!-- EN-Revision: 1.8 Maintainer: yannick Status: ready -->
 <refentry id="function.sqlite-create-function">
  <refnamediv>
   <refname>sqlite_create_function</refname>
@@ -40,13 +40,21 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-function md5_and_reverse($string) {
+function md5_and_reverse($string) 
+{
     return strrev(md5($string));
 }
 
-sqlite_create_function($db, 'md5rev', 'md5_and_reverse', 1);
-
-$rows = sqlite_array_query($db, 'SELECT md5rev(filename) from files');
+if ($dbhandle = sqlite_open('mysqlitedb', 0666, $sqliteerror)) {
+    
+    sqlite_create_function($dbhandle, 'md5rev', 'md5_and_reverse', 1);
+    
+    $sql  = 'SELECT md5rev(filename) FROM files';
+    $rows = sqlite_array_query($dbhandle, $sql);
+} else {
+    echo 'Erreur pendant l\'ouverture de la base db : ' . $sqliteerror;
+    exit;
+}
 ?>
 ]]>
     </programlisting>
@@ -56,14 +64,13 @@ $rows = sqlite_array_query($db, 'SELECT md5rev(filename) from files');
    Dans cet exemple, nous avons une fonction qui calcule la somme de contrôle
    MD5 d'une chaîne, et l'inverse. Lorsque la requête SQL s'exécute,
    elle retourne le nom du fichier, transformé par cette opération.
-   Les données retournées dans <parameter>$rows</parameter> contient le
+   Les données retournées dans <parameter>$rows</parameter> contiennent le
    résultat.
   </para>
   <para>
    La beauté de cette technique est que vous n'avez pas à traiter vous même
    les données avec une boucle, une fois que vous avez lu les données.
   </para>
-
   <para>
    &php; enregistre une fonction spéciale appelée <literal>php</literal> lorsque
    la base est ouverte. Cette fonction est utilisée pour appeler toute fonction
@@ -75,8 +82,9 @@ $rows = sqlite_array_query($db, 'SELECT md5rev(filename) from files');
     <programlisting role="php">
 <![CDATA[
 <?php
-  $rows = sqlite_array_query($db, "SELECT php('md5', filename) from files");
-?>]]>
+$rows = sqlite_array_query($db, "SELECT php('md5', filename) from files");
+?>
+]]>
     </programlisting>
     <para>
      Cet exemple va appeler la fonction <function>md5</function> sur chaque
