@@ -1,3 +1,5 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.4 $ -->
 <reference id="ref.mbstring">
  <title>Cha&icirc;nes de caract&egrave;res multi-octets</title>
  <titleabbrev>Cha&icirc;nes de caract&egrave;res multi-octets</titleabbrev>
@@ -23,15 +25,419 @@
   <para>
    Les jeux de caract&egrave;res multi-octets repr&eacute;sentent les caract&egrave;res
    sur plusieurs octets cons&eacute;cutifs (d'o&ugrave; leur nom). Certains
-   syst&egrave;mes d'encodages ont des caract&egrave;res d'&eacute;chappement d&eacute;di&eacute;s, pour
-   d&eacute;marrer/finir une s&eacute;quence de caract&egrave;res multi-octets. De ce fait,
-   certains caract&egrave;res peuvent &ecirc;tre d&eacute;truit lorsqu'une cha&icirc;ne est
+   syst&egrave;mes d'encodages ont des caract&egrave;res d'&eacute;chappement
+   d&eacute;di&eacute;s, pour d&eacute;marrer/finir une s&eacute;quence de
+   caract&egrave;res multi-octets. De ce fait, certains caract&egrave;res
+   peuvent &ecirc;tre d&eacute;truit lorsqu'une cha&icirc;ne est
    coup&eacute;e en plusieurs morceaux, ou bien conduire &agrave; des r&eacute;sultats
    erronn&eacute;s lorsque le nombre de caract&egrave;re est compt&eacute;. Il faut utiliser
    des fonctions qui supportent ces encodages. Les fonctions
    <literal>mbstring</literal> supportent les jeux de caract&egrave;res
    multi-octets, ainsi que les conversions.
   </para>
+    <para>
+     Etant donn&eacute; que PHP supporte essentiellement le jeu de
+     caract&egrave;res ISO-8859-1, certains jeux de caract&egrave;res
+     ne fonctionnent pas bien avec PHP. Par cons&eacute;quent,
+     il est important de donner une valeur &agrave; l'option de configuration
+     <literal>mbstring.internal_encoding</literal> qui permettent &agrave; PHP de
+     travailler correctement.
+    </para>
+    <para>
+     Pr&eacute;-requis PHP 4
+    </para>
+    <para>
+     <itemizedlist>
+      <listitem>
+       <simpara>
+        Encodage par octet
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        Les caract&egrave;res d'un octet dans l'intervalle <literal>00h-7fh</literal>
+        doivent &ecirc;tre compatibles avec le code <literal>ASCII</literal>
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        Jeux de caract&egrave;res multi-octets, qui n'utilisent pas l'intervalle
+        <literal>00h-7fh</literal>.
+       </simpara>
+      </listitem>
+     </itemizedlist>
+    </para>
+    <para>
+     Voici des exemples d'encodage internes :
+     <informalexample>
+      <programlisting>
+Jeu de caract&egrave;res qui fonctionnent avec PHP :
+ISO-8859-*, EUC-JP, UTF-8
+Jeu de caract&egrave;res qui NE fonctionnent PAS avec PHP :
+JIS, SJIS
+      </programlisting>
+     </informalexample>
+    </para>
+    <para>
+     Les jeux de caract&egrave;res qui ne fonctionnent pas comme encodage interne
+     &agrave; PHP, peuvent toutefois &ecirc;tre utilis&eacute; avec les fonctions de conversion
+     de <literal>mbstring</literal>.
+    </para>
+    <note>
+     <para>
+      SJIS ne doit pas &ecirc;tre utilis&eacute; comme encodage interne, &agrave;
+      moins que vous ne soyez familier de l'analyseur/compilateur, et des
+      probl&egrave;mes li&eacute;s aux jeux de caract&egrave;res.
+     </para>
+    </note>
+    <note>
+     <para>
+      SI vous utilisez une base de donn&eacute;es avec PHP, il est recommand&eacute;
+      que vous utilisiez le m&ecirc;me jeu de caract&egrave;re pour la base de donn&eacute;es
+      et le jeu de caract&egrave;re interne de PHP, pour am&eacute;liorer les performances.
+      </para>
+     <para>
+      Si vous utilisez PostgreSQL, il supporte des jeux de caract&egrave;res qui
+      peuvent &ecirc;tre diff&eacute;rents de ceux du client. Reportez vous au manuel
+      de PostgreSQL pour plus de d&eacute;tails.
+     </para>
+    </note>
+    <sect2 id="mb-enable">
+     <title>Comment activer mbstring</title>
+     <para>
+      <literal>mbstring</literal> est un module PHP. Vous devez activer le
+      module avec le script de configuration <literal>configure</literal>.
+      Reportez vous &agrave; la section <link linkend="installation">installation</link>
+      pour plus de d&eacute;tails.
+     </para>
+     <simpara>
+      Les options de configurations suivantes sont li&eacute;es au module
+      <literal>mbstring</literal>.
+     </simpara>
+     <para>
+      <itemizedlist>
+       <listitem>
+	<para>
+	 <option role="configure">--enable-mbstring</option> : Active les
+	 fonctions <literal>mbstring</literal>. Cette option est n&eacute;cessaire
+	 pour utiliser les fonctions <literal>mbstring</literal>.
+	</para>
+       </listitem>
+       <listitem>
+	<para>
+	 <option role="configure">--enable-mbstr-enc-trans</option> :
+	 Active la conversion automatique des donn&eacute;es par HTTP, avec le moteur
+	 de conversion de <literal>mbstring</literal>. Si cette option est activ&eacute;e,
+	 les donn&eacute;es venants du web via HTTP seront converties dans le jeu
+	 de caract&egrave;res <literal>mbstring.internal_encoding</literal>, automatiquement.
+	</para>
+       </listitem>
+      </itemizedlist>
+     </para>
+    </sect2>
+    <sect2 id="mb-conv">
+     <title>Entr&eacute;es/Sorties HTTP</title>
+     <para>
+      La conversion automatiques des entr&eacute;es/sorties HTTP peuvent
+      aussi convertir des donn&eacute;es binaires. Les utilisateurs
+      doivent contr&ocirc;ler les conversions, si des donn&eacute;es binaires doivent
+      &ecirc;tre utilis&eacute;es via HTTP.
+     </para>
+     <para>
+      Si l'option <literal>enctype</literal> d'un formulaire HTML vaut
+      <literal>multipart/form-data</literal>,
+      <literal>mbstring</literal> ne convertira pas les donn&eacute;es du POST. Dans ce
+      cas, les cha&icirc;nes de caract&egrave;res doivent &ecirc;tre convertis manuellement.
+     </para>
+     <para>
+      <itemizedlist>
+       <listitem>
+	<simpara>
+	 Entr&eacute;e HTTP
+	</simpara>
+	<para>
+	 Il n'y a pas de moyen de contr&ocirc;ler la conversion des caract&egrave;res
+	 HTTP en entr&eacute;e, depuis un script PHP. Pour d&eacute;sactiver cette conversion,
+	 il faut le faire d&egrave;s le fichier <filename>php.ini</filename>.
+	 <example>
+	  <title>
+	   Inactive la conversion HTTP dans le php.ini
+	  </title>
+	  <programlisting role="php">
+;; Inactive la conversion HTTP
+mbstring.http_input = pass
+	  </programlisting>
+	 </example>
+	</para>
+	<para>
+	 Lorsque vous utilisez PHP comme module Apache, il est possible
+	 d'annuler la configuration du <filename>php.ini</filename> pour
+	 chaque Virtual Host dans le fichier
+	 <filename>httpd.conf</filename> ou par dossier avec le fichier
+	 <literal>.htaccess</literal>. Reportez vous &agrave; la section de
+	 <link linkend="configuration">configuration</link> ainsi qu'au
+	 manuel Apache.
+	</para>
+       </listitem>
+       <listitem>
+	<simpara>
+	 Sorties HTTP
+	</simpara>
+	<para>
+	 Il y a plusieurs moyens d'activer la conversion en sortie de script
+	 PHP. L'un d'entre eux utilise <filename>php.ini</filename>, un autre
+	 utilise <function>ob_start</function> avec la fonction
+	 <function>mb_output_handler</function> comme fonction de call-back.
+	</para>
+	<note>
+	 <para>
+	  Pour les utilisateurs PHP3-i18n, le syst&egrave;me de conversion de
+	  <literal>mbstring</literal> diff&egrave;re de celui de PHP3-i18n.
+	  Le jeu de caract&egrave;re est converti avec un buffer de sortie.
+	 </para>
+	</note>
+       </listitem>
+      </itemizedlist>
+     </para>
+     <para>
+      <example>
+       <title>Exemple de configuration de mbstring dans <filename>php.ini</filename></title>
+       <programlisting role="php">
+;; Active la conversion de sortie pour toute les pages PHP
+;; Active la bufferisation de sortie
+output_buffering    = On
+;; Choisi mb_output_handler pour effectuer la conversion de sortie
+output_handler      = mb_output_handler
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      <example>
+       <title>Script example</title>
+       <programlisting role="php">
+&lt;?php
+// Active la conversion de caract&egrave;re uniquement pour cette page
+// Choisi le jeu de caract&egrave;res SJIS
+mb_http_output('SJIS');
+// Commence la bufferisation et sp&eacute;cifie "mb_output_handler"
+// comme fonction de callback
+ob_start('mb_output_handler');
+?&gt;
+       </programlisting>
+      </example>
+     </para>
+    </sect2>
+    <sect2 id="mb-code">
+     <title>Jeux de caract&egrave;res support&eacute;s</title>
+     <simpara>
+      Actuellement, les jeux de caract&egrave;res suivants sont
+      support&eacute;s par <literal>mbstring</literal>. L'encodage
+      de caract&egrave;re peut &ecirc;tre sp&eacute;cifi&eacute;
+      par les param&egrave;tres <literal>encoding</literal> dans les fonctions
+      <literal>mbstring</literal>.
+     </simpara>
+     <para>
+      Les jeux de caract&egrave;res suivants sont support&eacute;s par
+      <literal>mbstring</literal> :
+     </para>
+     <para>
+      <literal>UCS-4</literal>,
+      <literal>UCS-4BE</literal>,
+      <literal>UCS-4LE</literal>,
+      <literal>UCS-2</literal>,
+      <literal>UCS-2BE</literal>,
+      <literal>UCS-2LE</literal>,
+      <literal>UTF-32</literal>,
+      <literal>UTF-32BE</literal>,
+      <literal>UTF-32LE</literal>,
+      <literal>UCS-2LE</literal>,
+      <literal>UTF-16</literal>,
+      <literal>UTF-16BE</literal>,
+      <literal>UTF-16LE</literal>,
+      <literal>UTF-8</literal>,
+      <literal>UTF-7</literal>,
+      <literal>ASCII</literal>,
+      <literal>EUC-JP</literal>,
+      <literal>SJIS</literal>,
+      <literal>eucJP-win</literal>,
+      <literal>SJIS-win</literal>,
+      <literal>ISO-2022-JP</literal>,
+      <literal>JIS</literal>,
+      <literal>ISO-8859-1</literal>,
+      <literal>ISO-8859-2</literal>,
+      <literal>ISO-8859-3</literal>,
+      <literal>ISO-8859-4</literal>,
+      <literal>ISO-8859-5</literal>,
+      <literal>ISO-8859-6</literal>,
+      <literal>ISO-8859-7</literal>,
+      <literal>ISO-8859-8</literal>,
+      <literal>ISO-8859-9</literal>,
+      <literal>ISO-8859-10</literal>,
+      <literal>ISO-8859-13</literal>,
+      <literal>ISO-8859-14</literal>,
+      <literal>ISO-8859-15</literal>,
+      <literal>byte2be</literal>,
+      <literal>byte2le</literal>,
+      <literal>byte4be</literal>,
+      <literal>byte4le</literal>,
+      <literal>BASE64</literal>,
+      <literal>7bit</literal>,
+      <literal>8bit</literal> et
+      <literal>UTF7-IMAP</literal>.
+     </para>
+     <para>
+      Les entr&eacute;es du fichiers <filename>php.ini</filename>, qui acceptent des
+      noms de jeux de caract&egrave;res, acceptent aussi les valeurs
+      &quot;<literal>auto</literal>&quot; et
+      &quot;<literal>pass</literal>&quot;.
+      Les fonctions <literal>mbstring</literal>,qui acceptent des
+      noms de jeux de caract&egrave;res, acceptent aussi la valeur
+      &quot;<literal>auto</literal>&quot;/
+     </para>
+     <para>
+      Si &quot;<literal>pass</literal>&quot; est utilis&eacute;e, aucune conversion
+      n'est effectu&eacute;e.
+     </para>
+     <para>
+      Si &quot;<literal>auto</literal>&quot; est utilis&eacute;e, elle est remplac&eacute;e
+      par &quot;<literal>ASCII,JIS,UTF-8,EUC-JP,SJIS</literal>&quot;.
+     </para>
+     <para>
+      Voir aussi <function>mb_detect_order</function>.
+     </para>
+     <note>
+      <para>
+       Un jeu de caract&egrave;re support&eacute; n'est pas forc&eacute;ment un bon choix comme
+       jeu de caract&egrave;res interne.
+      </para>
+     </note>
+    </sect2>
+    <sect2 id="mb-ini">
+     <title>Configuration php.ini</title>
+     <para>
+      <itemizedlist>
+       <listitem>
+	<simpara>
+      <literal>mbstring.internal_encoding</literal> d&eacute;finit le jeu
+      de caract&egrave;res interne par d&eacute;faut.
+	</simpara>
+       </listitem>
+       <listitem>
+	<simpara>
+      <literal>mbstring.http_input</literal> d&eacute;finit le jeu
+      de caract&egrave;res d'entr&eacute;e HTTP par d&eacute;faut.
+	</simpara>
+       </listitem>
+       <listitem>
+	<simpara>
+      <literal>mbstring.http_output</literal> defines d&eacute;finit le jeu
+      de caract&egrave;res d'affichage HTTP par d&eacute;faut.
+	</simpara>
+       </listitem>
+       <listitem>
+	<simpara>
+      <literal>mbstring.detect_order</literal> d&eacute;finit l'ordre de d&eacute;tection
+      des jeux de caract&egrave;res (lors de la lecture sur une source externe.
+      Voir aussi la fonction <function>mb_detect_order</function>.
+	</simpara>
+       </listitem>
+       <listitem>
+	<simpara>
+      <literal>mbstring.substitute_character</literal> d&eacute;finit le
+      caract&egrave;re de substitution pour les codes invalides.
+	</simpara>
+       </listitem>
+      </itemizedlist>
+     </para>
+     <para>
+      Les navigateurs web utilisent tout le temps le m&ecirc;me encodage lorsqu'ils
+      &eacute;mettent les donn&eacute;es d'un formulaire. Cependant, les navigateurs peuvent
+      ne pas tous utiliser le m&ecirc;me encodage. Voyez la fonction
+      <function>mb_http_input</function> pour d&eacute;tecter les jeux de caract&egrave;res
+      utilis&eacute;s par les navigateurs.
+     </para>
+     <para>
+      Si <literal>enctype</literal> vaut <literal>multipart/form-data</literal> dans
+      un formulaire HTML, <literal>mbstring</literal> n'effectue aucune conversion
+      des donn&eacute;es. Il faut les faire manuellement, dans le script.
+     </para>
+     <para>
+      Bien que les navigateurs soivent g&eacute;n&eacute;ralement assez intelligents pour
+      d&eacute;tecter les jeux de caract&egrave;res automatiquement,
+      il est recommand&eacute; de l'indiquer dans l'en-t&ecirc;te
+      <literal>charset</literal>. Modifiez <literal>default_charset</literal>
+      en fonction du jeu de caract&egrave;res.
+     </para>
+     <para>
+      <example>
+       <title>Exemple de configuration <filename>php.ini</filename> pour mbstring</title>
+       <programlisting role="php">
+;; Set default internal encoding
+;; Note: Make sure to use character encoding works with PHP
+mbstring.internal_encoding    = UTF-8  ; Set internal encoding to UTF-8
+;; Set default HTTP input character encoding
+;; Note: Script cannot change http_input setting.
+mbstring.http_input           = pass    ; No conversion.
+mbstring.http_input           = auto    ; Set HTTP input to auto
+	                                ; "auto" is expanded to "ASCII,JIS,UTF-8,EUC-JP,SJIS"
+mbstring.http_input           = SJIS    ; Set HTTP2 input to  SJIS
+mbstring.http_input           = UTF-8,SJIS,EUC-JP ; Specify order
+;; Set default HTTP output character encoding
+mbstring.http_output          = pass    ; No conversion
+mbstring.http_output          = UTF-8   ; Set HTTP output encoding to UTF-8
+;; Set default character encoding detection order
+mbstring.detect_order         = auto    ; Set detect order to auto
+mbstring.detect_order         = ASCII,JIS,UTF-8,SJIS,EUC-JP ; Specify order
+;; Set default substitute character
+mbstring.substitute_character = 12307   ; Specify Unicode value
+mbstring.substitute_character = none    ; Do not print character
+mbstring.substitute_character = long    ; Long Example: U+3000,JIS+7E7E
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      <example>
+       <title>Exemple de configuration <filename>php.ini</filename> pour
+       mbstring pour utiliser <literal>EUC-JP</literal></title>
+       <programlisting role="php">
+;; Disable Output Buffering
+output_buffering      = Off
+;; Set HTTP header charset
+default_charset       = EUC-JP
+;; Set HTTP input encoding conversion to auto
+mbstring.http_input   = auto
+;; Convert HTTP output to EUC-JP
+mbstring.http_output  = EUC-JP
+;; Set internal encoding to EUC-JP
+mbstring.internal_encoding = EUC-JP
+;; Do not print invalid characters
+mbstring.substitute_character = none
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      <example>
+       <title>Exemple de configuration <filename>php.ini</filename> pour
+       mbstring pour utiliser <literal>SJIS</literal></title>
+       <programlisting role="php">
+;; Enable Output Buffering
+output_buffering     = On
+;; Set mb_output_handler to enable output conversion
+output_handler       = mb_output_handler
+;; Set HTTP header charset
+default_charset      = Shift_JIS
+;; Set http input encoding conversion to auto
+mbstring.http_input  = auto
+;; Convert to SJIS
+mbstring.http_output = SJIS
+;; Set internal encoding to EUC-JP
+mbstring.internal_encoding = EUC-JP
+;; Do not print invalid characters
+mbstring.substitute_character = none
+       </programlisting>
+      </example>
+     </para>
+    </sect2>
   <sect2 id="mb-ja-basic">
   <title>Cas des caract&egrave;res japonais</title>
   <para>
@@ -57,8 +463,8 @@
       &agrave; comparer avec les caract&egrave;res simple-octet traditionnellement
       utilis&eacute;. Les caract&egrave;res les plus gros sont appel&eacute;s "zen-kaku"
       (i.e. grande largeur) et les plus petits sont appel&eacute;s "han-kaku"
-      (i.e. demi-largeur). Les caract&egrave;res "zen-kaku" sont g&eacute;n&eacute;ralement de taille
-      constante.
+      (i.e. demi-largeur). Les caract&egrave;res "zen-kaku" sont
+      g&eacute;n&eacute;ralement de taille constante.
      </simpara>
     </listitem>
     <listitem>
@@ -70,8 +476,8 @@
     <listitem>
      <simpara>
       Les bases de donn&eacute;es allouent des tailles de stockages diff&eacute;rentes
-      de celles utilis&eacute;es par PHP, m&ecirc;me si le m&ecirc;me encodage de caract&egrave;re
-      est utilis&eacute; (par exemple, PostGreSQL).
+      de celles utilis&eacute;es par PHP, m&ecirc;me si le m&ecirc;me encodage
+      de caract&egrave;re est utilis&eacute; (par exemple, PostGreSQL).
      </simpara>
     </listitem>
     <listitem>
@@ -87,112 +493,129 @@
    </itemizedlist>
   </para>
   </sect2>
-  <sect2 id="mb-code">
-  <title>Jeux de caract&egrave;res support&eacute;s</title>
-  <para>
-   Les jeux de caract&egrave;res suivants sont support&eacute;s par cette extension PHP :
-   <literal>UCS-4</literal>,
-   <literal>UCS-4BE</literal>,
-   <literal>UCS-4LE</literal>,
-   <literal>UCS-2</literal>,
-   <literal>UCS-2BE</literal>,
-   <literal>UCS-2LE</literal>,
-   <literal>UTF-32</literal>,
-   <literal>UTF-32BE</literal>,
-   <literal>UTF-32LE</literal>,
-   <literal>UCS-2LE</literal>,
-   <literal>UTF-16</literal>,
-   <literal>UTF-16BE</literal>,
-   <literal>UTF-16LE</literal>,
-   <literal>UTF-8</literal>,
-   <literal>UTF-7</literal>,
-   <literal>ASCII</literal>,
-   <literal>EUC-JP</literal>,
-   <literal>SJIS</literal>,
-   <literal>eucJP-win</literal>,
-   <literal>SJIS-win</literal>,
-   <literal>ISO-2022-JP</literal>(<literal>JIS</literal>),
-   <literal>ISO-8859-1</literal>,
-   <literal>ISO-8859-2</literal>,
-   <literal>ISO-8859-3</literal>,
-   <literal>ISO-8859-4</literal>,
-   <literal>ISO-8859-5</literal>,
-   <literal>ISO-8859-6</literal>,
-   <literal>ISO-8859-7</literal>,
-   <literal>ISO-8859-8</literal>,
-   <literal>ISO-8859-9</literal>,
-   <literal>ISO-8859-10</literal>,
-   <literal>ISO-8859-13</literal>,
-   <literal>ISO-8859-14</literal>,
-   <literal>ISO-8859-15</literal>.
-  </para>
-  </sect2>
-  <sect2 id="mb-ini">
-  <title>Configuration du fichier php.ini</title>
-  <para>
-   <itemizedlist>
-    <listitem>
-     <simpara>
-      <literal>mbstring.internal_encoding</literal> d&eacute;finit le jeu
-      de caract&egrave;res interne par d&eacute;faut.
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      <literal>mbstring.http_input</literal> d&eacute;finit le jeu
-      de caract&egrave;res d'entr&eacute;e HTTP par d&eacute;faut.
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      <literal>mbstring.http_output</literal> defines d&eacute;finit le jeu
-      de caract&egrave;res d'affichage HTTP par d&eacute;faut.
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      <literal>mbstring.detect_order</literal> d&eacute;finit l'ordre de d&eacute;tection
-      des jeux de caract&egrave;res (lors de la lecture sur une source externe
-      inconnue).
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      <literal>mbstring.substitute_character</literal> d&eacute;finit le
-      caract&egrave;re de substitution pour les codes invalides.
-     </simpara>
-    </listitem>
-   </itemizedlist>
-  </para>
-  <para>
-   <example>
-    <title>Exemple de configuration du <literal>php.ini</literal></title>
-    <programlisting role="php.ini">
-;; Set default internal encoding
-mbstring.internal_encoding    = UTF-8  ; Par d&eacute;faut, to UTF-8
-;; Set default HTTP input character code
-mbstring.http_input = auto     ; Par d&eacute;faut, mode automatique
-; or
-; mbstring.http_input = SJIS     ; Par d&eacute;faut, HTTP fournit du code SJIS
-; mbstring.http_input = eucjp-win, sjis-win, UTF-8 ; Ordre sp&eacute;cifique
-;; Set default HTTP output character code
-mbstring.http_output = UTF-8   ; Par d&eacute;faut, HTTP affiche du code UTF-8
-;; Set default character code detection order
-mbstring.detect_order = auto   ; Par d&eacute;faut, mode automatique
-; or
-; mbstring.detect_order = eucjp-win, sjis-win, UTF-8 ; Ordre sp&eacute;cifique
-;; Set default substitute character
-mbstring.substitute_character = 12307 ; Sp&eacute;cifie un code de caract&egrave;re
-; or
-; mbstring.substitute_character = none  ; Caract&egrave;re NULL
-; mbstring.substitute_character = long  ; Long
-    </programlisting>
-   </example>
-  </para>
-  </sect2>
+    <sect2 id="mb-ref">
+     <title>R&eacute;f&eacute;rences</title>
+     <para>
+      Les jeux de caract&egrave;res multi-octets et leurs techniques sont tr&egrave;s complexes.
+       Il n'est pas possible de couvrir tous les aspects en d&eacute;tails ici. Reportez-vous aux
+       URL suivantes, pour d'autres ressouces compl&eacute;mentaires :
+      <itemizedlist>
+       <listitem>
+	<para>
+	 Unicode/UTF/UCS/etc
+	</para>
+	<para>
+	  <literal>http://www.unicode.org/</literal>
+	</para>
+       </listitem>
+       <listitem>
+	<para>
+	 Japanais/cor&eacute;en/Chinois
+	</para>
+	<para>
+	 <literal>
+	 ftp://ftp.ora.com/pub/examples/nutshell/ujip/doc/cjk.inf
+	 </literal>
+	</para>
+       </listitem>
+      </itemizedlist>
+     </para>
+    </sect2>
   </sect1>
  </partintro>
- <refentry id="function.mb-internal-encoding">
+  <refentry id="function.mb-language">
+   <refnamediv>
+    <refname>mb_language</refname>
+    <refpurpose>Lit/modifie le langage courant</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>string <function>mb_language</function></funcdef>
+      <paramdef>string
+       <parameter><optional>language</optional></parameter></paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>mb_language</function> remplace le langage courant par
+     <parameter>language</parameter>. Si <parameter>language</parameter> est omis,
+     <function>mb_language</function> retourne le langage courant.
+    </para>
+    <para>
+     Le param&egrave;tre <parameter>language</parameter> sert &agrave; encoder les
+     messages &eacute;lectroniques. Les langages valies sont :
+     "Japanese" (japonais), "ja" (japonais), "English" (anglais), "en"
+     (anglais) and "uni" (UTF-8). <function>mb_send_mail</function> utilise cette
+     option pour encoder les emails.
+    </para>
+    <para>
+     Le langage et sa configuration valle <literal>ISO-2022-JP/Base64</literal>
+     poru le japonais, <literal>UTF-8/Base64</literal> pour l'UTF-8 et
+     <literal>ISO-8859-1/quoted printable</literal> pour l'anglais.
+    </para>
+    <para>
+     Si <parameter>language</parameter> est fourni et valide,
+     <function>mb_language</function> retourne &true;.
+     Sinon, elle retourne &false;. Lorsque le param&egrave;tre
+     <parameter>language</parameter> est omis, <function>mb_language</function> retourne
+     le nom du langage courant, sous forme de cha&icirc;ne. Si aucun langage n'avait
+     &eacute;t&eacute; configur&eacute;, <function>mb_language</function> retourne &false;.
+    </para>
+    <para>
+     Voir aussi
+     <function>mb_send_mail</function>.
+    </para>
+   </refsect1>
+  </refentry>
+  <refentry id="function.mb-parse-str">
+   <refnamediv>
+    <refname>mb_parse_str</refname>
+    <refpurpose>
+      Analyse les donn&eacute;es HTTP GET/POST/COOKIE et assigne les variables globales
+    </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <funcsynopsis>
+     <funcprototype>
+      <funcdef>string <function>mb_parse_str</function>
+      </funcdef>
+      <paramdef>string
+       <parameter>encoded_string</parameter>
+      </paramdef>
+      <paramdef>array
+       <parameter><optional>result</optional></parameter>
+      </paramdef>
+     </funcprototype>
+    </funcsynopsis>
+    <para>
+     <function>mb_parse_str</function> analyse les donn&eacute;es d'entr&eacute;es
+     HTTP GET/POST/COOKIE et assigne les variables globales. Etant donn&eacute;
+     que PHP ne fournit pas de valeurs brutes de POST/COOKIE, cette
+     fonction n'est utilisable que sur les donn&eacute;es en m&eacute;thode GET.
+     <function>mb_parse_str</function> prend les donn&eacute;es de l'URL appelante,
+     d&eacute;tecte le jeu de caract&egrave;res, converti les donn&eacute;es en jeu de caract&egrave;res
+     interne, et affecte les valeurs au tableau de variables globales.
+    </para>
+    <para>
+     <parameter>encoded_string</parameter>: Les donn&eacute;es encod&eacute;es de l'URL.
+    </para>
+    <para>
+     <parameter>result</parameter>: Un tableau contenant les valeurs d&eacute;cod&eacute;es,
+     et les noms des jeux de caract&egrave;res.
+    </para>
+    <para>
+     <function>mb_parse_str</function> retourne &true; en
+     cas de succ&egrave;s, et &false; sinon.
+    </para>
+    <para>
+     Voir aussi
+     <function>mb_detect_order</function> et
+     <function>mb_internal_encoding</function>.
+    </para>
+   </refsect1>
+  </refentry> <refentry id="function.mb-internal-encoding">
   <refnamediv>
    <refname>mb_internal_encoding</refname>
    <refpurpose>
@@ -234,7 +657,7 @@ mbstring.substitute_character = 12307 ; Sp&eacute;cifie un code de caract&egrave
     <example>
      <title>Exemple avec <function>mb_internal_encoding</function></title>
      <programlisting role="php">
-&lt?php
+&lt?;php
 /* Utilise l'encodage interne UTF-8 */
 mb_internal_encoding("UTF-8");
 /* Affiche l'encodage interne courant */
@@ -367,7 +790,7 @@ echo mb_internal_encoding();
     <example>
      <title>Exemple avec <function>mb_detect_order</function></title>
      <programlisting role="php">
-&lt?php
+&lt;?php
 /* Remplace l'ordre de d&eacute;tection par une liste &eacute;num&eacute;r&eacute;e */
 mb_detect_order("eucjp-win,sjis-win,UTF-8");
 /* Remplace l'ordre de d&eacute;tection par un tableau */
@@ -443,7 +866,7 @@ echo implode(", ", mb_detect_order());
     <example>
      <title>Exemple avec <function>mb_substitute_character</function></title>
      <programlisting role="php">
-&lt?php
+&lt;?php
 /* Configure le caract&egrave;re de substitution avec U+3013 (GETA MARK) */
 mb_substitute_character(0x3013);
 /* Configure le caract&egrave;re de substitution avec un format h&eacute;xad&eacute;cimal */
@@ -491,7 +914,7 @@ echo mb_substitute_character();
     <example>
      <title>Exemple avec <function>mb_output_handler</function></title>
      <programlisting role="php">
-&lt?php
+&lt;?php
 mb_http_output("UTF-8");
 ob_start("mb_output_handler");
 ?&gt;
@@ -534,7 +957,7 @@ ob_start("mb_output_handler");
     <example>
      <title>Exemple avec <function>mb_preferred_mime_string</function></title>
      <programlisting role="php">
-&lt?php
+&lt;?php
 $outputenc = "sjis-win";
 mb_http_output($outputenc);
 ob_start("mb_output_handler");
@@ -821,7 +1244,7 @@ Header("Content-Type: text/html; charset=" . mb_preferred_mime_name($outputenc))
    </para>
   </refsect1>
  </refentry>
- <refentry id="function.mb-strmwidth">
+ <refentry id="function.mb-strimwidth">
   <refnamediv>
    <refname>mb_strimwidth</refname>
    <refpurpose>Tronque une cha&icirc;ne</refpurpose>
@@ -862,7 +1285,7 @@ Header("Content-Type: text/html; charset=" . mb_preferred_mime_name($outputenc))
     <example>
      <title>Exemple avec <function>mb_strimwidth</function></title>
      <programlisting role="php">
-&lt?php
+&lt?;php
 $str = mb_strimwidth($str, 0, 40, "..>");
 ?&gt;
      </programlisting>
@@ -911,7 +1334,7 @@ $str = mb_strimwidth($str, 0, 40, "..>");
     <example>
      <title>Exemple avec <function>mb_convert_encoding</function></title>
      <programlisting role="php">
-&lt?php
+&lt;?php
 /* Convertit l'encodage interne vers SJIS */
 $str = mb_convert_encoding($str, "SJIS");
 /* Convertit EUC-JP en UTF-7 */
@@ -965,7 +1388,7 @@ $str = mb_convert_encoding($str, "EUC-JP", "auto");
     <example>
      <title>Exemple avec <function>mb_detect_encoding</function></title>
      <programlisting role="php">
-&lt?php
+&lt;?php
 /* D&eacute;tecte l'encodage avec les valeurs par d&eacute;faut */
 echo mb_detect_encoding($str);
 /* "auto" signifie "ASCII,JIS,UTF-8,EUC-JP,SJIS" */
@@ -1047,7 +1470,7 @@ echo mb_detect_encoding($str, $ary);
     <example>
      <title>Exemple avec <function>mb_convert_kana</function></title>
      <programlisting role="php">
-&lt?php
+&lt;?php
 /* Convertit tous les "kana" en "zen-kaku" "kata-kana" */
 $str = mb_convert_kana($str, "KVC");
 /* Convertit "han-kaku" "kata-kana" en "zen-kaku" "kata-kana"
@@ -1104,7 +1527,7 @@ $str = mb_convert_kana($str, "KVa");
     <example>
      <title>Exemple avec <function>mb_convert_kana</function></title>
      <programlisting role="php">
-&lt?php
+&lt;?php
 $name = ""; // kanji
 $mbox = "kru";
 $doma = "gtinn.mon";
@@ -1186,7 +1609,7 @@ echo $addr;
     <example>
      <title>Exemple avec <function>mb_convert_variables</function></title>
      <programlisting role="php">
-&lt?php
+&lt;?php
 /* Convertit les variables $post1, $post2 en encodage interne */
 $interenc = mb_internal_encoding();
 $inputenc = mb_convert_variables($interenc, "ASCII,UTF-8,SJIS-win", $post1, $post2);
@@ -1232,7 +1655,7 @@ $inputenc = mb_convert_variables($interenc, "ASCII,UTF-8,SJIS-win", $post1, $pos
     <example>
      <title>Exemple de param&egrave;tre <parameter>convmap</parameter></title>
      <programlisting role="php">
-&lt?php
+&lt;?php
 $convmap = array (
  int start_code1, int end_code1, int offset1, int mask1,
  int start_code2, int end_code2, int offset2, int mask2,
@@ -1249,7 +1672,7 @@ $convmap = array (
     <example>
      <title>Exemple avec <function>mb_encode_numericentity</function></title>
      <programlisting role="php">
-&lt?php
+&lt;?php
 /* Convertit du ISO-8859-1 en entit&eacute;s HTML */
 $convmap = array(0x80, 0xff, 0, 0xff);
 $str = mb_encode_numericentity($str, $convmap, "ISO-8859-1");
