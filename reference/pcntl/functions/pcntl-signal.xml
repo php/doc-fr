@@ -11,7 +11,8 @@
     <methodsynopsis>
      <type>bool</type><methodname>pcntl_signal</methodname>
      <methodparam><type>int</type><parameter>signo</parameter></methodparam>
-     <methodparam><type>mixed</type><parameter>handle</parameter></methodparam>
+     <methodparam><type>callback</type><parameter>handle</parameter></methodparam>
+     <methodparam choice="opt"><type>bool</type><parameter>restart_syscalls</parameter></methodparam>
     </methodsynopsis>
    <para>
     <function>pcntl_signal</function> installe un nouveau gestionnaire
@@ -20,11 +21,71 @@
     &agrave; <parameter>handler</parameter> qui peut &ecirc;tre le nom d'une fonction
     utilisateur, ou bien l'une des deux constantes globales
     <constant>SIG_IGN</constant> et <constant>SIG_DFL</constant>.
+    Le param&egrave;tre optionnel <parameter>restart_syscalls</parameter> 
+    sp&eacute;cifie si l'appel syst&egrave;me de red&eacute;marrage (restarting) doit &ecirc;tre utilis&eacute;
+    lorsque ce signal arrive, et par d&eacute;faut, ce param&egrave;tre vaut &true;.
    </para>
    <para>
-    <function>pcntl_signal</function> retourne &true; en cas de
-    succ&egrave;s et &false; en cas d'&eacute;chec.
+    &return.success;
    </para>
+   <note>
+    <para>
+     La possibilit&eacute; d'utiliser une m&eacute;thode d'objet comme fonction de callback
+     est disponible depuis &php; 4.3.0. Notez que lorsque vous configurez le
+     gestionnaire avec une m&eacute;thode d'objet, le compteur de r&eacute;f&eacute;rence de l'objet
+     est incr&eacute;ment&eacute;, ce qui le rend persistant jusqu'&agrave; ce que vous changiez le
+     gestionaire de signeux pour un autre, ou que le script se termine.
+    </para>
+   </note>
+   <example>
+    <title>Exemple avec <function>pcntl_signal</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// l'usage des tick est n&eacute;cessaire depuis PHP 4.3.0
+declare (ticks = 1);
+
+// gestionnaire de siganux syst&egrave;me
+function sig_handler($signo) {
+
+     switch($signo) {
+         case SIGTERM:
+             // gestion de l'extinction
+             exit;
+             break;
+         case SIGHUP:
+             // gestion du red&eacute;marrage
+             break;
+         case SIGUSR1:
+             print "Re&ccedil;u le signe SIGUSR1...\n";
+             break;
+         default:
+             // gestion des autres signaux
+     }
+
+}
+
+print "Installation du gestionnaire de signaux...\n";
+
+// Installation des gestionnaires de signaux
+pcntl_signal(SIGTERM, "sig_handler");
+pcntl_signal(SIGHUP,  "sig_handler");
+pcntl_signal(SIGUSR1, "sig_handler");
+
+// ou bien utilisez un objet (disponible depuis PHP 4.3.0)
+// pcntl_signal(SIGUSR1, array($obj, "faire_quelquechose");
+
+print "G&eacute;n&eacute;ration d'un signal SIGTERM &agrave; moi m&ecirc;me...\n";
+
+// envoi de SIGUSR1 &agrave; l'identifiant de processus courant
+posix_kill(posix_getpid(), SIGUSR1);
+
+print "Done\n"
+
+?>
+]]>
+    </programlisting>
+   </example>
    <para>
     Voir aussi 
     <function>pcntl_fork</function> et

@@ -4,7 +4,9 @@
   <refentry id="function.preg-replace-callback">
    <refnamediv>
     <refname>preg_replace_callback</refname>
-    <refpurpose>Rechercher/remplacer avec une expression r&eacute;guli&egrave;re et fonction de callback</refpurpose>
+    <refpurpose>
+     Rechercher/remplacer avec une expression r&eacute;guli&egrave;re et fonction de callback
+    </refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
@@ -23,8 +25,80 @@
      qui sera appel&eacute;e, avec les &eacute;l&eacute;ments trouv&eacute;s en arguments.
      Cette fonction retourne alors la cha&icirc;ne de remplacement.
     </para>
+  <example>
+   <title>Exemple avec <function>preg_replace_callback</function></title>
+   <programlisting role='php'>
+<![CDATA[
+<?php
+  // Ce texte &eacute;tait vrai en 2002
+  // nous voulons le mettre a jour pour 2003
+  $text = "Le premier avril est le 01/04/2002\n";  
+  $text.= "Le dernier noel &eacute;tait le 12/24/2001\n";  
+  
+  // Fonction de callback
+  function next_year($matches) {
+    // comme d'habitude : $matches[0] repr&eacute;sente la valeur totale
+    // $matches[1] repr&eacute;sente la premi&egrave;re parenth&egrave;se capturante
+    return $matches[1].($matches[2]+1);
+  }
+
+  echo preg_replace_callback(
+              "|(\d{2}/\d{2}/)(\d{4})|", 
+              "next_year",
+              $text);
+
+  // retourne ceci : 
+  // Le premier avril est le 01/04/2003
+  // Le dernier noel &eacute;tait le 12/24/2002
+?>
+]]>
+   </programlisting>
+  </example>
+  <para>
+   Vous aurez souvent besoin de la fonction <parameter>callback</parameter> 
+   avec <function>preg_replace_callback</function> &agrave; un seul endroit.
+   Dans ce cas, vous pouvez simplement utiliser la fonction 
+   <function>create_function</function> pour d&eacute;clarer une fonction anonyme
+   comme fonction de callback pour <function>preg_replace_callback</function>. 
+   En faisant cela, vous concentrez toutes les routines li&eacute;es &agrave;
+   votre remplacement &agrave; un seul endroit, et nous ne polluez par
+   votre espace de noms de fonctions avec des fonctions &agrave; usage unique.
+  </para>
+  <example>
+   <title>
+     Exemples avec <function>preg_replace_callback</function> et 
+     <function>create_function</function>
+    </title>
+   <programlisting role='php'>
+<![CDATA[
+<?php
+  // Un filtre de ligne de commande Unix pour convertir les lettres
+  // en majuscule de d&eacute;but des paragraphe en minuscules
+
+	$fp = fopen("php://stdin", "r") or die("Impossible de lire la ligne de commande");
+	while (!feof($fp)) {
+		$line = fgets($fp);
+		$line = preg_replace_callback(
+              '|<p>\s*\w|', 
+              create_function(
+                // Les guillemets simples sont tr&egrave;s importants ici
+                // ou bien il faut prot&eacute;ger les caract&egrave;res $ avec \$
+                '$matches',
+                'return strtolower($matches[0]);'
+              ),
+              $line
+            );
+		echo $line;
+	}
+	fclose($fp);
+?>
+]]>
+   </programlisting>
+  </example>
     <para>
-     Voir aussi <function>preg_replace</function>.
+     Voir aussi
+     <function>preg_replace</function> et
+     <function>create_function</function>.
     </para>
    </refsect1>
   </refentry>

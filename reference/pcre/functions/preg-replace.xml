@@ -5,7 +5,7 @@
    <refnamediv>
     <refname>preg_replace</refname>
     <refpurpose>
-      Rechercher et remplacer par expression r&eacute;guli&egrave;re standard.
+      Rechercher et remplacer par expression r&eacute;guli&egrave;re standard
     </refpurpose>
    </refnamediv>
    <refsect1>
@@ -36,6 +36,26 @@
      &agrave; 1) pour d&eacute;terminer le num&eacute;ro de parenth&egrave;se
      capturante.
     </para>
+     <example>
+      <title>Utilisation des r&eacute;f&eacute;rences arri&egrave;res avec des litt&eacute;raux num&eacute;riques</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+$string = "Avril 05, 2003";
+$pattern = "/(\w+) (\d+), (\d+)/i";
+$replacement = "\${1}1,\$3";
+print preg_replace($pattern, $replacement, $string);
+
+/* Output
+   ======
+
+Avril1,2003
+
+ */
+?>
+]]>
+      </programlisting>
+     </example>
     <para>
       Si la recherche n'aboutit &agrave; aucun r&eacute;sultat,
       <parameter>subject</parameter> sera inchang&eacute;.
@@ -43,6 +63,66 @@
     <para>
       Tous les param&egrave;tres de <function>preg_replace</function>
       peuvent &ecirc;tre des tableaux.
+    </para>
+    <para>
+     <note>
+      <para>
+       Lorsque vous utilisez des tableaux avec les param&egrave;tres
+       <parameter>pattern</parameter> et
+       <parameter>replacement</parameter>, les cl&eacute;s sont trait&eacute;es
+       dans l'ordre dans lequel elles apparaissent dans le tableau.
+       Ce <emphasis>n'est pas forc&eacute;ment</emphasis> la m&ecirc;me chose que
+       l'ordre des index num&eacute;rique. Si vous utilisez des index pour
+       identifier quel <parameter>pattern</parameter> doit &ecirc;tre
+       replac&eacute;e par quel <parameter>replacement</parameter>, il est
+       recommand&eacute; de faire un tri <function>ksort</function> sur chaque
+       tableau avant de faire appel &agrave; 
+       <function>preg_replace</function>.
+      </para>
+     </note>
+     <example>
+      <title>Utilisation de tableaux index&eacute; avec <function>preg_replace</function></title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+$string = "The quick brown fox jumped over the lazy dog.";
+
+$patterns[0] = "/quick/";
+$patterns[1] = "/brown/";
+$patterns[2] = "/fox/";
+
+$replacements[2] = "bear";
+$replacements[1] = "black";
+$replacements[0] = "slow";
+
+print preg_replace($patterns, $replacements, $string);
+
+/* Output
+   ======
+
+The bear black slow jumped over the lazy dog.
+
+*/
+
+/* By ksorting patterns and replacements,
+   we should get what we wanted. */
+
+ksort($patterns);
+ksort($replacements);
+
+print preg_replace($patterns, $replacements, $string);
+
+/* Output
+   ======
+
+The slow black bear jumped over the lazy dog.
+
+*/
+
+?>
+]]>
+      </programlisting>
+     </example>
     </para>
     <para>
       Si <parameter>subject</parameter> est un tableau, alors l'op&eacute;ration
@@ -79,26 +159,32 @@
     </para>
     <para>
      <example>
-      <title>Remplacement de plusieurs valeurs</title>
+      <title>Remplacement de plusieurs valeurs simultan&eacute;ment</title>
       <programlisting role="php">
-&lt;?php
-$patterns = array ("/(19|20)(&#92;d{2})-(&#92;d{1,2})-(&#92;d{1,2})/",
-                   "/^&#92;s*{(&#92;w+)}&#92;s*=/");
-$replace = array ("&#92;&#92;3/&#92;&#92;4/&#92;&#92;1&#92;&#92;2", "$&#92;&#92;1 =");
+<![CDATA[
+<?php
+$patterns = array ("/(19|20)(\d{2})-(\d{1,2})-(\d{1,2})/",
+                   "/^\s*{(\w+)}\s*=/");
+$replace = array ("\\3/\\4/\\1\\2", "$\\1 =");
 print preg_replace ($patterns, $replace, "{startDate} = 1999-5-27");
-?&gt;
+?>
+]]>
       </programlisting>
      </example>
     Cet exemple va afficher :
-     <computeroutput>
-      $startDate = 5/27/1999
-     </computeroutput>
+     <programlisting>
+<![CDATA[
+$startDate = 5/27/1999
+]]>
+     </programlisting>
      <example>
       <title>Utilisation de l'option /e </title>
       <programlisting role="php">
-&lt;?php
-  preg_replace("/(&lt;&#92;/?)(&#92;w+)([^&gt;]*&gt;/e", "'&#92;&#92;1'.strtoupper('&#92;&#92;2').'&#92;&#92;3'", $html_body);
-?&gt;
+<![CDATA[
+<?php
+  preg_replace("/(<\/?)(\w+)([^>]*>/e", "'\\1'.strtoupper('\\2').'\\3'", $html_body);
+?>
+]]>
       </programlisting>
       <para>
        Cela va mettre en majuscule toutes les balises HTML du texte.
@@ -107,39 +193,41 @@ print preg_replace ($patterns, $replace, "{startDate} = 1999-5-27");
      <example>
       <title>Conversion HTML en texte</title>
       <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 // $document contient un document HTML
 // Ce script va effacer les balises HTML, les javascript
 // et les espaces. Il remplace aussi quelques entit&eacute;s HTML
 // courante en leur &eacute;quivalent texte.
-$search = array ("'&lt;script[?&gt;]*?&gt;.*?&lt;/script&gt;'si",  // Supprime le javascript
-                 "'&lt;[&#92;/&#92;!]*?[^&lt;?&gt;]*?&gt;'si",  // Supprime les balises HTML
-                 "'([&#92;r&#92;n])[&#92;s]+'",  // Supprime les espaces
-                 "'&amp;(quot|#34);'i",  // Supprime les entites HTML
-                 "'&amp;(amp|#38);'i",
-                 "'&amp;(lt|#60);'i",
-                 "'&amp;(gt|#62);'i",
-                 "'&amp;(nbsp|#160);'i",
-                 "'&amp;(iexcl|#161);'i",
-                 "'&amp;(cent|#162);'i",
-                 "'&amp;(pound|#163);'i",
-                 "'&amp;(copy|#169);'i",
-                 "'&amp;#(&#92;d+);'e");  // Evaluation comme PHP
+$search = array ("'<script[?>]*?>.*?</script>'si",  // Supprime le javascript
+                 "'<[\/\!]*?[^<?>]*?>'si",  // Supprime les balises HTML
+                 "'([\r\n])[\s]+'",  // Supprime les espaces
+                 "'&(quot|#34);'i",  // Supprime les entites HTML
+                 "'&(amp|#38);'i",
+                 "'&(lt|#60);'i",
+                 "'&(gt|#62);'i",
+                 "'&(nbsp|#160);'i",
+                 "'&(iexcl|#161);'i",
+                 "'&(cent|#162);'i",
+                 "'&(pound|#163);'i",
+                 "'&(copy|#169);'i",
+                 "'&#(\d+);'e");  // Evaluation comme PHP
 $replace = array ("",
                   "",
-                  "&#92;&#92;1",
-                  "&#92;"",
-                  "&amp;",
-                  "&lt;",
-                  ?&gt;",
+                  "\\1",
+                  "\"",
+                  "&",
+                  "<",
+                  ?>",
                   " ",
                   chr(161),
                   chr(162),
                   chr(163),
                   chr(169),
-                  "chr(&#92;&#92;1)");
+                  "chr(\\1)");
 $text = preg_replace ($search, $replace, $document);
-?&gt;
+?>
+]]>
       </programlisting>
      </example>
     </para>
