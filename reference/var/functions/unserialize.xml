@@ -13,6 +13,7 @@
      <methodsynopsis>
       <type>mixed</type><methodname>unserialize</methodname>
       <methodparam><type>string</type><parameter>str</parameter></methodparam>
+      <methodparam choice="opt"><type>string</type><parameter>callback</parameter></methodparam>
      </methodsynopsis>
     <simpara>
      <function>unserialize</function> prend une variable lin&eacute;aris&eacute;e
@@ -22,18 +23,74 @@
      <type>string</type>, <type>array</type> ou <type>object</type>.
      Les objets lin&eacute;aris&eacute;s perdent leurs m&eacute;thodes.
     </simpara>
+    <note>
+     <title>Directive unserialize_callback_func</title>
+     <para>
+      Il est possible de d&eacute;finir une fonction de callback qui sera
+      appel&eacute;e si une classe und&eacute;finie est utilis&eacute;e lors 
+      de la d&eacute;lin&eacute;arisation
+      (ce qui &eacute;vitera de voir l'objet recevoir le type 
+      d'objet incomplet <type>object</type> "__PHP_Incomplete_Class").
+      Utilisez dans votre fichier &php.ini; ou le fichier &htaccess;, 
+      ou encore avec la fonction <function>ini_set</function>, pour d&eacute;finir
+      une fonction 'unserialize_callback_func'. Chaque fois qu'une classe non
+      d&eacute;finie sera instanti&eacute;e, cette fonction sera appel&eacute;e. 
+      Pour d&eacute;sactiver cette fonctionnalit&eacute;, laissez la simplement 
+      vide. Notez aussi que cette directive n'est disponible que depuis PHP 4.2.0. 
+     </para>
+    </note>
+    <note>
+     <para>
+     Le param&egrave;tre <parameter>callback</parameter> est disponible depuis PHP 4.2.0.
+     </para>
+    </note>
+    <para>
+     Si la variable d&eacute;lin&eacute;aris&eacute;e est un objet, apr&egrave;s avoir r&eacute;ussi &agrave; le
+     reconstruire, PHP appelera automatiquement la m&eacute;thode
+     __wakeup() si elle existe.
+     <example>
+      <title>Exemple avec la directive unserialize_callback_func</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+  $serialized_object='O:1:"a":1:{s:5:"value";s:3:"100";}';
+
+  // directive unserialize_callback_func disponible depuis PHP 4.2.0
+  ini_set('unserialize_callback_func','moncallback'); 
+  // configure votre fonction de callback :  moncallbackfunction
+
+  function moncallback($classname) {
+    // Incluez simplement in fichier contenant votre d&eacute;finition de classe
+    // vous saurez quelle classe gr&acirc;ce &agrave; $classname
+  }
+?>
+]]>
+      </programlisting>
+     </example>
+    </para>
+    <note>
+     <para>
+      En PHP 3, les m&eacute;thodes ne sont pas pr&eacute;serv&eacute;es lors de la
+      d&eacute;lin&eacute;arisation d'un bojet. PHP 4 l&egrave;ve cette limitation, et 
+      stocke d&eacute;sormais les m&eacute;thodes et les membres. Voyez le chapitre sur
+      la <link linkend="language.oop.serialization">Lin&eacute;arisation des objets</link>
+      du chapitre <link linkend="language.oop">Classes et
+      Objets</link>.
+     </para>
+    </note>
     <para>
      <example>
       <title>Exemple avec <function>unserialize</function></title>
       <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 // Ici, on utilise <function>unserialize</function> pour charger les donn&eacute;es de sessions
 // depuis la base de donn&eacute;es, dans $session_data. Cet exemple compl&egrave;te
 // celui fourni avec <function>serialize</function>.
 $conn = odbc_connect ("webdb", "php", "chicken");
 $stmt = odbc_prepare ($conn, "SELECT data FROM sessions WHERE id = ?");
 $sqldata = array ($PHP_AUTH_USER);
-if (!odbc_execute ($stmt, &amp;$sqldata) || !odbc_fetch_into ($stmt, &amp;$tmp)) {
+if (!odbc_execute ($stmt, &$sqldata) || !odbc_fetch_into ($stmt, &$tmp)) {
     // si la pr&eacute;paration ou la lecture &eacute;choue, on cr&eacute;e un tableau vide
     $session_data = array();
 } else {
@@ -44,10 +101,15 @@ if (!odbc_execute ($stmt, &amp;$sqldata) || !odbc_fetch_into ($stmt, &amp;$tmp))
     $session_data = array();
     }
 }
-?&gt;
+?>
+]]>
       </programlisting>
      </example>
     </para>
+   <para>
+    Voir aussi
+    <function>serialize</function>.
+   </para>
    </refsect1>
   </refentry>
 
