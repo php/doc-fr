@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.6 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
-<!-- splitted from ./fr/functions/var.xml, last change in rev 1.2 -->
-<!-- last change to 'serialize' in en/ tree in rev 1.28 -->
+<!-- $Revision: 1.7 $ -->
+<!-- EN-Revision: 1.8 Maintainer: yannick Status: ready -->
     <refentry id="function.serialize">
    <refnamediv>
     <refname>serialize</refname>
@@ -23,18 +20,32 @@
      stockage.
     </simpara>
     <simpara>
-     C'est une technique pratique pour stocker ou passer des valeurs de PHP
+     C'est une technique pratique pour stocker ou passer des valeurs de &php;
      entre scripts, sans perdre ni leur structure, ni leur type.
     </simpara>
     <simpara>
      Pour récupérer une variable linéarisée, et retrouver une
      variable, utilisez <function>unserialize</function>.
-     <function>serialize</function> acceptent les types
-      <type>integer</type>, <type>double</type>,
-     <type>string</type>, <type>array</type> (multidimensionnels) et
-     <type>object</type> (les propriétés des objets seront 
-     linéarisées, mais pas les méthodes).
+     <function>serialize</function> acceptent tous les types sauf les ressources.
+     Vous pouvez linéariser un tableau qui contient une référence sur lui-même.
+     Les références dans ce tableau/objet seront également stockées.     
     </simpara>
+    <simpara>
+     Lors de la linéarisation d'un objet, &php; tentera d'appeler la fonction membre
+     <function>__sleep</function> avant de linéariser. Celà permet à l'objet
+     de faire un dernier nettoyage, etc. avant d'être linéarisé.
+     De même, lorsque l'objet est restoré en utilisant <function>unserialize</function>,
+     la fonction membre <function>__wakeup</function> est appelée.
+   </simpara>
+   <note>
+    <para>
+     En &php; 3, les propriétés de l'objet seront linéarisées, mais les méthodes seront perdues.
+     &php; 4 enlève cette limitation et restore les propriétés et les méthodes.
+     Merci de voir la section sur la <link
+     linkend="language.oop.serialization">linéarisations d'objets</link> des 
+     <link linkend="language.oop">classes et objets</link> pour plus d'informations.
+    </para>
+   </note>
     <para>
      <example>
       <title>Exemple avec <function>serialize</function></title>
@@ -44,11 +55,12 @@
 // $session_data contient un tableau multi-dimensionnel , avec les
 // informations de session de l'utilisateur courant. On utilise serialize()
 // pour les stocker dans une base de données
-$conn = odbc_connect ("webdb", "php", "chicken");
-$stmt = odbc_prepare ($conn,
+
+$conn = odbc_connect("webdb", "php", "chicken");
+$stmt = odbc_prepare($conn,
       "UPDATE sessions SET data = ? WHERE id = ?");
-$sqldata = array (serialize($session_data), $PHP_AUTH_USER);
-if (!odbc_execute ($stmt, &$sqldata)) {
+$sqldata = array(serialize($session_data), $PHP_AUTH_USER);
+if (!odbc_execute($stmt, &$sqldata)) {
     $stmt = odbc_prepare($conn,
      "INSERT INTO sessions (id, data) VALUES(?, ?)");
     if (!odbc_execute($stmt, &$sqldata)) {
@@ -60,6 +72,10 @@ if (!odbc_execute ($stmt, &$sqldata)) {
       </programlisting>
      </example>
     </para>
+    <para>
+    Voir aussi 
+    <function>unserialize</function>.
+   </para>
    </refsect1>
   </refentry>
 
