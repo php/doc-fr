@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.4 $ -->
+<!-- $Revision: 1.5 $ -->
  <reference id="ref.stream">
   <title>Fl&ocirc;ts</title>
   <titleabbrev>Fl&ocirc;ts</titleabbrev>
@@ -32,6 +32,10 @@
      des gestionnaires actuellement enregistr&eacute;s, utilisez la fonction
      <function>stream_get_wrappers</function>.
     </simpara>
+   </section>
+
+   <section id="stream.filters">
+    <title>Filtres de fl&ocirc;ts</title>
     <simpara>
      Un <literal>filtre</literal> est une fonction finale qui effectue des op&eacute;rations
      sur les donn&eacute;es qui sont lues ou &eacute;crites dans un fl&ocirc;t. Un nombre arbitraire de
@@ -68,10 +72,52 @@
      </itemizedlist>
     </para>
    </section>
-  
-   <section id="stream.requirements">
-    &reftitle.required;
-    &no.requirement;
+   
+   <section id="stream.contexts">
+    <title>Contextes de fl&ocirc;ts</title>
+    <simpara>
+     Un <literal>contexte</literal> est un jeu de param&egrave;tres et d'options
+     sp&eacute;cifiques &agrave; un gestionnaire qui modifie ou am&eacute;liore le comportement
+     d'un fl&ocirc;t. Les contextes sont cr&eacute;&eacute;s en utilisant la fonction
+     <function>stream_context_create</function> et peuvent &ecirc;tre donn&eacute; aux
+     fonctions de cr&eacute;ations de fl&ocirc;ts sur le syst&egrave;me de fichier 
+     (i.e. <function>fopen</function>, <function>file</function>, 
+     <function>file_get_contents</function>, etc...).
+    </simpara>
+    <simpara>
+     Les options peuvent &ecirc;tre sp&eacute;cifi&eacute;es en appelant 
+     <function>stream_context_create</function>, ou plus tard, avec
+     <function>stream_context_set_option</function>.
+	 Une liste des options sp&eacute;cifiques &agrave; des gestionnaires est disponible
+	 dans la liste des gestionnaires int&eacute;gr&eacute;s (voyez <xref linkend="wrappers"/>).
+    </simpara>
+    <simpara>
+     De plus, les param&egrave;tres peuvent &ecirc;tre envoy&eacute;s &agrave; un contexte en utilisant
+     la fonction <function>stream_context_set_params</function>. Actuellement, le
+     seul param&egrave;tre de contexte support&eacute; par &php; est <literal>notification</literal>. 
+     La valeur de ce param&egrave;tre doit &ecirc;tre le nom d'une fonction qui sera appel&eacute;e
+     lorsqu'un &eacute;v&eacute;nement survient pour un fl&ocirc;t. La fonction d'alerte
+     est appel&eacute; durant la reception de l'&eacute;v&eacute;nement, et doit accepter 6 param&egrave;tres : 
+     </simpara>
+    <methodsynopsis>
+     <type>void</type><methodname>my_notifier</methodname>
+     <methodparam><type>int</type><parameter>notification_code</parameter></methodparam>
+     <methodparam><type>int</type><parameter>severity</parameter></methodparam>
+     <methodparam><type>string</type><parameter>message</parameter></methodparam>
+     <methodparam><type>int</type><parameter>message_code</parameter></methodparam>
+     <methodparam><type>int</type><parameter>bytes_transferred</parameter></methodparam>
+     <methodparam><type>int</type><parameter>bytes_max</parameter></methodparam>
+    </methodsynopsis>
+    <simpara>
+     <parameter>notification_code</parameter> et <parameter>severity</parameter>
+     sont des valeurs num&eacute;riques qui correspondent aux constantes <constant>STREAM_NOTIFY_*</constant>
+     list&eacute;es ci-dessous. Si un message descriptif est disponible dans un fl&ocirc;t, les
+     param&egrave;tre <parameter>message</parameter> et <parameter>message_code</parameter> 
+     en seront &eacute;quip&eacute;. La signification de ces valeurs est d&eacute;pendante du gestionnaire.
+
+     <parameter>bytes_transferred</parameter> et <parameter>bytes_max</parameter> seront
+     fournies lorsque possible.
+    </simpara>
    </section>
    
    <section id="stream.installation">
@@ -82,13 +128,8 @@
     </para>
    </section>
 
-   <section id="stream.configuration">
-    &reftitle.runtime;
-    &no.config;
-   </section>
-
    <section id="stream.resources">
-    <title>Stream Classes</title>
+    <title>Classes Stream</title>
     <simpara>
      Des gestionnaires personnalis&eacute;s peuvent &ecirc;tre enregistr&eacute;s via la fonction 
      <function>stream_register_wrapper</function>, en utilisant la d&eacute;finition de
@@ -102,37 +143,7 @@
     </simpara>
    </section>
 
-   <section id="stream.constants">
-    &reftitle.constants;
-    <para>
-     <informaltable>
-      <tgroup cols="2">
-       <thead>
-        <row>
-         <entry>Constante</entry>
-         <entry>Description</entry>
-        </row>
-       </thead>
-       <tbody>
-        <row>
-         <entry><constant>STREAM_USE_PATH</constant></entry>
-         <entry><literal>Flag</literal> indique si le fl&ocirc;t fait partie de
-         l'include_path.
-         </entry>
-        </row>
-        <row>
-         <entry><constant>STREAM_REPORT_ERRORS</constant></entry>
-         <entry><literal>Flag</literal> indiquant si le gestionnaire est responsable
-         de la lev&eacute;e des erreurs via <function>trigger_error</function> durant les
-         op&eacute;rations de fl&ocirc;ts. Si cette option n'est pas activ&eacute;e, vous ne 
-         pourrez pas g&eacute;n&eacute;rer d'erreurs.
-         </entry>
-        </row>
-       </tbody>
-      </tgroup>
-     </informaltable>
-    </para>
-   </section>
+   &reference.stream.constants;
 
    <section id="stream.errors">
     <title>Erreurs de fl&ocirc;ts</title>
@@ -226,7 +237,7 @@ fclose($sock);
       <programlisting role="php">
 <![CDATA[
 <?php
-/* Creation d'un fichier compressee; contenant une chaine arbitraire
+/* Cr&eacute;ation d'un fichier compress&eacute; contenant une cha&icirc;ne arbitraire
  * Le fichier peut etre lu en utilisant le gestionnaire compress.zlib
  * ou simplement decompresse; en ligne de commande avec 'gzip -d foo-bar.txt.gz'
  */

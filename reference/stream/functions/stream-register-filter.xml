@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
+<!-- $Revision: 1.2 $ -->
   <refentry id="function.stream-register-filter">
    <refnamediv>
     <refname>stream_register_filter</refname>
@@ -8,7 +8,7 @@
    <refsect1>
     <title>Description</title>
     <methodsynopsis>
-     <type>boolean</type><methodname>stream_register_filter</methodname>
+     <type>bool</type><methodname>stream_register_filter</methodname>
      <methodparam><type>string</type><parameter>filtername</parameter></methodparam>
      <methodparam><type>string</type><parameter>classname</parameter></methodparam>
     </methodsynopsis>
@@ -34,76 +34,38 @@
     </para>
 
     <methodsynopsis>
-     <type>int</type><methodname>write</methodname>
-     <methodparam><type>string</type><parameter>data</parameter></methodparam>
+     <type>int</type><methodname>filter</methodname>
+     <methodparam><type>resource</type><parameter>in</parameter></methodparam>
+     <methodparam><type>resource</type><parameter>out</parameter></methodparam>
+     <methodparam><type>int</type><parameter>&amp;consumed</parameter></methodparam>
+     <methodparam><type>boolean</type><parameter>closing</parameter></methodparam>
     </methodsynopsis>
     <para>
-     Cette m&eacute;thode est appel&eacute;e d&egrave;s que les donn&eacute;es sont &eacute;crite dans le fl&ocirc;t,
-     comme avec la fonction <function>fwrite</function>. Apr&egrave;s la modification
-     des donn&eacute;es <parameter>data</parameter>, cette m&eacute;thode doit utiliser la 
-     ligne suivante <literal>return parent::write($data);</literal>
-     pour que le prochain filtre puisse s'ex&eacute;cuter. Lorsqu'il ne reste plus
-     de filtres, le fl&ocirc;t va &eacute;crire les donn&eacute;es <parameter>data</parameter>
-     dans leur forme finale.
-     <note>
-      <para>
-       Si votre filtre modifie la taille de la cha&icirc;ne <parameter>data</parameter>, 
-       par exemple en supprimant le premier caract&egrave;re, il faut, avant d'utiliser
-       la fonction <literal>parent::write($data);</literal>, s'assurer d'inclure
-       le caract&egrave;re supprim&eacute; dans la valeur de retour.
-      </para>
-     </note>
-     <informalexample>
-      <programlisting role="php">
-<![CDATA[
-class myfilter extends php_user_filter {
-  function write($data) {
-    $data = substr($data,1);
-    $written_by_parent = parent::write($data);
-    return ($written_by_parent + 1);
-  }
-} 
-]]>
-      </programlisting>
-     </informalexample>
-    </para>
-
-    <methodsynopsis>
-     <type>string</type><methodname>read</methodname>
-     <methodparam><type>int</type><parameter>maxlength</parameter></methodparam>
-    </methodsynopsis>
-    <para>
-     Cette m&eacute;thode est appel&eacute;e d&egrave;s que des donn&eacute;es sont lues dans le fl&ocirc;t
-     (comme avec la fonction <function>fread</function>). Un filtre doit commencer
-     par utiliser la ligne <literal>parent::read($maxlength);</literal> pour
-     lire les donn&eacute;es issue du filtre pr&eacute;c&eacute;dent. Ultimement, ce sera le
-     fl&ocirc;t qui lira les donn&eacute;es. Votre filtre peut alors modifier cette
-     valeur et retourner la valeur finale. Votre filtre ne doit jamais
-     retourner plus de <parameter>maxlength</parameter> octets. 
-     Comme <literal>parent::read($maxlength);</literal> ne retournera
-     aussi pas plus de <parameter>maxlength</parameter>, ce ne sera pas
-     un probl&egrave;me en r&egrave;gle g&eacute;n&eacute;ral. Cependant, si votre filtre accroit la
-     taille des donn&eacute;es retourn&eacute;es, il faut alors appeler cette ligne avec
-     <literal>parent::read($maxlength-$x);</literal> o&ugrave; <parameter>x</parameter> 
-     est l'accroissement maximal de vos donn&eacute;es. Alternativement, vous pouvez
-     b&acirc;tir un buffer de lecture dans votre classe.
-    </para>
-
-    <methodsynopsis>
-     <type>int</type><methodname>flush</methodname>
-     <methodparam><type>bool</type><parameter>closing</parameter></methodparam>
-    </methodsynopsis>
-    <para>
-     Cette m&eacute;thode est appel&eacute;e en r&eacute;ponse &agrave; une requ&ecirc;te de vidage des
-     buffers du fl&ocirc;t (comme avec la fonction <function>fflush</function> ou
-     <function>fclose</function>).  Le param&egrave;tre <parameter>closing</parameter>
-     vous indique si le fl&ocirc;t est, en r&eacute;alit&eacute;, dans un processus de fermeture.
-     L'action par d&eacute;faut est d'appeler simplement 
-     <literal>return parent::flush($closing);</literal>, mais votre filtre
-     peut souhaiter ex&eacute;cuter des &eacute;critures suppl&eacute;mentaires, ou bien
-     nettoyer des ressources avant de r&eacute;aliser le vidage en r&egrave;gle.
-    </para>
-
+     Cette m&eacute;thode est appel&eacute; &agrave; chaque fois que des donn&eacute;es sont lues ou &eacute;crites
+     dans le fl&ocirc;t attach&eacute; (avec des fonctions comme <function>fread</function> ou
+     <function>fwrite</function>).  Le param&egrave;tre <parameter>in</parameter> est une ressource 
+     qui pointe sur une <literal>bucket brigade</literal> qui contient un ou plusieurs
+     objet <literal>bucket</literal> contenant les donn&eacute;es &agrave; filtrer.
+     <parameter>out</parameter> est une autre ressource 
+     qui pointe sur une <literal>bucket brigade</literal>
+     dans laquelle les donn&eacute;e seront plac&eacute;es.
+     <parameter>consumed</parameter>, qui doit <emphasis>toujours</emphasis>
+     &ecirc;tre d&eacute;clar&eacute; par r&eacute;f&eacute;rence, doit &ecirc;tre incr&eacute;ment&eacute; de la taille de donn&eacute;es que
+     votre filtre lit et modifie. Dans la plupart des cas, cela signifie que vous
+     devrez incr&eacute;menter <parameter>consumed</parameter> avec <literal>$bucket->datalen</literal>
+     pour chaque <literal>$bucket</literal>.
+     Si le fl&ocirc;t est en cours de fermeture (et par cons&eacute;quent, cela sera le dernier
+     passage dans la cha&icirc;ne de filtres), le param&egrave;tre <parameter>closing</parameter> 
+     vaudra &true; La m&eacute;thode <methodname>filter</methodname> doit retourner l'une 
+     des trois valeurs suivantes : <constant>PSFS_PASS_ON</constant> indique la r&eacute;ussite,
+     et les donn&eacute;es sont dans le param&egrave;tre <parameter>out</parameter>, une <literal>bucket brigade</literal>.
+     <constant>PSFS_FEED_ME</constant> indique que le filtre n'a aucune donn&eacute;es &agrave; retourner, et
+     requiert d'autres donn&eacute;es du fl&ocirc;t.
+     <constant>PSFS_ERR_FATAL</constant> indique que le fl&ocirc;t a rencontr&eacute; une erreur
+     fatale, et ne peut continuer. Si aucune valeur n'est retourn&eacute;e par cette m&eacute;thode,
+     <constant>PSFS_ERR_FATAL</constant> est utilis&eacute;.
+   </para>
+    
     <methodsynopsis>
      <type>void</type><methodname>oncreate</methodname>
      <void/>

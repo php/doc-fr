@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
+<!-- $Revision: 1.2 $ -->
   <refentry id="function.stream-filter-append">
    <refnamediv>
     <refname>stream_filter_append</refname>
@@ -11,6 +11,7 @@
       <type>bool</type><methodname>stream_filter_append</methodname>
       <methodparam><type>resource</type><parameter>stream</parameter></methodparam>
       <methodparam><type>string</type><parameter>filtername</parameter></methodparam>
+      <methodparam choice="opt"><type>int</type><parameter>read_write</parameter></methodparam>
       <methodparam choice="opt"><type>string</type><parameter>params</parameter></methodparam>
      </methodsynopsis>
     <para>
@@ -23,10 +24,67 @@
      Pour ajouter un filtre au d&eacute;but de la liste, utilisez
      la fonction <function>stream_filter_prepend</function>.
     </para>
-    <note>
+    <para>
+     Par d&eacute;faut, <function>stream_filter_prepend</function> va ajouter
+     le filtre &agrave; la liste de filtre de lecture si le fichier a &eacute;t&eacute; ouvert
+     en mode lecture (<literal>r</literal> et/ou <literal>+</literal>). Le
+     filtre sera aussi attach&eacute; &agrave; la liste des filtres de lecture
+     si le fichier a &eacute;t&eacute; ouvert en mode lecture (<literal>w</literal>, 
+     <literal>a</literal> et/ou <literal>+</literal>).
+     <constant>STREAM_FILTER_READ</constant>,
+     <constant>STREAM_FILTER_WRITE</constant>, et/ou
+     <constant>STREAM_FILTER_ALL</constant> peuvent aussi &ecirc;tre utilis&eacute;es
+     dans le param&egrave;tre <parameter>read_write</parameter> pour contr&ocirc;ler
+     ce comportement. Voyez la fonction
+     <function>stream_filter_append</function> pour un exemple de l'utilisation
+     de ce param&egrave;tre.
+    </para>
+    <para>
+     <example>
+      <title>Contr&ocirc;ler l'application des filtres</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+/* Open a test file for reading and writting */
+$fp = fopen("test.txt","rw");
+
+/* Apply the ROT13 filter to the
+ * write filter chain, but not the
+ * read filter chain */
+stream_filter_append($fp, "string.rot13", STREAM_FILTER_WRITE);
+
+/* Write a simple string to the file
+ * it will be ROT13 transformed on the
+ * way out */
+fwrite($fp, "This is a test\n");
+
+/* Back up to the beginning of the file */
+rewind($fp);
+
+/* Read the contents of the file back out.
+ * Had the filter been applied to the
+ * read filter chain as well, we would see
+ * the text ROT13ed back to its original state */
+fpassthru($fp);
+
+fclose($fp);
+
+/* Expected Output
+   ---------------
+
+Guvf vf n grfg
+
+ */
+?>
+]]>
+      </programlisting>
+     </example>
+    </para>
+     <note>
+     <title>Quand utiliser des filtres personnalis&eacute;s</title>
      <simpara>
       <function>stream_register_filter</function> doit &ecirc;tre appel&eacute; avant
-      <function>stream_filter_append</function> pour enregistrer le filtre
+      <function>stream_filter_prepend</function> pour enregistrer le filtre
       sous le nom de <parameter>filtername</parameter>.
      </simpara>
     </note>
