@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.6 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
-<!-- splitted from ./fr/functions/ming.xml, last change in rev 1.7 -->
-<!-- last change to 'swfaction' in en/ tree in rev 1.24 -->
+<!-- $Revision: 1.7 $ -->
+<!-- EN-Revision: 1.6 Maintainer: yannick Status: ready -->
   <refentry id="function.swfaction">
    <refnamediv>
     <refname>swfaction</refname>
@@ -30,7 +27,7 @@
      Chaque fonction doit savoir exactement où elle retourne.
     </para>
     <para>
-     Alors, que reste-t-il? Le compilateur reconnaît les mots suivants :
+     Alors, que reste-t-il ? Le compilateur reconnaît les mots suivants :
      <itemizedlist>
       <listitem>
        <simpara>
@@ -417,35 +414,42 @@
       <programlisting role="php">
 <![CDATA[
 <?php
-$s = new SWFShape();
-$f = $s->addFill(0xff, 0, 0);
-$s->setRightFill($f);
-$s->movePenTo(-500, -500);
-$s->drawLineTo(500, -500);
-$s->drawLineTo(500, 500);
-$s->drawLineTo(-500, 500);
-$s->drawLineTo(-500, -500);
-$p = new SWFSprite();
-$i = $p->add($s);
-$i->setDepth(1);
-$p->nextFrame();
-for($n=0; $n<5; ++$n) {
-  $i->rotate(-15);
+  $s = new SWFShape();
+  $f = $s->addFill(0xff, 0, 0);
+  $s->setRightFill($f);
+
+  $s->movePenTo(-500, -500);
+  $s->drawLineTo(500, -500);
+  $s->drawLineTo(500, 500);
+  $s->drawLineTo(-500, 500);
+  $s->drawLineTo(-500, -500);
+
+  $p = new SWFSprite();
+  $i = $p->add($s);
+  $i->setDepth(1);
   $p->nextFrame();
-}
-$m = new SWFMovie();
-$m->setBackground(0xff, 0xff, 0xff);
-$m->setDimension(6000,4000);
-$i = $m->add($p);
-$i->setDepth(1);
-$i->moveTo(-500,2000);
-$i->setName("box");
-$m->add(new SWFAction("/box.x += 3;"));
-$m->nextFrame();
-$m->add(new SWFAction("gotoFrame(0); play();"));
-$m->nextFrame();
-header('Content-type: application/x-shockwave-flash');
-$m->output();
+
+  for ($n=0; $n<5; ++$n) {
+    $i->rotate(-15);
+    $p->nextFrame();
+  }
+
+  $m = new SWFMovie();
+  $m->setBackground(0xff, 0xff, 0xff);
+  $m->setDimension(6000, 4000);
+
+  $i = $m->add($p);
+  $i->setDepth(1);
+  $i->moveTo(-500,2000);
+  $i->setName("box");
+
+  $m->add(new SWFAction("/box.x += 3;"));
+  $m->nextFrame();
+  $m->add(new SWFAction("gotoFrame(0); play();"));
+  $m->nextFrame();
+
+  header('Content-type: application/x-shockwave-flash');
+  $m->output();
 ?>
 ]]>
       </programlisting>
@@ -463,81 +467,108 @@ $m->output();
   $m->setRate(36.0);
   $m->setDimension(1200, 800);
   $m->setBackground(0, 0, 0);
+
   /* sprite de suivi de souris : vide, mais il suit la souris
-  de manière à ce que nous connaissions ses coordonnées*/
+    de manière à ce que nous connaissions ses coordonnées*/
+
   $i = $m->add(new SWFSprite());
   $i->setName('mouse');
+
   $m->add(new SWFAction("
     startDrag('/mouse', 1); /* '1' signifie verrouiller la souris */
   "));
-  /* On peut tout simplement virer l'anti-aliasing, car il n'y a
-  que des gros carrés, finalement */
+
+  /*  On peut tout simplement virer l'anti-aliasing, car il n'y a
+    que des gros carrés, finalement */
+
   $m->add(new SWFAction("
     this.quality = 0;
   "));
+
   /* boîte de morphing */
   $r = new SWFMorph();
   $s = $r->getShape1();
+
   /* Notez que ce n'est pas pratique pour les formes habituelles.
-  Aucune idée de pourquoi */
+    Aucune idée de pourquoi */
   $s->setLeftFill($s->addFill(0xff, 0xff, 0xff));
   $s->movePenTo(-40, -40);
   $s->drawLine(80, 0);
   $s->drawLine(0, 80);
   $s->drawLine(-80, 0);
   $s->drawLine(0, -80);
+
   $s = $r->getShape2();
+
   $s->setLeftFill($s->addFill(0x00, 0x00, 0x00));
   $s->movePenTo(-1, -1);
   $s->drawLine(2, 0);
   $s->drawLine(0, 2);
   $s->drawLine(-2, 0);
   $s->drawLine(0, -2);
+
   /* sprite contenant la boîte de morphing -
      c'est juste un scénario avec une boîte de morphing */
+
   $box = new SWFSprite();
   $box->add(new SWFAction("
     stop();
   "));
   $i = $box->add($r);
-  for($n=0; $n<=20; ++$n)
-  {
+
+  for ($n=0; $n<=20; ++$n) {
     $i->setRatio($n/20);
     $box->nextFrame();
   }
+
   /* ce conteneur nous permet d'utiliser la même action plusieurs fois */
+
   $cell = new SWFSprite();
   $i = $cell->add($box);
   $i->setName('box');
+
   $cell->add(new SWFAction("
+
     setTarget('box');
-    /* ...x signifie abscisse du parent, c'est-à-dire (..).x */
+
+    /* ...x means the x coordinate of the parent, i.e. (..).x */
     dx = (/mouse.x + random(6)-3 - ...x)/5;
     dy = (/mouse.y + random(6)-3 - ...y)/5;
     gotoFrame(int(dx*dx + dy*dy));
+
   "));
+
   $cell->nextFrame();
   $cell->add(new SWFAction("
+
     gotoFrame(0);
     play();
+
   "));
+
   $cell->nextFrame();
+
   /* finalement, ajoutons quelques cellules à l'animation */
-  for($x=0; $x<12; ++$x)
-  {
-    for($y=0; $y8; ++$y)
-    {
+
+  for ($x=0; $x<12; ++$x) {
+    for ($y=0; $y<8; ++$y) {
       $i = $m->add($cell);
       $i->moveTo(100*$x+50, 100*$y+50);
     }
   }
+
   $m->nextFrame();
+
   $m->add(new SWFAction("
+
     gotoFrame(1);
     play();
+
   "));
+
   header('Content-type: application/x-shockwave-flash');
   $m->output();
+?>
 ]]>
       </programlisting>
      </example>
@@ -553,20 +584,26 @@ $m->output();
   $m = new SWFMovie();
   $m->setDimension(11000, 8000);
   $m->setBackground(0x00, 0x00, 0x00);
+
   $m->add(new SWFAction("
+
 this.quality = 0;
 /frames.visible = 0;
 startDrag('/mouse', 1);
+
   "));
+
   // sprite de suivi de souris
   $t = new SWFSprite();
   $i = $m->add($t);
   $i->setName('mouse');
+
   $g = new SWFGradient();
   $g->addEntry(0, 0xff, 0xff, 0xff, 0xff);
   $g->addEntry(0.1, 0xff, 0xff, 0xff, 0xff);
   $g->addEntry(0.5, 0xff, 0xff, 0xff, 0x5f);
   $g->addEntry(1.0, 0xff, 0xff, 0xff, 0);
+
   // gradient
   $s = new SWFShape();
   $f = $s->addFill($g, SWFFILL_RADIAL_GRADIENT);
@@ -577,14 +614,17 @@ startDrag('/mouse', 1);
   $s->drawLine(0, 1200);
   $s->drawLine(-1200, 0);
   $s->drawLine(0, -1200);
+
   // on en fait un sprite pour utiliser la fonction multColor()
   $p = new SWFSprite();
   $p->add($s);
   $p->nextFrame();
+
   // Ajoute la forme ici, chaque forme dans une couleur différente
   $q = new SWFSprite();
   $q->add(new SWFAction("gotoFrame(random(7)+1); stop();"));
   $i = $q->add($p);
+
   $i->multColor(1.0, 1.0, 1.0);
   $q->nextFrame();
   $i->multColor(1.0, 0.5, 0.5);
@@ -599,19 +639,24 @@ startDrag('/mouse', 1);
   $q->nextFrame();
   $i->multColor(1.0, 0.5, 1.0);
   $q->nextFrame();
+
   // Enfin, le code de l'action
   $p = new SWFSprite();
   $i = $p->add($q);
   $i->setName('frames');
   $p->add(new SWFAction("
+
 dx = (/:mousex-/:lastx)/3 + random(10)-5;
 dy = (/:mousey-/:lasty)/3;
 x = /:mousex;
 y = /:mousey;
 alpha = 100;
+
   "));
   $p->nextFrame();
+
   $p->add(new SWFAction("
+
 this.x = x;
 this.y = y;
 this.alpha = alpha;
@@ -619,32 +664,46 @@ x += dx;
 y += dy;
 dy += 3;
 alpha -= 8;
+
   "));
   $p->nextFrame();
+
   $p->add(new SWFAction("prevFrame(); play();"));
   $p->nextFrame();
+
   $i = $m->add($p);
   $i->setName('frames');
   $m->nextFrame();
+
   $m->add(new SWFAction("
+
 lastx = mousex;
 lasty = mousey;
 mousex = /mouse.x;
 mousey = /mouse.y;
+
 ++num;
-if(num == 11)
+
+if (num == 11)
   num = 1;
+
 removeClip('char' & num);
 duplicateClip(/frames, 'char' & num, num);
+
   "));
+
   $m->nextFrame();
   $m->add(new SWFAction("prevFrame(); play();"));
+
   header('Content-type: application/x-shockwave-flash');
   $m->output();
+?>
 ]]>
       </programlisting>
      </example>
     </para>
+    <!--
+    
     <para>
      Cet exemple simple gère le clavier (vous devrez cependant
      cliquer dans la fenêtre pour lui donner le focus, et vous
@@ -655,52 +714,56 @@ duplicateClip(/frames, 'char' & num, num);
       <programlisting role="php">
 <![CDATA[
 <?php
-  /* Le sprite n'a qu'une lettre par image */
-  $p = new SWFSprite();
-  $p->add(new SWFAction("stop();"));
-  $chars = "abcdefghijklmnopqrstuvwxyz".
+
+/* Le sprite n'a qu'une lettre par image */
+$p = new SWFSprite();
+$p->add(new SWFAction("stop();"));
+$chars = "abcdefghijklmnopqrstuvwxyz".
 	   "ABCDEFGHIJKLMNOPQRSTUVWXYZ".
            "1234567890!@#$%^&*()_+-=/[]{}|;:,.<>?`~";
-  $f = new SWFFont("_sans");
-  for($n=0; $nremove($i);
-    $t = new SWFTextField();
-    $t->setFont($f);
-    $t->setHeight(240);
-    $t->setBounds(600,240);
-    $t->align(SWFTEXTFIELD_ALIGN_CENTER);
-    $t->addString($c);
-    $i = $p->add($t);
-    $p->labelFrame($c);
-    $p->nextFrame();
-  }
-  /* région de clic pour le bouton : toute la fenêtre */
-  $s = new SWFShape();
-  $s->setFillStyle0($s->addSolidFill(0, 0, 0, 0));
-  $s->drawLine(600, 0);
-  $s->drawLine(0, 400);
-  $s->drawLine(-600, 0);
-  $s->drawLine(0, -400);
-  /* le bouton s'assure des touches pressées, et envoie le bon
-     sprite à l'image de droite */
-  $b = new SWFButton();
-  $b->addShape($s, SWFBUTTON_HIT);
-  for($n=0; $naddAction(new SWFAction("
+$f = new SWFFont("_sans");
+for($n=0; $nremove($i) ) {
+  $t = new SWFTextField();
+  $t->setFont($f);
+  $t->setHeight(240);
+  $t->setBounds(600,240);
+  $t->align(SWFTEXTFIELD_ALIGN_CENTER);
+  $t->addString($c);
+  $i = $p->add($t);
+  $p->labelFrame($c);
+  $p->nextFrame();
+}
+/* région de clic pour le bouton : toute la fenêtre */
+$s = new SWFShape();
+$s->setFillStyle0($s->addSolidFill(0, 0, 0, 0));
+$s->drawLine(600, 0);
+$s->drawLine(0, 400);
+$s->drawLine(-600, 0);
+$s->drawLine(0, -400);
+/* le bouton s'assure des touches pressées, et envoie le bon
+    sprite à l'image de droite */
+$b = new SWFButton();
+$b->addShape($s, SWFBUTTON_HIT);
+for($n=0; $naddAction(new SWFAction("
 setTarget('/char');
 gotoFrame('$c');
     "), SWFBUTTON_KEYPRESS($c));
-  }
-  $m = new SWFMovie();
-  $m->setDimension(600,400);
-  $i = $m->add($p);
-  $i->setName('char');
-  $i->moveTo(0,80);
-  $m->add($b);
-  header('Content-type: application/x-shockwave-flash');
-  $m->output();
+}
+$m = new SWFMovie();
+$m->setDimension(600,400);
+$i = $m->add($p);
+$i->setName('char');
+$i->moveTo(0,80);
+$m->add($b);
+header('Content-type: application/x-shockwave-flash');
+$m->output();
+
+?>
 ]]>
       </programlisting>
      </example>
     </para>
+    -->
    </refsect1>
   </refentry>
 
