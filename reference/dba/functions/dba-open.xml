@@ -4,17 +4,17 @@
  <refentry id="function.dba-open">
   <refnamediv>
    <refname>dba_open</refname>
-   <refpurpose>Ouvre une base de données.</refpurpose>
+   <refpurpose>Ouvre une base de données</refpurpose>
   </refnamediv>
   <refsect1>
    <title>Description</title>
-    <methodsynopsis>
-     <type>int</type><methodname>dba_open</methodname>
-     <methodparam><type>string</type><parameter>path</parameter></methodparam>
-     <methodparam><type>string</type><parameter>mode</parameter></methodparam>
-     <methodparam><type>string</type><parameter>handler</parameter></methodparam>
-     <methodparam choice="opt"><type>mixed</type><parameter>...</parameter></methodparam>
-    </methodsynopsis>
+     <methodsynopsis>
+      <type>resource</type><methodname>dba_open</methodname>
+      <methodparam><type>string</type><parameter>path</parameter></methodparam>
+      <methodparam><type>string</type><parameter>mode</parameter></methodparam>
+      <methodparam><type>string</type><parameter>handler</parameter></methodparam>
+      <methodparam choice="opt"><parameter>...</parameter></methodparam>
+     </methodsynopsis>
    <para>
     <function>dba_open</function> établit une connexion à
     la base repérée par <parameter>path</parameter> avec le
@@ -28,13 +28,137 @@
     lecture/écriture, "c" pour lecture/écriture, et
     création si la base n'existe pas, et "n" pour
     création, écrasement et accès en
-    lecture/écriture.
+    lecture/écriture. De plus, vous pouvez choisir la méthode
+    de verrouillage de la base avec le caractère suivant. Utilisez 
+    "l" pour vérrouiller la base avec un fichier .lck, et "d" pour verrouiller
+    la base elle-même. Il est important que vos application utilisent ces
+    options de manière cohérente. Si vous voulez tester la possibilité
+    d'accès, et ne pas attendre la disponibilité du verrou, vous pouvez
+    ajouter la lettre "t" comme troisième caractère. Lorsque
+    vous êtes absolument certain que votre base ne requiert pas de
+    verrou, vous pouvez utiliser le tiret "-" à la place de "l" ou "d". 
+    Lorsque vous n'utilisez ni "d", ni "l" ni "-", dba va verrouiller
+    en mode "d".
    </para>
    <para>
-    <parameter>handler</parameter> est le nom de l'identifiant qui
+    <parameter>handler</parameter> est le nom de 
+    <link linkend="dba.requirements">l'identifiant</link> qui
     sera utilisé pour accéder à <parameter>path</parameter>.
     Il est passé à <function>dba_popen</function>.
    </para>
+    <para>
+     <function>dba_open</function> retourne une ressource positive ou &false;, 
+     respectivement si la base a pu &ecirc;tre ouverte ou si la connexion a &eacute;chou&eacute;.
+    </para>
+    <note>
+     <para>
+      Il ne peut y avoir qu'un seul type d'&eacute;criture dans la base. Lorsque vous
+      utilisez dba sur un serveur web, et que plusieurs requ&ecirc;tes HTTP effectuent
+      des &eacute;critures, elles ne peuvent &ecirc;tre faites que l'une apr&egrave;s l'autre. De m&ecirc;me,
+      la lecture durant l'&eacute;criture n'est pas possible. L'extension dba utilise
+      un verrou pour &eacute;viter ces probl&egrave;mes. Voici la table de verrouillage : 
+      <table>
+       <title>Verrouillage DBA</title>
+       <tgroup cols="9">
+        <thead>
+         <row>
+          <entry>d&eacute;j&agrave; ouverte</entry>
+          <entry><parameter>mode</parameter> = "rl"</entry>
+          <entry><parameter>mode</parameter> = "rlt"</entry>
+          <entry><parameter>mode</parameter> = "wl"</entry>
+          <entry><parameter>mode</parameter> = "wlt"</entry>
+          <entry><parameter>mode</parameter> = "rd"</entry>
+          <entry><parameter>mode</parameter> = "rdt"</entry>
+          <entry><parameter>mode</parameter> = "wd"</entry>
+          <entry><parameter>mode</parameter> = "wdt"</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry>non-ouverte</entry>
+          <entry>ok</entry>
+          <entry>ok</entry>
+          <entry>ok</entry>
+          <entry>ok</entry>
+          <entry>ok</entry>
+          <entry>ok</entry>
+          <entry>ok</entry>
+          <entry>ok</entry>
+         </row>
+         <row>
+          <entry><parameter>mode</parameter> = "rl"</entry>
+          <entry>ok</entry>
+          <entry>ok</entry>
+          <entry>attente</entry>
+          <entry>&false;</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+         </row>
+         <row>
+          <entry><parameter>mode</parameter> = "wl"</entry>
+          <entry>attente</entry>
+          <entry>&false;</entry>
+          <entry>attente</entry>
+          <entry>&false;</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+         </row>
+         <row>
+          <entry><parameter>mode</parameter> = "rd"</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+          <entry>ok</entry>
+          <entry>ok</entry>
+          <entry>attente</entry>
+          <entry>&false;</entry>
+         </row>
+         <row>
+          <entry><parameter>mode</parameter> = "wd"</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+          <entry>illegal</entry>
+          <entry>attente</entry>
+          <entry>&false;</entry>
+          <entry>attente</entry>
+          <entry>&false;</entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </table>
+      <simplelist>
+       <member>ok : Le second appel r&eacute;ussit.</member>
+       <member>attente : Le  second appel attend que <function>dba_close</function> soit appel&eacute; par le premier script.</member>
+       <member>&false; : Le second appel retourn &false;.</member>
+       <member>illegal: vous ne devez pas m&eacute;langer les options "l" et "d" pour le param&egrave;tre <parameter>mode</parameter>.</member>
+      </simplelist>
+     </para>
+    </note>
+    <note>
+     <para>
+      Depuis &php; 4.3.0, il est possible d'ouvrir la base de donn&eacute;es &agrave; travers
+      le r&eacute;seua. Toutesfois, dans le cas o&ugrave; des connexions sockets seront utilis&eacute;es
+      (via HTTP ou FTP), la connexion sera verrouill&eacute;e, et non pas la ressource. C'est
+      important de le savoir pour comprendre que dans ce cas, le verrouillage sera
+      ignor&eacute;, et d'autres solutions doivent &ecirc;tre trouv&eacute;es.
+     </para>
+    </note>
+    <note>
+     <para>
+      Le param&egrave;tre de verrouillage <parameter>mode</parameter> et les options
+      "l", "d", "-" et "t" ont &eacute;t&eacute; ajout&eacute;es en &php; 4.3.0.
+      Dans les versions de &php; ant&eacute;rieures &agrave; la PHP 4.3.0, vous deviez
+      utiliser des s&eacute;maphores pour &eacute;viter les acc&egrave;s concurents &agrave; la base
+      de donn&eacute;es, hormis pour celles de type GDBM. Voyez le chapitre sur les
+      <link linkend="ref.sem">s&eacute;maphores System V</link>.
+     </para>
+    </note>
    <para>
     Voir aussi
     <function>dba_popen</function> et
