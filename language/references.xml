@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.16 $ -->
+<!-- $Revision: 1.17 $ -->
 <!-- EN-Revision: 1.27 Maintainer: dams Status: ready -->
  <chapter id="language.references">
   <title>Les références</title>
@@ -45,6 +45,14 @@ $a =& $b
       et <varname>$b</varname> qui pointent sur le même contenu.
      </para>
     </note>
+   </para>
+   <note>
+    <para>
+     Si un tableau par référence est copié, ses valeurs ne sont pas déréférencées.
+     Celà est valide également pour les tableaux passées par valeur aux fonctions.
+    </para>
+   </note>
+   <para>
     La même syntaxe peut être utilisée avec les fonctions qui
     retournent des références, et avec l'opérateur
     <literal>new</literal> (&php; 4.0.4 et plus récent):
@@ -77,6 +85,69 @@ $a =& $b
       moteur Zend, et cela conduit à une erreur d'analyse.
      </para>
    </note>
+   <warning>
+    <para>
+     Si vous assignez une référence à une variable définie en tant que 
+     <literal>global</literal> dans une fonction, la référence sera visible uniquement 
+     à l'intérieure de la fonction. Vous pouvez éviter celà en utilisant le tableau 
+     <varname>$GLOBALS</varname>.
+     <example>
+      <title>Référencer une variable globale à l'intérieure d'une fonction</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+$var1 = "Variable Exemple";
+$var2 = "";
+
+function global_references($use_globals)
+{
+    global $var1, $var2;
+    if (!$use_globals) {
+        $var1 =& $var2; // visible uniquement dans la fonction
+    } else {
+        $GLOBALS["var1"] =& $var2; // visible également dans un contexte global
+    }
+}
+
+global_references(false);
+echo "var2 est défini à '$var2'\n"; // var2 est défini à ''
+global_references(true);
+echo "var2 est défini à '$var2'\n"; // var2 est défini à 'Variable Exemple'
+?>
+]]>
+      </programlisting>
+     </example>
+     Voyez <literal>global $var;</literal> comme un raccourci pour <literal>$var
+     =&amp; $GLOBALS['var'];</literal>. De ce fait assignant d'autres références à
+     <literal>$var</literal> changeant uniquement la référence local de la variable.
+    </para>
+   </warning>
+   <warning>
+    <para>
+     Les tableaux complexes sont parfois plutôt copiés que référencés. De ce fait, l'exemple 
+     suivant ne fonctionnera pas comme prévu :
+     <example>
+      <title>Références avec un tableau complexe</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+$top = array(
+    'A' => array(),
+    'B' => array(
+        'B_b' => array(),
+    ),
+);
+
+$top['A']['parent'] = &$top;
+$top['B']['parent'] = &$top;
+$top['B']['B_b']['data'] = 'test';
+print_r($top['A']['parent']['B']['B_b']); // array()
+?>
+]]>
+      </programlisting>
+     </example>
+    </para>
+   </warning>
    <para>
     Le deuxième intérêt des références est de
     pouvoir passer des variables par référence. On
