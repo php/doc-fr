@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.10 $ -->
-<!-- EN-Revision: 1.14 Maintainer: dams Status: ready -->
+<!-- $Revision: 1.11 $ -->
+<!-- EN-Revision: 1.15 Maintainer: dams Status: ready -->
   <refentry id="function.mysql-real-escape-string">
    <refnamediv>
     <refname>mysql_real_escape_string</refname>
@@ -34,7 +34,7 @@
      le jeu de caractères courant de la connexion <parameter>link_identifier</parameter>. 
      Le résultat peut être utilisé sans problème 
      avec la fonction <function>mysql_query</function>. 
-     Si vous désirez insérer des donnés binaires, vous devez utiliser cette fonction.
+     Si des donnés binaires doivent être insérées, cette fonction doit être utilisée.
     </para>
     <para>
      <function>mysql_real_escape_string</function> appelle la fonction 
@@ -64,17 +64,21 @@ $query = sprintf("SELECT * FROM users WHERE user='%s' AND password='%s'",
      </example>
     </para>
     <para>
-     Vous devez toujours (avec quelques rares exceptions) utiliser cette fonction
-     pour protéger vos données avant d'exécuter la requête vers MySQL. Si vous avez 
-     <link linkend="ini.magic-quotes-gpc">magic_quotes_gpc</link> d'activé et
-     que vous travaillez avec des données issues d'une entrée utilisateur, 
-     vous devez d'abord utiliser la fonction <function>stripslashes</function> 
-     sur vos données. Si vos données sont issues d'une autre source et que vous avez 
-     <link linkend="ini.magic-quotes-gpc">magic_quotes_gpc</link> d'activé,
-     vous devez également utiliser la fonction <function>stripslashes</function> 
-     sur vos données.
-     Si vous n'utilisez pas celà, vous devez vous protégrer vous-même
-     des attaques par injection SQL. Voici un exemple :
+     Cette fonction doit toujours (avec quelques exceptions) être utilisée
+     pour protéger vos données avant d'envoyer la requête à MySQL.
+    </para>
+    <note>
+     <para>
+      Si <link linkend="ini.magic-quotes-gpc">magic_quotes_gpc</link> est activé,
+      appliquez d'abord la fonction <function>stripslashes</function> à vos données. 
+      Utiliser cette fonction sur des données qui ont déjà été échappées, les échappera une
+      deuxième fois.
+     </para>
+    </note>
+    <para>
+     Si cette fonction n'est pas utilisée pour protéger vos données, la requête
+     sera vulnérable aux 
+     <link linkend="security.database.sql-injection">attaques par injection SQL</link>.
     </para>
     <para>
      <example>
@@ -104,24 +108,27 @@ SELECT * FROM users WHERE name='aidan' AND password='' OR 1=1
 ]]>
       </screen>
       <para>
-       Celà permet à n'importe qui de s'identifier sans mot de passe valide !
+       Celà permet à n'importe qui de s'identifier sans mot de passe valide.
+      </para>
+      <para>
        L'utilisation de la fonction <function>mysql_real_escape_string</function> 
-       sur chaque variable prévient celà.
+       sur chaque variable prévient celà. Cet exemple démontre la méthode la plus propre
+       pour envoyer une requête à la base, indépendamment de votre configuration
+       de <link linkend="security.magicquotes">Magic Quotes</link>.
       </para>
       <programlisting role="php">
 <![CDATA[
 <?php
-/**
- * Protège la variable
- */
+// Protège la variable
+
 function quote_smart($value)
 {
-    // Stripslashes si nécessaire
+    // Stripslashes
     if (get_magic_quotes_gpc()) {
         $value = stripslashes($value);
     }
-
     // Protection si ce n'est pas un entier
+    
     if (!is_int($value)) {
         $value = "'" . mysql_real_escape_string($value) . "'";
     }
@@ -143,7 +150,7 @@ mysql_query($query);
 ]]>
       </programlisting>
       <para>
-       La requête s'exécute maintenant correctement et les attaques par injection ne fonctionne plus.
+       La requête s'exécute maintenant correctement et les attaques par injection SQL ne fonctionne plus.
       </para>
      </example>
     </para>
