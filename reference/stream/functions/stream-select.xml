@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.5 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.6 $ -->
+<!-- EN-Revision: 1.8 Maintainer: yannick Status: ready -->
   <refentry id="function.stream-select">
    <refnamediv>
     <refname>stream_select</refname>
-    <refpurpose>Runs the equivalent of the select() system call on the given 
-     arrays of streams with a timeout specified by tv_sec and tv_usec </refpurpose>
+    <refpurpose>Retourne l'équivalent de l'appel système select() sur un tableau
+     de flux avec un délai d'expiration spécifié par tv_sec et tv_usec</refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
      <methodsynopsis>
       <type>int</type><methodname>stream_select</methodname>
-      <methodparam><type>resource</type><parameter>&amp;read</parameter></methodparam>
-      <methodparam><type>resource</type><parameter>&amp;write</parameter></methodparam>
-      <methodparam><type>resource</type><parameter>&amp;except</parameter></methodparam>
+      <methodparam><type>array</type><parameter>&amp;read</parameter></methodparam>
+      <methodparam><type>array</type><parameter>&amp;write</parameter></methodparam>
+      <methodparam><type>array</type><parameter>&amp;except</parameter></methodparam>
       <methodparam><type>int</type><parameter>tv_sec</parameter></methodparam>
       <methodparam choice="opt"><type>int</type><parameter>tv_usec</parameter></methodparam>
      </methodsynopsis>
@@ -21,7 +21,7 @@
      <function>stream_select</function> accepte un tableau de flux et
      attend que l'un d'entre eux change de statut. Cette opération est équivalente
      à ce que fait la fonction <function>socket_select</function>, ormis le fait qu'elle
-     travaille sur flux.
+     travaille sur un flux.
     </simpara>
     <simpara>
      Les flux qui sont listés dans le paramètre <parameter>read</parameter> seront
@@ -32,17 +32,60 @@
     </simpara>
     <simpara>
      Les flux qui sont listés dans le paramètre <parameter>write</parameter> 
-     seront surveillé en écriture (pour être précis, si une écriture ne 
+     seront surveillés en écriture (pour être précis, si une écriture ne 
      bloquera pas).
     </simpara>
     <simpara>
-     Les flux qui sont listés dans le paramètre <parameter>except</parameter> 
-     seront surveillé pour voir si une exception est levée.
+     Les flux qui sont listés dans le paramètre <parameter>except</parameter>
+     seront surveillés pour voir si une exception est levée.
+    </simpara>      
+    <note>
+     <para>
+      Lorsque <function>stream_select</function> se termine, les tableaux
+      <parameter>read</parameter>, <parameter>write</parameter> et 
+      <parameter>except</parameter> sont modifiés pour indiquer quel flux
+      ont actuellement changé de statut.
+     </para>
+    </note>
+    <simpara>
+     Les paramètres <parameter>tv_sec</parameter> et 
+     <parameter>tv_usec</parameter>
+     forment le <emphasis>délai d'expiration</emphasis>, 
+     <parameter>tv_sec</parameter> spécifie le nombre de secondes tandis que
+     <parameter>tv_usec</parameter>, le nombre de microsecondes.
+     Le paramètre <emphasis>timeout</emphasis> représente la limite supérieure du temps
+     que <function>stream_select</function> doit attendre avant de se terminer.
+     Si <parameter>tv_sec</parameter> et <parameter>tv_usec</parameter> 
+     sont tous les deux définis à &zero;, <function>stream_select</function> 
+     n'attendra pas de données - à la place, elle 
+     se terminera immédiatement, indiquand le statut courant du flux.
+     Si <parameter>tv_sec</parameter> vaut &null;, <function>stream_select</function>
+     peut se bloquer indéfiniment, se terminant uniquement lorsqu'un évènement sur un des flux surveillés
+     survient (ou si un sgnal interrompt l'appel système).
+    </simpara>      
+    <simpara>
+     En cas de succès, <function>stream_select</function> retourne le nombre de flux qui ont évolué,
+     ce qui peut être &zero; si le délai d'expiration a été atteint avant que les flux n'évoluent.
+     En cas d'erreur, la fonction retournera &false; et un avertissement sera renvoyé (celà peut apparaître
+     si l'appel système est interrompu par un signal entrant).
     </simpara>
+    
     <warning>
      <para>
-      Lors de la fin de la fonction, les tableaux sont modifiés pour rapporter
-      leurs évolutions respectives.
+      Utiliser comme délai d'expiration une valeur de &zero; vous permet de renvoyer instantanément
+      le statut des flux, sinon, ce N'est PAS une bonne idée d'utiliser une valeur de &zero; dans une 
+      boucle, ce qui ferait que votre script consommerait beaucoup trop de temps CPU.
+     </para>
+     <para>
+      Il est préférable de spécifier une valeur de délai d'exiration de quelques secondes. Même
+      si vous avez besoin d'exécuter d'autres codes en même temps, l'utilisation d'un délai d'expiration
+      de moins de <literal>200000</literal> microsecondes devrait vous aider à réduire le temps
+      CPU de votre script.
+     </para>
+     <para>
+      Souvenez-vous que le délai d'expiration représente le temps maximal qui s'écoulera ;
+      <function>stream_select</function> se terminera dès que les flux désirés seront prêts à 
+      être utilisés.
      </para>
     </warning>
     <simpara>
@@ -53,7 +96,9 @@
      modifiés lorsque <function>stream_select</function> s'achèvera.
     </simpara>
     <para>
-     Exemple
+     Cet exemple surveille si des données arrivent pour être lues dans soit 
+     <parameter>$stream1</parameter>, soit <parameter>$stream2</parameter>.
+     Si le délai d'expiration vaut &zero;, la fonction se terminera immédiatement :
      <programlisting role="php">
 <![CDATA[
 <?php
@@ -75,38 +120,22 @@ if (false === ($num_changed_streams = stream_select($read, $write = NULL, $excep
       de passer la valeur &null; directement comme paramètre d'une fonction
       qui s'attend à des paramètres passés par référence. Au lieu de cela,
       il est recommandé d'utiliser une variable temporaire, ou une expression
-      don le membre de gauche est une variable temporaire. Comme ceci : 
+      dont le membre de gauche est une variable temporaire. Comme ceci : 
       <programlisting role="php">
 <![CDATA[
 <?php
-  stream_select($r, $w, $e = NULL, 0);
+stream_select($r, $w, $e = NULL, 0);
 ?>
 ]]>
      </programlisting>
      </para>
     </note>
-    <simpara>
-     Les paramètres <parameter>tv_sec</parameter> et <parameter>tv_usec</parameter>
-     ensemle forment le délai d'expiration. Ce délai est la durée maximale
-     d'exécution de <function>stream_select</function>.
-     <parameter>tv_sec</parameter> peut valoir zéro, ce qui fait que
-     <function>stream_select</function> s'achève immédiatement. C'est pratique
-     pour réaliser du polling. Si <parameter>tv_sec</parameter> est &null; (pas de
-     délai d'expiration), <function>stream_select</function> peut bloquer le script
-     indéfiniment.
-    </simpara>
-    <simpara>
-     En cas de succès, <function>stream_select</function> retourne le nomre de
-     flux qui ont évolué, ce qui peut être zéro si le délai d'expiration
-     a été atteint avant que les flux n'évoluent. En cas d'erreur, la 
-     fonction retourne &false;.
-    </simpara>
     <note>
      <para>
      Assurez vous de bien utiliser l'opérateur <literal>===</literal> lorsque vous
      recherchez des erreurs. Comme <function>stream_select</function> peut retourner
      0, une comparaison effectuée à l'aide de <literal>==</literal> 
-     la confondrait avec une erreur.
+     l'évaluerait à &true; :
      <programlisting role="php">
 <![CDATA[
 <?php
@@ -120,27 +149,17 @@ if (false === stream_select($r, $w, $e = NULL, 0)) {
     </note>
     <note>
      <para>
-      Gardez à l'esprit que certaines implémentations de flux doivent
-      être gérées très prudemment. Voici quelques règles à suivre :
-      <itemizedlist>
-       <listitem>
-        <simpara>
-         Il faut toujours essayer d'utiliser <function>stream_select</function>
-         sans délai d'expiration. Votre programme ne devrait rien faire si
-         il ne reçoit pas de données extérieures. Les codes qui dépendent du
-         délai d'expiration ne sont généralement pas portable, et difficiles
-         à déboguer.
-        </simpara>
-       </listitem>
-       <listitem>
-        <simpara>
-         Si vous avez écrit ou lu dans un flux qui retournés dans les tableaux
-         de flux, soyez bien conscient que ces flux n'ont peut être pas écrit
-         ou lu la  totalité des données demandées. Soyez préparés à être en 
-         mesure de lire un seul octet.
-        </simpara>
-       </listitem>
-      </itemizedlist>
+      Si vous avez écrit ou lu dans un flux qui retournés dans les tableaux
+      de flux, soyez bien conscient que ces flux n'ont peut être pas écrit
+      ou lu la  totalité des données demandées. Soyez préparés à être en 
+      mesure de lire un seul octet.
+     </para>
+    </note>
+    <note>
+     <title>Notes aux utilisateurs de Windows 98</title>
+     <para>
+      <function>stream_select</function> utilisé sur une pipe retournée par 
+      <function>proc_open</function> peut causer la perte de données sous Windows 98.
      </para>
     </note>
     <para>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.8 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.9 $ -->
+<!-- EN-Revision: 1.14 Maintainer: yannick Status: ready -->
   <refentry id="function.stream-socket-server">
    <refnamediv>
     <refname>stream_socket_server</refname>
@@ -24,15 +24,13 @@
      de socket créé est déterminé par le transport spécifié avec le formattage
      URL suivant : <literal>transport://target</literal>. Pour une socket Internet,
      (<constant>AF_INET</constant>) comme TCP et UDP, la <literal>cible</literal> 
-     de <parameter>remote_socket</parameter> sera une adresse IP ou un nom d'hôte.
-     Pour une socket Unix,la <literal>cible</literal> doit être un fichier de
+     de <parameter>remote_socket</parameter> sera une adresse IP ou un nom d'hôte
+     suivie de deux point et d'un numéro de port.
+     Pour une socket Unix, la <literal>cible</literal> doit être un fichier de
      socket du système.
-    </para>
-    <para>
+          
      <parameter>flags</parameter> est un champ de bits qui peut être la combinaison
-     de n'importe quelle option de connexion. Actuellement, les valeurs possibles
-     pour ces options sont <constant>STREAM_CLIENT_ASYNC_CONNECT</constant> et
-     <constant>STREAM_CLIENT_PERSISTENT</constant>. La valeur par défaut est
+     de n'importe quelle option de connexion. La valeur par défaut est
      <constant>STREAM_SERVER_BIND</constant> | <constant>STREAM_SERVER_LISTEN</constant>.
     </para>
     <para>
@@ -44,20 +42,22 @@
      Si l'appel échoue, <function>stream_socket_server</function> va retourner
      &false; et si les paramètres optionnels <parameter>errno</parameter> et
      <parameter>errstr</parameter> sont fournis, ils recevront l'erreur
-     exacte qui est survenue dans le système lors de l'appel à 
-     <literal>connect()</literal>. Si la valeur retournée dans
-     <parameter>errno</parameter> est <literal>0</literal> et que la fonction
+     exacte qui est survenue dans le système lors des appels à 
+     <literal>connect()</literal>, <literal>bind()</literal>, et
+     <literal>listen()</literal>. Si la valeur retournée dans
+     <parameter>errno</parameter> est &zero; et que la fonction
      a retournée &false;, c'est une indication que l'erreur est survenue
-     avant l'appel à <literal>connect()</literal>. Cela est probablement du
+     avant l'appel à <literal>bind()</literal>. Cela est probablement du
      à un problème d'initialisation de la socket. Notez que 
-     <parameter>errno</parameter> et<parameter>errstr</parameter> 
-     doivent être passés par référence.
+     <parameter>errno</parameter> et <parameter>errstr</parameter> 
+     doivent toujours être passés par référence.
     </para>
      <para>
      Suivant votre environnement, les sockets Unix ou le délai d'expiration
      peuvent ne pas être disponibles. Une liste des transports disponibles
      sur le système est accessible via
-     <function>stream_get_transports</function>.
+     <function>stream_get_transports</function>. Voir
+     <xref linkend="transports"/> pour une liste complète des transports disponibles.
     </para>
     <para>
      <example>
@@ -70,7 +70,7 @@ if (!$socket) {
   echo "$errstr ($errno)<br>\n";
 } else {
   while ($conn = stream_socket_accept($socket)) {
-    fputs ($conn, 'Merci de vous connecter à mon serveur. L\'heure locale est ' . date('n/j/Y g:i a') . "\n");
+    fputs ($conn, 'L\'heure locale est ' . date('n/j/Y g:i a') . "\n");
     fclose ($conn);
   }
   fclose($socket);
@@ -79,12 +79,15 @@ if (!$socket) {
 ]]>
       </programlisting>
      </example>
+    </para>
+    <para>
      L'exemple ci-dessous vous montre comment lire la date et l'heure
      sur un service UDP de type "daytime" (port 13) sur votre propre machine,
      tel que présenté avec la fonction <function>stream_socket_client</function> :
      <note>
-      <simpara>La plupart des systèmes ont besoin d'un accès administrateur
-      pour ouvrir une socket au dela des ports 1024.
+      <simpara>
+       La plupart des systèmes ont besoin d'un accès administrateur
+       pour ouvrir une socket au dela des ports 1024.
       </simpara>
      </note>
      <example>
@@ -92,9 +95,9 @@ if (!$socket) {
      <programlisting role="php">
 <![CDATA[
 <?php
-$socket = stream_socket_server("udp://0.0.0.0:13", $errno, $errstr);
+$socket = stream_socket_server("udp://0.0.0.0:13", $errno, $errstr, STREAM_SERVER_BIND);
 if (!$socket) {
-    echo "ERROR: $errno - $errstr<br>\n";
+    echo "ERROR: $errno - $errstr<br />\n";
 } else {
   while ($conn = stream_socket_accept($socket)) {
     fwrite($conn, date("D M j H:i:s Y\r\n"));
@@ -106,8 +109,8 @@ if (!$socket) {
 ]]>
      </programlisting>
      </example>
-     &ipv6.brackets;
     </para>
+     &ipv6.brackets;
     <para>
      Voir aussi 
      <function>stream_socket_client</function>, 
@@ -115,7 +118,7 @@ if (!$socket) {
      <function>stream_set_timeout</function>, 
      <function>fgets</function>,
      <function>fgetss</function>, 
-     <function>fputs</function>,
+     <function>fwrite</function>,
      <function>fclose</function>, 
      <function>feof</function> et
      l'<link linkend="ref.curl">extension CURL</link>.

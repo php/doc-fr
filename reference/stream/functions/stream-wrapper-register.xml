@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.7 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-<!-- splitted from ./en/functions/filesystem.xml, last change in rev 1.141 -->
+<!-- $Revision: 1.8 $ -->
+<!-- EN-Revision: 1.12 Maintainer: yannick Status: ready -->
   <refentry id="function.stream-wrapper-register">
    <refnamediv>
     <refname>stream_wrapper_register</refname>
     <refpurpose>
-     Enregistre une enveloppe URL, implémentée comme classe PHP
+     Enregistre une enveloppe URL, implémentée comme une classe PHP
     </refpurpose>
    </refnamediv>
    <refsect1>
@@ -25,12 +24,22 @@
     <para>
      Pour implémenter une enveloppe, vous devez définir une classe avec
      la liste des membres définie ci-dessous. Lorsque quelqu'un ouvre
-     votre flux, PHP va créer une instance de la classe 
+     votre flux, &php; va créer une instance de la classe 
      <parameter>classname</parameter> et appeler les méthodes de cette
      instance. Vous devez implémenter ces méthodes exactement comme 
      décrit ci-dessous : sinon, vous risquez de rencontrer des comportements
      indéfinis.
     </para>
+    <note>
+     <simpara>
+      Depuis &php; 5.0.0, l'intance de la classe <parameter>classname</parameter>
+      sera peuplé avec une propriété <parameter>context</parameter>
+      référençant une <literal>ressource de contexte</literal> qui peut être accédée
+      avec la fonction <function>stream_context_get_options</function>.
+      Si aucun contexte n'est passé à la fonction de création du flux, 
+      <parameter>context</parameter> sera défini à &null;.
+     </simpara>
+    </note>    
     <para>
      <function>stream_wrapper_register</function> retourne &false; si
      le protocole <parameter>protocol</parameter> a déjà un gestionnaire
@@ -53,7 +62,7 @@
     </para>
     <para>
      <parameter>mode</parameter> est le mode d'ouverture du fichier,
-     comme expliqué dans <function>fopen</function>.  Vous êtes responsable
+     comme expliqué dans <function>fopen</function>. Vous êtes responsable
      de la vérification de la validité du paramètre <parameter>mode</parameter>
      avec le chemin <parameter>path</parameter> fourni.
     </para>
@@ -104,9 +113,9 @@
      <void/>
     </methodsynopsis>
     <para>
-     Cette méthode est appelée lors que flux est fermée, grâce à la
+     Cette méthode est appelée lors que le flux est fermée, grâce à la
      fonction <function>fclose</function>.  Vous devez libérez
-     toutes les ressources réservées par le flux.
+     toutes les ressources vérouillées ou réservées par le flux.
     </para>
 
     <methodsynopsis>
@@ -114,14 +123,14 @@
      <methodparam><type>int</type><parameter>count</parameter></methodparam>
     </methodsynopsis>
     <para>
-     Cette méthod est appelée suite à l'utilisation des fonctions <function>fread</function>
+     Cette méthode est appelée suite à l'utilisation des fonctions <function>fread</function>
      et <function>fgets</function>. Vous devez lire jusqu'à
      <parameter>count</parameter> octets de données à partir de
      la position courante d'écriture ou de lecture, sous la 
      forme de chaîne de caractères. S'il y a moins que
      <parameter>count</parameter> octets disponibles, vous
      devez en retourner autant que possible. Si aucune autre
-     donnée n'est disponible, retournez soit &false; soit 
+     donnée n'est disponible, &false; sera retourné ou  
      une chaîne vide. Vous devez aussi tenir à jour la position 
      du pointeur d'écriture/lecture dans le flux, en ajoutant
      ou retranchant le nombre d'octets lus.
@@ -139,7 +148,7 @@
      avez réussi à écrire, ou bien 0 si aucun n'a pu être stocké.
      Vous devez aussi tenir à jour la position 
      du pointeur d'écriture/lecture dans le flux, en ajoutant
-     ou retranchant le nombre d'octets lus.
+     ou retranchant le nombre d'octets écrits.
     </para>
    
     <methodsynopsis>
@@ -149,7 +158,7 @@
     <para>
      Cette méthode est appelée lorsque la fonction <function>feof</function>
      est utilisée. Vous devez retourner &true; si la position de lecture
-     se situe a la fin du fichier et s'il n'y a plus de donnée
+     se situe à la fin du fichier et s'il n'y a plus de donnée
      disponible pour la lecture, ou bien &false; sinon.
     </para>
 
@@ -160,7 +169,7 @@
     <para>
      Cette méthode est appelée lorsque la fonction <function>ftell</function>
      est utilisée. Vous devez retourner la position actuelle du pointeur
-     de lecture / écriture.
+     de lecture / écriture dans le flux.
     </para>
 
     <methodsynopsis>
@@ -185,7 +194,7 @@
     <para>
      Cette méthode est appelée lorsque la fonction <function>fflush</function>
      est utilisée. Si vous avez mis des données dans un système de cache pour
-     votre flux, mais qu'ils ne sont pas encore stockés de manière pérenne,
+     votre flux, mais qu'elles ne sont pas encore stockées de manière pérenne,
      c'est le moment de le faire. Retournez 
      &true; si les données cachées ont pu être stockées avec succès
      (il n'y a plus de donnée à stocker), ou bien &false; si les
@@ -209,34 +218,84 @@
     <para>
      Cette méthode est appelée en réponse à la fonction <function>unlink</function>
      avec une URL, et doit tenter de supprimer l'objet identifié par 
-     <parameter>path</parameter>. La fonction doit retourne 
+     <parameter>path</parameter>. La fonction doit retourner 
      &true; en cas de succès, et &false; en cas d'échec.
      Afin de retourner le bon message d'erreur, ne définissez pas
      cette méthode si votre gestionnaire ne le supporte pas.
     </para>
     <note>
      <simpara>
-      Userspace wrapper unlink method is not supported prior to 
-      <literal>PHP 5.0.0</literal>.
+      La méthode enveloppe d'utilisateur <literal>unlink</literal> n'est pas supportée
+      avant &php; 5.0.0.
+     </simpara>
+    </note>
+         
+    <methodsynopsis>
+     <type>bool</type><methodname>rename</methodname>
+     <methodparam><type>string</type><parameter>path_from</parameter></methodparam>
+     <methodparam><type>string</type><parameter>path_to</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette méthode est appelée en réponse à la fonction <function>rename</function>
+     avec une URL associée avec l'enveloppe et doit tenter de renommer
+     l'objet identifié par <parameter>path_from</parameter> en 
+     <parameter>path_to</parameter>. Celà doit retourner &true; en cas de succès ou
+     &false; en cas d'erreur. 
+     Afin de pouvoir retourner le message d'erreur approprié, ne définissez pas cette méthode
+     si votre enveloppe ne supporte pas le renommage.
+    </para>
+    <note>
+     <simpara>
+      La méthode enveloppe d'utilisateur <literal>rename</literal> n'est pas supportée
+      avant &php; 5.0.0.
+     </simpara>
+    </note>
+         
+    <methodsynopsis>
+     <type>bool</type><methodname>mkdir</methodname>
+     <methodparam><type>string</type><parameter>path</parameter></methodparam>
+     <methodparam><type>int</type><parameter>mode</parameter></methodparam>
+     <methodparam><type>int</type><parameter>options</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette méthode est appelée en réponse à la fonction <function>mkdir</function>
+     avec une URL associée avec l'enveloppe et doit tenter de créer le répertoire
+     spécifié par <parameter>path</parameter>.
+     Celà doit retourner &ture; en cas de succès ou &false; en cas d'erreur.
+     Afin de pouvoir retourner le message d'erreur approprié, ne définissez pas cette méthode
+     si votre enveloppe ne supporte pas la création de répertoire.
+     Les valeurs possibles pour le paramètre <parameter>options</parameter>
+     sont <constant>STREAM_REPORT_ERRORS</constant> et 
+     <constant>STREAM_MKDIR_RECURSIVE</constant>.
+    </para>
+    <note>
+     <simpara>
+      La méthode enveloppe d'utilisateur <literal>mkdir</literal> n'est pas supportée
+      avant &php; 5.0.0.
      </simpara>
     </note>
 
-<!--
-    Note: url_stat() is not yet implemented.  
-          ext/standard/filestat.c needs to route through wrappers first.
-
     <methodsynopsis>
-     <type>array</type><methodname>url_stat</methodname>
+     <type>bool</type><methodname>rmdir</methodname>
      <methodparam><type>string</type><parameter>path</parameter></methodparam>
+     <methodparam><type>int</type><parameter>options</parameter></methodparam>
     </methodsynopsis>
     <para>
-     This method is called in response to <function>stat</function>
-     calls on the URL paths associated with the wrapper and should
-     return as many elements in common with the system function as
-     possible.  Unknown or unavailable values should be set to a
-     rational value (usually <constant>0</constant>).
+     Cette méthode est appeléée en réponse à la fonction <function>rmdir</function>
+     avec une URL associée avec l'enveloppe et doit tenter de supprimer
+     le répertoire spécifié par <parameter>path</parameter>.
+     Celà doit retourner &true; en cas de succès ou &false; en cas d'erreur.
+     Afin de pouvoir retourner le message d'erreur approprié, ne définissez pas cette méthode
+     si votre enveloppe ne supporte pas la suppression de répertoire.
+     La valeur possible pour le paramètre <parameter>options</parameter>
+     est <constant>STREAM_REPORT_ERRORS</constant>.
     </para>
--->
+    <note>
+     <simpara>
+      Userspace wrapper rmdir method is not supported prior to 
+      <literal>PHP 5.0.0</literal>.
+     </simpara>
+    </note>
 
     <methodsynopsis>
      <type>bool</type><methodname>dir_opendir</methodname>
@@ -252,6 +311,54 @@
      pour la scinder en morceaux.
     </para>
 
+    <methodsynopsis>
+     <type>array</type><methodname>url_stat</methodname>
+     <methodparam><type>string</type><parameter>path</parameter></methodparam>
+     <methodparam><type>int</type><parameter>flags</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette méthode est appelée en réponse à la fonctio <function>stat</function>
+     avec une URL associé avec l'enveloppe et doit retourner autant d'éléments en commun
+     avec la fonction système que possible. Les valeurs non connues ou non disponibles doivent
+     être définies en une valeur rationnelle (habituellement, &zero;).
+    </para>
+    <para>
+     <parameter>flags</parameter> représente les options additionnelles définies
+     par l'API. Il peut prendre une ou plusieurs des valeurs suivantes séparées par OR.
+     <informaltable>
+      <tgroup cols="2">
+       <thead>
+        <row>
+         <entry>Option</entry>
+         <entry>Description</entry>
+        </row>
+       </thead>
+       <tbody>
+        <row>
+         <entry>STREAM_URL_STAT_LINK</entry>
+         <entry>
+          Pour les ressources avec la possibilité de relier d'autres ressources (comme
+          par exemple <literal>HTTP Location: forward</literal> ou un lien symbolique d'un
+          système de fichier). Cette option spécifie que seul les informations à propo du lien
+          lui-même peuvent être retournés, et non pas les ressources pointées par le lien.
+          Cette option est définie en réponse à l'appel à la fonction <function>lstat</function>,
+          <function>is_link</function>, ou <function>filetype</function>.
+         </entry>
+        </row>
+        <row>
+         <entry>STREAM_URL_STAT_QUIET</entry>
+         <entry>
+          Si cette option est définie, votre enveloppe ne devra contenir aucune erreur.
+          Si cette option n'est pas définie, vous êtes responsable du traitement des erreurs
+          en utilisant la fonction <function>trigger_error</function> pendant l'évaluation 
+          du chemin.  
+         </entry>
+        </row>
+       </tbody>
+      </tgroup>
+     </informaltable>
+    </para>
+         
     <methodsynopsis>
      <type>string</type><methodname>dir_readdir</methodname>
      <void/>
@@ -278,7 +385,7 @@
      <void/>
     </methodsynopsis>
     <para>
-     Cette méthde est appelé en réponse à <function>closedir</function>.
+     Cette méthode est appelée en réponse à <function>closedir</function>.
      Vous devez libérer toutes les ressources qui ont été réservées
      durant l'ouverture et l'utilisation du dossier.
     </para>
@@ -389,11 +496,13 @@ while(!feof($fp)) {
 }
 fclose($fp);
 var_dump($myvar);
+
 ?>
 ]]>
       </programlisting>
      </example>
     </para>
+    
    </refsect1>
   </refentry>
 
