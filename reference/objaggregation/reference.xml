@@ -1,0 +1,444 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+ <reference id="ref.objaggregation">
+  <title>Aggregation d'objets/Composition de fonctions</title>
+  <titleabbrev>Aggregation d'objets</titleabbrev>
+
+  <partintro id="objaggregation.partintro">
+    &warn.experimental;
+    <section id="objaggregation.intro">
+     &reftitle.intro;
+     <para>
+      En programmation objet, il est courant de rencontrer la combinaison
+      de classes simples (et de leurs instances) en une classe plus complexe.
+      C'est une strategie habile pour mettre en place des objets complexes,
+      et des hierarchies d'objets. Ce syst&egrave;me peut fonctionne comme une
+      alternative dynamique &agrave; l'h&eacute;ritage multiple. Il y a deux solutions
+      pour combiner deux classes, suivant la relation de leurs &eacute;l&eacute;ments
+      constitutifs : L'<emphasis>Association</emphasis> et 
+      l'<emphasis>Aggregation</emphasis>.
+     </para>
+     <para>
+      Une <emphasis>Association</emphasis> est une combinaison d'&eacute;l&eacute;ments construits
+      ind&eacute;pendamment et visibles &agrave; l'ext&eacute;rieur. Lorsque nous associons des classes ou
+      objets, chacun garde une r&eacute;f&eacute;rence &agrave; l'autre partie de l'association. Lorsque
+      nous associons des classes statiquement, une classe contient une r&eacute;f&eacute;rence
+      &agrave; une instance de l'autre classe. Par exemple : 
+      <example>
+       <title>Association de classe</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+class DateTime {
+   
+   function DateTime() {
+       // constructeur vide
+   }
+
+   function now() {
+       return date("Y-m-d H:i:s");
+   }
+}
+
+class Report {
+   var $_dt = new DateTime();
+   // autres propri&eacute;t&eacute;s ...
+
+   function Report() {
+       // initialisation du code ...
+   }
+
+   function generateReport() {
+       $dateTime = $_dt->now();
+       // autre code
+   }
+
+   // autres m&eacute;thodes ...
+}
+
+$rep = new Report();
+?>
+]]>
+       </programlisting>
+      </example>
+      Nous pouvons aussi associer des instances dynamiquement, en passant une r&eacute;f&eacute;rence au
+      constructeur (ou par une autre m&eacute;thode), ce qui permet de g&eacute;rer dynamiquement 
+      l'association entre les objets. Nous allons modifier l'exemple ci-dessus pour
+      illustrer ce point : 
+      <example>
+       <title>Association d'objets</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+class DateTime {
+   // identique au pr&eacute;c&eacute;dent exemple
+}
+
+class DateTimePlus {
+   var $_format;
+   
+   function DateTimePlus($format="Y-m-d H:i:s") {
+       $this->_format = $format
+   }
+
+   function now() {
+       return date($this->_format);
+   }
+}
+
+class Report {
+   var $_dt;    // Nous allons garder la r&eacute;f&eacute;rence &agrave; DateTime ici
+   // autre propri&eacute;t&eacute;s
+  
+   function Report() {
+       // initialisation
+   }
+
+   function setDateTime(&$dt) {
+       $this->_dt =& $dt;
+   }
+
+   function generateReport() {
+       $dateTime = $_dt->now();
+       // autre code ...
+   }
+
+   // autres m&eacute;thodes ...
+}
+
+$rep = new Report();
+$dt = new DateTime();
+$dtp = new DateTimePlus("l, F j, Y (h:i:s a, T)");
+
+// G&eacute;n&eacute;ratino du rapport avec une simple date
+$rep->setDateTime(&$dt);
+echo $rep->generateReport();
+
+// plus loin dans le code
+
+// generation du rapport avec une date design&eacute;e
+$rep->setDateTime(&$dtp);
+$output = $rep->generateReport();
+// sauvegarde pour affichage dans la base 
+// ... etc ... 
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      L'<emphasis>Aggregation</emphasis>, d'un autre cot&eacute;, implique
+      l'encapsulation et le masquage des parties de la combinaison. Nous
+      pouvons aggr&eacute;ger des classes en utilisant une m&eacute;thode statique, gr&acirc;ce
+      aux sous-classes (mais PHP ne supporte pas bien les sous classes), et
+      dans ce cas, la d&eacute;finition de la classe aggr&eacute;g&eacute;e n'est pas accessible,
+      sauf via les m&eacute;thodes de la classe contenant. L'aggregation d'instances
+      (aggr&eacute;gation d'objets) implique la cr&eacute;ation dynamique de sous-objets
+      &agrave; l'int&eacute;rieur d'un autre objet, et dans le m&ecirc;me temps, l'extension des
+      capacit&eacute;s de l'objet principal (en terme de m&eacute;thodes accessibles).
+     </para>
+     <para>
+      L'aggr&eacute;gation d'object est une m&eacute;thode naturelle pour repr&eacute;senter des
+      relation de type tout-partie (par exemple, une mol&eacute;cule est une aggr&eacute;gation
+      d'atomes), ou bien peut &ecirc;tre utilis&eacute;e pour obtenir un effet &eacute;quivalent
+      &agrave; l'h&eacute;ritage multiple, sans avoir &agrave; lier plusieurs classes et leurs
+      interfaces. En fait, les aggr&eacute;gations d'objets sont plus souples,
+      car nous pouvons alors s&eacute;lectionner les m&eacute;thodes et les propri&eacute;t&eacute;s qui
+      sont transmises &agrave; l'objet aggr&eacute;g&eacute;.
+     </para>
+    </section>
+    <section id="objaggregation.examples">
+     &reftitle.examples;
+     <para>
+      Nous d&eacute;finissons trois classes, qui impl&eacute;mentent chacune une m&eacute;thode de stockage
+      diff&eacute;rente : 
+     </para>
+     <para>
+      <example>
+       <title>storage_classes.inc</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+class FileStorage {
+    var $data;
+
+    function FileStorage($data) {
+        $this->data = $data;
+    }
+    function write($name) {
+        $fp = fopen(name, "w");
+        fwrite($fp, $this->data);
+        fclose($data);
+    }
+}
+
+class WDDXStorage {
+    var $data;
+    var $version = "1.0";
+    var $_id; // variable "priv&eacute;e" 
+
+    function WDDXStorage($data) {
+        $this->data = $data;
+        $this->_id = $this->_genID();
+    }
+
+    function store() {
+        if ($this->_id) {
+            $pid = wddx_packet_start($this->_id);
+            wddx_add_vars($pid, "this->data");
+            $packet = wddx_packet_end($pid);
+        } else {
+            $packet = wddx_serialize_value($this->data);
+        }
+        $dbh = dba_open("varstore", "w", "gdbm");
+        dba_insert(md5(uniqid("",true)), $packet, $dbh);
+        dba_close($dbh);
+    }
+
+    // m&eacute;thode priv&eacute;e
+    function _genID() {
+        return md5(uniqid(rand(),true));
+    }
+}
+
+class DBStorage {
+    var $data;
+    var $dbtype = "mysql";
+
+    function DBStorage($data) {
+        $this->data = $data;
+    }
+
+    function save() {
+        $dbh = mysql_connect();
+        mysql_select_db("storage", $dbh);
+        $serdata = serialize($this->data);
+        mysql_query("insert into vars ('$serdata',now())", $dbh);
+        mysql_close($dbh);
+    }
+}
+
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+     Puis, nous instantion quelques objets issue de ces classes, et nous
+     r&eacute;alisons des aggr&eacute;gations et d&eacute;saggr&eacute;gations, tout en affichant
+     quelques r&eacute;sultats : 
+     </para>
+     <para>
+      <example>
+       <title>test_aggregation.php</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+include "storageclasses.inc";
+
+// quelques utilitaires
+
+function p_arr($arr) {
+    foreach($arr as $k=>$v)
+        $out[] = "\t$k => $v";
+    return implode("\n", $out);
+}
+
+function object_info($obj) {
+    $out[] = "Classe : ".get_class($obj);
+    foreach(get_object_vars($obj) as $var=>$val)
+        if (is_array($val))
+            $out[] = "propri&eacute;t&eacute; : $var (array)\n".p_arr($val);
+        else
+            $out[] = "propri&eacute;t&eacute; : $var = $val";
+    foreach(get_class_methods($obj) as $method)
+        $out[] = "m&eacute;thode : $method";
+    return implode("\n", $out);
+}
+
+
+$data = array(M_PI, "kludge != cruft");
+
+// cr&eacute;ons quelques objets simples
+$fs = new FileStorage($data);
+$ws = new WDDXStorage($data);
+
+// affichons des informations sur ces objets
+echo "\$fs object\n";
+echo object_info($fs)."\n";
+echo "\n\$ws object\n";
+echo object_info($ws)."\n";
+
+// maintenant, quelques aggr&eacute;gations
+
+echo "\nAggr&eacute;geons \$fs avec la classe WDDXStorage\n";
+aggregate($fs, "WDDXStorage");
+echo "L'objet \$fs \n";
+echo object_info($fs)."\n";
+
+echo "\nAggr&eacute;geons le r&eacute;sultat avec la classe DBStorage \n";
+aggregate($fs, "DBStorage");
+echo "L'objet \$fs \n";
+echo object_info($fs)."\n";
+
+echo "\nEt finalement, d&eacute;saggr&eacute;geons WDDXStorage\n";
+deaggregate($fs, "WDDXStorage");
+echo "L'objet \$fs \n";
+echo object_info($fs)."\n";
+
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      Etudions maintenant le r&eacute;sultat du script pour comprendre les effets
+      secondaires et les limitations des aggr&eacute;gations d'objets en PHP.
+      D'abord, nous avons cr&eacute;&eacute; <varname>$fs</varname> et <varname>$ws</varname>
+      et ils fournissent le bon r&eacute;sultat (suivant la d&eacute;finition de leur classe).
+      Notez que dans le but de l'aggr&eacute;gation d'objets, 
+      <emphasis>les &eacute;l&eacute;ments priv&eacute;s d'une classe ou d'un objet doivent commencer
+      par un soulign&eacute; ("_")</emphasis>, m&ecirc;me si il n'y a pas de distinction 
+      r&eacute;elle entre un objet priv&eacute; et un objet public.
+     </para>
+     <para>
+      <informalexample>
+       <programlisting>
+<![CDATA[
+L'objet $fs
+Classe : filestorage
+propri&eacute;t&eacute; : data (array)
+	0 => 3.1415926535898
+	1 => kludge != cruft
+m&eacute;thode : filestorage
+m&eacute;thode : write
+
+L'objet $ws
+Classe : wddxstorage
+propri&eacute;t&eacute; : data (array)
+	0 => 3.1415926535898
+	1 => kludge != cruft
+propri&eacute;t&eacute; : version = 1.0
+propri&eacute;t&eacute; : _id = ID::9bb2b640764d4370eb04808af8b076a5
+m&eacute;thode : wddxstorage
+m&eacute;thode : store
+m&eacute;thode : _genid
+]]>
+       </programlisting>
+      </informalexample>
+     </para>
+     <para>
+      Nous aggr&eacute;geons alors <varname>$fs</varname> avec la classe
+      <classname>WDDXStorage</classname>, et nous affichons les informations.
+      Nous pouvons aussi vior que m&ecirc;me si l'objet <varname>$fs</varname> 
+      est toujours du type <classname>FileStorage</classname>, il a maintenant
+      la propri&eacute;t&eacute; <varname>$version</varname>, et la m&eacute;thode <function>store</function>,
+      qui sont d&eacute;finies dans <classname>WDDXStorage</classname>. Une chose importante
+      &agrave; noter est que les &eacute;l&eacute;ments priv&eacute;s n'ont pas &eacute;t&eacute; aggr&eacute;g&eacute;s, m&ecirc;me si ils sont
+      pr&eacute;sents dans l'objet <varname>$ws</varname>. Un autre absent est le constructeur
+      de <classname>WDDXStorage</classname>, qu'il n'est pas logique 
+      d'aggr&eacute;ger.
+     </para>
+     <para>
+      <informalexample>
+       <programlisting>
+<![CDATA[
+Aggr&eacute;geons \$fs avec la classe WDDXStorage
+L'objet $fs
+Classe : filestorage
+propri&eacute;t&eacute; : data (array)
+	0 => 3.1415926535898
+	1 => kludge != cruft
+propri&eacute;t&eacute; : version = 1.0
+m&eacute;thode : filestorage
+m&eacute;thode : write
+m&eacute;thode : store
+]]>
+       </programlisting>
+      </informalexample>
+     </para>
+     <para>
+      Le processus d'aggr&eacute;gation est cumulatif, ce qui fait que
+      lorsque nous aggr&eacute;geons <varname>$fs</varname> avec la classe 
+      <classname>DBStorage</classname>, nous g&eacute;n&eacute;rons un objet qui
+      peut utiliser n'importe laquelle des m&eacute;thodes de stockage de
+      ces classes.
+     </para>
+     <para>
+      <informalexample>
+       <programlisting>
+<![CDATA[
+Aggr&eacute;geons le r&eacute;sultat avec la classe DBStorage
+L'objet $fs 
+Classe : filestorage
+propri&eacute;t&eacute; : data (array)
+	0 => 3.1415926535898
+	1 => kludge != cruft
+propri&eacute;t&eacute; : version = 1.0
+propri&eacute;t&eacute; : dbtype = mysql
+m&eacute;thode : filestorage
+m&eacute;thode : write
+m&eacute;thode : store
+m&eacute;thode : save
+]]>
+       </programlisting>
+      </informalexample>
+     </para>
+     <para>
+      Finalement, de la m&ecirc;me fa&ccedil;on que nous avons aggr&eacute;g&eacute;s les m&eacute;thodes et propri&eacute;t&eacute;s
+      dynamiquement, nous pouvons aussi les d&eacute;saggr&eacute;g&eacute;er. Si vous d&eacute;saggr&eacute;geons 
+      la classe <classname>WDDXStorage</classname> de l'objet <varname>$fs</varname>, 
+      nous allons obtenir : 
+     </para>
+     <para>
+      <informalexample>
+       <programlisting>
+<![CDATA[
+Et finalement, d&eacute;saggr&eacute;geons WDDXStorage
+L'objet $fs
+Classe : filestorage
+propri&eacute;t&eacute; : data (array)
+	0 => 3.1415926535898
+	1 => kludge != cruft
+propri&eacute;t&eacute; : dbtype = mysql
+m&eacute;thode : filestorage
+m&eacute;thode : write
+m&eacute;thode : save
+]]>
+       </programlisting>
+      </informalexample>
+     </para>
+     <para>
+      Un point que nous n'avons pas mentionn&eacute;&eacute; ci-dessus et que l'aggr&eacute;gation ne va
+      pas &eacute;craser les m&eacute;thodes ou propri&eacute;t&eacute;s d&eacute;j&agrave; existantes dans l'objet principal.
+      Par exemple, la classe <classname>FileStorage</classname> d&eacute;finit une
+      propri&eacute;t&eacute; <varname>$data</varname>, et la classe
+      <classname>WDDXStorage</classname> aussi. Mais cette derni&egrave;re ne sera pas
+      impliqu&eacute;e dans l'aggr&eacute;gation.
+     </para>
+    </section>
+  </partintro>
+
+  &reference.objaggregation.functions;
+ </reference>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
+
