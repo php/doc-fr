@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.5 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
-<!-- splitted from ./fr/functions/dir.xml, last change in rev 1.11 -->
-<!-- last change to 'readdir' in en/ tree in rev 1.2 -->
+<!-- $Revision: 1.6 $ -->
+<!-- EN-Revision: 1.5 Maintainer: didou Status: ready -->
  <refentry id="function.readdir">
   <refnamediv>
    <refname>readdir</refname>
@@ -19,18 +16,39 @@
     <function>readdir</function> retourne le nom du fichier suivant dans
     le dossier identifié par <parameter>dir_handle</parameter>.
     Les noms sont retournés dans n'importe quel ordre.
+   </para>
+   <para>
+    Notez la façon dont la valeur de retour de <function>dir</function>
+    est vérifiée dans l'exemple suivant. Nous testons si la valeur est
+    identique (égale et de même type que -- woyez <link
+    linkend="language.operators.comparison">opérateurs de comparaison</link>
+    pour plus de détails) &false; sinon, toute entrée dans le nom serait évalué
+    à &false; causera l'arrêt de la boucle (exemple, un répertoire nommé 0).
+   </para>
+   <para>
     <example>
      <title>Liste tous les fichiers du dossier courant</title>
      <programlisting role="php">
 <![CDATA[
 <?php
-  $handle=opendir('.');
-  echo "Pointeur de dossier : $handle\n";
-  echo "Fichiers :\n";
-  while ($file = readdir($handle)) {
-    echo "$file\n";
-  }
-  closedir($handle);
+// Notez que !== n'existait pas avant 4.0.0-RC2
+
+if ($handle = opendir('/chemin/vers/fichiers')) {
+    echo "Directory handle: $handle\n";
+    echo "Files:\n";
+
+    /* Ceci est la façon correcte de traverser un dossier. */
+    while (false !== ($file = readdir($handle))) {
+        echo "$file\n";
+    }
+
+    /* Ceci est la MAUVAISE façon de traverser un dossier. */
+    while ($file = readdir($handle)) {
+        echo "$file\n";
+    }
+
+    closedir($handle);
+}
 ?>
 ]]>
      </programlisting>
@@ -46,13 +64,14 @@
      <programlisting role="php">
 <![CDATA[
 <?php
-$handle=opendir('.');
-while ($file = readdir($handle)) {
-    if ($file != "." && $file != "..") {
-        echo "$file\n";
+if ($handle = opendir('.')) {
+    while (false !== ($file = readdir($handle))) {
+        if ($file != "." && $file != "..") {
+            echo "$file\n";
+        }
     }
+    closedir($handle);
 }
-closedir($handle);
 ?>
 ]]>
      </programlisting>
