@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+<!-- Author: Wez Furlong <wez@thebrainroom.com>
+  Please contact me before making any major amendments to the
+  content of this section.  Splitting/Merging are fine if they are
+  required for php-doc restructuring purposes - just drop me a line
+  if you make a change (so I can update my local copy).
+-->
+
+<chapter id="streams">
+ <title>API de fl&ocirc;ts les auteurs d'extensions</title>
+
+ <sect1 id="streams.overview">
+  <title>Pr&eacute;sentation</title>
+  <para>
+   Les fl&ocirc;ts de PHP proposent une approche unifi&eacute;e &agrave; la gestion des
+   fichiers et sockets, depuis une extension PHP. En utilisant l'API
+   standard, les fl&ocirc;ts vous permettent d'acc&eacute;der &agrave; des fichiers, des 
+   sockets, des URL, de la m&eacute;moire ou encore des objets d&eacute;finis dans des
+   scripts. Les fl&ocirc;ts (streams en anglais), sont une API flexible et
+   dynamique, dynamiquement charg&eacute;e dans les modules (et les scripts!).
+  </para>
+  <para>
+   Le but des fl&ocirc;ts est de proposer une API confortables pour les programmeurs,
+   lors des manipulations de fichiers, URL et autres sources de donn&eacute;es lin&eacute;aires.
+   L'API unifi&eacute;e est tr&egrave;s simple &agrave; comprendre : elle est plus ou moins bas&eacute;e sur
+   la famille de fonction classiques C d'entr&eacute;e/sortie (avec les m&ecirc;mes concepts
+   pour la plus part des fonctions) : les programmeurs C ne seront pas d&eacute;pays&eacute;s.
+  </para>
+  <para>
+    L'API des fl&ocirc;ts intervient &agrave; diff&eacute;rents niveaux : &agrave; la base, elle d&eacute;finit un
+    objet php_stream, qui repr&eacute;sente les sources de donn&eacute;es. A un niveau au dessus,
+    l'API d&eacute;fini un objet php_stream_wrapper qui s'interface avec l'API de bas
+    niveau, pour lire et &eacute;crire les donn&eacute;es et m&eacute;ta donn&eacute;es, dans les sources.
+  </para>
+  <para>
+   Les fl&ocirc;ts peuvent &ecirc;tre converti en pilotes pour fichiers, de mani&egrave;re &agrave; &ecirc;tre
+   utilis&eacute; par des librairies tierce-partie avec beaucoup de facilit&eacute;. Cela 
+   autorise ces librairies &agrave; acc&eacute;der aux donn&eacute;es directement depuis des sources
+   repr&eacute;sent&eacute;es par des URL. Si votre syst&egrave;me supporte la fonction
+   <function>fopencookie</function>, vous pouvez m&ecirc;me passer n'importe quel
+   fl&ocirc;t PHP &agrave; une autre librairie qui utilise les entr&eacute;e/sortie standard ANSI!
+  </para>
+ </sect1>
+
+ <sect1 id="streams.basics">
+  <title>El&eacute;ments de bases</title>
+  <para>
+   Utiliser les fl&ocirc;ts ressemble &eacute;norm&eacute;ment &agrave; l'utilisation des fonctions 
+   d'entr&eacute;e/sortie standard ANSI streams. La principale diff&eacute;rence est que
+   vous devez cr&eacute;er le pointeur de fl&ocirc;t d'abord. Dans la plus part des
+   cas, vous utiliserez la fonction <function>php_stream_open_wrapper</function>
+   pour l'obtenir. Cette fonction ressemble &agrave; fopen(),
+   comme le montre l'exemple ci-dessous : 
+  </para>
+  <para>
+     <example>
+      <title>Exemple de fl&ocirc;t qui affiche la page de PHP.net</title>
+      <programlisting role="c">
+<![CDATA[
+php_stream * stream = php_stream_open_wrapper("http://www.php.net", "rb", REPORT_ERRORS, NULL);
+if (stream) {
+    while(!php_stream_eof(stream)) {
+        char buf[1024];
+        
+        if (php_stream_gets(stream, buf, sizeof(buf))) {
+            printf(buf);
+        } else {
+            break;
+        }
+    }
+    php_stream_close(stream);
+}
+]]>
+      </programlisting>
+     </example>
+  </para>
+  <para>
+   La table ci-dessous montre les fonctions de fl&ocirc;ts &eacute;quivalentes aux fonctions
+   ANSI. Sauf indication contraire, les fonctionnalit&eacute;s sont les m&ecirc;mes.
+     <table>
+      <title>ANSI stdio equivalent functions in the Streams API</title>
+      <tgroup cols="3">
+       <thead>
+        <row>
+         <entry>Fonction ANSI</entry>
+         <entry>Fonction Fl&ocirc;t PHP</entry>
+         <entry>Notes</entry>
+        </row>
+       </thead>
+       <tbody>
+
+        <row>
+         <entry>fopen</entry>
+         <entry>php_stream_open_wrapper</entry>
+         <entry>Les fl&ocirc;ts incluent des param&egrave;tres suppl&eacute;mentaires</entry>
+        </row>
+
+        <row>
+         <entry>fclose</entry>
+         <entry>php_stream_close</entry>
+         <entry></entry>
+        </row>
+
+        <row>
+         <entry>fgets</entry>
+         <entry>php_stream_gets</entry>
+         <entry></entry>
+        </row>
+
+        <row>
+         <entry>fread</entry>
+         <entry>php_stream_read</entry>
+         <entry>Le param&egrave;tre nmemb est suppos avoir la valeur 1 : le prototype ressemble plut&ocirc;t &agrave; read(2)</entry>
+        </row>
+
+        <row>
+         <entry>fwrite</entry>
+         <entry>php_stream_write</entry>
+         <entry>Le param&egrave;tre nmemb est suppos avoir la valeur 1 : le prototype ressemble plut&ocirc;t &agrave; write(2)</entry>
+        </row>
+
+        <row>
+         <entry>fseek</entry>
+         <entry>php_stream_seek</entry>
+         <entry></entry>
+        </row>
+
+        <row>
+         <entry>ftell</entry>
+         <entry>php_stream_tell</entry>
+         <entry></entry>
+        </row>
+
+        <row>
+         <entry>rewind</entry>
+         <entry>php_stream_rewind</entry>
+         <entry></entry>
+        </row>
+
+        <row>
+         <entry>feof</entry>
+         <entry>php_stream_eof</entry>
+         <entry></entry>
+        </row>
+
+        <row>
+         <entry>fgetc</entry>
+         <entry>php_stream_getc</entry>
+         <entry></entry>
+        </row>
+
+        <row>
+         <entry>fputc</entry>
+         <entry>php_stream_putc</entry>
+         <entry></entry>
+        </row>
+
+        <row>
+         <entry>fflush</entry>
+         <entry>php_stream_flush</entry>
+         <entry></entry>
+        </row>
+
+        <row>
+         <entry>puts</entry>
+         <entry>php_stream_puts</entry>
+         <entry>Identique &agrave; puts, et non pas &agrave; fputs</entry>
+        </row>
+
+        <row>
+         <entry>fstat</entry>
+         <entry>php_stream_stat</entry>
+         <entry>Les informations des fl&ocirc;ts sont plus riches</entry>
+        </row>
+         
+       </tbody>
+      </tgroup>
+     </table>
+   
+  </para>
+ </sect1>
+ <sect1 id="streams.resources">
+  <title>Les fl&ocirc;ts qui sont des ressources</title>
+  <para>
+   Tous les fl&ocirc;ts sont enregitr&eacute;s comme des ressources lorsqu'il sont cr&eacute;&eacute;s.
+   Cela garantit qu'ils seront convenablement d&eacute;blay&eacute;s de la m&eacute;moire, m&ecirc;me
+   en cas d'erreur fatale. Toutes les fonctions du syt&egrave;me de fichier de &php;
+   op&egrave;re sur des ressources : cela signifie que vos extensions peuvent accepter
+   des pointeurs de fichiers comme param&egrave;tre, et retourner des fl&ocirc;ts. L'API des
+   fl&ocirc;ts rend ce processus tr&egrave;s convivial.
+  </para>
+  <para>
+     <example>
+      <title>Comment accepter un fl&ocirc;t comme param&egrave;tre d'entr&eacute;e</title>
+      <programlisting role="c">
+<![CDATA[
+PHP_FUNCTION(example_write_hello)
+{
+    zval *zstream;
+    php_stream *stream;
+    
+    if (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "r", &zstream))
+        return;
+    
+    php_stream_from_zval(stream, &zstream);
+
+    /* Vous pouvez maintenant utiliser votre fl&ocirc;t. Cependant, vous ne 
+       "poss&eacute;dez" pas le fl&ocirc;t, mais le script le poss&egrave;de. Cela signifie
+       que vous de DEVEZ PAS fermer le fl&ocirc;t, car sinon, PHP va crasher! */
+
+    php_stream_write(stream, "hello\n");
+        
+    RETURN_TRUE();
+}
+]]>
+      </programlisting>
+     </example>
+  </para>
+  <para>
+     <example>
+      <title>Comment retourner un fl&ocirc;t depuis une fonction</title>
+      <programlisting role="c">
+<![CDATA[
+PHP_FUNCTION(example_open_php_home_page)
+{
+    php_stream *stream;
+    
+    stream = php_stream_open_wrapper("http://www.php.net", "rb", REPORT_ERRORS, NULL);
+    
+    php_stream_to_zval(stream, return_value);
+
+    /* A partir de ce moment, le fl&ocirc;t appartient au script.
+      Si vous le fermer ici, vous allez faire crasher PHP! */
+}
+]]>
+      </programlisting>
+     </example>
+  </para>
+  <para>
+   Comme les fl&ocirc;ts sont automatiquement d&eacute;blay&eacute;s de la m&eacute;moire, il est tentant de
+   penser que vous pouvez &ecirc;tre des programmeurs paresseux et ne pas vous pr&eacute;occuper
+   de la fermeture du fl&ocirc;t lorsque vous en avez termin&eacute; avec lui. M&ecirc;me si une telle
+   approche fonctionnera probablement, ce n'est pas une bonne id&eacute;e pour un bon
+   nombre de raisons : les fl&ocirc;ts conservent des verrous sur les ressources
+   syst&egrave;mes durant un temps plus long, ce qui fait que laisser le verrous emp&ecirc;che
+   d'autres processus d'acc&eacute;der &agrave; cette ressource. Si le script g&egrave;re un grand
+   nombre de fichier, l'accumulation de ressources, en terme de m&eacute;moire et de
+   nombre de fichiers ouverts, causer l'&eacute;chec des requ&ecirc;tes du serveur web. Cela n'est
+   plus aussi s&eacute;duisant, n'est-ce pas? L'API de fl&ocirc;t inclut un peu de magie pour
+   que vous puissiez garder votre code propre : si un fl&ocirc;t n'est pas ferm&eacute; par 
+   votre code alors qu'il devrait l'&ecirc;tre, vous trouverez des informations de
+   d&eacute;bogage dans le fichier d'historique d'erreur de votre serveur web.
+  </para>
+  <note>
+   <simpara>
+    Utilisez toujours une version de d&eacute;bogagge de &php; lorsque vous d&eacute;veloppez
+    (<option>--enable-debug</option> lors de la configuration de la compilation)
+    car de nombreux efforts ont &eacute;t&eacute; fait pour vous aider &agrave; traquer les fuites
+    de m&eacute;moire.
+   </simpara>
+  </note>
+  <para>
+   Dans certains cas, il est pratique de garder un fl&ocirc;t ouvert pour toute la
+   dur&eacute;e de la requ&ecirc;te, afin de l'utiliser comme fichier d'historique. Ecrire le
+   code n&eacute;cessaire au nettoyage propre d'un tel fichier n'est pas difficile, mais
+   ce sont plusieurs lignes e code qui ne sont pas strictement n&eacute;cessaire. Pour 
+   vous &eacute;viter l'&eacute;criture de ce code, vous pouvez marquer le fl&ocirc;t pour qu'il soit
+   automatiquement lib&eacute;r&eacute; lorsque viendra le temps de lib&eacute;rer les ressources.
+   Pour cela, vous pouvez utiliser la fonction <function>php_stream_auto_cleanup</function>.
+  </para>
+ </sect1>
+ 
+&chapters.streams.common;
+&chapters.streams.dir;
+&chapters.streams.file;
+&chapters.streams.socket;
+&chapters.streams.structs;
+&chapters.streams.constants;
+ 
+</chapter>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
+

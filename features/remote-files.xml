@@ -1,21 +1,32 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.8 $ -->
+<!-- $Revision: 1.9 $ -->
  <chapter id="features.remote-files">
   <title>Utilisation des fichiers &agrave; distance</title>
   <para>
-   Aussi longtemps que le support de la fonction d'ouverture
-   g&eacute;n&eacute;rique de fichiers ("URL fopen wrapper")
-   est actif lorsque vous configurez PHP (il est inutile de
-   passer explicitement l'option 
-   <link linkend="install.configure.disable-url-fopen-wrapper">--disable-url-fopen-wrapper</link>
-   pour faire la configuration), vous pouvez utiliser des URLs
+   Aussi longtemps que le support des gestionnaires d'URL ("URL fopen wrapper")
+   sont activ&eacute;s dans le &php.ini;, vous pouvez utiliser des URLs
    (HTTP et FTP) avec la majorit&eacute; des fonctions qui utilisent un
-   nom de fichier comme param&egrave;tre, ceci incluant les expressions
-   <function>require</function> et <function>include</function>.
+   nom de fichier comme param&egrave;tre. Cela inclut notamment
+   <function>include</function>, <function>include_once</function>, 
+   <function>require</function> et <function>require_once</function>.
+   Reportez-vous &agrave; <xref linkend="wrappers"/> pour plus d'informations
+   sur les protocoles support&eacute;s par &php;.
+  </para>
+  <note>
+   <para>
+    En PHP 4.0.3 et plus r&eacute;cent, pour pouvoir utiliser les gestionnaires
+    d'URL, vous devez configurer &php; avec l'option
+    <option>--enable-url-fopen-wrapper</option>.
+   </para>
+  </note>
+ <para>
    <note>
     <para>
-      Vous ne pouvez pas utiliser les fichiers distants dans les expressions
-      <function>include</function> et <function>require</function> sous Windows.
+     Les versions de &php; pour Windows plus anciennes que 4.3
+     de supportait pas les gestionnaires d'URL avec les fonctions suivantes : 
+     <function>include</function>, <function>include_once</function>,
+     <function>require</function>, <function>require_once</function>,
+     et les fonctions de cr&eacute;ation d'images de l'extension <xref linkend="ref.image"/>.
     </para>
    </note>
   </para>
@@ -30,22 +41,24 @@
    <example>
     <title>Conna&icirc;tre le titre d'une page distante</title>
     <programlisting role="php">
-&lt;?php
-  $file = fopen("http://www.php.net/", "r");
-  if (!$file) {
-    echo "&lt;p>Impossible d'ouvrir le fichier distant.\n";
+<![CDATA[
+<?php
+$file = fopen ("http://www.example.com/", "r");
+if (!$file) {
+    echo "<p>Impossible de lire la page.\n";
     exit;
-  }
-  while (!feof($file)) {
-    $line = fgets($file, 1024);
-    /* Cela ne fonctionne que si le titre est &eacute;crit sur une ligne.*/
-    if (eregi("&lt;title>(.*)&lt;/title>", $line, $out)) {
-      $title = $out[1];
-      break;
+}
+while (!feof ($file)) {
+    $line = fgets ($file, 1024);
+    /* Cela ne fonctionne que si les balises Title sont correctement utilis&eacute;es */
+    if (eregi ("<title>(.*)</title>", $line, $out)) {
+        $title = $out[1];
+        break;
     }
-  }
-  fclose($file);
-?&gt;
+}
+fclose($file);
+?>
+]]>
     </programlisting>
    </example>
   </para>
@@ -53,7 +66,10 @@
    Vous pouvez aussi &eacute;crire des fichiers sur un serveur FTP
    aussi longtemps que vous &ecirc;tes connect&eacute; avec un
    utilisateur ayant les bons droits d'acc&egrave;s, alors que le
-   fichier n'existait pas encore. Pour vous connecter avec un
+   fichier n'existait pas encore. 
+  </para>
+  <para>
+   Pour vous connecter avec un
    utilisateur autre qu'anonyme, vous devez sp&eacute;cifier un
    nom d'utilisateur (et certainement le mot de passe) dans l'URL,
    comme par exemple 'ftp://user:password&#64;ftp.example.com/path/to/file'.
@@ -65,16 +81,18 @@
    <example>
     <title>Stocker des donn&eacute;es sur un serveur distant</title>
     <programlisting role="php">
-&lt;?php
-  $file = fopen("ftp://ftp.php.net/incoming/outputfile", "w");
-  if (!$file) {
-    echo "&lt;p>Impossible d'ouvrir un fichier distant en &eacute;criture.\n";
+<![CDATA[
+<?php
+$file = fopen ("ftp://ftp.example.com/incoming/outputfile", "w");
+if (!$file) {
+    echo "<p>Unable to open remote file for writing.\n";
     exit;
-  }
+}
   /* Ecriture des donn&eacute;es. */
-  fputs($file, "$HTTP_USER_AGENT\n");
-  fclose($file);
-?&gt;
+fputs ($file, $_SERVER['HTTP_USER_AGENT'] . "\n");
+fclose ($file);
+?>
+]]>
     </programlisting>
    </example>
   <note>

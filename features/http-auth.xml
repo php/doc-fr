@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.11 $ -->
+<!-- $Revision: 1.12 $ -->
  <chapter id="features.http-auth">
   <title>Authentification HTTP avec PHP</title>
   <simpara>
@@ -18,26 +18,53 @@
      simple ("Basic") est support&eacute;e. Reportez-vous &agrave; la fonction
      <function>header</function> pour plus d'informations.
    </simpara>
+
+  <note>
+   <title>Note sur les versions de PHP</title>
+   <para>
+    Les <link linkend="language.variables.superglobals">auto-globales</link>, 
+    telles que <link linkend="reserved.variables.server">$_SERVER</link>, ont &eacute;t&eacute;
+    ajout&eacute;e en &php; &agrave; partir de la version 
+    <ulink url="&url.php.release4.1.0;">4.1.0</ulink>. 
+    <varname>$HTTP_SERVER_VARS</varname> est disponible depuis PHP 3.
+   </para>
+  </note>
+
   <para>
    Voici un exemple de script qui force l'authentification du client
    pour acc&eacute;der &agrave; une page :
    <example>
     <title>Exemple d'authentification HTTP</title>
     <programlisting role="php">
-&lt;?php
-  if(!isset($PHP_AUTH_USER)) {
-    Header(&quot;WWW-Authenticate: Basic realm=\&quot;My Realm\&quot;&quot;);
-    Header(&quot;HTTP/1.0 401 Unauthorized&quot;);
-    echo &quot;Texte &agrave; envoyer si le client appuie sur le bouton d'annulation\n&quot;;
+<![CDATA[
+<?php
+  if (!isset($_SERVER['PHP_AUTH_USER'])) {
+    header('WWW-Authenticate: Basic realm="My Realm"');
+    header('HTTP/1.0 401 Unauthorized');
+    echo 'Texte utilis&eacute; si le visiteur utilise le bouton d\'annulation';
     exit;
   } else {
-    echo &quot;Bonjour $PHP_AUTH_USER.&lt;P&gt;&quot;
-    echo &quot;Vous avez entr&eacute; le mot de passe $PHP_AUTH_PW.&lt;P&gt;&quot;
+    echo "<p>Bonjour, {$_SERVER['PHP_AUTH_USER']}.</p>";
+    echo "<p>Votre mot de passe est {$_SERVER['PHP_AUTH_PW']}.</p>";
   }
-?&gt;
+?>
+]]>
     </programlisting>
    </example>
    </para>
+
+  <note>
+   <title>Note de compatibilit&eacute;</title>
+   <para>
+    Soyez bien prudent lorsque vous utilisez des ent&ecirc;tes HTTP avec &php;. Afin de
+    garantir un maximum de compatibilit&eacute; entre les navigateurs, le mot cl&eacute; 
+    "Basic" doit &ecirc;tre &eacute;crit avec un B majuscule, et le texte de pr&eacute;sentation
+    doit &ecirc;tre plac&eacute; entre guillemets simples, et exactement un espace doit
+    pr&eacute;c&eacute;der le code <emphasis>401</emphasis> dans l'ent&ecirc;te
+    <emphasis>HTTP/1.0 401</emphasis>.
+   </para>
+  </note>
+
   <para>
      Au lieu d'afficher simplement les variables globales <varname>$PHP_AUTH_USER</varname>
      et <varname>$PHP_AUTH_PW</varname>, vous pr&eacute;f&eacute;rerez s&ucirc;rement
@@ -58,9 +85,21 @@
     quelle on a acc&eacute;d&eacute; par une authentification traditionnelle,
     les variables globales PHP_AUTH ne seront pas assign&eacute;es si
     l'authentification externe a &eacute;t&eacute; activ&eacute;e pour
-    cette page. Dans ce cas, la variable <varname>$REMOTE_USER</varname> peut &ecirc;tre
+    cette page. Dans ce cas, la variable <varname>REMOTE_USER</varname> peut &ecirc;tre
     utilis&eacute;e pour identifier l'utilisateur &agrave; l'ext&eacute;rieur.
+    De m&ecirc;me que <varname>$_SERVER['REMOTE_USER']</varname>.
   </simpara>
+  <note>
+   <title>Note de configuration</title>
+   <para>
+    &php; utilise la pr&eacute;sence de la directive <literal>AuthType</literal>
+    pour d&eacute;terminer si une authentification externe est activ&eacute;.
+    ƒvitez donc cette directive de contexte si vous voulez utiliser
+    l'authentification de &php; (sinon, les deux authentifications
+    se contrediront, et &eacute;choueront).
+   </para>
+  </note>
+
   <simpara>
     Notez cependant que les manipulations ci-dessus n'emp&ecirc;chent
     pas quiconque poss&egrave;de une page non authentifi&eacute;e
@@ -79,26 +118,29 @@
     Authentification HTTP avec nom d'utilisateur/mot de passe forc&eacute;
    </title>
    <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
   function authenticate() {
-   Header( &quot;WWW-Authenticate: Basic realm=\&quot;Test Authentication System\&quot;&quot;);
-   Header( &quot;HTTP/1.0 401 Unauthorized&quot;);
-   echo &quot;Vous devez entrer un nom d'utilisateur valide et un mot de passe correct pour acc&eacute;der &agrave; cette ressource\n&quot;;
-   exit;
+    header('WWW-Authenticate: Basic realm="Test Authentication System"');
+    header('HTTP/1.0 401 Unauthorized');
+    echo "You must enter a valid login ID and password to access this resource\n";
+    exit;
   }
-  if(!isset($PHP_AUTH_USER) || ($SeenBefore == 1 &amp;&amp; !strcmp($OldAuth, $PHP_AUTH_USER)) ) {
+ 
+  if (!isset($_SERVER['PHP_AUTH_USER']) || ($_POST['SeenBefore'] == 1 && $_POST['OldAuth'] == $_SERVER['PHP_AUTH_USER'])) {
    authenticate();
-  }
+  } 
   else {
-   echo &quot;Bienvenue $PHP_AUTH_USER&lt;BR&gt;&quot;;
-   echo &quot;Old: $OldAuth&quot;;
-   echo &quot;&lt;form action=\&quot;$PHP_SELF\&quot; method=post&gt;\n&quot;;
-   echo &quot;&lt;input type=hidden NAME=\&quot;SeenBefore\&quot; VALUE=\&quot;1\&quot;&gt;\n&quot;;
-   echo &quot;&lt;input type=hidden NAME=\&quot;OldAuth\&quot; VALUE=\&quot;$PHP_AUTH_USER\&quot;&gt;\n&quot;;
-   echo &quot;&lt;input type=submit value=\&quot;Re Authenticate\&quot;&gt;\n&quot;
-   echo &quot;&lt;/FORM&gt;\n&quot;;
+   echo "<p>Welcome: {$_SERVER['PHP_AUTH_USER']}<br>";
+   echo "Old: {$_REQUEST['OldAuth']}";
+   echo "<form action='{$_SERVER['PHP_SELF']}' METHOD='POST'>\n";
+   echo "<input type='hidden' name='SeenBefore' value='1'>\n";
+   echo "<input type='hidden' name='OldAuth' value='{$_SERVER['PHP_AUTH_USER']}'>\n";
+   echo "<input type='submit' value='Re Authenticate'>\n";
+   echo "</form></p>\n";
   }
-?&gt;
+?>
+]]>
    </programlisting>
   </example>
   <simpara>
@@ -115,6 +157,14 @@
    Notez aussi que tout ceci ne fonctionne pas sous Microsoft IIS et que les
    limitations de PHP en version CGI sont dues aux limitations de IIS.
   </simpara>
+  <note>
+   <para>
+    Si le &safemode; est activ&eacute;, l'uid du script es ajout&eacute; automatiquement
+    dans l'ent&ecirc;te <literal>realm</literal>, comme faisant partie de l'ent&ecirc;te
+    <literal>WWW-Authenticate</literal>.
+   </para>
+  </note>
+
  </chapter>
 <!-- Keep this comment at the end of the file
 Local variables:

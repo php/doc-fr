@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+  <sect1 id="install.netscape-enterprise">
+ <title>Installation sous Netscape et iPlanet Enterprise Serveur</title>
+ <para>
+  Cette section contient les notes et d&eacute;tails sp&eacute;cifique &agrave; l'installation
+  Netscape et iPlanet, aussi bien pour <link linkend="install.netscape.sun">Sun Solaris</link>
+  que <link linkend="install.netscape.windows">Windows</link>.
+ </para>
+ <para>
+  Vous pouvez trouvez plus d'informations sur la configuration de
+  PHP avec Netscape Enterprise Server :
+  <ulink url="&url.netscape.nsapi;">&url.netscape.nsapi;</ulink>
+ </para>
+ <sect2 id="install.netscape.sun">
+  <title>Installer PHP avec Netscape sous Sun Solaris</title>
+  <para>
+   Pour compiler PHP avec NES ou iPlanet, indiquez le bon dossier
+   d'installation pour l'option de configuration
+   <link linkend="install.configure.with-nsapi">--with-nsapi</link>
+   = <replaceable>DIR</replaceable> option. Le dossier par d&eacute;faut
+   est g&eacute;n&eacute;ralement <filename class="directory">/opt/netscape/suitespot/</filename>.
+   Lisez aussi <filename>/php-xxx-version/sapi/nsapi/nsapi-readme.txt</filename>.
+  </para>
+  <para>
+   <example id="install.netscape-enterprise.solaris">
+    <title>Exemple d'installation pour Netscape Enterprise sous Solaris</title>
+    <screen>
+<![CDATA[
+Instructions pour Sun Solaris 2.6 avec Netscape Enterprise Server 3.6
+From: bhager@invacare.com
+1. Installez les packages suivants depuis le serveur www.sunfreeware.com
+ou un miroir ad hoc :
+    flex-2_5_4a-sol26-sparc-local
+    gcc-2_95_2-sol26-sparc-local
+    gzip-1.2.4-sol26-sparc-local
+    perl-5_005_03-sol26-sparc-local
+    bison-1_25-sol26-sparc-local
+    make-3_76_1-sol26-sparc-local
+    m4-1_4-sol26-sparc-local
+    autoconf-2.13
+    automake-1.4
+    mysql-3.23.24-beta (if you want mysql support)
+    tar-1.13 (GNU tar)
+2. Assurez-vous que le path inclut bien les dossiers n&eacute;cessaires :
+    PATH=.:/usr/local/bin:/usr/sbin:/usr/bin:/usr/ccs/bin
+    export PATH
+3. gunzip php-x.x.x.tar.gz (si vous avez une distribution .gz, ou bien allez en 4)
+4. tar xvf php-x.x.x.tar
+5. cd ../php-x.x.x
+6. Pour les &eacute;tapes suivantes, assurez-vous que /opt/netscape/suitespot/ correspond
+bien &agrave; votre installation du serveur netscape. Sinon, indiquez le chemin
+correct :
+    /configure
+    --with-mysql=/usr/local/mysql
+    --with-nsapi=/opt/netscape/suitespot/
+    --enable-track-vars --enable-libgcc
+7. make
+8. make install
+]]>
+      </screen>
+ </example>
+  Apr&egrave;s avoir fait l'installation de base et lu les fichiers
+  readme.txt, vous pouvez avoir besoin de faire des configurations
+  suppl&eacute;mentaires.
+ </para>
+ <para>
+  D'abord, vous devez ajouter des chemins dans la variable
+  LD_LIBRARY_PATH pour que PHP trouve toutes les librairies
+  partag&eacute;es. Le mieux est de le faire dans le script de
+  d&eacute;marrage de votre serveur Netscape. Les utilisateurs Windows
+  peuvent probablement ignorer cette &eacute;tape. Le script de
+  d&eacute;marrage est situ&eacute; dans :
+  <filename
+  class="directory">/path/to/server/https-servername/start</filename>
+ </para>
+ <para>
+  Vous pouvez aussi avoir besoin d'&eacute;diter les fichiers de
+  configuration qui sont situ&eacute;s dans : <filename
+  class="directory">/path/to/server/https-servername/config/</filename>.
+ </para>
+ <example id="install.netscape-enterprise.configure">
+  <title>
+   Exemple de configuration pour Netscape Enterprise
+  </title>
+     <screen>
+<![CDATA[
+Instructions  de configuration for Netscape Enterprise Server
+From: bhager@invacare.com
+1. Ajoutez les lignes suivantes dans mime.types:
+    type=magnus-internal/x-httpd-php exts=php
+2. Ajoutez les lignes suivantes dans obj.conf. shlib peut d&eacute;pendre de
+votre OS, pour Unix c'est quelque chose de proche de
+/opt/netscape/suitespot/bin/libphp4.so.
+    Il est conseill&eacute; de placer les lignes suivantes apr&egrave;s les
+    lignes de types mime :
+    Init fn="load-modules" funcs="php4_init,php4_close,php4_execute,php4_auth_trans" shlib="/php4/nsapiPHP4.dll"
+    Init fn=php4_init errorString="Failed to initialize PHP!"
+    <object name="default">
+    .
+    .
+    .
+    .#NOTE La ligne suivante doit &ecirc;tre plac&eacute;e apr&egrave;s toutes
+    .#les lignes 'ObjectType'
+    .# et avant les lignes 'AddLog'
+    Service fn="php4_execute" type="magnus-internal/x-httpd-php"
+    .
+    .
+    </Object>
+    <Object name="x-httpd-php">
+    ObjectType fn="force-type" type="magnus-internal/x-httpd-php"
+    Service fn=php4_execute
+    </Object>
+    Configuration d'authentification
+    L'authentification PHP ne peut pas &ecirc;tre utilis&eacute;e avec d'autre authentification.
+    TOUTES LES FORMES D'AUTHENTIFICATION SONT PASSEES AU SCRIPT PHP.
+    Pour configurer l'authentification PHP pour le serveur entier, ajoutez
+    la ligne suivante :
+    <Object name="default">
+    AuthTrans fn=php4_auth_trans
+    .
+    .
+    .
+    .
+    </Object>
+    Pour configurer l'authentification PHP pour un dossier, ajoutez
+    la ligne suivante :
+    <Object ppath="d:\path\to\authenticated\dir\*">
+    AuthTrans fn=php4_auth_trans
+    </Object>
+]]>
+     </screen>
+    </example>
+  <para>
+  Si vous utilisez Netscape Enterprise 4.x, alors, il faut utiliser ceci :
+ </para>
+ <example>
+  <title>Exemple de configuration pour Netscape Enterprise 4.x</title>
+     <programlisting>
+<![CDATA[
+     Placez ces lignes apr&egrave;s les types MIME, et tout le reste ressemble
+     &agrave; l'exemple ci-dessus :
+From: Graeme Hoose (GraemeHoose@BrightStation.com)
+
+Init fn="load-modules" shlib="/path/to/server4/bin/libphp4.so" funcs="php4_init,php4_close,php4_execute,php4_auth_trans"
+Init fn="php4_init" LateInit="yes"
+]]>
+     </programlisting>
+    </example>
+   </sect2>
+   <sect2 id="install.netscape.windows">
+  <title>Installer PHP avec Netscape Enterprise sous Windows</title>
+  <para>
+    Pour installer PHP sous forme de CGI (pour Netscape Enterprise Server,
+    iPlanet, peut &ecirc;tre Fastrack), suivez ces instructions :
+  </para>
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     Copiez le fichier <filename>php4ts.dll</filename> dans votre dossier
+     systemroot (le dossier o&ugrave; vous avez install&eacute; windows)
+    </simpara>
+   </listitem>
+   <listitem>
+    <para>
+     Fa&icirc;tes un fichier d'association depuis la ligne de commande.
+     Tapez les lignes suivantes :
+       <programlisting>
+<![CDATA[
+assoc .php=PHPScript
+ftype PHPScript=c:\php\php.exe %1 %*
+]]>
+       </programlisting>
+     </para>
+   </listitem>
+   <listitem>
+    <simpara>
+     Dans le serveur Netscape Enterprise Administration Server,
+     cr&eacute;ez un dossier shellcgi et supprimez le aussit&ocirc;t (cette
+     op&eacute;ration cr&eacute;ee 5 lignes importantes dans le fichier
+     obj.conf et permet au serveur de g&eacute;rer les scripts CGI).
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Dans le serveur Netscape Enterprise Administration Server, cr&eacute;eez un
+     nouveau type MIME (Category: type,
+     Content-Type: magnus-internal/shellcgi, File Suffix:php).
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Recommencez pour chaque instance de serveur web qui devra ex&eacute;cuter
+     PHP.
+    </simpara>
+   </listitem>
+  </itemizedlist>
+  <para>
+   Plus de d&eacute;tails sur la configuration de PHP comme CGI sont
+   disponibles &agrave; <ulink url="&url.netscape.cgi;">&url.netscape.cgi;</ulink>
+  </para>
+  <para>
+   Pour installer PHP avec l'interface NSAPI (pour Netscape Enterprise Server,
+   iPlanet, peut-&ecirc;tre Fastrack), fa&icirc;tes ceci :
+  </para>
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     Copiez le fichier <filename>php4ts.dll</filename> dans votre dossier
+     systemroot (le dossier o&ugrave; vous avez install&eacute; windows)
+    </simpara>
+   </listitem>
+   <listitem>
+    <para>
+     Fa&icirc;tes un fichier d'association depuis la ligne de commande.
+     Tapez les lignes suivantes :
+       <programlisting>
+<![CDATA[
+assoc .php=PHPScript
+ftype PHPScript=c:\php\php.exe %1 %*
+]]>
+       </programlisting>
+    </para>
+   </listitem>
+   <listitem>
+    <simpara>
+     Dans le serveur Netscape Enterprise Administration Server, cr&eacute;eez un
+     nouveau type MIME (Category: type,
+     Content-Type: magnus-internal/shellcgi, File Suffix:php).
+    </simpara>
+   </listitem>
+   <listitem>
+    <para>
+     Stoppez votre serveur web et &eacute;ditez le fichier <filename>obj.conf</filename>.
+     A la fin de la section Init, placez ces deux lignes (obligatoirement
+     apr&egrave;s l'init de type MIME) :
+       <programlisting>
+<![CDATA[
+Init fn="load-modules" funcs="php4_init,php4_close,php4_execute,php4_auth_trans" shlib="c:/php/sapi/php4nsapi.dll"
+Init fn="php4_init" errorString="Failed to initialise PHP!"
+]]>
+       </programlisting>
+      </para>
+   </listitem>
+   <listitem>
+    <para>
+     Dans la section <literal>&lt; Object name="default" &gt;</literal>,
+     placez cette ligne, obligatoirement apr&egrave;s toutes les lignes
+     'ObjectType' et avamt les lignes 'AddLog' :
+       <programlisting>
+<![CDATA[
+Service fn="php4_execute" type="magnus-internal/x-httpd-php"
+]]>
+       </programlisting>
+   </para>
+   </listitem>
+   <listitem>
+    <para>
+     A la fin du fichier, cr&eacute;ez un nouvel objet appel&eacute;
+     <literal>x-httpd-php</literal>, en ins&eacute;rant ces lignes :
+       <programlisting>
+<![CDATA[
+<Object name="x-httpd-php">
+ObjectType fn="force-type" type="magnus-internal/x-httpd-php"
+Service fn=php4_execute
+</Object>
+]]>
+     </programlisting>
+    </para>
+   </listitem>
+   <listitem>
+    <simpara>
+     Red&eacute;marrez votre serveur web, et validez les modifications
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Recommencez pour chaque serveur qui doit utiliser PHP.
+    </simpara>
+   </listitem>
+  </itemizedlist>
+  <para>
+   Plus ded d&eacute;tails sur la configiration de PHP en
+   filtre NSAPI sont disponibles :
+   <ulink url="&url.netscape.nsapi;">&url.netscape.nsapi;</ulink>
+  </para>
+ </sect2>
+ </sect1>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
