@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.11 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
-<!-- splitted from ./fr/functions/mail.xml, last change in rev 1.10 -->
-<!-- last change to 'mail' in en/ tree in rev 1.2 -->
+<!-- $Revision: 1.12 $ -->
+<!-- EN-Revision: 1.26 Maintainer: yannick Status: ready -->
  <refentry id="function.mail">
   <refnamediv>
    <refname>mail</refname>
@@ -43,6 +40,25 @@
     <function>mail</function> retourne &true; si le mail
     est envoyé, et &false; sinon.
    </para>
+   <warning>
+     <para>
+      L'implémentation de la fonction <function>mail</function> sur les systèmes 
+      Microsoft Windows est différentes en plusieurs points par rapport à celle des 
+      système Unix.
+      Premièrement, <function>mail</function> n'utilise pas un binaire local pour
+      composer le message mais opère uniquement sur les sockets directement, ce qui
+      signifie qu'un <literal>MTA</literal> (Mail Transfert Agent) doit écouté 
+      un socket réseau (qui peut être local ou distant).
+      Deuxièmement, les entêtes personnalisées comme <literal>From:</literal>,
+      <literal>Cc:</literal>, <literal>Bcc:</literal> et <literal>Date:</literal>
+      <emphasis role="strong">ne sont pas</emphasis> par le <literal>MTA</literal>
+      dans un premier temps, mais sont parsées par &php;.
+      Seul les versions de &php; inférieures à la version 4.3 supporte l'entête 
+      <literal>Cc:</literal> (et est sensible à la casse).
+      Les versions de &php; &gt;= 4.3 supportent toutes les entêtes mentionnées et 
+      ne sont pas sensibles à la casse.
+     </para>
+    </warning>
    <para>
     <example>
      <title>Envoie de courrier électronique (mail)</title>
@@ -59,25 +75,14 @@ mail("maxou@exemple.com", "Mon Sujet", "Ligne 1\nLigne 2\nLigne 3");
     Le quatrième argument passé sera inséré à
     la fin de l'en-tête. Typiquement, cela permet d'insérer des
     en-têtes supplémentaires. Les en-têtes multiples doivent
-    être séparées par des virgules.
+    être séparées par des retours chariots et des caractères de nouvelles lignes
+    (\r\n).
    </simpara>
    <note>
     <para>
-     Sous Windows 32bits, vous devez utiliser <literal>\r\n</literal> pour
-     séparer les en-têtes. Notez aussi que les en-têtes cc: et bcc: sont
-     sensibles à la casse et doivent être écrits <literal>Cc:</literal>
-     et <literal>Bcc:</literal> sous Win32.
-    </para>
-   </note>
-   <simpara>
-    Si le cinquième argument <parameter>additional_parameters</parameter>
-    est fourni, PHP l'utilisera dans son appel du programme d'envoie de
-    courrier électronique. Ceci est pratique pour passer une valeur
-    correcte à l'en-tête <literal>Return-Path</literal>, avec sendmail.
-   </simpara>
-   <note>
-    <para>
-     Le cinquième paramètre a été ajouté en PHP 4.0.5.
+    Vous devez utilisé les caractères <literal>\r\n</literal> pour séparer
+    les entêtes bien que quelques MTA Unix fonctionne avec uniquement 
+    un caracètre de nouvelle ligne (<literal>\n</literal>).
     </para>
    </note>
    <para>
@@ -94,21 +99,24 @@ mail("personne@exemple.com", "Le sujet", $message,
 ]]>
      </programlisting>
     </example>
-    Avec le cinquième paramètre, vous pouvez ajouter d'autres paramètres
-    de ligne de commande qui seront utilisés par le programme d'envoi de
-    courrier. Dans l'exemple ci-dessous, l'en-tête <literal>Return-Path</literal>
-    est correctement paramétré. Normalement, sendmail ajoute automatiquement
-    l'en-tête <literal>X-Authentication-Warning</literal> (paramètre -f),
-    car l'utilisateur "serveur web" n'est probablement pas un de ses
-    utilisateurs de confiance ("trusted users"). Pour supprimer cette
-    alerte, ajoutez l'utilisateur du serveur web dans la  configuration
-    de sendmail.
+    </para>
+    <para>
+    Le paramètre <parameter>additional_parameters</parameter>
+    peut être utilisé pour passer un paramètre additionnel au programme
+    défini lorsqu'il envoie le mail en utilisant le paramètre de configuration
+    <literal>sendmail_path</literal>. Par exemple, celà peut être utilisé
+    pour définir l'adresse d'expédition lorsque le logiciel sendmail est utilisé
+    avec l'option <literal>-f</literal>. Vous devriez sûrement ajouter 
+    l'utilisateur sous lequel tourne votre serveur web à votre configuration
+    sendmail afin d'éviter qu'une entête 'X-Warning' ne soit ajoutée à votre 
+    message lorsque vous utilisez cette méthode pour définir l'adresse 
+    d'expédition.
     <example>
      <title>
       Envoi de eMail avec des en-têtes supplémentaires et
       un paramètre de ligne de commande supplémentaire
      </title>
-     <programlisting>
+     <programlisting role="php">
 <![CDATA[
 <?php
 
@@ -118,6 +126,17 @@ mail("personne@exemple.com", "Le sujet", $message,
 ]]>
      </programlisting>
     </example>
+    </para>
+    <note>
+     <para>
+      Le cinquième paramètre a été ajouté depuis la version 4.0.5 de &php;.
+      Depuis la version 4.2.3 de &php;, ce paramètre est désactivé dans le
+      <link linkend="ini.safe-mode">safe_mode</link> et la fonction
+      <function>mail</function> affichera un message d'avertissement
+      et retournera &false; si vous tentez de l'utiliser.
+     </para>
+    </note>
+    <para>
     Vous pouvez aussi utiliser des techniques simples de
     concaténations de chaînes pour construire des
     messages complexes :
@@ -134,7 +153,7 @@ $to .= "Kelly <kelly@example.com>";
 $subject = "Anniversaires à souhaiter en Août";
 
 /* message */
-$message = "
+$message = '
 <html>
 <head>
  <title>Rappel des anniversaires d'Août</title>
@@ -153,17 +172,18 @@ $message = "
  </tr>
 </table>
 </body>
-</html>";
+</html>
+';
 
-/* Pour envoyer du mail au format HTML, vous pouvez configurer le type Content-type. */
+/* Pour envoyer un mail au format HTML, vous pouvez configurer le type Content-type. */
 $headers  = "MIME-Version: 1.0\r\n";
 $headers .= "Content-type: text/html; charset=iso-8859-1\r\n";
 
-/* D'autres en-têtes : errors, From cc's, bcc's, etc */
-$headers .= "From: Birthday Reminder <birthday@example.com>\r\n";
-
-$headers .= "Cc: birthdayarchive@example.com\r\n";
-$headers .= "Bcc: birthdaycheck@example.com\r\n";
+/* D'autres en-têtes */
+$headers .= "To: Mary <mary@exemple.com>, Kelly <kelly@exemple.com>\r\n";
+$headers .= "From: Birthday Reminder <birthday@exemple.com>\r\n";
+$headers .= "Cc: birthdayarchive@exemple.com\r\n";
+$headers .= "Bcc: birthdaycheck@exemple.com\r\n";
 
 /* et hop, à la poste */
 mail($to, $subject, $message, $headers);
@@ -184,7 +204,8 @@ mail($to, $subject, $message, $headers);
     <para>
      Le paramètre <parameter>to</parameter> ne peut pas être une adresse
      de la forme &quot;Quelqu'un &lt;quidam@exemple.com&gt;&quot;. La commande
-     mail ne comprendra pas ce format.
+     mail ne traitera pas correctement ce format vers le MTA (tout particulièrement sur les systèmes
+     Microsoft Windows).
     </para>
    </note>
    <para>
