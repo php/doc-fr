@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.17 $ -->
-<!-- EN-Revision: 1.9 Maintainer: dams Status: ready -->
+<!-- $Revision: 1.18 $ -->
+<!-- EN-Revision: 1.11 Maintainer: dams Status: ready -->
   <chapter id="security.database">
    <title>Sécurité des bases de données</title>                                                                                                                    
    <simpara>
@@ -13,14 +13,15 @@
     Pour lire ou stocker des informations, vous devez vous connecter au serveur
     de bases de données, envoyer une requête valide, lire le résultat et
     refermer la connexion. De nos jours, le langage le plus courant pour ce
-    type de communication est le langage SQL (Structured Query Language). Voyez comment
-    un pirate peut
-    <link linkend="security.database.sql-injection">s'introduire dans une requête SQL</link>.
+    type de communication est le langage SQL (Structured Query Language). Voyez
+    comment un pirate peut
+    <link linkend="security.database.sql-injection">s'introduire dans une
+    requête SQL</link>.
    </simpara>
    <simpara>
-    Comme vous pouvez le réaliser, &php; ne peut pas protéger vos bases de données
-    pour vous. La section suivante vous introduira aux notions de base pour protéger
-    vos bases de données, lors de la programmation de vos scripts.
+    Comme vous pouvez le réaliser, &php; ne peut pas protéger vos bases de
+    données pour vous. La section suivante vous introduira aux notions de base
+    pour protéger vos bases de données, lors de la programmation de vos scripts.
    </simpara>
    <simpara>
     Gardez bien cette règle simple en tête : la défense se fait par couches.
@@ -102,21 +103,23 @@
      dont il dispose, comme
      <link linkend="ref.mcrypt">Mcrypt</link> et
      <link linkend="ref.mhash">Mhash</link>, qui connaissent un large éventail
-     de méthodes de chiffrement. Le script &php; va chiffrer les données qui seront
-     stockées, et les déchiffrer losrqu'elles seront relues. Voyez la suite
-     pour des exemples d'utilisation de ce chiffrement.
+     de méthodes de chiffrement. Le script &php; va chiffrer les données qui
+     seront stockées, et les déchiffrer losrqu'elles seront relues. Voyez la
+     suite pour des exemples d'utilisation de ce chiffrement.
     </simpara>
     <simpara>
      Dans le cas de données vraiment sensibles, si la représentation originale
      n'est pas nécessaire (pour affichage, ou comparaison), utiliser un
      hash est une bonne solution. L'exemple classique est le stockage de
      mots de passe dans les bases de données, après les avoir passé au
-     MD5. Voyez les fonctions <function>crypt</function> et <function>md5</function>.
+     MD5. Voyez les fonctions <function>crypt</function> et 
+     <function>md5</function>.
     </simpara>
     <example>
      <title>Utiliser un mot de passe et MD5</title>
      <programlisting role="php">
 <![CDATA[
+<?php
 // Stockage du mot de passe hashé
 $query  = sprintf("INSERT INTO users(name,pwd) VALUES('%s','%s');",
             addslashes($username), md5($password));
@@ -132,6 +135,7 @@ if (pg_num_rows($result) > 0) {
 } else {
     echo "Identification échouée pour $username.";
 }
+?>
 ]]>
      </programlisting>
     </example>
@@ -142,9 +146,9 @@ if (pg_num_rows($result) > 0) {
      De nombreux développeurs web ne sont pas conscients des possibilités
      de manipulation des requêtes SQL, et supposent que les requêtes SQL
      sont des commandes sûres. Cela signifie qu'une requête SQL est
-     capable de contourner les contrôles et vérifications, comme par
-     exemple les identifications, et parfois, les requêtes
-     SQL ont accès aux commandes d'administration.
+     capable de contourner les contrôles et vérifications, comme les
+     identifications, et parfois, les requêtes SQL ont accès aux commandes
+     d'administration.
     </simpara>
     <simpara>
      L'injection SQL directe est une technique où un pirate modifie une requête
@@ -165,12 +169,14 @@ if (pg_num_rows($result) > 0) {
       </title>
       <programlisting role="php">
 <![CDATA[
+<?php
 $offset = $argv[0]; // Attention, aucune validation!
 $query  = "SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET $offset;";
 // avec PostgreSQL 
 $result = pg_query($conn, $query);
 // avec MySQL
 $result = mysql_query($query);
+?>
 ]]>
       </programlisting>
      </example>
@@ -184,6 +190,7 @@ $result = mysql_query($query);
       <title>Exemple d'injection SQL</title>
        <programlisting>
 <![CDATA[
+<?php
 // cas de PostgreSQL
 0;
 insert into pg_shadow(usename,usesysid,usesuper,usecatupd,passwd)
@@ -195,6 +202,7 @@ insert into pg_shadow(usename,usesysid,usesuper,usecatupd,passwd)
 0;
 UPDATE user SET Password=PASSWORD('crack') WHERE user='root';
 FLUSH PRIVILEGES;
+?>
 ]]>
        </programlisting>
       </example>
@@ -204,13 +212,13 @@ FLUSH PRIVILEGES;
     </para>
     <note>
      <para>
-      C'est une techinque répandue que de forcer l'analyseur SQL d'ignorer le
+      C'est une techinque répandue que de forcer l'analyseur SQL à ignorer le
       reste de la requête, en utilisant les symboles <literal>--</literal> pour
-      mettre en commentaire.
+      mettre en commentaires.
      </para>
     </note>
     <para>
-     Un moyen possible pour accéder aux mots de passe est de contourner
+     Un moyen disponible pour accéder aux mots de passe est de contourner
      la recherche de page. Ce que le pirate doit faire, c'est simplement
      voir si une variable du formulaire est utilisée dans la requête, et
      si elle est mal gérée. Ces variables peuvent avoir été configurées
@@ -227,10 +235,12 @@ FLUSH PRIVILEGES;
       </title>
       <programlisting role="php">
 <![CDATA[
+<?php
 $query  = "SELECT id, name, inserted, size FROM products
                   WHERE size = '$size'
                   ORDER BY $order LIMIT $limit, $offset;";
 $result = odbc_exec($conn, $query);
+?>
 ]]>
       </programlisting>
      </example>
@@ -240,15 +250,17 @@ $result = odbc_exec($conn, $query);
       <title>Révélation des mots de passe</title>
       <programlisting>
 <![CDATA[
+<?php
 '
 union select '1', concat(uname||'-'||passwd) as name, '1971-01-01', '0' from usertable;
 --
+?>
 ]]>
       </programlisting>
      </example>
-     Si cette requête (exploitant les <literal>'</literal> et <literal>--</literal>)
-     est affectée à une variable utilisée dans
-     <varname>$query</varname>, l'injection SQL va arriver.
+     Si cette requête, exploitant les <literal>'</literal> et 
+     <literal>--</literal> est affectée à une variable utilisée dans
+     <varname>$query</varname>, une injection SQL va se produire.
     </para>
     <para>
      Les commandes <literal>UPDATE</literal> sont aussi sujettes à des
@@ -257,31 +269,36 @@ union select '1', concat(uname||'-'||passwd) as name, '1971-01-01', '0' from use
      le pirate peut jouer sur la commande <literal>SET</literal>. Dans ce cas,
      il doit connaitre un peu votre base de données. Cela peut se deviner
      en examinant les noms de variables dans les formulaires, ou simplement,
-     en testant les cas les plus classiques. Il n'y a pas beaucoup de conventions
-     de nommination pour stocker des noms d'utilisateurs et des mots de passe.
+     en testant les cas les plus classiques. Il n'y a pas beaucoup de
+     conventions de noms pour stocker des noms d'utilisateurs et des mots de
+     passe.
      <example>
      <title>Modifier un mot de passe ... et gain de droits!</title>
       <programlisting role="php">
 <![CDATA[
-$query = "UPDATE usertable SET pwd='$pwd' WHERE uid='$uid';";
+<?php
+$query= "UPDATE usertable SET pwd='$pwd' WHERE uid='$uid';";
+?>
 ]]>
       </programlisting>
      </example>
      Mais un internaute fourbe peut envoyer une valeur telle que
      <literal>' or uid like '%admin%'; --</literal> dans <varname>$uid</varname>
-     pour modifier le mot de passe utilisateur, ou simplement, utiliser la variable
-     <varname>$pwd</varname> avec la valeur
-     <literal>"hehehe', admin='yes', trusted=100 "</literal> (avec l'espace final) pour
-     obtenir des droits supplémentaires. La requête sera alors devenue :
+     pour modifier le mot de passe utilisateur, ou simplement, utiliser la
+     variable <varname>$pwd</varname> avec la valeur
+     <literal>"hehehe', admin='yes', trusted=100 "</literal> (avec l'espace
+     final) pour obtenir des droits supplémentaires. La requête devient alors :
      <example>
      <title>Une requête et son injection</title>
       <programlisting role="php">
  <![CDATA[
+<?php
 // $uid == ' or uid like'%admin%'; --
 $query = "UPDATE usertable SET pwd='...' WHERE uid='' or uid like '%admin%'; --";
 
 // $pwd == "hehehe', admin='yes', trusted=100 "
 $query = "UPDATE usertable SET pwd='hehehe', admin='yes', trusted=100 WHERE ...;"
+?>
 ]]>
       </programlisting>
      </example>
@@ -293,38 +310,43 @@ $query = "UPDATE usertable SET pwd='hehehe', admin='yes', trusted=100 WHERE ...;
      <title>Attaque d'un serveur de bases de données (MSSQL Server)</title>
       <programlisting role="php">
 <![CDATA[
+<?php
 $query  = "SELECT * FROM products WHERE id LIKE '%$prod%'";
 $result = mssql_query($query);
+?>
 ]]>
       </programlisting>
      </example>
      Si le pirate injecte la valeur
-     <literal>a%' exec master..xp_cmdshell 'net user test testpass /ADD' --</literal>
-     dans la variable <varname>$prod</varname>, alors la requête <varname>$query</varname>
-     devient :
+     <literal>a%' exec master..xp_cmdshell 'net user test testpass /ADD'  
+--</literal>
+     dans la variable <varname>$prod</varname>, alors la requête
+     <varname>$query</varname> devient :
      <example>
      <title>Attaque d'un serveur de base de données (MSSQL Server) - 2</title>
       <programlisting role="php">
 <![CDATA[
+<?php
 $query  = "SELECT * FROM products
                     WHERE id LIKE '%a%'
                     exec master..xp_cmdshell 'net user test testpass /ADD'--";
 $result = mssql_query($query);
+?>
 ]]>
       </programlisting>
      </example>
      MSSQL Server exécute les requêtes SQL en lot, y compris la commande
      d'ajout d'un nouvel utilisateur à la base de données locale. Si cette
-     application fonctionnait en tant que <literal>sa</literal> et que le service
-     MSSQLSERVER disposait de niveau de droits suffisant, le pirate dispose désormais
-     d'un compte avec accès au serveur.
+     application fonctionnait en tant que <literal>sa</literal> et que le
+     service MSSQLSERVER disposait de niveau de droits suffisant, le pirate
+     dispose désormais d'un compte avec accès au serveur.
     </para>
     <note>
      <para>
       Certains des exemples ci-dessus sont spécifiques à certains serveurs de
-      bases de données. Cela n'empêche pas des attaques similaires d'être possibles
-      sur d'autres produits. Votre base de données sera alors vulnérable d'une autre
-      manière.
+      bases de données. Cela n'empêche pas des attaques similaires d'être
+      possibles sur d'autres produits. Votre base de données sera alors
+      vulnérable d'une autre manière.
      </para>
     </note>
 
@@ -337,9 +359,9 @@ $result = mssql_query($query);
       auront filtré, et si cela arrive, votre base de données sera en grand
       danger. Si vous utilisez une base de données Open Srouce, ou une
       base qui est du domaine public, ou encore un schéma qui appartient
-      à un système de gestion de contenu ou d'un forum, le pirate peut facilement
-      se procurer une copie du code que vous utilisez. Cela peut être un
-      risque potentiel si la base a été mal conçue.
+      à un système de gestion de contenu ou d'un forum, le pirate peut
+      facilement se procurer une copie du code que vous utilisez. Cela peut être
+      un risque potentiel si la base a été mal conçue.
      </simpara>
      <simpara>
       Ces attaques sont généralement basées sur l'exploitation de code qui
@@ -351,9 +373,9 @@ $result = mssql_query($query);
      <itemizedlist>
       <listitem>
        <simpara>
-        Ne nous connectez jamais sur une base de données en tant que super utilisateur
-        ou propriétaire de la base. Utilisez toujours un utilisateur adapté, avec
-        des droits très limités.
+        Ne nous connectez jamais sur une base de données en tant que super
+        utilisateur ou propriétaire de la base. Utilisez toujours un utilisateur
+        adapté, avec des droits très limités.
        </simpara>
       </listitem>
       <listitem>
@@ -392,16 +414,19 @@ $query = sprintf("SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET %d
       </listitem>
       <listitem>
        <simpara>
-        Mettez entre guillemets toutes les valeurs non numériques qui sont passées
-        à la base de données avec la fonction spécifique à la base de données d'échappement
-        de caractères (e.g. <function>mysql_escape_string</function>,
-        <function>sql_escape_string</function>, etc.). Si un méchanisme d'échappement
-        spécifique à une base de données n'existe pas, les fonctions
-        <function>addslashes</function> et <function>str_replace</function>
-        peuvent être très utiles (dépendant du type de la base de données).
-        Lisez <link linkend="security.database.storage">le premier exemple</link>.
-        Comme le montre l'exemple, ajouter des guillemets à la partie statique
-        de la requête n'est pas suffisant, rendant cette requête facilement piratable.
+        Mettez entre guillemets toutes les valeurs non numériques qui sont
+        passées à la base de données avec la fonction spécifique à la base de
+        données d'échappement de caractères (e.g.
+        <function>mysql_escape_string</function>,
+        <function>sql_escape_string</function>, etc.). Si un mécanisme
+        d'échappement spécifique à une base de données n'existe pas, les
+        fonctions <function>addslashes</function> et
+        <function>str_replace</function> peuvent être très utiles (en fonction
+        du type de la base de données).
+        Lisez <link linkend="security.database.storage">le premier
+        exemple</link>. Comme le montre l'exemple, ajouter des guillemets à la
+        partie statique de la requête n'est pas suffisant, rendant cette requête
+        facilement piratable.
        </simpara>
       </listitem>
       <listitem>
@@ -421,12 +446,12 @@ $query = sprintf("SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET %d
       </listitem>
      </itemizedlist>
      <simpara>
-      A coté de ces conseils, il est recommandé d'enregistrer vos requêtes soit dans
-      vos scripts soit dans la base elle-même, si elle le supporte. Evidemment,
-      cet enregistrement ne sera pas capable d'empêcher une attaque, mais vous
-      permettra de retrouver la requête qui a fauté. L'historique n'est pas très utile
-      par lui-même, mais au niveau des informations qu'il contient. Plus vous
-      avez de détails, mieux c'est.
+      A coté de ces conseils, il est recommandé d'enregistrer vos requêtes soit 
+      dans vos scripts soit dans la base elle-même, si elle le supporte.
+      Evidemment, cet enregistrement ne sera pas capable d'empêcher une attaque,
+      mais vous permettra de retrouver la requête qui a fauté. L'historique
+      n'est pas très utile par lui-même, mais au niveau des informations qu'il
+      contient. Plus vous avez de détails, mieux c'est.
      </simpara>
     </sect2>
    </sect1>
