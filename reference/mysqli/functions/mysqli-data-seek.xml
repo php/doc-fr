@@ -1,19 +1,29 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.8 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
+<!-- $Revision: 1.9 $ -->
+<!-- EN-Revision: 1.14 Maintainer: yannick Status: ready -->
   <refentry id="function.mysqli-data-seek">
    <refnamediv>
     <refname>mysqli_data_seek</refname>
+    <refname>result->data_seek</refname>
     <refpurpose>Déplace le pointeur interne de résultat</refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
+     &title.procedural;
+    <methodsynopsis>
+     <type>bool</type><methodname>mysqli_data_seek</methodname>
+     <methodparam><type>object</type><parameter>result</parameter></methodparam>
+     <methodparam><type>int</type><parameter>offset</parameter></methodparam>
+    </methodsynopsis>
+    &title.oop;
+    <classsynopsis>
+     <ooclass><classname>result</classname></ooclass>
      <methodsynopsis>
-      <type>void</type><methodname>mysqli_data_seek</methodname>
-      <methodparam><type>resource</type><parameter>result</parameter></methodparam>
+      <type>bool</type>
+      <methodname>data_seek</methodname>
       <methodparam><type>int</type><parameter>offset</parameter></methodparam>
      </methodsynopsis>
+    </classsynopsis>
     <para>
      La fonction <function>mysqli_data_seek</function> déplace le
      pointeur interne de résultat associé au jeu de 
@@ -21,54 +31,110 @@
      en le faisant pointer sur la ligne spécifiée par 
      <parameter>offset</parameter>.
      Le paramètre <parameter>offset</parameter> doit être 
-     compris entre zéro et <function>mysqli_num_rows</function> - 1.
+     compris entre zéro et <function>mysqli_num_rows</function> - 
+     1 (0..<function>mysqli_num_rows</function> - 1).
     </para>
     <note>
      <para>
       Cette fonction ne peut être utilisée qu'avec des
       résultats obtenus avec la fonction 
-      <function>mysqli_store_result</function>. 
+      <function>mysqli_store_result</function> ou <function>mysqli_query</function>. 
      </para>
     </note>
+    </refsect1>
+    <refsect1>
+    &reftitle.returnvalues;
     <para>
-     <example>
-      <title>Utilisation de <function>mysqli_data_seek</function></title>
-      <programlisting role="php">
-<![CDATA[
-<?php
-                                                                          
-/* Connexion à la base de données */
-$link = mysqli_connect("localhost", "username", "password");
-mysqli_select_db("mydb");
-                                                                                                           
-/* Récupération de quelques lignes et stockage */
-$query = "SELECT DINSTINCT name FROM employee ORDER BY name";
-$result = mysqli_query($query) or die(mysqli_error());
-
-$rows = mysqli_store_result($result);
-
-$total = mysqli_num_fields($rows);
-
-if ($total > 0) { // il y'a au moins une ligne
-    /* Obtenir le dernier employé */
-    mysqli_data_seek($rows, mysqli_num_rows($result) -1);
-    $employee = mysqli_fetch_row($rows);
-    printf ("Nom de l'employé : %s\n", $employee[0]);
-}
-    
-mysqli_free_result($rows);
-
-?>
-]]>
-      </programlisting>
-     </example>
+     &return.success;
     </para>
+   </refsect1>
+   <refsect1>
+    <title>Voir aussi</title>
     <para>
-     Voir aussi
      <function>mysqli_store_result</function>,
-     <function>mysqli_fetch_row</function> et
+     <function>mysqli_fetch_row</function>,
      <function>mysqli_num_rows</function>.
     </para>
+   </refsect1>
+   <refsect1>
+    <title>Exemple</title>
+    <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+/* Ouverture de la connexion */
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
+
+/* Vérification de la connexion */ 
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
+
+$query = "SELECT Name, CountryCode FROM City ORDER BY Name";
+if ($result = $mysqli->query( $query)) {
+
+    /* Déplacement du pointeur sur la ligne numéro 400 */
+    $result->data_seek(399);
+
+    /* Récupération de cette ligne */
+    $row = $result->fetch_row();
+
+    printf ("Ville : %s  Code postal: %s\n", $row[0], $row[1]);
+        
+    /* Libération des résultats */
+    $result->close();
+}
+
+/* Fermeture de la connexion */
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+    </example>
+    <example>
+     <title>Procedural style</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+/* Ouverture de la connexion */
+$link = mysqli_connect("localhost", "my_user", "my_password", "world");
+
+/* Vérification de la connexion */ 
+if (!$link) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
+
+$query = "SELECT Name, CountryCode FROM City ORDER BY Name";
+
+if ($result = mysqli_query($link, $query)) {
+
+    /* Déplacement du pointeur sur la ligne numéro 400 */
+    mysqli_data_seek($result, 399);
+
+    /* Récupération de cette ligne */
+    $row = mysqli_fetch_row($result);
+
+    printf ("Ville : %s  Code postal : %s\n", $row[0], $row[1]);
+        
+    /* Libération des résultats */
+    mysqli_free_result($result);
+}
+
+/* Fermeture de la connexion */
+mysqli_close($link);
+?>
+]]>
+     </programlisting>
+    </example>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Ville : Benin City  Code postal : NGA
+]]>
+    </screen>
    </refsect1>
   </refentry>
 
