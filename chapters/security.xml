@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.19 $ -->
+<!-- $Revision: 1.20 $ -->
  <chapter id="security">
   <title>S&eacute;curit&eacute;</title>
   <simpara>
@@ -137,7 +137,7 @@
       </simpara>
       <simpara>
            Le "path information" dans l'url, situ&eacute; juste apr&egrave;s le nom
-           du binaire PHP, <filename role="uri">/secret/doc.html</filename> est
+           de l'ex&eacute;cutable PHP, <filename role="uri">/secret/doc.html</filename> est
            utilis&eacute; par convention pour sp&eacute;cifier le nom du fichier
            qui doit &ecirc;tre ouvert et interpr&eacute;t&eacute; par le programe
            <acronym>CGI</acronym>. Habituellement, des directives de configuration
@@ -395,14 +395,16 @@ AddHandler.php-script .php
     <example>
      <title>Une erreur de v&eacute;rification de variable conduit &agrave; ...</title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 // efface un fichier dans un dossier racine
 $username = $HTTP_POST_VARS['user_submitted_name'];
 $homedir = "/home/$username";
 $file_to_delete = "$userfile";
 unlink ($homedir/$userfile);
 echo "$file_to_delete a &eacute;t&eacute; effac&eacute;!";
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
     Etant donn&eacute; que le nom de l'utilisateur est &agrave; fournir, des intrus peuvent
@@ -415,7 +417,8 @@ echo "$file_to_delete a &eacute;t&eacute; effac&eacute;!";
     <example>
      <title>Une attaque du syst&egrave;me de fichiers!</title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 // efface un fichier n'importe o&ugrave; sur le disque dur,
 // o&ugrave; l'utilisateur PHP a acc&egrave;s. Si PHP a un acc&egrave;s root :
 $username = "../etc/";
@@ -423,7 +426,8 @@ $homedir = "/home/../etc/";
 $file_to_delete = "passwd";
 unlink ("/home/../etc/passwd");
 echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
     Il y a deux mesures primordiales &agrave; prendre pour &eacute;viter
@@ -445,7 +449,8 @@ echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
     <example>
      <title>Une v&eacute;rification renforc&eacute;e</title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 // Efface un fichier sur le disque o&ugrave; l'utilisateur &agrave; le droit d'aller
   $username = $HTTP_SERVER_VARS['REMOTE_USER'];
 // utilise un m&eacute;canisme d'authentification
@@ -458,7 +463,8 @@ echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
   fputs ($fp, $logstring);
   fclose($fp);
   echo "$file_to_delete a &eacute;t&eacute; &eacute;ffac&eacute;!";
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
     Cependant, m&ecirc;me cette technique n'est pas sans faille.
@@ -469,14 +475,16 @@ echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
     <example>
      <title>V&eacute;rification de noms de fichier s&eacute;curis&eacute;e</title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
   $username = $HTTP_SERVER_VARS['REMOTE_USER'];;
   $homedir = "/home/$username";
   if (!ereg('^[^./][^/]*$', $username))
     die('Erreur de nom de fichier');
     //meurt, ne SURTOUT pas traiter!
 //etc...
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
    </para>
@@ -489,8 +497,440 @@ echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
     politique qui interdit TOUT sauf ce que vous autorisez.
    </para>
   </sect1>
+  <sect1 id="security.database">
+   <title>S&eacute;curit&eacute; des bases de donn&eacute;es</title>
+   <simpara>
+    De nos jours, les bases de donn&eacute;es sont des composants incontournables
+    des serveurs web et des applications en ligne, qui fournissent du contenu
+    dynamique. Des donn&eacute;es secr&egrave;tes ou critiques peuvent &ecirc;tre stock&eacute;es dans les
+    bases de donn&eacute;es : il est donc important de les prot&eacute;ger efficacement.
+   </simpara>
+   <simpara>
+    Pour lire ou stocker des informations, vous devez vous connecter au serveur
+    de base de donn&eacute;es, envoyer une requ&ecirc;te valide, lire le r&eacute;sultat et 
+    refermer la connexion. De nos jours, le langage le plus courant pour ce
+    type de communication est le langage SQL (Structured Query Language). Voyez comment
+    un pirate peut 
+    <link linkend="security.database.sql-injection">s'introduire dans une requ&ecirc;te SQL</link>.
+   </simpara>
+   <simpara>
+    Comme vous pouvez le r&eacute;aliser, &php; ne peut pas prot&eacute;ger vos bases de donn&eacute;es
+    pour vous. La section suivante vous introduira aux notions de base pour prot&eacute;ger
+    vos bases de donn&eacute;es, lors de la programmation de vos scripts.
+   </simpara>
+   <simpara>
+    Gardez bien cette r&egrave;gle simple en t&ecirc;te : la d&eacute;fense se fait par couches.
+    Plus vous ajouterez de tests pour prot&eacute;ger votre base, plus faible sera la
+    probabilit&eacute; de r&eacute;ussite d'un pirate. Ajoutez &agrave; cela une bon sch&eacute;ma de base
+    de donn&eacute;es, et vous aurez une application r&eacute;ussie.
+   </simpara>
+
+   <sect2 id="security.database.design">
+    <title>Sch&eacute;ma de base de donn&eacute;es</title>
+     <simpara>
+      La premi&egrave;re &eacute;tape est de cr&eacute;er une base de donn&eacute;es, &agrave; moins que vous ne
+      souhaitiez utiliser une base de donn&eacute;es d&eacute;j&agrave; cr&eacute;&eacute;e. Lorsque la base
+      de donn&eacute;es est cr&eacute;&eacute;e, un utilisateur propri&eacute;taire en est responsable. 
+      G&eacute;n&eacute;ralement, seul le propri&eacute;taire (et le super utilisateur) peuvent
+      intervenir avec les tables de cette base, et il faut que ce dernier 
+      donne des droits &agrave; tous les intervenants qui auront &agrave; faire dans cette
+      base.
+     </simpara>
+     <simpara>
+      Les applications ne doivent jamais se connecter au serveur de
+      base de donn&eacute;es sous le nom du propri&eacute;taire ou de l'administrateur,
+      car ces utilisateurs ont des droits tr&egrave;s importants, et pourront
+      ex&eacute;cuter n'importe quelle requ&ecirc;te, comme par exemple la
+      modification de tables, l'effacement de lignes ou m&ecirc;me encore,
+      la destruction de la base.
+     </simpara>
+     <simpara>
+      Vous pouvez cr&eacute;er diff&eacute;rents utilisateurs de base de donn&eacute;es pour
+      chaque aspect de votre application, avec des droits limit&eacute;s aux
+      seules actions planifi&eacute;es. Il faut alors &eacute;viter que le m&ecirc;me utilisateur
+      dispose des droits de plusieurs cas d'utilisation. Cela permet que
+      si des intrus obtiennent l'acc&egrave;s &agrave; la base avec l'un de ces jeux
+      de droits, il ne pourra pas affecter toute l'application.
+     </simpara>
+     <simpara>
+      Il est recommand&eacute; de ne pas impl&eacute;menter toute la logique fonctionnelle
+      dans l'application web (c'est &agrave; dire dans vos scripts), mais d'en
+      reporter une partie dans la base en utilisant les triggers, vues et
+      r&egrave;gles. Si le syst&egrave;me &eacute;volue, les nouvelles versions vous feront r&eacute;&eacute;crire
+      toute la logique et donc tous vos scripts. De plus, l'utilisation de
+      trigger permet de g&eacute;rer de mani&egrave;re transparente des donn&eacute;es, et 
+      fournit des indications pour d&eacute;boguer votre application.
+     </simpara>
+   </sect2>
+
+   <sect2 id="security.database.connection">
+    <title>Connexions au serveur de base de donn&eacute;es</title>
+    <simpara>
+     Il est recommand&eacute; d'&eacute;tablit des connexions au serveur avec le
+     protocole SSL, pour chiffrer les &eacute;changes clients/serveur, afin
+     d'am&eacute;liorer la s&eacute;curit&eacute;. Vous pouvez aussi utiliser un client
+     SSH pour chiffrer la connexion entre les clients et le serveur
+     de base de donn&eacute;es. Si l'une de ces deux protections est 
+     mise en place, il sera difficile de surveiller votre trafic et
+     de comprendre les informations &eacute;chang&eacute;es.
+    </simpara>
+    <!--simpara>
+     If your database server native SSL support, consider to use <link
+     linkend="ref.openssl">OpenSSL functions</link> in communication between
+     PHP and database via SSL.
+    </simpara-->
+   </sect2>
+
+   <sect2 id="security.database.storage">
+    <title>Mod&egrave;le de stockage avec chiffrement</title>
+    <simpara>
+     Les protocoles SSL/SSH prot&egrave;gent les donn&eacute;es qui circulent entre
+     le serveur et le client, mais SSL/SSH ne prot&egrave;gent pas les donn&eacute;es
+     une fois dans la base. SSL est un protocole en ligne.
+    </simpara>
+    <simpara>
+     Une fois que le pirate a obtenu l'acc&egrave;s direct &agrave; votre base de donn&eacute;es 
+     (en contournant le serveur web), les donn&eacute;es sensibles, stock&eacute;es dans votre
+     base sont accessibles directement, &agrave; moins que les donn&eacute;es de la base
+     ne soient prot&eacute;g&eacute;es par la base. Chiffrer les donn&eacute;es est une bonne
+     solution pour r&eacute;duire cette menace, mais tr&egrave;s peut de bases de donn&eacute;es
+     offrent ce type de chiffrement.
+    </simpara>
+    <simpara>
+     Le moyen le plus simple pour contourner ce probl&egrave;me est de cr&eacute;er votre
+     propre logiciel de chiffrement, et de l'utiliser dans vos scripts &php;.
+     &php; peut vous aider dans cette t&acirc;che gr&acirc;ce aux nombreuses extensions
+     dont il dispose, comme par exemple 
+     <link linkend="ref.mcrypt">Mcrypt</link> et 
+     <link linkend="ref.mhash">Mhash</link>, qui connaissent un large &eacute;ventail
+     de m&eacute;thodes de chiffrement. Le script &php; va chiffrer les donn&eacute;es qui seront
+     stock&eacute;es, et les d&eacute;chiffrer losrqu'elles seront relues. Voyez la suite
+     pour des exemples d'utilisation de ce chiffrement.
+    </simpara>
+    <simpara>
+     Dans le cas de donn&eacute;es vraiment sensibles, si la repr&eacute;sentation originale
+     n'est pas n&eacute;cessaire (pour affichage, ou comparaison), utiliser un
+     hash est une bonne solution. L'exemple classique est le stockage de
+     mots de passe dans les bases de donn&eacute;es, apr&egrave;s les avoir pass&eacute; au 
+     MD5. Voyez les fonctions <function>crypt</function> et <function>md5</function>.
+    </simpara>
+    <example>
+     <title>Utiliser un mot de passe et MD5</title>
+     <programlisting role="php">
+<![CDATA[
+// Stockage du mot de passe hash&eacute;
+$query  = sprintf("INSERT INTO users(name,pwd) VALUES('%s','%s');",
+            addslashes($username), md5($password));
+$result = pg_exec($connection, $query);
+
+// interroger le serveur pour comparer le mot de passe soumis
+$query = sprintf("SELECT 1 FROM users WHERE name='%s' AND pwd='%s';",
+            addslashes($username), md5($password));
+$result = pg_exec($connection, $query);
+
+if (pg_numrows($result) > 0) {
+    echo "Bienvenue, $username!";
+}
+else {
+    echo "Identification &eacute;chou&eacute;e pour $username.";
+}
+]]>
+     </programlisting>
+    </example>
+   </sect2>
+
+   <sect2 id="security.database.sql-injection">
+    <title>Injection SQL</title>
+    <simpara>
+     De nombreux d&eacute;veloppeurs web ne sont pas conscients des possibilit&eacute;s
+     de manipulation des requ&ecirc;tes SQL, et supposent que les requ&ecirc;tes SQL
+     sont des commandes s&ucirc;res. Cela signifie qu'une requ&ecirc;te SQL est 
+     capable de contourner les contr&ocirc;les et v&eacute;rifications, comme par
+     exemple les identifications et authentifications, et parfois, les requ&ecirc;tes
+     SQL ont acc&egrave;s aux commandes d'administration.
+    </simpara>
+    <simpara>
+     L'injection SQL directe est une technique o&ugrave; un pirate modifie une requ&ecirc;te
+     SQL existante pour afficher des donn&eacute;es cach&eacute;es, ou pour &eacute;craser des
+     valeurs importantes, ou encore ex&eacute;cuter des commandes dangeureuses pour la
+     base. Cela se fait lorsque l'appliaction prend les donn&eacute;es envoy&eacute;es par
+     l'internaute, et l'utilise directement pour contruire une requ&ecirc;te SQL. Les
+     exemples ci-dessous sont bas&eacute;s sur une histoire vraie, malheureusement.
+    </simpara>
+    <para>
+     Avec le manque de v&eacute;rification des donn&eacute;es de l'internaute et la connexion
+     au serveur avec des droits de super utilisateur, le pirate peut cr&eacute;er des
+     utilisateurs, et cr&eacute;er un autre super utilisateur.
+     <example>
+      <title>
+       S&eacute;paration des r&eacute;sultats en pages, et cr&eacute;er des administrateurs 
+       (PostgreSQL et MySQL)
+      </title>
+      <programlisting role="php">
+<![CDATA[
+$offset = argv[0]; // Attention, aucune validation!
+$query  = "SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET $offset;";
+// avec PostgreSQL 
+$result = pg_exec($conn, $query);
+// avec MySQL
+$result = mysql_query($query);
+]]>
+      </programlisting>
+     </example>
+      Un utilisateur normale clique sur les boutons 'suivant' et 'pr&eacute;c&eacute;dent',
+      qui sont alors plac&eacute;s dans la variable <varname>$offset</varname>,
+      encod&eacute; dans l'URL. Le script s'attend &agrave; ce que la variable 
+      <varname>$offset</varname> est alors un nombre d&eacute;cimal. Cependant,
+      il est possible de modifier l'URL en ajoutant une nouvelle valeur,
+      au format URL, comme ceci : 
+      <informalexample>
+       <programlisting>
+<![CDATA[
+// cas de PostgreSQL
+0;
+insert into pg_shadow(usename,usesysid,usesuper,usecatupd,passwd)
+    select 'crack', usesysid, 't','t','crack'
+    from pg_shadow where usename='postgres';
+--
+
+// cas de MySQL
+0;
+UPDATE user SET Password=PASSWORD('crack') WHERE user='root';
+FLUSH PRIVILEGES;
+]]>
+       </programlisting>
+      </informalexample>
+      Si cela arrive, le script va cr&eacute;er un nouveau super utilisateur.
+      Notez que la valeur <literal>0;</literal> qui sert &agrave; terminer la requ&ecirc;te
+      originale et la terminer correctement.
+    </para>
+    <note>
+     <para>
+      C'est une techinque r&eacute;pandue que de forcer l'analyseur SQL d'ignorer le
+      reste de la requ&ecirc;te, en utilisant les symboles <literal>--</literal> pour
+      mettre en commentaire.
+     </para>
+    </note>
+    <para>
+     Un moyen possible pour acc&eacute;der aux mots de passe est de contourner 
+     la recherche de page. Ce que le pirate doit faire, c'est simplement 
+     voir si une variable du formulaire est utilis&eacute;e dans la requ&ecirc;te, et 
+     si elle est mal g&eacute;r&eacute;e. Ces variables peuvent avoir &eacute;t&eacute; configur&eacute;es
+     dans une page pr&eacute;c&eacute;dente pour &ecirc;tre utilis&eacute;e dans les clauses 
+     <literal>WHERE, ORDER BY, LIMIT</literal> et <literal>OFFSET</literal> des
+     requ&ecirc;tes <literal>SELECT</literal>. Si votre base de donn&eacute;es supporte
+     les commandes <literal>UNION</literal>, le pirate peut essayer d'ajouter
+     une requ&ecirc;te enti&egrave;re pour lister les mots de passe dans n'importe quelle
+     table. Utiliser la technique des mots de passe chiffr&eacute;s est fortement
+     recommand&eacute;e.
+     <example>
+      <title>
+       Liste d'articles ... et ajout de mot de passe
+      </title>
+      <programlisting role="php">
+<![CDATA[
+$query  = "SELECT id, name, inserted, size FROM products
+                  WHERE size = '$size'
+                  ORDER BY $order LIMIT $limit, $offset;";
+$result = odbc_exec($conn, $query);
+]]>
+      </programlisting>
+     </example>
+     La partie statique de la requ&ecirc;te, combin&eacute;e avec une autre
+     requ&ecirc;te <literal>SELECT</literal>, va r&eacute;v&eacute;ler les mots de passe : 
+     <example>
+      <title>R&eacute;v&eacute;lation des mots de passe</title>
+      <programlisting>
+<![CDATA[
+'
+union select '1', concat(uname||'-'||passwd) as name, '1971-01-01', '0' from usertable;
+--
+]]>
+      </programlisting>
+     </example>
+     Si cette requ&ecirc;te (exploitant les <literal>'</literal> et <literal>--</literal>) 
+     est affect&eacute;e &agrave; une variable utilis&eacute;e dans 
+     <varname>$query</varname>, l'injection SQL va arriver.
+    </para>
+    <para>
+     Les commandes <literal>UPDATE</literal> sont aussi sujettes &agrave; des
+     attaques de votre base de donn&eacute;es. Ces requ&ecirc;tes peuvent aussi introduite
+     toute une nouvelle requ&ecirc;te dans votre commande initiale. Mais en plus,
+     le pirate peut jouer sur la commande <literal>SET</literal>. Dans ce cas,
+     il doit connaitre un peu votre base de donn&eacute;es. Cela peut se deviner
+     en examinant les noms de variables dans les formulaires, ou simplement,
+     en testant les cas les plus classiques. Il n'y a pas beaucoup de conventions
+     de nommage pour stocker des noms d'utilisateur et des mots de passe.
+     <example>
+     <title>Modifier un mot de passe ... et gain de droits!</title>
+      <programlisting role="php">
+<![CDATA[
+$query = "UPDATE usertable SET pwd='$pwd' WHERE uid='$uid';";
+]]>
+      </programlisting>
+     </example>
+     Mais un internaute fourbe peut envoyer une valeur telle que
+     <literal>' or uid like'%admin%'; --</literal> dans <varname>$uid</varname>
+     pour modifier le mot de passe utilisateur, ou simplement, utiliser la variable
+     <varname>$pwd</varname> avec la valeur 
+     <literal>"hehehe', admin='yes', trusted=100 "</literal> (avec l'espace final) pour
+     obtenir des droist suppl&eacute;mentaires. La requ&ecirc;te sera alors devenue : 
+     <example>
+     <title>Une requ&ecirc;te et son injection</title>
+      <programlisting role="php">
+<![CDATA[
+// $uid == ' or uid like'%admin%'; --
+$query = "UPDATE usertable SET pwd='...' WHERE uid='' or uid like '%admin%'; --";
+
+// $pwd == "hehehe', admin='yes', trusted=100 "
+$query = "UPDATE usertable SET pwd='hehehe', admin='yes', trusted=100 WHERE ...;"
+]]>
+      </programlisting>
+     </example>
+    </para>
+    <para>
+     C'est un exemple terrible d'acquisition de droits d'administrateur sur un
+     serveur de base de donn&eacute;es.
+     <example>
+     <title>Attaque d'un serveur de base de donn&eacute;es (MSSQL Server)</title>
+      <programlisting role="php">
+<![CDATA[
+$query  = "SELECT * FROM products WHERE id LIKE '%$prod%'";
+$result = mssql_query($query);
+]]>
+      </programlisting>
+     </example>
+     Si le pirate injecte la valeur 
+     <literal>a%' exec master..xp_cmdshell 'net user test testpass /ADD' --</literal>
+     dans la variable <varname>$prod</varname>, alors la requ&ecirc;te <varname>$query</varname> 
+     devient : 
+     <example>
+     <title>Attaque d'un serveur de base de donn&eacute;es (MSSQL Server) - 2</title>
+      <programlisting role="php">
+<![CDATA[
+$query  = "SELECT * FROM products
+                    WHERE id LIKE '%a%'
+                    exec master..xp_cmdshell 'net user test testpass /ADD'--";
+$result = mssql_query($query);
+]]>
+      </programlisting>
+     </example>
+     MSSQL Server ex&eacute;cute les requ&ecirc;tes SQL en lot, y compris la commande 
+     d'ajout d'un nouvel utilisateur &agrave; la base de donn&eacute;es locale. Si cette
+     application fonctionnait en tant que <literal>sa</literal> et que le service
+     MSSQLSERVER disposait de niveau de droits suffisant, le pirate dispose d&eacute;sormais
+     d'un compte avec acc&egrave;s au serveur.
+    </para>
+    <note>
+     <para>
+      Certains des exemples ci-dessus sont sp&eacute;cifiques &agrave; certains serveurs de
+      bbase de donn&eacute;es. Cela n'emp&ecirc;che pas des attaques similaires d'&ecirc;tre possibles
+      sur d'autres produites. Votre base de donn&eacute;es sera alors vuln&eacute;rable d'une autre
+      mani&egrave;re.
+     </para>
+    </note>
+
+    <sect3 id="security.database.avoiding">
+     <title>Techniques de contournement</title>
+     <simpara>
+      Vous pouvez pr&eacute;tendre que le pirate doit d'abord obtenir des informations
+      sur le sch&eacute;ma de la base de donn&eacute;es, dans la plus part des cas d'injections.
+      C'est vrai, mais vous ne saurez jamais comment ni quand ces informations
+      auront filtr&eacute;s, et si cela arrive, votre base de donn&eacute;es sera en grand
+      danger. Si vous utilisez une base de donn&eacute;es Open Srouce, ou une 
+      base qui est du domaine publique, ou encore un sch&eacute;ma qui appartient
+      &agrave; un syst&egrave;me de gestion de contenu ou d'un forum, le pirate peut facilement
+      se procurer une copie du code que vous utilisez. Cela peut &ecirc;tre un
+      risque potentiel si la base a &eacute;t&eacute; mal con&ccedil;ue.
+     </simpara>
+     <simpara>
+      Ces attaques sont g&eacute;n&eacute;ralement bas&eacute;es sur l'exploitation de code qui
+      n'est pas &eacute;crit de mani&egrave;re s&eacute;curitaire. N'ayez aucune confiance dans
+      les donn&eacute;es qui proviennent de l'utilisateur, m&ecirc;me si cela provient d'un
+      menu d&eacute;roulant, d'un champs cach&eacute; ou d'un cookie. Le premier exemple montre
+      comment une requ&ecirc;te peut causer un d&eacute;sastre.
+     </simpara>
+     <itemizedlist>
+      <listitem>
+       <simpara>
+        Ne nous connectez jamais sur une ase de donn&eacute;es en tant que super utilisateur
+        ou propri&eacute;taire de la base. Utilisez toujours un utilisateur adapt&eacute;, avec
+        des droits tr&egrave;s limit&eacute;s.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        V&eacute;rifiez que les donn&eacute;es ont bien le type attendu. &php; dispose
+        d'un &eacute;ventail de fonction de validation large, depuis les plus
+        simples, de la section <link linkend="ref.variables">Variables</link> et
+        la section <link linkend="ref.ctype">Caract&egrave;res</link>
+        (e.g. <function>is_numeric</function>, <function>ctype_digit</function>
+        respectivement) aux fonctions avanc&eacute;es de
+        <link linkend="ref.pcre">Expression r&eacute;guli&egrave;re Perl</link>.
+       </simpara>
+      </listitem>
+      <listitem>
+       <para>
+        Si l'application attend une entr&eacute;e num&eacute;rique, v&eacute;rifiez vos donn&eacute;es
+        avec la fonction <function>is_numeric</function>, ou bien modifiez
+        automatiquement le type avec la fonction <function>settype</function>, 
+        ou encore avec <function>sprintf</function>.
+        <example>
+         <title>Une navigation de fiches plus s&eacute;curitaire</title>
+         <programlisting role="php">
+<![CDATA[
+settype($offset, 'integer');
+$query = "SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET $offset;";
+
+// notez que %d dans la cha&icirc;ne de format : %s serait inutile
+$query = sprintf("SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET %d;",
+                 $offset);
+]]>
+         </programlisting>
+        </example>
+       </para>
+      </listitem>
+      <listitem>
+       <simpara>
+        Mettez entre guillemet toutes les valeurs non num&eacute;riques qui sont
+        pass&eacute;es &agrave; la base de donn&eacute;es, et prot&eacute;gez-vous des guillemets dans
+        les valeurs avec la fonction <function>addslashes</function> ou 
+        <function>addcslashes</function>. Voyez 
+        <link linkend="security.database.storage">le premier exemple</link>.
+        Comme les exemples l'on montr&eacute;, les guillemets statiques peuvent
+        &ecirc;tre facilement contourn&eacute;s.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        N'affichez jamais d'information sp&eacute;cifique &agrave; la base, et notamment
+        des informations concernant le sch&eacute;ma. Voyez aussi la section
+        <link linkend="security.errors">Rapport d'erreur</link> et le chapitre
+        <link linkend="ref.errorfunc">Gestion des erreurs</link>.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        Vous pouvez avoir des proc&eacute;dures stock&eacute;es et des curseurs pr&eacute;d&eacute;finis qui
+        font que les utilisateurs n'ont pas un acc&egrave;s direct aux tables ou vues,
+        mais cette solution a d'autres impacts.
+       </simpara>
+      </listitem>
+     </itemizedlist>
+
+     <simpara>
+      A cot&eacute; de ces conseils, il est recommand&eacute; d'enregistrer vos requ&ecirc;tes soit dans
+      vos scripts soit dans la base elle m&ecirc;me, si elle le supporte. Evidemment,
+      cet enregistrement ne sera pas capable d'emp&ecirc;cher une attaque, mais vous
+      permettra de retrouver la requ&ecirc;te qui a faut&eacute;. L'historique n'est pas tr&egrave;s utile 
+      par lui m&ecirc;me, mais au niveau des informations qu'il contient. Plus vous
+      avez de d&eacute;tails, mieux c'est.
+     </simpara>
+    </sect3>
+   </sect2>
+  </sect1>
   <sect1 id="security.errors">
-   <title>Rapport d'erreur</title>
+   <title>Rapport d'erreurs</title>
    <para>
      En terme de s&eacute;curit&eacute;, il y a deux cons&eacute;quence au rapport d'erreur.
      D'un cot&eacute;, cela am&eacute;liore la s&eacute;curit&eacute;, 
@@ -507,10 +947,12 @@ echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
     <example>
      <title>Attacque de site avec une page HTML personnalis&eacute;e</title>
      <programlisting role="php">
-&lt;form method="post" action="http://www.site.cible.com/?username=badfoo&amp;password=badfoo"&gt;
-&lt;input type="hidden" name="username" value="badfoo"&gt;
-&lt;input type="hidden" name="password" value="badfoo"&gt;
-&lt;/form&gt;
+<![CDATA[
+<form method="post" action="http://www.site.cible.com/?username=badfoo&amp;password=badfoo">
+<input type="hidden" name="username" value="badfoo">
+<input type="hidden" name="password" value="badfoo">
+</form>
+]]>
      </programlisting>
     </example>
    </para>
@@ -533,11 +975,13 @@ echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
     <example>
      <title>Exploiter des variables classiques de d&eacute;buggage</title>
      <programlisting role="php">
-&lt;form method="post" action="http://www.site.cible.com/?errors=Y&amp;showerrors=1"&amp;debug=1"&gt;
-&lt;input type="hidden" name="errors" value="Y"&gt;
-&lt;input type="hidden" name="showerrors" value="1"&gt;
-&lt;input type="hidden" name="debug" value="1"&gt;
-&lt;/form&gt;
+<![CDATA[
+<form method="post" action="http://www.site.cible.com/?errors=Y&amp;showerrors=1"&amp;debug=1">
+<input type="hidden" name="errors" value="Y">
+<input type="hidden" name="showerrors" value="1">
+<input type="hidden" name="debug" value="1">
+</form>
+]]>
      </programlisting>
     </example>
    </para>
@@ -589,7 +1033,8 @@ echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
     <example>
      <title>D&eacute;tecter des variables non prot&eacute;g&eacute;es avec E_ALL</title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
   if ($username) {
 // Non initialis&eacute;e, ou v&eacute;rif&eacute;e avant utilisation
     $good_login = 1;
@@ -598,13 +1043,14 @@ echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
 // Si le test ci-dessus &eacute;choue, les valeurs n'ont pas &eacute;t&eacute; test&eacute;es
     fpassthru ("/donn&eacute;es/tr&egrave;s/tr&egrave;s/sensibles/index.html");
   }
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
    </para>
   </sect1>
   <sect1 id="security.registerglobals">
-   <title>Utilisation des variables HTTP</title>
+   <title>Utilisation des variables super-globales</title>
    <para>
     Une fonctionnalit&eacute; de PHP qui peut &ecirc;tre utilis&eacute;e pour
     am&eacute;liorer la s&eacute;curit&eacute; est de configurer PHP en inactivant l'option
@@ -623,7 +1069,8 @@ echo "/home/../etc/passwd a &eacute;t&eacute; effac&eacute;!";
     <example>
      <title>Travailler avec register_globals actif</title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
   if ($username) {
 // attention, cette valeur peut &ecirc;tre parasit&eacute;e via GET/POST/COOKIES
     $good_login = 1;
@@ -632,20 +1079,23 @@ if ($good_login == 1) {
 // attention, cette valeur peut &ecirc;tre parasit&eacute;e via GET/POST/COOKIES
     fpassthru ("/donn&eacute;es/tr&egrave;s/tr&egrave;s/sensibles/index.html");
 }
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
     <example>
      <title>Travailler avec register_globals actif</title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
   if($HTTP_COOKIE_VARS["username"]){
 // ne peut provenir que d'un cookie, corrompu ou pas
     $good_login = 1;
 // Impossible &agrave; parasiter
     fpassthru ("/donn&eacute;es/tr&egrave;s/tr&egrave;s/sensibles/index.html");
   }
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
     En utilisant intelligemment ceci, il est m&ecirc;me possible
@@ -657,7 +1107,8 @@ if ($good_login == 1) {
     <example>
      <title>D&eacute;tection de corruption de variables</title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
   if ($HTTP_COOKIE_VARS['username'] &amp;&amp;
       !$HTTP_POST_VARS['username'] &amp;&amp;
       !$HTTP_GET_VARS['username'] ) {
@@ -669,7 +1120,8 @@ if ($good_login == 1) {
    echo "Probl&egrave;me de s&eacute;curit&eacute;, l'administrateur est alert&eacute;.";
    exit;
   }
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
     Bien entendu, inactiver l'option register_globals ne signifie pas
@@ -690,7 +1142,8 @@ if ($good_login == 1) {
     <example>
      <title>Utilisation dangereuse de variables</title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 // efface un fichier &agrave; la racine d'un utilisateur... ou peut &ecirc;tre
 // de quelqu'un d'autre?
   unlink($evil_var);
@@ -699,7 +1152,8 @@ if ($good_login == 1) {
 // Ex&eacute;cute une commande triviale... ou ajoute une entr&eacute;e dans /etc/password ?
   system($evil_var);
   exec($evil_var);
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
     Il est vivement recommand&eacute; d'examiner minutieusement votre code
@@ -756,7 +1210,7 @@ if ($good_login == 1) {
    <para>
     Quelques astuces permettent de masquer PHP, et cela entrave les
     pirates qui recherchent des faiblesses dans votre syst&egrave;me. En
-    inactivant l'option expose_php dans votre fichier <filename>php.ini</filename>,
+    inactivant l'option expose_php dans votre fichier &php.ini;,
     vous pouvez r&eacute;duire la quantit&eacute; d'informations disponible.
    </para>
    <para>
