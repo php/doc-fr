@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.6 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
-<!-- splitted from ./fr/functions/yaz.xml, last change in rev 1.1 -->
-<!-- last change to 'yaz-record' in en/ tree in rev 1.1 -->
+<!-- $Revision: 1.7 $ -->
+<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
   <refentry id="function.yaz-record">
    <refnamediv>
     <refname>yaz_record</refname>
@@ -19,21 +16,231 @@
      </methodsynopsis>
     <para>
      <function>yaz_record</function> retourne un résultat à la
-     position <parameter>pos</parameter>, ou une chaîicirc;ne vide si
+     position <parameter>pos</parameter>, ou une chaîne vide si
      aucun résultat n'est disponible à la position
      <parameter>pos</parameter>.
     </para>
     <para>
      <function>yaz_record</function> recherche une ligne dans le résultat,
-     à la position spécifiée. Si aucune ligne
-     n'existe à la position donnée, une chaîne
-     vide est retournée. L'argument <parameter>type</parameter>
-     spécifie la forme du résultat retourné : si
-     <parameter>type</parameter> vaut "string", la ligne est retournée
-     sous la forme d'une chaîne, prête à
-     l'affichage. Si <parameter>type</parameter> vaut "array", la ligne sera
-     retournée sous la forme d'un tableau structuré.
+     à la position spécifiée par <parameter>pos</parameter>. Si aucun résultat n'est
+     disponible à la position donnée, une chaîne vide est retournée.
     </para>
+    <para>
+     La position des enregistrements dans le jeux de résultat est numérotée 1, 2, ....
+     $hits où $hits est le nombre de résultats, retourné par <function>yaz_hits</function>.
+    </para>
+    <para>
+     <parameter>type</parameter> spécifie la forme des enregistrements retournés.    
+    </para>
+     
+   <variablelist>
+   <varlistentry>
+    <term><literal>string</literal></term>
+    <listitem>
+     <para>
+      L'enregistrement est retourné comme une chaîne de caractères pour un affichage simple.
+      Dans ce mode, tous les enregistrements MARC sont convertis en un format
+      ligne par ligne du fait que l'ISO2709 n'est pas facile à lire.
+      Les enregistrements XML et SUTRS sont retournés dans leur format d'origine.
+      GRS-1 est retourné dans un format ligne par ligne.
+     </para>
+     <para>
+     Ce format est adapté si les enregistrements doivent être affichés de façon
+     rapide pour du débogage ou parcequ'il n'est pas faisable de faire un affichage propre.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><literal>xml</literal></term>
+    <listitem>
+     <para>
+      Les enregistrements sont retournés sous la forme d'une chaîne XML
+      si possible. Dans ce mode, tous les résultats MARC sont convertis
+      en <ulink url="&url.yaz-marcxml;">MARCXML</ulink>.
+      Les enregistrements XML et SUTRS sont retournés dans leur format d'origine.
+      GPS-1 n'est pas supporté.
+     </para>
+     <para>
+      Ce format est similaire à  <literal>string</literal> excepté que les résultats
+      MARC sont convertis en MARCXML.
+     </para>
+     <para>
+      Ce format est adapté si les enregistrements sont traités par un analyseur XML ou
+      un processeur XSLT en suivant.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>raw</literal></term>
+    <listitem>
+     <para>
+      Les enregistrements sont retournés comme une chaîne de caractères dans leurs formats d'origine.
+      Ce type est adapté pour MARC, XML et SUTRS. Il ne fonctionne pas pour GRS-1.
+     </para>
+     <para>
+      Les enregistrements MARC sont retournés comme une chaîne de caractères
+      ISO2709. XML et SUTRS sont retournés comme des chaînes de caractères.
+     </para>
+    </listitem>
+   </varlistentry>
+   
+   <varlistentry>
+    <term><literal>syntax</literal></term>
+    <listitem>
+     <para>
+      La synthaxe des enregistrements est retournée comme une chaîne de caractères i.e 
+      <literal>USmarc</literal>, <literal>GRS-1</literal>,
+      <literal>XML</literal>, etc.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>database</literal></term>
+    <listitem>
+     <para>
+      Le nom de la base de données associée avec les enregistrements à la position, 
+      est retourné comme une chaîne de caractères.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><literal>array</literal></term>
+    <listitem>
+     <para>
+      Les enregistrements sont retournés comme un tableau qui reflète la structure
+      GRS-1. Ce type est adapté pour MARC et GRS-1. XML et SUTRS ne sont pas
+      supportés et si l'actuel résultat est XML ou SUTRS, une chaîne vide est retournée.
+     </para>
+     <para>
+      Le tableau retourné est constitué d'une liste correspondant à chaque
+      feuille/noeud interne de GRS-1. Chaque élément de la liste est constitué
+      d'une sous-liste avec comme premier élément <emphasis>path</emphasis> et
+      <emphasis>data</emphasis> (si les données sont disponibles).
+      </para>
+     <para>
+      Le chemin, qui est une chaîne de caractères, contient une liste de chaque composant 
+      de l'arbre (de la structure des enregistrements GRS-1) depuis la racine vers l'extrémité.
+      Chaque composant est une paire de type de balise / valeur sous la forme 
+      <literal>(</literal><replaceable>type</replaceable><literal>,</literal>
+      <replaceable>value</replaceable>
+     </para>
+     <para>
+      Les chaînes des balises, normalement, ont un type de balise correspondant 3.
+      MARC peut aussi être retourné comme un tableau (ils sont convertis en GRS-1 en interne).
+     </para>
+    </listitem>
+   </varlistentry>
+   
+  </variablelist>
+
+  <note>
+   <para>
+    C'est l'application qui est responsable actuellement d'assurer
+    que les enregistrements sont retournés du serveur Z39.50 dans un format correct.
+    Le type donné spécifie uniquement une conversion à mettre en place sur le client
+    (in PHP/YAZ).
+   </para>
+  </note>
+
+  <para>
+   En plus de la convertion d'un enregistrement de transfert en une chaîne de caractères
+   ou un tableau, PHP/YAZ est également possible de faire une conversion de l'enregistrement
+   en un jeux de caractères. Tout spécialement pour USMARC/MARC21, il est recommandé,
+   depuis qu'ils sont typiquement retournés dans le jeux de caractères MARC-8 qui n'est pas
+   supporté par les navigateurs, etc. Pour spécifier une conversion, ajouter 
+   <literal>; charset=</literal><replaceable>from</replaceable><literal>,
+   </literal><replaceable>to</replaceable> lorsque <replaceable>from</replaceable>
+   est le jeux de caractères de l'enregistrement et <replaceable>to</replaceable>
+   est le jeux de caractères résultant (comme vu par &php;).
+  </para>
+  
+  <example>
+   <title>Tableau pour des enregistrements GRS-1</title>
+   <para>
+    Considérer les enregistrements GRS-1
+    <screen>
+(4,52)Robert M. Pirsig
+(4,70)
+      (4,90)
+            (2,7)Transworld Publishers, ltd.
+    </screen>
+    Cet enregistrement a deux noeuds à la racine.
+    Le premier élément de la racine est (4,52) [tag type 4, tag value 52],
+    et à comme donnée <literal>Robert M. Pirsig</literal>.
+    Le deuxième élément de la racine (4,70) a un sous-arbre avec un élément simple (4,90).
+    (4,90) a maintenant un sous-arbre (2,7) avec comme donnée <literal>Transworld Publishers,
+     ltd.</literal>.
+   </para>
+   <para>
+    Si cet enregistrement est présent à la position $p, alors
+    <programlisting role="php">
+$ar = yaz_record($id, $p, "array");
+print_r($ar);
+    </programlisting>
+    affichera :
+    <screen>
+ Array
+(
+    [0] => Array
+        (
+            [0] => (4,52)
+            [1] => Robert M. Pirsig
+        )
+    [1] => Array
+        (
+            [0] => (4,70)
+        )
+    [2] => Array
+        (
+            [0] => (4,70)(4,90)
+        )
+    [3] => Array
+        (
+            [0] => (4,70)(4,90)(2,7)
+            [1] => Transworld Publishers, ltd.
+        )
+)      
+    </screen>
+   </para>
+  </example>
+
+  <example>
+   <title>Travail avec MARCXML</title>
+   <para>
+    Le script &php; ci-dessous retourne un enregistrement MARC21/USMARC
+    comme MARCXML. L'enregistrement original est retourné dans le jeux de caractères
+    marc-8 (inconnu de beaucoup d'analyseur XML), donc nous le convertissons en UTF-8
+    (que tous les analyseurs XML supportent).
+    <programlisting role="php">
+     $rec = yaz_record($id, $p, "xml; charset=marc-8,utf-8");
+    </programlisting>
+   </para>
+   <para>
+    L'enregistrement  <literal>$rec</literal> peut être obtenu avec le processeur
+    <link linkend="ref.xslt">Sablotron XSLT</link> comme celà :
+   </para>
+   <para>
+    <programlisting role="php">
+<![CDATA[ 
+$xslfile = 'display.xsl';
+$processor = xslt_create();
+$parms = array('/_xml' => $rec);
+$res = xslt_process($processor, 'arg:/_xml', $xslfile, NULL, $parms);
+xslt_free($processor);
+$res = preg_replace("'</?html[^>]*>'", '', $res);
+print $res;
+]]>
+    </programlisting>
+   </para>
+   <para>
+    En &php; 5, l'extension <link linkend="ref.xsl">XSL</link> peut être
+    utilisée à la place de Sablotron XSLT.
+   </para>
+  </example>
+    
    </refsect1>
   </refentry>
 

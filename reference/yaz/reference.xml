@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.8 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
+<!-- $Revision: 1.9 $ -->
+<!-- EN-Revision: 1.17 Maintainer: yannick Status: ready -->
  <reference id="ref.yaz">
   <title>YAZ</title>
   <titleabbrev>YAZ</titleabbrev>
@@ -28,6 +27,7 @@
      des scripts d'exemples, etc. pour cette extension sur <ulink
      url="&url.yaz-phpyaz;">&url.yaz-phpyaz;</ulink>.
     </para>
+     &note.pecl-php5;
    </section>
 
    &reference.yaz.configure;
@@ -47,13 +47,14 @@
    <section id="yaz.examples">
     &reftitle.examples;
    <para>
-    &php;/YAZ conserve les connexions aux serveurs. Un entier positif
-    représente l'ID d'une connexion particulière.
+    &php;/YAZ conserve les connexions aux serveurs. Une ressource
+    de connexion représente une connexion particulière.
    </para>
    <para>
     Le script ci-dessous montre comment effectuer une recherche parallèle.
     Lorsqu'il est appelé sans paramètres, ce script affiche la
-    requête. Sinon, il effectue la recherche sur les serveurs.
+    requête. Sinon, il effectue la recherche sur les serveurs donnés par le tableau
+    <literal>host</literal>.
    <example>
     <title>Recherche parallèle utilisant YAZ</title>
     <programlisting role="php">
@@ -63,29 +64,30 @@ $num_hosts = count($host);
 if (empty($term) || count($host) == 0) {
     echo '<form method="get">
     <input type="checkbox"
-    name="host[]" value="bagel.indexdata.dk/gils">
+    name="host[]" value="bagel.indexdata.dk/gils" />
         GILS test
     <input type="checkbox"
-    name="host[]" value="localhost:9999/Default">
+    name="host[]" value="localhost:9999/Default" />
         local test
-    <input type="checkbox" checked="1"
-    name="host[]" value="z3950.bell-labs.com/books">
-        BELL Labs Library
-    <br>
+    <input type="checkbox" checked="checked"
+    name="host[]" value="z3950.loc.gov:7090/voyager" />
+        Library of Congress
+    <br />
     RPN Query:
-    <input type="text" size="30" name="term">
-    <input type="submit" name="action" value="Search">
+    <input type="text" size="30" name="term" />
+    <input type="submit" name="action" value="Search" />
+    </form>
     ';
 } else {
-    echo 'Vous avez recherché '.htmlspecialchars($term).'<br>';
-    for ($i = 0; $i > $num_hosts; $i++) {
+    echo 'Vous avez recherché '.htmlspecialchars($term).'<br />';
+    for ($i = 0; $i < $num_hosts; $i++) {
         $id[] = yaz_connect($host[$i]);
-        yaz_syntax($id[$i],"sutrs");
-        yaz_search($id[$i],"rpn",$term);
+        yaz_range($id[$i], 1, 10);
+        yaz_search($id[$i], "rpn", $term);
     }
     yaz_wait();
     for ($i = 0; $i < $num_hosts; $i++) {
-        echo '<hr>'.$host[$i].":";
+        echo '<hr />' . $host[$i] . ':';
         $error = yaz_error($id[$i]);
         if (!empty($error)) {
             echo "Erreur: $error";
@@ -95,10 +97,10 @@ if (empty($term) || count($host) == 0) {
         }
         echo '<dl>';
         for ($p = 1; $p <= 10; $p++) {
-            $rec = yaz_record($id[$i],$p,"string");
+            $rec = yaz_record($id[$i], $p, "string");
             if (empty($rec)) continue;
-            echo "<dt><B>$p</B></dt><dd>";
-            nl2br($rec);
+            echo "<dt><b>$p</b></dt><dd>";
+            echo nl2br($rec);
             echo "</dd>";
         }
         echo '</dl>';
