@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+<chapter id="faq.using">
+  <title>Utiliser &php;</title>
+  <titleabbrev>Utiliser &php;</titleabbrev>
+
+  <para>
+   Cette section regroupe plusieurs erreurs que vous pouvez rencontrer
+   lors de l'&eacute;criture de vos scripts &php;.
+  </para>
+
+  <qandaset>
+   <qandaentry id="faq.using.anyform">
+    <question>
+     <para>
+      J'aimerais &eacute;crire un script &php; g&eacute;n&eacute;rique qui pourrait traiter les
+      donn&eacute;es provenant de tout formulaire. Comment savoir quelles variables
+      de la m&eacute;thode POST sont disponibles ?
+     </para>
+    </question>
+    <answer>
+     <para>
+      &php; fournit plusieurs <link linkend="language.variables.predefined">
+      variables pr&eacute;d&eacute;finies</link>, comme la super globale <varname>
+      $_POST</varname>. Vous puvez boucler sur <varname>$_POST</varname>
+      puisque c'est un tableau associatif de toutes les valeurs POST&eacute;es.
+      Par exemple, bouclons dessus simplement avec <link linkend="control-structures.foreach">
+      foreach</link>, v&eacute;rifions les valeurs vides et affichons les.
+      <programlisting role="php">
+<![CDATA[
+<?php
+$empty = $post = array();
+foreach ($_POST as $nomvar => $valeurvar) {
+    if (empty($varvalue)) {
+        $empty[$nomvar] = $valeurvar;
+    } else {
+        $post[$nomvar] = $valeurvar;
+    }
+}
+
+print "<pre>";
+if (empty($empty)) {
+    print "Aucune valeur POST&eacute;e n'est vide, post&eacute;es :\n";
+    var_dump($post);
+} else {
+    print "Nous avons " . count($empty) . " valeurs vides\n";
+    print "Post&eacute;es :\n"; var_dump($post);
+    print "Vides :\n";  var_dump($empty);
+    exit;
+}
+?>
+]]>
+      </programlisting>
+     </para>
+     
+     &note.superglobals;
+
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.using.addslashes">
+    <question>
+     <para>
+      Il faut que je convertisse tous les guillemets simples (')
+      en un anti-slash suivi d'un guillemet simple (\'). Comment le faire
+      avec une expression reguli&egrave;re ? J'aimerais aussi convertir " en \" et
+      \ en \\.
+     </para>
+    </question>
+    <answer>
+     <para>
+      La fonction <function>addslashes</function> le fera. Voir aussi
+      <function>mysql_escape_string</function>. Vous pouvez aussi supprimer
+      les anti-slashs avec <function>stripslashes</function>.
+     </para>
+
+     &note.magicquotes.gpc;
+
+    </answer>
+   </qandaentry>
+   
+   <qandaentry id="faq.using.stripslashes">
+    <question>
+     <para>
+      Tous mes " se transforment en \" et mes ' en \', comment me d&eacute;barrasser
+      de tous ces anti-slashs ? Comment et pourquoi sont-ils apparus ?
+     </para>
+    </question>
+    <answer>
+     <para>
+      La fonction &php; <function>stripslashes</function> supprimera ces
+      anti-slashs de votre cha&icirc;ne de caract&egrave;res. La plupart du temps, ils
+      appraissent car la directive &php;  
+      <link linkend="ini.magic-quotes-gpc">magic_quotes_gpc</link> est activ&eacute;e.
+     </para>
+     
+     &note.magicquotes.gpc;
+     
+    </answer>
+   </qandaentry>   
+
+   <qandaentry id="faq.using.wrong-order">
+    <question>
+     <para>
+      Quand je fais ce qui suit, l'affichage se fait dans le mauvais ordre :
+     <programlisting role="php">
+<![CDATA[
+<?php
+function mafonction($argument)
+{
+    echo $argument + 10;
+}
+$variable = 10;
+echo "mafonction($variable) = " . mafonction($variable);
+?>
+]]>
+    </programlisting>
+     que se passe-t-il ?
+     </para>
+    </question>
+    <answer>
+     <para>
+      Pour pouvoir utiliser le r&eacute;sultat de votre fonction dans une expression
+      (comme le concat&eacute;ner avec une cha&icirc;ne comme dans cet exemple), vous devez
+      retourner la valeur avec <function>return</function>, et non pas
+      l'afficher avec <function>echo</function>.
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.using.newlines">
+    <question>
+     <para>
+      Hey, o&ugrave; sont mes nouvelles lignes ?
+      <programlisting role="php">
+<![CDATA[
+<pre>
+<?php echo "Ceci est ma premi&egrave;re ligne."; ?>
+<?php echo "Celle-ci devrait s'afficher en dessous de la premi&egrave;re."; ?>
+</pre>
+]]>
+      </programlisting>
+     </para>
+    </question>
+    <answer>
+     <para>
+      En &php;, la fin d'un bloc de code est soit "?&gt;" ou
+      "?&gt;\n" (o&ugrave; \n signifie une nouvelle ligne). Donc dans l'exemple plus
+      haut, les phrases affich&eacute;es le seront sur une seule ligne, car &php;
+      oublie les nouvelles lignes apr&egrave;s la fin du bloc. Cela signifie que vous
+      devez ins&eacute;rer une nouvelle ligne de plus apr&egrave;s chaque bloc de code &php;
+      pour la lui faire afficher.
+     </para>
+     <para>
+      Pourquoi &php; fait-il cela ? Car lors du formatage du HTML, cela
+      vous simplifie la vie car vous ne voulez pas de cette nouvelle ligne,
+      mais vous devez cr&eacute;er de tr&egrave;s longues lignes ou rendre la source brute
+      de la page illisible pour arriver &agrave; cet effet.
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.using.headers-sent">
+    <question>
+     <para>
+      J'obtiens le message 'Warning: Cannot send session cookie - headers already
+      sent...' ou 'Cannot add header information - headers already sent...'.
+     </para>
+    </question>
+    <answer>
+     <para>
+      Les fonctions <function>header</function>, <function>setcookie
+      </function>, et les <link linkend="ref.session">fonctions de session 
+      </link> doivent ajouter des ent&ecirc;tes au flux de sortie, mais ceux-ci ne
+      peuvent &ecirc;tre envoy&eacute;s qu'avant le reste du contenu. Il ne doit y avoir
+      aucun affichage avant d'utiliser ces fonctions, comme le HTML par
+      example. La fonction <function>headers_sent</function> v&eacute;rifiera si
+      votre script a d&eacute;j&agrave; envoy&eacute; des ent&ecirc;tes. Voyez aussi 
+      <link linkend="ref.outcontrol">les fonctions de bufferisation de sortie
+      </link>.
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.using.header">
+    <question>
+     <para>
+      J'ai besoin d'acc&egrave;der &agrave; des informations dans l'en-t&ecirc;te de requ&ecirc;te
+      directement. Comment puis-je le faire ?
+     </para>
+    </question>
+    <answer>
+     <para>
+      La fonction <function>getallheaders</function> le fera si vous ex&eacute;cutez
+      &php; en tant que module Apache. Le code suivant vous montrera tous les
+      en-t&ecirc;tes de requ&ecirc;te :
+      <programlisting role="php">
+<![CDATA[
+<?php
+$headers = getallheaders();
+foreach ($headers as $nom => $contenu) {
+    echo "headers[$nom] = $contenu<br>\n";
+}
+?>
+]]>
+      </programlisting>
+     </para>
+     <para>
+      Voir aussi 
+      <function>apache_lookup_uri</function>,
+      <function>apache_response_headers</function> et
+      <function>fsockopen</function>
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.using.authentication">
+    <question>
+     <para>
+      Quand j'essaye d'utiliser l'authentification avec IIS j'obtiens 'No Input file specified'.
+     </para>
+    </question>
+    <answer>
+     <para>
+      Le mod&egrave;le s&eacute;curitaire de IIS est en faute. C'est un probl&egrave;me commun &agrave;
+      tous les programmes CGI fonctionnant avec IIS. Une alternative est de
+      cr&eacute;er un fichier HTML (non ex&eacute;cut&eacute; par &php;) comme page d'entr&eacute;e dans
+      le dossier o&ugrave; il faut s'authentifier. Utilisez alors une balise META
+      pour rediriger vers la page &php;, ou encore proposez un lien vers
+      celle-ci. &php; reconna&icirc;tra alors l'authentification correctement. Avec
+      le module ISAPI, cela n'est pas un probl&egrave;me. Cela ne devrait pas non
+      plus affecter d'autres serveurs NT. Pour plus  d'informations, voyez : 
+      <ulink url="&url.iis;">&url.iis;</ulink> et la section du manuel
+      concernant l'<link linkend="features.http-auth">authentification HTTP</link>.
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.using.netscape">
+    <question>
+     <para>
+      Mon script &php; fonctionne avec IE et Lynx, mais avec Netscape une
+      portion de ce qui devrait s'afficher manque. Quand j'affiche la source
+      HTML de la page, je vois le contenu avec IE mais pas avec Netscape.
+     </para>
+    </question>
+    <answer>
+     <para>
+      Netscape est plus stricte concernant les balises HTML (comme les tables)
+      que IE. Faire valider votre HTML g&eacute;n&eacute;r&eacute; par un validateur HTML, comme 
+      <ulink url="&url.w3.validator;">validator.w3.org</ulink>, peut se
+      r&eacute;v&eacute;ler utile. Par exemple, une &lt;/table&gt; maquante peut provoquer
+      ce probl&egrave;me.
+     </para>
+     <para>
+      De plus, IE et Lynx ignorent les NULs (<literal>\0</literal>) dans le
+      flux HTML, Netscape non. La meilleure fa&ccedil;on de le v&eacute;rifier est de
+      compiler la version en <link linkend="features.commandline">ligne de
+      commande</link> de &php; (aussi connue sous le nom de version CGI) et
+      d'ex&eacute;cuter vos scrpts &agrave; partir de la console. Sous *nix, redirigez la
+      sortie s&ucirc;r <literal>od -c</literal> et cherchez les caract&egrave;res  
+      <literal>\0</literal>. Si vous &ecirc;tes sous Windows, vous devez trouver un
+      &eacute;diteur ou un autre programme qui vous permettra de visualiser les
+      fichiers binaires. Lorsque Netscape rencontre un NUL dans un fichier, il
+      n'affichera la plupart du temps rien dans cette ligne, alors que IE et
+      Lynx le feront.
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.using.mixml">
+    <question>
+     <para>
+      Comment m&eacute;langer XML et &php; ? &php; se plaint de mes balises &lt;?xml !
+     </para>
+    </question>
+    <answer>
+     <para>
+      Pour inclure &lt;?xml dans votre code &php;, vous devrez d&eacute;sactiver les
+      short tags en configurant la directive &php; 
+      <link linkend="ini.short-open-tag">short_open_tags</link> &agrave; 
+      <literal>0</literal>.  Vous ne pouvez pas modifier cette directive avec
+      <function>ini_set</function>.  Que <link linkend="ini.short-open-tag">
+      short_open_tags</link> soit &agrave; on ou off, vous pouvez toujours faire ceci :
+      <literal>&lt;?php echo '&lt;?xml'; ?&gt;</literal>.  La valeur par
+      d&eacute;faut pour cette directive est on.
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.using.editor">
+    <question>
+     <para>
+      Comment utiliser &php; avec FrontPage ou d'autres &eacute;diteurs HTML qui
+      insistent pour mettre mon code ailleurs ?
+     </para>
+    </question>
+    <answer>
+     <para>
+      La fa&ccedil;on la plus simple est d'activer l'utilisation des balises ASP dans
+      votre code &php;. Cela vous permettra d'utiliser des d&eacute;limiteurs de code
+      &agrave; la mani&egrave;re de ASP : &lt;% et %&gt;. Quelques &eacute;diteurs HTML populaires
+      g&egrave;rent cela plus habilement. Pour activer les balises ASP, vous devez
+      configurer la variable <link linkend="ini.asp-tags">asp_tags</link>
+      de &php.ini;, ou utiliser la directive Apache appropri&eacute;e.
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.using.variables">
+    <question>
+     <para>
+      O&ugrave; puis-je trouver une liste compl&egrave;te des variables pr&eacute;d&eacute;finies que je 
+      peux utiliser dans mes scripts &php; ?
+     </para>
+    </question>
+    <answer>
+     <para>
+      Lisez la page du manuel qui concerne les <link linkend="language.variables.predefined">
+      variables pr&eacute;d&eacute;finies</link> vu qu'elle pr&eacute;sente une liste
+      partielle des variables pr&eacute;d&eacute;finies disponibles dans votre script. Une
+      liste compl&egrave;te des variables disponibles (et beaucoup d'informations)
+      peut &ecirc;tre vue en appelant la fonction <function>phpinfo</function>.
+      Lisez la section du manuel traitant des  
+      <link linkend="language.variables.external">variables non-issues de
+      &php;</link>, elle d&eacute;crit des sc&eacute;narios communs pour les variables
+      externes, comme celles issues d'un formulaire HTML, d'un Cookie, et de
+      l'URL.
+     </para>
+     
+     &note.registerglobals;
+
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.using.freepdf">
+    <question>
+     <para>
+      Comment puis-je g&eacute;n&eacute;rer des fichiers PDF sans utiliser les librairies
+      payantes <link linkend="ref.cpdf">ClibPDF</link> et 
+      <link linkend="ref.pdf">PDFLib</link> ? J'aimerais une fa&ccdil;on gratuite
+      et qui ne requi&egrave;re pas de librairies PDF externes.
+     </para>
+    </question>
+    <answer>
+     <para>
+      Il y'a quelques alternatives &eacute;crites en &php; tel que
+      <ulink url="&url.pdf.ros;">&url.pdf.ros;</ulink>, 
+      <ulink url="&url.pdf.fpdf;">&url.pdf.fpdf;</ulink>, 
+      <ulink url="&url.pdf.pdf4php;">&url.pdf.pdf4php;</ulink>, et 
+      <ulink url="&url.pdf.phppdflib;">&url.pdf.phppdflib;</ulink>.
+      Il existe aussi le module <ulink url="&url.pdf.panda;">Panda</ulink>.
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.using.cgi-vars">
+    <question>
+     <para>
+      J'essaye d'acc&eacute;der &agrave; une des variables standard CGI (comme
+      $DOCUMENT_ROOT ou $HTTP_REFERER) dans une fonction &eacute;crite par moi-m&ecirc;me,
+      et il semblerait qu'elle ne soit pas d&eacute;finie. Que se passe-t-il ?
+     </para>
+    </question>
+    <answer>
+     <para>
+      Il est important de r&eacute;aliser que la directive &php; <link
+      linkend="ini.register-globals">register_globals</link> affecte aussi les
+      variables d'environnement et de serveur. Lorsque register_globals = off
+      (valeur par d&eacute;faut depuis &php; 4.2.0), <varname>$DOCUMENT_ROOT</varname>
+      n'existera pas. A la place, utilisez <varname>$_SERVER['DOCUMENT_ROOT']
+      </varname>. Si register_globals = on alors les variables
+      <varname>$DOCUMENT_ROOT</varname> et
+      <varname>$GLOBALS['DOCUMENT_ROOT']</varname> existeront aussi.
+     </para>
+     <para>
+      Si vous &ecirc;tes s&ucirc;rs que register_globals = on et que vous vous demandez
+      pourquoi <varname>$DOCUMENT_ROOT</varname> n'est pas disponible &agrave;
+      l'int&eacute;rieur de votre fonction, c'est parceque elle est comme toute autre
+      variable et requi&egrave;re donc <literal>global $DOCUMENT_ROOT</literal> dans
+      le corps de la fonction.  Voyez aussi la page du manuel &agrave; propos de la 
+      <link linkend="language.variables.scope">port&eacute;e des variables</link>. Il
+      est recommand&eacute; de coder avec register_globals = off.
+     </para>
+     
+     &note.superglobals;
+
+    </answer>
+   </qandaentry>
+
+  </qandaset>
+ </chapter>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
