@@ -1,0 +1,778 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+ <sect1 id="language.oop5.reflection">
+  <title>Reflection</title>
+  <sect2 id="language.oop5.reflection.introduction">
+   <title>Introduction</title>
+   <para>
+    &php; 5 arrive une API complète de réflexion qui ajoute la possibilité
+     de faire du "<literal>reverse-engineer</literal>" sur les classes, les interfaces,
+     les fonctions et les méthodes tout comme les extensions. L'API de réflexion permet 
+     également d'obtenir les commentaires de la documentation
+     pour les fonctions, les classes et les méthodes.
+   </para>
+   <para>
+    L'API de réflexion est une extension orientée objet du Zend Engine, constituée
+    des classes suivantes :
+   </para>
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+  class Reflection { }
+  interface Reflector { }
+  class ReflectionException extends Exception { }
+  class ReflectionFunction implements Reflector { }
+  class ReflectionParameter implements Reflector { }
+  class ReflectionMethod extends ReflectionFunction { }
+  class ReflectionClass implements Reflector { }
+  class ReflectionObject extends ReflectionClass { }
+  class ReflectionProperty implements Reflector { }
+  class ReflectionExtension implements Reflector { }
+?>
+]]>
+    </programlisting>
+   </informalexample>
+   <note>
+    <simpara>
+     Pour plus de détails sur ces classes, lisez les chapitres suivants.
+    </simpara>
+   </note>
+   <para>
+    Si nous exécutons le code de l'exemple ci-dessous :
+    <example>
+     <title>Utilisation basique de l'API de réflexion</title>
+     <programlisting role='php'>
+<![CDATA[
+<?php
+  Reflection::export(new ReflectionClass('Exception'));
+?>
+]]>
+     </programlisting>
+    </example>
+    Nous verrons :
+    <screen>
+<![CDATA[
+Class [ <internal> class Exception ] {
+
+  - Constants [0] {
+  }
+
+  - Static properties [0] {
+  }
+
+  - Static methods [0] {
+  }
+
+  - Properties [6] {
+    Property [ <default> protected $message ]
+    Property [ <default> private $string ]
+    Property [ <default> protected $code ]
+    Property [ <default> protected $file ]
+    Property [ <default> protected $line ]
+    Property [ <default> private $trace ]
+  }
+
+  - Methods [9] {
+    Method [ <internal> final private method __clone ] {
+    }
+
+    Method [ <internal> <ctor> method __construct ] {
+    }
+
+    Method [ <internal> final public method getMessage ] {
+    }
+
+    Method [ <internal> final public method getCode ] {
+    }
+
+    Method [ <internal> final public method getFile ] {
+    }
+
+    Method [ <internal> final public method getLine ] {
+    }
+
+    Method [ <internal> final public method getTrace ] {
+    }
+
+    Method [ <internal> final public method getTraceAsString ] {
+    }
+
+    Method [ <internal> public method __toString ] {
+    }
+  }
+}
+]]>
+    </screen>
+   </para>
+  </sect2>
+
+  <sect2 id="language.oop5.reflection.reflectionfunction">
+   <title><classname>ReflectionFunction</classname></title>
+   <para>
+    La classe <classname>ReflectionFunction</classname> vous permet de faire
+    du <literal>"reverse-engineer "</literal> sur les fonctions.
+   </para>
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+  class ReflectionFunction implements Reflector {
+      public object __construct(string name)
+      public string __toString()
+      public static string export()
+      public string getName()
+      public bool isInternal()
+      public bool isUserDefined()
+      public string getFileName()
+      public int getStartLine()
+      public int getEndLine()
+      public string getDocComment()
+      public array getStaticVariables()
+      public mixed invoke(mixed* args)
+      public bool returnsReference()
+      public ReflectionParameter[] getParameters()
+  }
+?>
+]]>
+    </programlisting>
+   </informalexample>
+   <para>
+    Pour connaître le fonctionnement d'une fonction, vous devez tout d'abord créer une 
+    instance de la classe <classname>ReflectionFunction</classname>.
+    Ainsi, vous pouvez appeler n'importe quelles méthodes de cette instance.
+   </para>
+   <example>
+    <title>Utilisation de la classe <classname>ReflectionFunction</classname></title>
+    <programlisting role='php'>
+<![CDATA[
+<?php
+/**
+ * Un simple compteur
+ *
+ * @return    int
+ */
+function counter() 
+{
+    static $c = 0;
+
+    return $c++;
+}
+
+// Création d'une instance de la classe Reflection_Function
+$func = new ReflectionFunction('counter');
+
+// Affichage d'informations basiques
+printf(
+    "===> The %s function '%s'\n".
+    "     declared in %s\n".
+    "     lines %d to %d\n",
+    $func->isInternal() ? 'internal' : 'user-defined',
+    $func->getName(),
+    $func->getFileName(),
+    $func->getStartLine(),
+    $func->getEndline()
+);
+
+// Affichage du commentaire de la documentation
+printf("---> Documentation:\n %s\n", var_export($func->getDocComment(), 1));
+
+// Affichage des variables statiques si elles existent
+if ($statics = $func->getStaticVariables())
+{
+    printf("---> Variables statiques : %s\n", var_export($statics, 1));
+}
+
+// Appel de la fonction
+printf("---> Invocation des résultats dans : ");
+var_dump($func->invoke());
+
+
+// vous pouvez préférer utiliser la méthode export()
+echo "\nRésultat de ReflectionFunction::export() :\n";
+echo ReflectionFunction::export('counter');
+?>
+]]>
+    </programlisting>
+   </example>
+   <note>
+    <simpara>
+     La méthode <function>invoke</function> accepte un nombre variables d'arguments
+     passés à la fonction, tout comme la fonction 
+     <function>call_user_func</function>.
+    </simpara>
+   </note>
+  </sect2>
+
+  <sect2 id="language.oop5.reflection.reflectionparameter">
+   <title><classname>ReflectionParameter</classname></title>
+   <para>
+    La classe <classname>ReflectionParameter</classname> récupère les informations
+    concernant les paramètres des fonctions ou des méthodes.
+   </para>
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+  class ReflectionParameter implements Reflector {
+      public object __construct(string name)
+      public string __toString()
+      public static string export()
+      public string getName()
+      public ReflectionClass getClass()
+      public bool allowsNull()
+      public bool isPassedByReference()
+  }
+?>
+]]>
+    </programlisting>
+   </informalexample>
+   <para>
+    Pour connaître le fonctionnement des paramètres d'une fonction, vous devez tout d'abord
+    créer une instance de la classe <classname>ReflectionFunction</classname> ou
+    de la classe <classname>ReflectionMethod</classname>et ainsi, utiliser leur méthode
+    <function>getParameters</function> pour récupérer un tableau de paramètres.
+   </para>
+   <example>
+    <title>Utilisation de la classe <classname>ReflectionParameter</classname></title>
+    <programlisting role='php'>
+<![CDATA[
+<?php
+    function foo($a, $b, $c) { }
+    function bar(Exception $a, &$b, $c) { }
+    function baz($a = 1, $b = NULL, ReflectionFunction $c) { }
+    function abc() { }
+
+    // Création d'une instance de la classe Reflection_Function avec le 
+    // paramètre fourni en ligne de commande.    
+    $reflect = new ReflectionFunction($argv[1]);
+
+    echo $reflect;
+
+    foreach ($reflect->getParameters() as $i => $param) 
+    {
+        printf(
+            "-- Paramètre #%d : %s {\n".
+            "   Classe : %s\n".
+            "   Autorise NULL : %s\n".
+            "   Passé par référence : %s\n".
+            "}\n",
+            $i, 
+            $param->getName(),
+            var_export($param->getClass(), 1),
+            var_export($param->allowsNull(), 1),
+            var_export($param->isPassedByReference(), 1)
+        );
+    }
+?>
+]]>
+    </programlisting>
+   </example>
+  </sect2>
+
+  <sect2 id="language.oop5.reflection.reflectionclass">
+   <title><classname>ReflectionClass</classname></title>
+   <para>
+    La classe <classname>ReflectionClass</classname> vous permet
+    de faire du <literal>reverse-engineer</literal> sur des classes.
+   </para>
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+  class ReflectionClass implements Reflector {
+      public __construct(string name)
+      public string __toString()
+      public static string export()
+      public string getName()
+      public bool isInternal()
+      public bool isUserDefined()
+      public string getFileName()
+      public int getStartLine()
+      public int getEndLine()
+      public string getDocComment()
+      public ReflectionMethod getConstructor()
+      public ReflectionMethod getMethod(string name)
+      public ReflectionMethod[] getMethods()
+      public ReflectionProperty getProperty(string name)
+      public ReflectionProperty[] getProperties()
+      public array getConstants()
+      public mixed getConstant(string name)
+      public bool isInstantiable()
+      public bool isInterface()
+      public bool isFinal()
+      public bool isAbstract()
+      public int getModifiers()
+      public bool isInstance(stdclass object)
+      public stdclass newInstance(mixed* args)
+      public ReflectionClass[] getInterfaces()
+      public ReflectionClass getParentClass()
+      public bool isSubclassOf(ReflectionClass class)
+  }
+?>
+]]>
+    </programlisting>
+   </informalexample>
+   <para>
+    Pour connaître le fonctionnement d'une classe, vous devez d'abord créer une instance
+    de la classe <classname>ReflectionClass</classname>. Vous pourrez donc appeler
+    n'importe quelles méthodes de cette instance.
+   </para>
+   <example>
+    <title>Utilisation de la classe <classname>ReflectionClass</classname></title>
+    <programlisting role='php'>
+<![CDATA[
+<?php
+  interface Serializable
+  {
+      // ...
+  }
+
+  class Object
+  {
+      // ...
+  }
+
+  /**
+   * Une classe compteur
+   *
+   */
+  class Counter extends Object implements Serializable 
+  {
+      const START = 0;
+      private static $c = Counter::START;
+
+      /**
+       * Invocation du compteur
+       *
+       * @access  public
+       * @return  int
+       */
+      public function count()
+      {
+          return self::$c++;
+      }
+  }
+
+  // Création d'une instance de la classe ReflectionClass
+  $class= new ReflectionClass('Counter');
+
+  // Affichage d'informations basiques
+  printf(
+      "===> La %s%s%s %s '%s' [extension de %s]\n".
+      "     déclarée dans %s\n".
+      "     lignes %d à %d\n".
+      "     a le modificateur %d [%s]\n",
+      $class->isInternal() ? 'internal' : 'user-defined',
+      $class->isAbstract() ? ' abstract' : '',
+      $class->isFinal() ? ' final' : '',
+      $class->isInterface() ? 'interface' : 'class',
+      $class->getName(),
+      var_export($class->getParentClass(), 1),
+      $class->getFileName(),
+      $class->getStartLine(),
+      $class->getEndline(),
+      $class->getModifiers(),
+      implode(' ', Reflection::getModifierNames($class->getModifiers()))
+  );
+
+  // Affichage du commentaire de la documentation
+  printf("---> Documentation:\n %s\n", var_export($class->getDocComment(), 1));
+
+  // Affichage de l'interface qui implémente cette classe
+  printf("---> Implémenté :\n %s\n", var_export($class->getInterfaces(), 1));
+
+  // Affichage des constantes de la classe
+  printf("---> Constantes : %s\n", var_export($class->getConstants(), 1));
+
+  // Affichage des propriétés de la classe
+  printf("---> Properties: %s\n", var_export($class->getProperties(), 1));
+
+  // Affichage des méthodes de la classe
+  printf("---> Méthodes : %s\n", var_export($class->getMethods(), 1));
+
+  // Si cette classe est instanciable, création d'une instance
+  if ($class->isInstantiable()) 
+  {
+      $counter= $class->newInstance();
+
+      echo '---> $counter est uneinstance ? '; 
+      echo $class->isInstance($counter) ? 'oui' : 'non';
+
+      echo "\n---> Le nouvel objet Object() est une instance ? ";
+      echo $class->isInstance(new Object()) ? 'oui' : 'non';
+  }
+?>
+]]>
+    </programlisting>
+   </example>
+   <note>
+    <simpara>
+     La méthode <function>newInstance</function> accepte un nombre variable d'arguments
+     passés à la fonction, tout comme la fonction 
+     <function>call_user_func</function>.
+    </simpara>
+   </note>
+   <note>
+    <simpara>
+     <literal>$class = new ReflectionClass('Foo'); $class-&gt;isInstance($arg)</literal>
+     est équivalent à <literal>$arg instanceof Foo</literal> ou
+     <literal>is_a($arg, 'Foo')</literal>.
+    </simpara>
+   </note>
+  </sect2>
+
+  <sect2 id="language.oop5.reflection.reflectionmethod">
+   <title><classname>ReflectionMethod</classname></title>
+   <para>
+    La classe <classname>ReflectionMethod</classname> vous permet de faire du
+    <literal>reverse-engineer</literal> sur les méthodes des classes.
+   </para>
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+  class ReflectionMethod extends ReflectionFunction {
+      public __construct(mixed class, string name)
+      public static string export()
+      public mixed invoke(stdclass object, mixed* args)
+      public bool isFinal()
+      public bool isAbstract()
+      public bool isPublic()
+      public bool isPrivate()
+      public bool isProtected()
+      public bool isStatic()
+      public bool isConstructor()
+      public int getModifiers()
+      public ReflectionClass getDeclaringClass()
+
+      /* Inherited from ReflectionFunction */
+      public string __toString()
+      public string getName()
+      public bool isInternal()
+      public bool isUserDefined()
+      public string getFileName()
+      public int getStartLine()
+      public int getEndLine()
+      public string getDocComment()
+      public array getStaticVariables()
+      public bool returnsReference()
+      public ReflectionParameter[] getParameters()
+  }
+?>
+]]>
+    </programlisting>
+   </informalexample>
+   <para>
+    Pour connaître le fonctionnement d'une méthode, vous devez d'abord créer une instance
+    de la classe <classname>ReflectionMethod</classname>. Vous pourrez ainsi
+    appeler n'importe quelles méthodes de cette instance.
+   </para>
+   <example>
+    <title>Utilisation de la classe <classname>ReflectionMethod</classname></title>
+    <programlisting role='php'>
+<![CDATA[
+<?php
+  class Counter {
+      private static $c = 0;
+
+      /**
+       * Incrémentation d'un compteur
+       *
+       * @final
+       * @static
+       * @access  public
+       * @return  int
+       */
+      final public static function increment()
+      {
+          self::$c++;
+          return self::$c;
+      }
+  }
+
+  // Création d'une instance de la classe Reflection_Method
+  $method= new ReflectionMethod('Counter', 'increment');
+
+  // Affichage d'informations basiques
+  printf(
+    "===> La méthode %s%s%s%s%s%s%s '%s' (qui est %s)\n".
+    "     déclaré dans %s\n".
+    "     lignes %d à %d\n".
+    "     a les modificateurs %d[%s]\n",
+    $method->isInternal() ? 'internal' : 'user-defined',
+    $method->isAbstract() ? ' abstract' : '',
+    $method->isFinal() ? ' final' : '',
+    $method->isPublic() ? ' public' : '',
+    $method->isPrivate() ? ' private' : '',
+    $method->isProtected() ? ' protected' : '',
+    $method->isStatic() ? ' static' : '',
+    $method->getName(),
+    $method->isConstructor() ? 'the constructor' : 'a regular method',
+    $method->getFileName(),
+    $method->getStartLine(),
+    $method->getEndline(),
+    $method->getModifiers(),
+    implode(' ', Reflection::getModifierNames($method->getModifiers()))
+  );
+
+  // Affichage du commentaire de la documentation
+  printf("---> Documentation:\n %s\n", var_export($method->getDocComment(), 1));
+
+  // Affichage des variables statiques si elles existent
+  if ($statics= $method->getStaticVariables())
+  {
+      printf("---> Variales statiques : %s\n", var_export($statics, 1));
+  }
+
+  // Invocation de la méthode
+  printf("---> Résultat de l'invocation dans : ");
+  var_dump($method->invoke(NULL));
+?>
+]]>
+    </programlisting>
+   </example>
+   <note>
+    <simpara>
+     Essayer d'invoquer des méthodes privées, protégées ou abstraites provoquera
+     une exception jetée par la méthode <function>invoke</function>.
+    </simpara>
+   </note>
+   <note>
+    <simpara>
+     Pour les méthodes statiques comme vû précedemment, vous devez passer NULL 
+     comme premier argument de la fonction <function>invoke</function>. 
+     Pour les méthodes non statiques, passez une instance de la classe.
+    </simpara>
+   </note>
+  </sect2>
+
+  <sect2 id="language.oop5.reflection.reflectionproperty">
+   <title><classname>ReflectionProperty</classname></title>
+   <para>
+    La classe <classname>ReflectionProperty</classname> vous permet
+    de faire du <literal>reverse-engineer</literal> sur les propriétés des classes.
+   </para>
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+  class ReflectionProperty implements Reflector {
+      public __construct(mixed class, string name)
+      public string __toString()
+      public static string export()
+      public string getName()
+      public bool isPublic()
+      public bool isPrivate()
+      public bool isProtected()
+      public bool isStatic()
+      public bool isDefault()
+      public int getModifiers()
+      public mixed getValue(stdclass object)
+      public void setValue(stdclass object, mixed value)
+      public ReflectionClass getDeclaringClass()
+  }
+?>
+]]>
+    </programlisting>
+   </informalexample>
+   <para>
+    Pour connaître le fonctionnement d'une méthode, vous devez d'abord créer une instance
+    de la classe <classname>ReflectionProperty</classname>. Vous pourrez ainsi
+    appeler n'importe quelles méthodes de cette instance.
+   </para>
+   <example>
+    <title>Utilisation de la classe <classname>ReflectionProperty</classname></title>
+    <programlisting role='php'>
+<![CDATA[
+<?php
+  class String
+  {
+      public $length  = 5;
+  }
+
+  // Création d'une instance de la classe ReflectionProperty
+  $prop = new ReflectionProperty('String', 'length');
+
+  // Affichage d'informations basiques
+  printf(
+      "===> Les propriétés %s%s%s%s '%s' (qui a %s)\n".
+      "     a les modificateurs %s\n",
+      $prop->isPublic() ? ' public' : '',
+      $prop->isPrivate() ? ' private' : '',
+      $prop->isProtected() ? ' protected' : '',
+      $prop->isStatic() ? ' static' : '',
+      $prop->getName(),
+      $prop->isDefault() ? 'déclaré au moment de la compilation' : 'créé au moment de l\'exécution',
+      var_export(Reflection::getModifierNames($prop->getModifiers()), 1)
+  );
+
+  // Création d'une instance de String
+  $obj= new String();
+
+  // Récupération de la valeur courante
+  printf("---> La veleur est : ");
+  var_dump($prop->getValue($obj));
+
+  // Modification de la valeur
+  $prop->setValue($obj, 10);
+  printf("---> Définition de la valeur à 10, la nouvelle valeur est : ");
+  var_dump($prop->getValue($obj));
+
+  // Affichage de l'objet
+  var_dump($obj);
+?>
+]]>
+    </programlisting>
+   </example>
+   <note>
+    <simpara>
+     Essayer de récupérer ou définir les valeurs des propriétés d'une classe privée ou protégée
+     produira une exception.
+    </simpara>
+   </note>
+  </sect2>
+
+  <sect2 id="language.oop5.reflection.reflectionextension">
+   <title><classname>ReflectionExtension</classname></title>
+   <para>
+    La classe <classname>ReflectionExtension</classname> vous permet de faire du
+    <literal>reverse-engineer</literal> surles extensions. Vous pouvez retrouver toutes
+    les extensions chargées à l'exécution en utilisation la fonction 
+    <function>get_loaded_extensions</function>.
+   </para>
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+  class ReflectionExtension implements Reflector {
+      public __construct(string name)
+      public string __toString()
+      public static string export()
+      public string getName()
+      public string getVersion()
+      public ReflectionFunction[] getFunctions()
+      public array getConstants()
+      public array getINIEntries()
+  }
+?>
+]]>
+    </programlisting>
+   </informalexample>
+   <para>
+    Pour connaître le fonctionnement d'une méthode, vous devez d'abord créer une instance
+    de la classe <classname>ReflectionProperty</classname>. Vous pourrez ainsi
+    appeler n'importe quelles méthodes de cette instance.
+   </para>
+   <example>
+    <title>Utilisation de la classe <classname>ReflectionExtension</classname></title>
+    <programlisting role='php'>
+<![CDATA[
+<?php
+  // Création d'une instance de la classe ReflectionProperty
+  $ext = new ReflectionExtension('standard');
+
+  // Affichage d'informations basiques
+  printf(
+      "Nom        : %s\n".
+      "Version     : %s\n".
+      "Fonctions   : [%d] %s\n".
+      "Constantes   : [%d] %s\n".
+      "Entrées INI : [%d] %s\n",
+      $ext->getName(),
+      $ext->getVersion() ? $ext->getVersion() : 'NO_VERSION',
+      sizeof($ext->getFunctions()),
+      var_export($ext->getFunctions(), 1),
+      sizeof($ext->getConstants()),
+      var_export($ext->getConstants(), 1),
+      sizeof($ext->getINIEntries()),
+      var_export($ext->getINIEntries(), 1)
+  );
+?>
+]]>
+    </programlisting>
+   </example>
+  </sect2>
+
+  <sect2 id="language.oop5.reflection.extending">
+   <title>Extension des classes de réflexion</title>
+   <para>
+    Dans le cas où vous voudriez créer des versions spéciales des classes
+    embarquées (par exemple pour créer du HTML colorisé lorsqu'il est exporté,
+    pour avoir un accès facile aux variables des membres au lieu des méthodes ou
+    pour avoir des méthodes utiles), vous devez étendre la classe.
+   </para>
+   <example>
+    <title>Extension des classes embarquées</title>
+    <programlisting role='php'>
+<![CDATA[
+<?php
+  /**
+   * Ma classe Reflection_Method
+   *
+   */
+  class My_Reflection_Method extends ReflectionMethod {
+    public $visibility= '';
+
+    public function __construct($o, $m) {
+      parent::__construct($o, $m);
+      $this->visibility= Reflection::getModifierNames($this->getModifiers());
+    }
+  }
+
+  /**
+   * Démo classe #1
+   *
+   */
+  class T {
+    protected function x() {}
+  }
+
+  /**
+   * Démo classe #2
+   *
+   */
+  class U extends T {
+    function x() {}
+  }
+
+  // Affichage des informations
+  var_dump(new My_Reflection_Method('U', 'x'));
+?>
+]]>
+    </programlisting>
+   </example>
+   <note>
+    <simpara>
+     ATTENTION : Si vous écrasez le construteur,  n'oubliez pas d'appeler
+     le constructeur parent _avant_ d'insérer le moindre code. Sinon, votre code
+     produira l'erreur suivante :
+     <literal>
+      Fatal error: Internal error: Failed to retrieve the reflection object
+     </literal>
+    </simpara>
+   </note>
+  </sect2>
+ </sect1>
+ 
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
