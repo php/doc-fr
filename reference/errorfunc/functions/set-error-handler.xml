@@ -12,7 +12,7 @@
     <title>Description</title>
      <methodsynopsis>
       <type>string</type><methodname>set_error_handler</methodname>
-      <methodparam><type>string</type><parameter>error_handler</parameter></methodparam>
+      <methodparam><type>callback</type><parameter>error_handler</parameter></methodparam>
      </methodsynopsis>
     <para>
      <function>set_error_handler</function> choisit la fonction utilisateur
@@ -30,112 +30,146 @@
      La fonction utilisateur doit accepter deux arguments : le code de l'erreur,
      et une cha&icirc;ne d&eacute;crivant l'erreur. L'exemple ci dessous montre
      le traitement d'exceptions en d&eacute;clenchant des erreurs, et en les
-     g&eacute;rant avec une fonction utilisateur :
+     g&eacute;rant avec une fonction utilisateur.
+    </para>
+    <note>
+     <simpara>
+      Au lieu d'un nom de fonction, vous pouvez utiliser un tableau contenant
+      deux &eacute;l&eacute;ments, une r&eacute;f&eacute;rence sur un objet et un nom de m&eacute;thode. Cette
+      fonctionnalit&eacute; a &eacute;t&eacute; ajout&eacute;e en PHP 4.3.0.
+     </simpara>
+    </note>
+    <note>
+     <para>
+      Les types d'erreur suivants ne peuvent pas &ecirc;tre g&eacute;r&eacute;s avec cette fonction : 
+      <constant>E_ERROR</constant>, <constant>E_PARSE</constant>,
+      <constant>E_CORE_ERROR</constant>, <constant>E_CORE_WARNING</constant>,
+      <constant>E_COMPILE_ERROR</constant> et
+      <constant>E_COMPILE_WARNING</constant>.
+     </para>
+    </note>
+    <para>
+     L'exemple ci-dessous illustre l'interception d'erreurs internes avec
+     g&eacute;n&eacute;ration d'erreur, et exploitation dans une fonction utilisateur : 
      <example>
       <title>
        Traitement des erreurs avec <function>set_error_handler</function> et
        <function>trigger_error</function>
       </title>
       <programlisting role="php">
-&lt;?php
-// red&eacute;finit les constantes utilisateurs - PHP 4 seulement
-define (FATAL,E_USER_ERROR);
-define (ERROR,E_USER_WARNING);
-define (WARNING,E_USER_NOTICE);
-// Fixe le niveau de rapport d'erreur pour ce script
-error_reporting  (FATAL + ERROR + WARNING);
-// Fonction de traitement des erreurs
-function myErrorHandler ($errno, $errstr) {
-    switch ($errno) {
-    case FATAL:
-    echo &quot;&lt;B&gt;FATAL&lt;/B&gt; [$errno] $errstr&lt;br&gt;\n&quot;;
-    echo &quot;  Erreur fatale &agrave; la ligne &quot;.__LINE__.&quot; du fichier &quot;.__FILE__;
-    echo &quot;, PHP &quot;.PHP_VERSION.&quot; (&quot;.PHP_OS.&quot;)&lt;br&gt;\n&quot;;
-    echo &quot;Aborting...&lt;br&gt;\n&quot;;
-    exit -1;
+<![CDATA[
+<?php
+
+// red&eacute;fini les constantes utilisateur (PHP 4 Uniquement)
+define ("FATAL",E_USER_ERROR);
+define ("ERROR",E_USER_WARNING);
+define ("WARNING",E_USER_NOTICE);
+
+// configure le niveau de rapport d'erreur pour ce script
+error_reporting (FATAL | ERROR | WARNING);
+
+// gestionnaire d'erreurs
+function myErrorHandler ($errno, $errstr, $errfile, $errline) {
+  switch ($errno) {
+  case FATAL:
+    echo "<b>FATAL</b> [$errno] $errstr<br>\n";
+    echo "  Fatal error in line ".$errline." of file ".$errfile;
+    echo ", PHP ".PHP_VERSION." (".PHP_OS.")<br>\n";
+    echo "Aborting...<br>\n";
+    exit(1);
     break;
-    case ERROR:
-    echo &quot;&lt;B&gt;ERREUR&lt;/B&gt; [$errno] $errstr&lt;br&gt;\n&quot;;
+  case ERROR:
+    echo "<b>ERROR</b> [$errno] $errstr<br>\n";
     break;
-    case WARNING:
-    echo &quot;&lt;B&gt;ALERTE&lt;/B&gt; [$errno] $errstr&lt;br&gt;\n&quot;;
+  case WARNING:
+    echo "<b>WARNING</b> [$errno] $errstr<br>\n";
     break;
     default:
-    echo &quot;Erreur inconnue de type : [$errno] $errstr&lt;br&gt;\n&quot;;
+    echo "Unkown error type: [$errno] $errstr<br>\n";
     break;
-    }
+  }
 }
-// fonction qui teste la gestion d'erreur
+
+// fonction pour tester la gestion d'erreur
 function scale_by_log ($vect, $scale) {
-    if ( !is_numeric($scale) || $scale &lt;= 0 )
-    trigger_error(&quot;log(x) pour x &lt;= 0 est ind&eacute;fini, vous avez pass&eacute;: scale = $scale&quot;,
+  if ( !is_numeric($scale) || $scale <= 0 )
+    trigger_error("log(x) for x <= 0 is undefined, you used: scale = $scale",
       FATAL);
-    if (!is_array($vect)) {
-    trigger_error(&quot;Vecteur d'entr&eacute;e incorrect : un tableau de valeurs est attendu : &quot;, ERROR);
+  if (!is_array($vect)) {
+    trigger_error("Incorrect input vector, array of values expected", ERROR);
     return null;
-    }
-    for ($i=0; $i&lt;count($vect); $i++) {
+  }
+  for ($i=0; $i<count($vect); $i++) {
     if (!is_numeric($vect[$i]))
-    trigger_error(&quot;La valeur &agrave; la position $i n'est pas un nombre. On utilise 0 (z&eacute;ro) &agrave; la place&quot;,
-      WARNING);
+      trigger_error("Value at position $i is not a number, using 0 (zero)", 
+        WARNING);
     $temp[$i] = log($scale) * $vect[$i];
-    }
-    return $temp;
+  }
+  return $temp;
 }
-// Ancienne fonction de traitement des erreurs
-$old_error_handler = set_error_handler(&quot;myErrorHandler&quot;);
-// G&eacute;n&eacute;ration de quelques erreurs : d&eacute;finition d'un tableau avec des &eacute;l&eacute;ments non num&eacute;riques
-echo &quot;vector a\n&quot;;
-$a = array(2,3,&quot;foo&quot;,5.5,43.3,21.11);
+
+// Configuration du gestionnaire d'erreurs
+$old_error_handler = set_error_handler("myErrorHandler");
+
+// g&eacute;n&eacute;ration de quelques erreurs. Commen&ccedil;ons par cr&eacute;er un tableau
+echo "vecteur a \n";
+$a = array(2,3,"foo",5.5,43.3,21.11);
 print_r($a);
-// d&eacute;finition d'un deuxi&egrave;me table &agrave; probl&egrave;me
-echo &quot;----\nvector b - a alerte (b = log(PI) * a)\n&quot;;
+
+// g&eacute;n&eacute;rons maintenant un autre tableau, avec des alertes
+echo "----\nvecteur b - une alerte (b = log(PI) * a)\n";
 $b = scale_by_log($a, M_PI);
 print_r($b);
-// Ceci est un probl&egrave;me, on passe une cha&icirc;ne &agrave; la place d'un tableau
-echo &quot;----\nvector c - une erreur\n&quot;;
-$c = scale_by_log(&quot;not array&quot;,2.3);
+
+// ceci est un probl&egrave;me, nous avons utilis&eacute; une cha&icirc;ne au lieu d'un tableau
+echo "----\nvecteur c - une erreur\n";
+$c = scale_by_log("not array",2.3);
 var_dump($c);
-// Ceci est critique : le tableau contient des valeurs n&eacute;gatives
-echo &quot;----\nvector d - fatal error\n&quot;;
+
+// Ceci est une erreur critique : le logarithme de z&eacute;ro ou d'un nombre n&eacute;gatif est ind&eacute;fini
+echo "----\nvecteur d - erreur fatale\n";
 $d = scale_by_log($a, -2.5);
-?&gt;
+
+?>
+]]>
      </programlisting>
     </example>
     L'&eacute;x&eacute;cution du script devrait donner ceci :
     <informalexample>
      <programlisting>
-vector a
+<![CDATA[
+vecteur a 
 Array
 (
-    [0] =&gt; 2
-    [1] =&gt; 3
-    [2] =&gt; foo
-    [3] =&gt; 5.5
-    [4] =&gt; 43.3
-    [5] =&gt; 21.11
+    [0] => 2
+    [1] => 3
+    [2] => foo
+    [3] => 5.5
+    [4] => 43.3
+    [5] => 21.11
 )
 ----
-vector b - une alerte (b = log(PI) * a)
-&lt;B&gt;WARNING&lt;/B&gt; [1024] La valeur &agrave; la position 2 n'est pas un nombre. On utilise 0 (z&eacute;ro) &agrave; la place&lt;br&gt;
+vecteur b - une alerte (b = log(PI) * a)
+<b>WARNING</b> [1024] Value at position 2 is not a number, using 0 (zero)<br>
 Array
 (
-    [0] =&gt; 2.2894597716988
-    [1] =&gt; 3.4341896575482
-    [2] =&gt; 0
-    [3] =&gt; 6.2960143721717
-    [4] =&gt; 49.566804057279
-    [5] =&gt; 24.165247890281
+    [0] => 2.2894597716988
+    [1] => 3.4341896575482
+    [2] => 0
+    [3] => 6.2960143721717
+    [4] => 49.566804057279
+    [5] => 24.165247890281
 )
 ----
-vector c - an error
-&lt;B&gt;ERROR&lt;/B&gt; [512] Vecteur d'entr&eacute;e incorrect : un tableau de valeur est attendu&lt;br&gt;
+vecteur c - une erreur
+<b>ERROR</b> [512] Incorrect input vector, array of values expected<br>
 NULL
 ----
-vector d - fatal error
-&lt;B&gt;FATAL&lt;/B&gt; [256] log(x) de x &lt;= 0 est ind&eacute;fini : scale = -2.5&lt;br&gt;
-Erreur fatale &agrave; la ligne 16 du fichier trigger_error.php, PHP 4.0.1pl2 (Linux)&lt;br&gt;
-Annulation du script....&lt;br&gt;
+vecteur d - erreur fatale
+<b>FATAL</b> [256] log(x) for x <= 0 is undefined, you used: scale = -2.5<br>
+  Fatal error in line 37 of file /Users/imac/-, PHP 5.0.0-dev (Darwin)<br>
+Aborting...<br>
+]]>
      </programlisting>
     </informalexample>
    </para>
@@ -157,6 +191,13 @@ Annulation du script....&lt;br&gt;
     fonction de gestion des erreurs se termine normalement, l'ex&eacute;cution
     du script se poursuivra avec l'ex&eacute;cution de la prochaine commande.
    </para>
+   <note>
+     <para>
+     Si une erreur survient avant que le script ne soit ex&eacute;cut&eacute; (par exemple
+     un t&eacute;l&eacute;chargement de fichier), le gestionnaire d'erreurs personnalis&eacute;s ne pourra
+     pas &ecirc;tre appel&eacute;, car il n'est pas encore enregistr&eacute;.
+     </para>
+    </note>
    <para>
     Voir aussi 
     <function>error_reporting</function>,
