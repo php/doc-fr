@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.6 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
-<!-- splitted from ./fr/functions/pgsql.xml, last change in rev 1.3 -->
-<!-- last change to 'pg-fetch-object' in en/ tree in rev 1.2 -->
+<!-- $Revision: 1.7 $ -->
+<!-- EN-Revision: 1.11 Maintainer: yannick Status: ready -->
   <refentry id="function.pg-fetch-object">
    <refnamediv>
     <refname>pg_fetch_object</refname>
@@ -20,7 +17,7 @@
     <para>
      <function>pg_fetch_object</function> retourne un objet dont les
      membres sont les champs de la ligne demandée, ou
-     &false; , si il n'y a plus de lignes.
+     &false;, si il n'y a plus de lignes.
     </para>
     <para>
      <function>pg_fetch_object</function> est similaire à
@@ -31,66 +28,58 @@
       (les nombres ne sont pas autorisés comme nom de membre).
     </para>
     <para>
-      L'argument optionnel <parameter>result_type</parameter> de
-      <parameter>result_type</parameter> est une constante qui peut prendre les
-      valeurs suivantes : <constant>PGSQL_ASSOC</constant>, 
-      <constant>PGSQL_NUM</constant> et <constant>PGSQL_BOTH</constant>.
-     <note>
-      <para>
-       <parameter>result_type</parameter> a été ajouté dans
-       PHP 4.0.
-      </para>
-     </note>
+     <parameter>row</parameter> est le numéro de la ligne (enregistrement).
+     Le numéro de la première ligne vaut 0.
     </para>
     <para>
      Au niveau vitesse, <function>pg_fetch_object</function> est aussi rapide que
      <function>pg_fetch_row</function> et presque aussi rapide que
      <function>pg_fetch_row</function> (la différence est non significative).
     </para>
+    <note>
+     <para>
+      Depuis la version 4.1.0 de &php;, <parameter>row</parameter> est optionnel.
+     </para>
+     <para>
+      Depuis &php; 4.3.0, <parameter>result_type</parameter> vaut par défaut 
+      <literal>PGSQL_ASSOC</literal> tandis que pour les versions plus récentes, 
+      <literal>PGSQL_BOTH</literal> était la valeur par défaut. Il n'y a aucune utilité
+      pour les propriétés numériques, depuis que celles-ci sont invalides en &php;.
+     </para>
+     <para>
+      <parameter>result_type</parameter> sera sûrement supprimé dans les prochaines
+      version.
+     </para>
+    </note>
     <para>
      <example>
-      <title>Lecture d'un objet Postgres</title>
+      <title>Exemple avec <function>pg_fetch_object</function></title>
       <programlisting role="php">
 <![CDATA[
 <?php 
-$database = "verlag";
-$db_conn = pg_connect ("host=localhost port=5432 dbname=$database");
-if (!$db_conn): ?>
-    <H1>Impossible de se connecter à la base PostgreSQL<?php echo $database ?></H1> <?php
+
+$database = 'store';
+
+$db_conn = pg_connect("host=localhost port=5432 dbname=$database");
+if (!$db_conn) {
+    echo "La connexion a la base $database a échouée\n";
     exit;
-endif;
+}
 
-$qu = pg_query ($db_conn, "SELECT * FROM verlag ORDER BY autor");
-$row = 0; // PostgreSQL requiert un compteur de ligne que d'autres n'ont pas
+$qu = pg_query($db_conn, "SELECT * FROM books ORDER BY author");
 
-while ($data = pg_fetch_object ($qu, $row)) {
-    echo $data->autor." (";
-    echo $data->jahr ."): ";
-    echo $data->titel."<BR>";
+$row = 0; // postgres a besoin d'un compteur
+
+while ($data = pg_fetch_object($qu, $row)) {
+    echo $data->author . " (";
+    echo $data->year . "): ";
+    echo $data->title . "<br />";
     $row++;
 }
-?>
-<PRE>
-<?php
-$fields[] = Array ("autor", "Author");
-$fields[] = Array ("jahr",  "  Year");
-$fields[] = Array ("titel", " Title");
 
-$row= 0; // PostgreSQL requiert un compteur de ligne que d'autres n'ont pas
-while ($data = pg_fetch_object ($qu, $row)) {
-    echo "----------\n";
-    reset ($fields);
-    while (list (,$item) = each ($fields)):
-        echo $item[1].": ".$data->$item[0]."\n";
-    endwhile;
-    $row++;
-}
-echo "----------\n"; 
-?>
-</PRE> 
-<?php
-pg_free_result ($qu);
-pg_close ($db_conn);
+pg_free_result($qu);
+pg_close($db_conn);
+
 ?>
 ]]>
       </programlisting>
@@ -99,7 +88,7 @@ pg_close ($db_conn);
     <note>
      <para>
       Depuis 4.1.0, <parameter>row</parameter> est devenu optionnel.
-      Appeler <function>pg_fetch_array</function> avec incrémenter
+      Appeler <function>pg_fetch_array</function> incrémentera
       le pointeur interne de 1.
      </para>
     </note>
