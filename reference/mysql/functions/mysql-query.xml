@@ -4,7 +4,7 @@
   <refentry id="function.mysql-query">
    <refnamediv>
     <refname>mysql_query</refname>
-    <refpurpose>Envoie une requ&ecirc;te SQL &agrave; un serveur MySQL.</refpurpose>
+    <refpurpose>Envoie une requ&ecirc;te SQL &agrave; un serveur MySQL</refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
@@ -12,6 +12,7 @@
       <type>resource</type><methodname>mysql_query</methodname>
       <methodparam><type>string</type><parameter>query</parameter></methodparam>
       <methodparam choice="opt"><type>resource</type><parameter>link_identifier</parameter></methodparam>
+      <methodparam choice="opt"><type>int</type><parameter>result_mode</parameter></methodparam>
      </methodsynopsis>
     <para>
      <function>mysql_query</function> envoie une requ&ecirc;te SQL &agrave;
@@ -23,41 +24,62 @@
      (c'est-&agrave;-dire avec les valeurs par d&eacute;faut).
     </para>
     <para>
-     <function>mysql_query</function> retourne &true; ou
-     &false;, pour indiquer le succ&egrave;s ou l'&eacute;chec
-     de la requ&ecirc;te. En cas de retour &true;, la
-     requ&ecirc;te &eacute;tait valide et a pu &ecirc;tre ex&eacute;cut&eacute;
-     sur le serveur. Cela n'indique pas le nombre de lignes affect&eacute;es,
-     ou retourn&eacute;es. Il est parfaitement possible qu'une requ&ecirc;te
-     valide n'affecte aucune ligne ou ne retourne aucune ligne.
+     Le param&egrave;tre optionnel <parameter>result_mode</parameter> peut prendre
+     les valeurs de <constant>MYSQL_USE_RESULT</constant> ou <constant>MYSQL_STORE_RESULT</constant>. Par d&eacute;faut,
+     il vaut <constant>MYSQL_STORE_RESULT</constant>, ce qui fait que le r&eacute;sultat est mis
+     dans un buffer. Voyez aussi la fonction 
+     <function>mysql_unbuffered_query</function> pour comprendre cas
+     o&ugrave; le r&eacute;sultat n'est pas mis en buffer.
+    </para>
+    <note>
+     <para>
+      La requ&ecirc;te ne doit pas &ecirc;tre termin&eacute;e par un point-virgule.
+     </para>
+    </note>
+    <para>
+     Seules les requ&ecirc;tes SQL SELECT,SHOW,EXPLAIN et DESCRIBE,
+     utilis&eacute;e avec <function>mysql_query</function>
+     retourne une ressource de r&eacute;sultat MySQL, ou bien &false; si
+     la requ&ecirc;te n'a pu &ecirc;tre ex&eacute;cut&eacute; correctement. Pour les autres
+     types de requ&ecirc;tes SQL, <function>mysql_query</function> retourne &true;
+     en cas de succ&egrave;s et &false; en cas d'erreur. Un r&eacute;sultat diff&eacute;rent de
+     &false;, la valeur signifie que la requ&ecirc;te soumise est valide
+     et qu'elle a pu &ecirc;tre ex&eacute;cut&eacute;e correctement. Cela n'apporte aucune
+     indication sur le nombre de lignes affect&eacute;es. Il est parfaitement
+     possible qu'une requ&ecirc;te soit r&eacute;ussie, mais qu'elle ne modifie
+     aucune ligne, ou qu'elle n'en retourne aucune.
     </para>
     <para>
      L'exemple suivant est syntaxiquement invalide, ce qui conduit
      <function>mysql_query</function> &agrave; l'&eacute;chec et retourne
      &false;:
      <example>
-      <title><function>mysql_query</function></title>
+      <title>Exemple avec <function>mysql_query</function></title>
       <programlisting role="php">
-&lt;?php
-  $result = mysql_query ("SELECT * WHERE 1=1")
+<![CDATA[
+<php
+$result = mysql_query("SELECT * WHERE 1=1")
     or die ("Requ&ecirc;te invalide");
-?&gt;
+?>
+]]>
       </programlisting>
      </example>
     </para>
     <para>
       L'exemple suivant est s&eacute;mantiquement invalide si
-      <literal>my_col</literal> n'est pas une colonne de la table
-      <literal>my_tbl</literal>, ce qui conduit
+      <literal>ma_colonne</literal> n'est pas une colonne de la table
+      <literal>my_table</literal>, ce qui conduit
       <function>mysql_query</function> &agrave; l'&eacute;chec et retourne
       &false; :
      <example>
-      <title><function>mysql_query</function></title>
+      <title>Exemple avec <function>mysql_query</function> (2)</title>
       <programlisting role="php">
-&lt;?php
-  $result = mysql_query ("SELECT my_col FROM my_tbl")
+<![CDATA[
+<?php
+$result = mysql_query("SELECT ma_colonne FROM ma_table")
     or die ("Requ&ecirc;te invalide");
-?&gt;
+?>
+]]>
       </programlisting>
      </example>
     </para>
@@ -70,20 +92,27 @@
      <function>mysql_affected_rows</function>  pour conna&icirc;tre le nombre de
      lignes affect&eacute;es (pour les commandes DELETE, INSERT, REPLACE, ou
      UPDATE ).
+    </para>
+    <para>
+
      Pour les commandes SELECT , <function>mysql_query</function> retourne un
      identifiant de r&eacute;sultat que vous pouvez passer &agrave;
-     <function>mysql_result</function>. Lorsque vous avez termin&eacute;
+     <function>mysql_fetch_array</function>, ou n'importe quelle autre
+     fonction de lecture de r&eacute;sultat. Lorsque vous avez termin&eacute;
      avec le r&eacute;sultat, lib&eacute;rez la m&eacute;moire avec
      <function>mysql_free_result</function>.
     </para>
     <para>
      Voir aussi
+     <function>mysql_num_rows</function>,
      <function>mysql_affected_rows</function>,
      <function>mysql_unbuffered_query</function>,
-     <function>mysql_db_query</function>,
      <function>mysql_free_result</function>,
+     <function>mysql_fetch_array</function>,
+     <function>mysql_fetch_row</function>,
+     <function>mysql_fetch_assoc</function>,
      <function>mysql_result</function>,
-     <function>mysql_select_db</function> et
+     <function>mysql_select_db</function> et 
      <function>mysql_connect</function>.
     </para>
    </refsect1>
