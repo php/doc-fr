@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='iso-8859-1'?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.4 Maintainer: yannick Status: ready -->
   <refentry id="function.ssh2-connect">
    <refnamediv>
     <refname>ssh2_connect</refname>
@@ -18,10 +18,255 @@
      <methodparam choice="opt"><type>array</type><parameter>callbacks</parameter></methodparam>
     </methodsynopsis>
 
+    <simpara>
+     <function>ssh2_connect</function> établie une connexion à un serveur SSH distant
+     et retourne une ressource de connexion en cas de succès, &false; sinon.
+    </simpara>
+
+    <simpara>
+     <parameter>methods</parameter> doit être un tableau associatif avec plus de 
+     quatre paramètres, comme décrit ci-dessous.
+    </simpara>
+
     <para>
-     <function>ssh2_connect</function> établit une connexion à un serveur SSH distant
-     et retourne une ressource de connexion en cas de succès et &false; sinon.
+     <table>
+      <title><parameter>methods</parameter> doit être un tableau associatif avec
+      n'importe quel ou tous les paramètres suivants.</title>
+      <tgroup cols="3">
+       <thead>
+        <row>
+         <entry>Index</entry>
+         <entry>Signification</entry>
+         <entry>Valeurs supportées *</entry>
+        </row>
+       </thead>
+       <tbody>
+        <row>
+         <entry>kex</entry>
+         <entry>
+          La liste des méthodes d'échange à annoncer, séparées par une virgule,
+          par ordre de préférence.
+         </entry>
+         <entry>
+          <literal>diffie-hellman-group1-sha1</literal>,
+          <literal>diffie-hellman-group14-sha1</literal>, et
+          <literal>diffie-hellman-group-exchange-sha1</literal>
+         </entry>
+        </row>
+        <row>
+         <entry>hostkey</entry>
+         <entry>
+          La liste des méthodes de clés d'hôte à annoncer, séparées par
+          une virgule, par ordre de préférence.
+         </entry>
+         <entry>
+          <literal>ssh-rsa</literal> et
+          <literal>ssh-dss</literal>
+         </entry>
+        </row>
+        <row>
+         <entry>client_to_server</entry>
+         <entry>
+          Tableau associatif contenant les codes des méthodes de cryptage, 
+          de compression et de messages d'identification (MAC) préférés
+          pour l'envoi des messages depuis le client vers le serveur.
+         </entry>
+         <entry/>
+        </row>
+        <row>
+         <entry>server_to_client</entry>
+         <entry>
+          Tableau associatif contenant les codes des méthodes de cryptage, 
+          de compression et de messages d'identification (MAC) préférés
+          pour l'envoi des messages depuis le serveur vers le client.
+         </entry>
+         <entry/>
+        </row>
+       </tbody>
+      </tgroup>
+     </table>
     </para>
+
+    <simpara>
+     * - Les valeurs supportées sont dépendantes des méthodes supportées par
+     la bibliothèque. Voir la documentation <ulink url="&url.libssh2;">libssh2</ulink> 
+     pour plus d'informations.
+    </simpara>
+
+    <para>
+     <table>
+      <title>
+       <parameter>client_to_server</parameter> et
+       <parameter>server_to_client</parameter> doivent être un tableau associatif
+       avec n'importe quel ou tous les paramètres suivants.
+      </title>
+      <tgroup cols="3">
+       <thead>
+        <row>
+         <entry>Index</entry>
+         <entry>Signification</entry>
+         <entry>Valeurs supportées *</entry>
+        </row>
+       </thead>
+       <tbody>
+        <row>
+         <entry>crypt</entry>
+         <entry>
+          Liste des méthodes de cryptage à annoncer, séparées par une virgule,
+          par ordre de préférence.
+         </entry>
+         <entry>
+          <literal>rijndael-cbc@lysator.liu.se</literal>,
+          <literal>aes256-cbc</literal>,
+          <literal>aes192-cbc</literal>,
+          <literal>aes128-cbc</literal>,
+          <literal>3des-cbc</literal>,
+          <literal>blowfish-cbc</literal>,
+          <literal>cast128-cbc</literal>,
+          <literal>arcfour</literal>, et
+          <literal>none**</literal>
+         </entry>
+        </row>
+        <row>
+         <entry>comp</entry>
+         <entry>
+          Liste des méthodes de compression à annoncer, séparées par une virgule,
+          par ordre de préférence.
+         </entry>
+         <entry>
+          <literal>zlib</literal> et
+          <literal>none</literal>
+         </entry>
+        </row>
+        <row>
+         <entry>mac</entry>
+         <entry>
+          Liste des méthodes MAC à annoncer, séparées par une virgule,
+          par ordre de préférence.
+         </entry>
+         <entry>
+          <literal>hmac-sha1</literal>,
+          <literal>hmac-sha1-96</literal>,
+          <literal>hmac-ripemd160</literal>,
+          <literal>hmac-ripemd160@openssh.com</literal>, et
+          <literal>none**</literal>
+         </entry>
+        </row>
+       </tbody>
+      </tgroup>
+     </table>
+    </para>
+
+    <note>
+     <title>Crypt and MAC method "<literal>none</literal>"</title> 
+     <simpara>
+      Pour des raisons de sécurité, <literal>none</literal> est désactivé par la 
+      bibliothèque <ulink url="&url.libssh2;">libssh2</ulink> à moins qu'il soit
+      activer explicitement durant la compilation en utilisant les options appropriées du
+      ./configure. Voir la documentation sur la bibliothèque pour plus d'informations.
+     </simpara>
+    </note>
+
+    <para>
+     <table>
+      <title><parameter>callbackss</parameter> doit être un tableau associatif
+      contenant n'importe quel ou tous les paramètres suivants.</title>
+      <tgroup cols="3">
+       <thead>
+        <row>
+         <entry>Index</entry>
+         <entry>Signification</entry>
+         <entry>Prototype</entry>
+        </row>
+       </thead>
+       <tbody>
+        <row>
+         <entry>ignore</entry>
+         <entry>
+          Nom de la fonction à appeler lorsqu'un paquet
+          <constant>SSH2_MSG_IGNORE</constant>
+          est reçu
+         </entry>
+         <entry>void ignore_cb($message)</entry>
+        </row>
+        <row>
+         <entry>debug</entry>
+         <entry>
+          Nom de la fonction à appeler lorsqu'un paquet
+          <constant>SSH2_MSG_DEBUG</constant>
+          est reçu
+         </entry>
+         <entry>void debug_cb($message, $language, $always_display)</entry>
+        </row>
+        <row>
+         <entry>macerror</entry>
+         <entry>
+          Nom de la fonction à appeler lorsqu'un paquet est reçu mais que
+          le code message d'identification échoue. Si le callback retourne
+          &true;, l'erreur sera ignoré, sinon, la connexion se terminera.
+         </entry>
+         <entry>bool macerror_cb($packet)</entry>
+        </row>
+        <row>
+         <entry>disconnect</entry>
+         <entry>
+          Nom de la fonction à appeler lorsqu'un paquet
+          <constant>SSH2_MSG_DISCONNECT</constant>
+          est reçu
+         </entry>
+         <entry>void disconnect_cb($reason, $message, $language)</entry>
+        </row>
+       </tbody>
+      </tgroup>
+     </table>
+    </para>
+
+    <example>
+     <title>
+      Ouverture d'une connexion forcant 3des-cbc lors de l'envoi de paquets,
+      n'importe quel force aes cipher lors de la réception de paquets,
+      aucune compression dans les deux directions, et change de clés Group1.
+     </title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+/* Notification à l'utilisateur si le serveur termine la connexion */
+function my_ssh_disconnect($reason, $message, $language) {
+  printf("Le serveur s'est déconnecté avec le code [%d] et le message : %s\n",
+         $reason, $message);
+}
+
+$methods = array(
+  'kex' => 'diffie-hellman-group1-sha1',
+  'client_to_server' => array(
+    'crypt' => '3des-cbc',
+    'comp' => 'none'),
+  'server_to_client' => array(
+    'crypt' => 'aes256-cbc,aes192-cbc,aes128-cbc',
+    'comp' => 'none'));
+
+$callbacks = array('disconnect' => 'my_ssh_disconnect');
+
+$connection = ssh2_connect('shell.example.com', 22, $methods, $callbacks);
+if (!$connect) die('Connection failed');
+?>
+]]>
+     </programlisting>
+    </example>
+
+    <simpara>
+     Une fois connecté, le client doit vérifier la clé hôte du serveur
+     en utilisant la fonction<function>ssh2_fingerprint</function>, 
+     puis s'identifier en utilisant soit un mot de passe, soit une clé publique.
+    </simpara>
+
+    <simpara>
+     Voir aussi
+     <function>ssh2_fingerprint</function>,
+     <function>ssh2_auth_none</function>,
+     <function>ssh2_auth_password</function> et
+     <function>ssh2_auth_pubkey_file</function>.
+    </simpara>
 
    </refsect1>
   </refentry>
