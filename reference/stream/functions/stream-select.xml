@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+  <refentry id="function.stream-select">
+   <refnamediv>
+    <refname>stream_select</refname>
+    <refpurpose>Runs the equivalent of the select() system call on the given 
+     arrays of streams with a timeout specified by tv_sec and tv_usec </refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+     <methodsynopsis>
+      <type>int</type><methodname>stream_select</methodname>
+      <methodparam><type>resource</type><parameter>&amp;read</parameter></methodparam>
+      <methodparam><type>resource</type><parameter>&amp;write</parameter></methodparam>
+      <methodparam><type>resource</type><parameter>&amp;except</parameter></methodparam>
+      <methodparam><type>int</type><parameter>tv_sec</parameter></methodparam>
+      <methodparam choice="opt"><type>int</type><parameter>tv_usec</parameter></methodparam>
+     </methodsynopsis>
+    <simpara>
+     <function>stream_select</function> accepte un tableau de fl&ocirc;ts et
+     attend que l'un d'entre eux change de statut. Cette op&eacute;ration est &eacute;quivalente
+     &agrave; ce que fait la fonction <function>socket_select</function>, ormis le fait qu'elle
+     travaille sur fl&ocirc;ts.
+    </simpara>
+    <simpara>
+     Les fl&ocirc;ts qui sont list&eacute;s dans le param&egrave;tre <parameter>read</parameter> seront
+     surveill&eacute;s en lecture, c'est &agrave; dire si de nouveaux octets sont disponibles
+     en lecture (pour &ecirc;tre pr&eacute;cis, si une lecture ne bloquera pas, ce qui inclut
+     aussi les fl&ocirc;ts qui sont en fin de fichier, auquel cas un appel &agrave; la fonction
+     <function>fread</function> retournera une cha&icirc;ne de taille 0).
+    </simpara>
+    <simpara>
+     Les fl&ocirc;ts qui sont list&eacute;s dans le param&egrave;tre <parameter>write</parameter> 
+     seront surveill&eacute; en &eacute;criture (pour &ecirc;tre pr&eacute;cis, si une &eacute;criture ne 
+     bloquera pas).
+    </simpara>
+    <simpara>
+     Les fl&ocirc;ts qui sont list&eacute;s dans le param&egrave;tre <parameter>except</parameter> 
+     seront surveill&eacute; pour voir si une exception est lev&eacute;e.
+    </simpara>
+    <warning>
+     <para>
+      Lors de la fin de la fonction, les tableaux sont modifi&eacute;s pour rapporter
+      leurs &eacute;volutions respectives.
+     </para>
+    </warning>
+    <simpara>
+     Vous n'&ecirc;tes pas oblig&eacute;s de passer tous les tableaux &agrave; la fonction
+     <function>stream_select</function>. Vous pouvez en omettre certains,
+     en utilisant un tabeau vide ou la valeur &null;. N'oubliez pas que ces
+     tableaux sont pass&eacute;s <emphasis>par r&eacute;f&eacute;rence</emphasis> et qu'ils seront
+     modifi&eacute;s lorsque <function>stream_select</function> s'ach&egrave;vera.
+    </simpara>
+    <para>
+     Exemple
+     <programlisting role="php">
+<![CDATA[
+<?php
+/* Preparation du tableau de fl&ocirc;ts lecture */
+$read = array($stream1, $stream2);
+
+if (false === ($num_changed_streams = stream_select($read, $write = NULL, $except = NULL, 0))) {
+    /* Gestion d'erreur */
+else if ($num_changed_streams > 0) {
+    /* Au moins un des fl&ocirc;ts a &eacute;volu&eacute;  */
+}
+?>
+]]>
+     </programlisting>
+    </para>
+    <note>
+     <para>
+      A cause d'une limitation du Zend Engine actuel, il n'est pas possible
+      de passer la valeur &null; directement comme param&egrave;tre d'une fonction
+      qui s'attend &agrave; des param&egrave;tres pass&eacute;s par r&eacute;f&eacute;rence. Au lieu de cela,
+      il est recommand&eacute; d'utiliser une variable temporaire, ou une expression
+      don le membre de gauche est une variable temporaire. Comme ceci : 
+      <programlisting role="php">
+<![CDATA[
+<?php
+  stream_select($r, $w, $e = NULL, 0);
+?>
+]]>
+     </programlisting>
+     </para>
+    </note>
+    <simpara>
+     Les param&egrave;tres <parameter>tv_sec</parameter> et <parameter>tv_usec</parameter>
+     ensemle forment le d&eacute;lai d'expiration. Ce d&eacute;lai est la dur&eacute;e maximale
+     d'ex&eacute;cution de <function>stream_select</function>.
+     <parameter>tv_sec</parameter> peut valoir z&eacute;ro, ce qui fait que
+     <function>stream_select</function> s'ach&egrave;ve imm&eacute;diatement. C'est pratique
+     pour r&eacute;aliser du polling. Si <parameter>tv_sec</parameter> est &null; (pas de
+     d&eacute;lai d'expiration), <function>stream_select</function> peut bloquer le script
+     ind&eacute;finiment.
+    </simpara>
+    <simpara>
+     En cas de succ&egrave;s, <function>stream_select</function> retourne le nomre de
+     fl&ocirc;ts qui ont &eacute;volu&eacute;, ce qui peut &ecirc;tre z&eacute;ro si le d&eacute;lai d'expiration
+     a &eacute;t&eacute; atteint avant que les fl&ocirc;ts n'&eacute;voluent. En cas d'erreur, la 
+     fonction retourne &false;.
+    </simpara>
+    <note>
+     <para>
+     Assurez vous de bien utiliser l'op&eacute;rateur <literal>===</literal> lorsque vous
+     recherchez des erreurs. Comme <function>stream_select</function> peut retourner
+     0, une comparaison effectu&eacute;e &agrave; l'aide de <literal>==</literal> 
+     la confondrait avec une erreur.
+     <programlisting role="php">
+<![CDATA[
+<?php
+if (false === stream_select($r, $w, $e = NULL, 0)) {
+    echo "stream_select() failed\n";
+}
+?>
+]]>
+     </programlisting>
+     </para>
+    </note>
+    <note>
+     <para>
+      Gardez &agrave; l'esprit que certaines impl&eacute;mentations de fl&ocirc;ts doivent
+      &ecirc;tre g&eacute;r&eacute;es tr&egrave;s prudemment. Voici quelques r&egrave;gles &agrave; suivre :
+      <itemizedlist>
+       <listitem>
+        <simpara>
+         Il faut toujours essayer d'utiliser <function>stream_select</function>
+         sans d&eacute;lai d'expiration. Votre programme ne devrait rien faire si
+         il ne re&ccedil;oit pas de donn&eacute;es ext&eacute;rieures. Les codes qui d&eacute;pendent du
+         d&eacute;lai d'expiration ne sont g&eacute;n&eacute;ralement pas portable, et difficiles
+         &agrave; d&eacute;boguer.
+        </simpara>
+       </listitem>
+       <listitem>
+        <simpara>
+         Si vous avez &eacute;crit ou lu dans un fl&ocirc;t qui retourn&eacute;s dans les tableaux
+         de fl&ocirc;ts, soyez bien conscient que ces fl&ocirc;ts n'ont peut &ecirc;tre pas &eacute;crit
+         ou lu la  totalit&eacute; des donn&eacute;es demand&eacute;es. Soyez pr&eacute;par&eacute;s &agrave; &ecirc;tre en 
+         mesure de lire un seul octet.
+        </simpara>
+       </listitem>
+      </itemizedlist>
+     </para>
+    </note>
+    <para>
+     Voir aussi
+     <function>stream_set_blocking</function>.
+    </para>
+   </refsect1>
+  </refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->

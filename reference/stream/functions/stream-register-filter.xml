@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+  <refentry id="function.stream-register-filter">
+   <refnamediv>
+    <refname>stream_register_filter</refname>
+    <refpurpose>Enregistre un filtre de fl&ocirc;t</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <methodsynopsis>
+     <type>boolean</type><methodname>stream_register_filter</methodname>
+     <methodparam><type>string</type><parameter>filtername</parameter></methodparam>
+     <methodparam><type>string</type><parameter>classname</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     <function>stream_register_filter</function> vous permet d'impl&eacute;menter
+     votre propre filtre de fl&ocirc;t, &agrave; utiliser avec les fonctions d'acc&egrave;s
+     aux donn&eacute;es externes (comme <function>fopen</function>,
+     <function>fread</function>, etc...).
+    </para>
+    <para>
+     Pour ce faire, vous devez d&eacute;finir une classe qui &eacute;tend la classe
+     <literal>php_user_fitler</literal> avec les membres et m&eacute;thodes d&eacute;finies
+     ci-dessous. Lorsque vous r&eacute;alisez des op&eacute;rations de lecture et d'&eacute;criture
+     dans le fl&ocirc;t auquel votre filtre est attach&eacute;, &php; passera les donn&eacute;es
+     &agrave; travers votre filtre (et tous les autres filtres attach&eacute;s), de fa&ccedil;on
+     &agrave; ce que les donn&eacute;es soient modifi&eacute;es telles que d&eacute;sir&eacute;. Vous devez
+     impl&eacute;menter les m&eacute;thodes telles que d&eacute;crit ci-dessous, sous peine de
+     comportement ind&eacute;fini.
+    </para>
+    <para>
+     <function>stream_register_filter</function> retourne &false; si le nom
+     de filtre <parameter>filtername</parameter> est d&eacute;j&agrave; utilis&eacute;.
+    </para>
+
+    <methodsynopsis>
+     <type>int</type><methodname>write</methodname>
+     <methodparam><type>string</type><parameter>data</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e d&egrave;s que les donn&eacute;es sont &eacute;crite dans le fl&ocirc;t,
+     comme avec la fonction <function>fwrite</function>. Apr&egrave;s la modification
+     des donn&eacute;es <parameter>data</parameter>, cette m&eacute;thode doit utiliser la 
+     ligne suivante <literal>return parent::write($data);</literal>
+     pour que le prochain filtre puisse s'ex&eacute;cuter. Lorsqu'il ne reste plus
+     de filtres, le fl&ocirc;t va &eacute;crire les donn&eacute;es <parameter>data</parameter>
+     dans leur forme finale.
+     <note>
+      <para>
+       Si votre filtre modifie la taille de la cha&icirc;ne <parameter>data</parameter>, 
+       par exemple en supprimant le premier caract&egrave;re, il faut, avant d'utiliser
+       la fonction <literal>parent::write($data);</literal>, s'assurer d'inclure
+       le caract&egrave;re supprim&eacute; dans la valeur de retour.
+      </para>
+     </note>
+     <informalexample>
+      <programlisting role="php">
+<![CDATA[
+class myfilter extends php_user_filter {
+  function write($data) {
+    $data = substr($data,1);
+    $written_by_parent = parent::write($data);
+    return ($written_by_parent + 1);
+  }
+} 
+]]>
+      </programlisting>
+     </informalexample>
+    </para>
+
+    <methodsynopsis>
+     <type>string</type><methodname>read</methodname>
+     <methodparam><type>int</type><parameter>maxlength</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e d&egrave;s que des donn&eacute;es sont lues dans le fl&ocirc;t
+     (comme avec la fonction <function>fread</function>). Un filtre doit commencer
+     par utiliser la ligne <literal>parent::read($maxlength);</literal> pour
+     lire les donn&eacute;es issue du filtre pr&eacute;c&eacute;dent. Ultimement, ce sera le
+     fl&ocirc;t qui lira les donn&eacute;es. Votre filtre peut alors modifier cette
+     valeur et retourner la valeur finale. Votre filtre ne doit jamais
+     retourner plus de <parameter>maxlength</parameter> octets. 
+     Comme <literal>parent::read($maxlength);</literal> ne retournera
+     aussi pas plus de <parameter>maxlength</parameter>, ce ne sera pas
+     un probl&egrave;me en r&egrave;gle g&eacute;n&eacute;ral. Cependant, si votre filtre accroit la
+     taille des donn&eacute;es retourn&eacute;es, il faut alors appeler cette ligne avec
+     <literal>parent::read($maxlength-$x);</literal> o&ugrave; <parameter>x</parameter> 
+     est l'accroissement maximal de vos donn&eacute;es. Alternativement, vous pouvez
+     b&acirc;tir un buffer de lecture dans votre classe.
+    </para>
+
+    <methodsynopsis>
+     <type>int</type><methodname>flush</methodname>
+     <methodparam><type>bool</type><parameter>closing</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e en r&eacute;ponse &agrave; une requ&ecirc;te de vidage des
+     buffers du fl&ocirc;t (comme avec la fonction <function>fflush</function> ou
+     <function>fclose</function>).  Le param&egrave;tre <parameter>closing</parameter>
+     vous indique si le fl&ocirc;t est, en r&eacute;alit&eacute;, dans un processus de fermeture.
+     L'action par d&eacute;faut est d'appeler simplement 
+     <literal>return parent::flush($closing);</literal>, mais votre filtre
+     peut souhaiter ex&eacute;cuter des &eacute;critures suppl&eacute;mentaires, ou bien
+     nettoyer des ressources avant de r&eacute;aliser le vidage en r&egrave;gle.
+    </para>
+
+    <methodsynopsis>
+     <type>void</type><methodname>oncreate</methodname>
+     <void/>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e durant l'instantiation du filtre. Si votre 
+     filtre alloue ou initialise d'autres ressources (comme des
+     buffers), c'est le moment de le faire.
+    </para>
+
+    <methodsynopsis>
+     <type>void</type><methodname>onclose</methodname>
+     <void/>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e durant l'extinction du filtre (g&eacute;n&eacute;ralement,
+     lorsque le fl&ocirc;t est ferm&eacute;), et est ex&eacute;cut&eacute; <emphasis>apr&egrave;s</emphasis>
+     l'appel de la fonction <literal>flush</literal>.  Si aucune ressource
+     a &eacute;t&eacute; allou&eacute;e ou cr&eacute;&eacute;e durant <literal>oncreate()</literal>,
+     c'est le moment de les lib&eacute;rer.
+    </para>
+
+    <para>
+     L'exemple ci-dessous impl&eacute;mente un filtre appel&eacute;
+     <literal>rot13</literal>, sur le fl&ocirc;t <literal>foo-bar.txt</literal>,
+     qui r&eacute;alise un chiffrement de type ROT-13 sur toutes les lettres 
+     lue ou &eacute;crite dans le fl&ocirc;t.
+     <example> 
+      <title>Filtre ROT13 pour les fl&ocirc;ts</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+
+/* Definition de notre classe de filtre */
+class rot13_filter extends php_user_filter {
+  function read($length) {
+    $tempstr = parent::read($length);
+    for($i = 0; $i < strlen($tempstr); $i++)
+      if (($tempstr[$i] >= 'A' AND $tempstr[$i] <= 'M') OR
+          ($tempstr[$i] >= 'a' AND $tempstr[$i] <= 'm')) $tempstr[$i] = chr(ord($tempstr[$i]) + 13);
+      else if (($tempstr[$i] >= 'N' AND $tempstr[$i] <= 'Z') OR
+               ($tempstr[$i] >= 'n' AND $tempstr[$i] <= 'z')) $tempstr[$i] = chr(ord($tempstr[$i]) - 13);
+    return $tempstr;
+  }
+
+  function write($data) {
+    for($i = 0; $i < strlen($data); $i++)
+      if (($data[$i] >= 'A' AND $data[$i] <= 'M') OR
+          ($data[$i] >= 'a' AND $data[$i] <= 'm')) $data[$i] = chr(ord($data[$i]) + 13);
+      else if (($data[$i] >= 'N' AND $data[$i] <= 'Z') OR
+               ($data[$i] >= 'n' AND $data[$i] <= 'z')) $data[$i] = chr(ord($data[$i]) - 13);
+    return parent::write($data);
+  }
+}
+
+/* Enregistrement du filtre avec PHP */
+stream_register_filter("rot13", "rot13_filter")
+    or die("Impossible d'enregistrer le filtre");
+
+$fp = fopen("foo-bar.txt", "w");
+
+/* Liaison du filtre avec le fl&ocirc;t */
+stream_filter_append($fp, "rot13");
+
+fwrite($fp, "Line1\n");
+fwrite($fp, "Word - 2\n");
+fwrite($fp, "Easy As 123\n");
+
+fclose($fp);
+
+/* Le filtre ne s'applique qu'au fl&ocirc;t $fp
+ * ce qui fait que cette lecture se fait sans d&eacute;chiffrement
+ */
+readfile("foo-bar.txt");
+
+/* affichage
+ * ------
+
+Yvar1
+Jbeq - 2
+Rnfl Nf 123
+
+ */
+?>
+]]>
+      </programlisting>
+     </example>
+    </para>
+    <simpara>
+     Voir aussi
+     <function>stream_register_wrapper</function>,
+     <function>stream_filter_prepend</function> et
+     <function>stream_filter_append</function>
+    </simpara>
+   </refsect1>
+  </refentry>
+
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->

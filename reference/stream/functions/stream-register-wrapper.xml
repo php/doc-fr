@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+<!-- splitted from ./en/functions/filesystem.xml, last change in rev 1.141 -->
+  <refentry id="function.stream-register-wrapper">
+   <refnamediv>
+    <refname>stream_register_wrapper</refname>
+    <refpurpose>Enregistre une enveloppe URL, impl&eacute;ment&eacute; comme classe PHP</refpurpose>
+   </refnamediv>
+   <refsect1>
+    <title>Description</title>
+    <methodsynopsis>
+     <type>boolean</type><methodname>stream_register_wrapper</methodname>
+     <methodparam><type>string</type><parameter>protocol</parameter></methodparam>
+     <methodparam><type>string</type><parameter>classname</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     <function>stream_register_wrapper</function> vous permet d'impl&eacute;menter
+     vos propres gestionnairs de protocoles et de fl&ocirc;ts, &agrave; utiliser avec
+     toutes les autres fonctions de fichiers, comme <function>fopen</function>,
+     <function>fread</function> etc...
+    </para>
+    <para>
+     Pour impl&eacute;menter une enveloppe, vous devez d&eacute;finir une classe avec
+     la liste des membres d&eacute;finie ci-dessous. Lorsque quelqu'un ouvre
+     votre fl&ocirc;t, PHP va cr&eacute;er une instance de la classe 
+     <parameter>classname</parameter> et appeler les m&eacute;thodes de cette
+     instance. Vous devez impl&eacute;menter ces m&eacute;thodes exactement comme 
+     d&eacute;crit ci-dessous : sinon, vous risquez de rencontrer des comportements
+     ind&eacute;finis.
+    </para>
+    <para>
+     <function>stream_register_wrapper</function> retourne &false; si
+     le protocole <parameter>protocol</parameter> a d&eacute;j&agrave; un gestionnaire
+     attitr&eacute;.
+    </para>
+
+    <methodsynopsis>
+     <type>boolean</type><methodname>stream_open</methodname>
+     <methodparam><type>string</type><parameter>path</parameter></methodparam>
+     <methodparam><type>string</type><parameter>mode</parameter></methodparam>
+     <methodparam><type>int</type><parameter>options</parameter></methodparam>
+     <methodparam><type>string</type><parameter>opened_path</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e imm&eacute;diatement apr&egrave;s la cr&eacute;ation de votre
+     fl&ocirc;t. <parameter>path</parameter> sp&eacute;cifie l'URL qui doit &ecirc;tre
+     pass&eacute;e &agrave; la fonction <function>fopen</function> et ce que cet
+     objet est suppos&eacute; y lire. Vous pouvez utiliser <function>parse_url</function>
+     pour l'analyser.
+    </para>
+    <para>
+     <parameter>mode</parameter> est le mode d'ouverture du fichier,
+     comme expliqu&eacute; dans <function>fopen</function>.  Vous &ecirc;tes responsable
+     de la v&eacute;rification de la validit&eacute; du param&egrave;tre <parameter>mode</parameter>
+     avec le chemin <parameter>path</parameter> fourni.
+    </para>
+    <para>
+     <parameter>options</parameter> contient des options suppl&eacute;mentaires,
+     utilis&eacute;es par les API de fl&ocirc;ts. Il peut contenir une ou plusieurs
+     des options suivantes, combin&eacute;es par des OR.
+     <informaltable>
+      <tgroup cols="2">
+       <thead>
+        <row>
+         <entry>Option</entry>
+         <entry>Description</entry>
+        </row>
+       </thead>
+       <tbody>
+        <row>
+         <entry>STREAM_USE_PATH</entry>
+         <entry>Si <parameter>path</parameter> est relatif, recherche
+         la ressources en utilisant la configuration de l'include_path.
+         </entry>
+        </row>
+        <row>
+         <entry>STREAM_REPORT_ERRORS</entry>
+         <entry>Si cette option est activ&eacute;e, vous &ecirc;tes responsable 
+         pour lever les erreurs avec <function>trigger_error</function> 
+         durant l'ouverture du fl&ocirc;t. Si cette option n'est pas 
+         activ&eacute;e, vous ne devez lever aucune erreur.
+         </entry>
+        </row>
+       </tbody>
+      </tgroup>
+     </informaltable>
+    </para>
+    <para>
+     Si le param&egrave;tre <parameter>path</parameter> est ouvert avec succ&egrave;s,
+     et que STREAM_USE_PATH est activ&eacute; dans le param&egrave;tre <parameter>options</parameter>,
+     vous devez affecter &agrave; <parameter>opened_path</parameter> le chemin complet
+     de la ressource ou du fichier que vous avez r&eacute;ellement ouvert.
+    </para>
+    <para>
+     Si la ressource demand&eacute;e a &eacute;t&eacute; ouverte, vous devez retourner
+     &true;, ou sinon, vous devez retourner &false;
+    </para>
+
+    <methodsynopsis>
+     <type>void</type><methodname>stream_close</methodname>
+     <methodparam><type>void</type><parameter></parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e lors que fl&ocirc;t est ferm&eacute;e, gr&acirc;ce &agrave; la
+     fonction <function>fclose</function>.  Vous devez lib&eacute;rez
+     toutes les ressources r&eacute;serv&eacute;es par le fl&ocirc;t.
+    </para>
+
+    <methodsynopsis>
+     <type>string</type><methodname>stream_read</methodname>
+     <methodparam><type>int</type><parameter>count</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thod est appel&eacute;e suite &agrave; l'utilisation des fonctions <function>fread</function>
+     et <function>fgets</function>. Vous devez lire jusqu'&agrave;
+     <parameter>count</parameter> octets de donn&eacute;es &agrave; partir de
+     la position courante d'&eacute;criture ou de lecture, sous la 
+     forme de cha&icirc;ne de caract&egrave;res. Si il y a moins que
+     <parameter>count</parameter> octets disponibles, vous
+     devez en retourner autant que possible. Si aucune autre
+     donn&eacute;es n'est disponible, retournez soit &false; soit 
+     une cha&icirc;ne vide. Vous devez aussi tenir &agrave; jour la position 
+     du pointeur d'&eacute;criture/lecture dans le fl&ocirc;t, en ajoutant
+     ou retranchant le nombre d'octets lus.
+    </para>
+
+    <methodsynopsis>
+     <type>int</type><methodname>stream_write</methodname>
+     <methodparam><type>string</type><parameter>data</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e lorsque la fonction <function>fwrite</function>
+     est utilis&eacute;e. Vous devez stocker les donn&eacute;es <parameter>data</parameter>
+     dans le fl&ocirc;t. Si il n'y a pas assez de place, essayez d'en
+     stocker le maximum. Vous devriez aussi retourner le nombre d'octets que vous
+     avez r&eacute;ussi &agrave; &eacute;crire, ou bien 0 si aucun n'a pu &ecirc;tre stock&eacute;.
+     Vous devez aussi tenir &agrave; jour la position 
+     du pointeur d'&eacute;criture/lecture dans le fl&ocirc;t, en ajoutant
+     ou retranchant le nombre d'octets lus.
+    </para>
+   
+    <methodsynopsis>
+     <type>boolean</type><methodname>stream_eof</methodname>
+     <methodparam><type>void</type><parameter></parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e lorsque la fonction <function>feof</function>
+     est utilis&eacute;e. Vous devez retourner &true; si la position de lecture
+     se situe a la fin du fichier et si il n'y a plus de donn&eacute;es
+     disponibles pour la lecture, ou bien &false; sinon.
+    </para>
+
+    <methodsynopsis>
+     <type>int</type><methodname>stream_tell</methodname>
+     <methodparam><type>void</type><parameter></parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e lorsque la fonction <function>ftell</function>
+     est utilis&eacute;e. Vous devez retourner la position actuelle du pointeur
+     de lecture/&eacute;criture.
+    </para>
+
+    <methodsynopsis>
+     <type>boolean</type><methodname>stream_seek</methodname>
+     <methodparam><type>int</type><parameter>offset</parameter></methodparam>
+     <methodparam><type>int</type><parameter>whence</parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e lorsque la fonction <function>fseek</function>
+     est utilis&eacute;e. Vous devez modifier la position du pointeur de lecture/
+     &eacute;criture en fonction des param&egrave;tres d'offset <parameter>offset</parameter>
+     et de direction <parameter>whence</parameter>. Reportez-vous
+     &agrave; la fonction <function>fseek</function> pour plus de d&eacute;tails sur ces
+     param&egrave;tres. Retournez &true; si la position a &eacute;t&eacute; modifi&eacute;e, et 
+     &false; sinon.
+    </para>
+
+    <methodsynopsis>
+     <type>boolean</type><methodname>stream_flush</methodname>
+     <methodparam><type>void</type><parameter></parameter></methodparam>
+    </methodsynopsis>
+    <para>
+     Cette m&eacute;thode est appel&eacute;e lorsque la fonction <function>fflush</function>
+     est utilis&eacute;e. Si vous avez mis des donn&eacute;es dans un syst&egrave;me de cache pour
+     votre fl&ocirc;t, mais qu'ils ne sont pas encore stock&eacute;s de mani&egrave;re p&eacute;renne,
+     c'est le moment de le faire. Retournez 
+     &true; si les donn&eacute;es cach&eacute;es ont pu &ecirc;tre stock&eacute;es avec succ&egrave;s
+     (il n'y a plus de donn&eacute;es &agrave; stocker), ou bien &false; si les
+     donn&eacute;es n'ont pu &ecirc;tre stock&eacute;es.
+    </para>
+
+    <para>
+     L'exemple ci-dessous impl&eacute;mente un gestionnaire de protocole pour
+     le protocole var://, qui permet l'&eacute;criture et la lecture de variables
+     globales en utilisant un fl&ocirc;t de fichier standard, et les fonctions
+     classiques telles que <function>fread</function>.
+     Le protocole var:// impl&eacute;ment&eacute; ci-dessous, &eacute;tant donn&eacute; l'URL
+     "var://foo" va &eacute;crire ou lire les donn&eacute;es dans $GLOBALS["foo"].
+
+     <example> 
+      <title>A Stream for reading/writing global variables</title>
+      <programlisting role="php">
+<![CDATA[
+class VariableStream {
+    var $position;
+    var $varname;
+   
+    function stream_open($path, $mode, $options, &$opened_path)
+    {
+        $url = parse_url($path);
+        $this->varname = $url["host"];
+        $this->position = 0;
+        
+        return true;
+    }
+
+    function stream_read($count)
+    {
+        $ret = substr($GLOBALS[$this->varname], $this->position, $count);
+        $this->position += strlen($ret);
+        return $ret;
+    }
+
+    function stream_write($data)
+    {
+        $left = substr($GLOBALS[$this->varname], 0, $this->position);
+        $right = substr($GLOBALS[$this->varname], $this->position + strlen($data));
+        $GLOBALS[$this->varname] = $left . $data . $right;
+        $this->position += strlen($data);
+        return strlen($data);
+    }
+
+    function stream_tell()
+    {
+        return $this->position;
+    }
+
+    function stream_eof()
+    {
+        return $this->position >= strlen($GLOBALS[$this->varname]);
+    }
+
+    function stream_seek($offset, $whence)
+    {
+        switch($whence) {
+            case SEEK_SET:
+                if ($offset < strlen($GLOBALS[$this->varname]) && $offset >= 0) {
+                     $this->position = $offset;
+                     return true;
+                } else {
+                     return false;
+                }
+                break;
+                
+            case SEEK_CUR:
+                if ($offset >= 0) {
+                     $this->position += $offset;
+                     return true;
+                } else {
+                     return false;
+                }
+                break;
+                
+            case SEEK_END:
+                if (strlen($GLOBALS[$this->varname]) + $offset >= 0) {
+                     $this->position = strlen($GLOBALS[$this->varname]) + $offset;
+                     return true;
+                } else {
+                     return false;
+                }
+                break;
+                
+            default:
+                return false;
+        }
+    }
+}
+
+stream_register_wrapper("var", "VariableStream")
+    or die("Failed to register protocol");
+
+$myvar = "";
+    
+$fp = fopen("var://myvar", "r+");
+
+fwrite($fp, "line1\n");
+fwrite($fp, "line2\n");
+fwrite($fp, "line3\n");
+
+rewind($fp);
+while(!feof($fp)) {
+    echo fgets($fp);
+}
+fclose($fp);
+var_dump($myvar);
+
+]]>
+      </programlisting>
+     </example>
+    </para>
+  
+   </refsect1>
+  </refentry>
+
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
