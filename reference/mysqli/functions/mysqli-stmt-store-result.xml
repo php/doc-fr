@@ -1,21 +1,141 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.3 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
+<!-- $Revision: 1.4 $ -->
+<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
   <refentry id="function.mysqli-stmt-store-result">
    <refnamediv>
     <refname>mysqli_stmt_store_result</refname>
-    <refpurpose></refpurpose>
+    <refname>mysqli_stmt->store_result</refname>
+    <refpurpose>Récupère un jeu de résultats depuis une requête préparée</refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
+    &title.procedural;
+    <methodsynopsis>
+     <type>bool</type><methodname>mysqli_stmt_store_result</methodname>
+     <methodparam><type>object</type><parameter>stmt</parameter></methodparam>
+    </methodsynopsis>
+    &title.oop;
+    <classsynopsis>
+     <ooclass><classname>mysqli_stmt</classname></ooclass>
      <methodsynopsis>
-      <type>resource</type><methodname>mysqli_stmt_store_result</methodname>
-      <methodparam><type>resource</type><parameter>stmt</parameter></methodparam>
+      <type>bool</type><methodname>store_result</methodname>
+      <methodparam><type>void</type><parameter></parameter></methodparam>
      </methodsynopsis>
+    </classsynopsis>
+    <para>
+     Vous devez appeler <function>mysql_stmt_store_result</function> pour toutes les requêtes
+     qui produisent un jeu de résultats (<literal>SELECT, SHOW, DESCRIBE, EXPLAIN</literal>),
+     et uniquement si vous voulez stocker le jeu de résultats complet par le client, et donc,
+     les séquences <function>mysql_fetch</function> pourront retourner ces données
+     stockées.
+    </para>
+    <note>
+     <para>
+      Ce n'est pas nécessaire d'appeler <function>mysql_stmt_store_result</function>
+      pour d'autres types de requête, mais si vous le faîtes, ce n'est pas grave et ne causera 
+      aucune perte notable de performance dans tous les cas.
+      Vous pouvez détecter dans tous les cas si votre requête va produire un jeu de résultats
+      en regardant si la fonction <function>mysql_stmt_result_metadata</function> retourne
+      &null;.
+     </para>
+    </note>
+   </refsect1>
+   <refsect1>
+    &reftitle.returnvalues;
+    <para>&return.success;</para>
+   </refsect1>
+   <refsect1>
+    &reftitle.seealso;
+    <para>
+     <function>mysqli_prepare</function>,
+     <function>mysqli_stmt_result_metadata</function> et 
+     <function>mysqli_fetch</function>.
+    </para>
+   </refsect1>
+   <refsect1>
+    &reftitle.examples;
+    <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+/* Ouverture de la connexion */
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-    &warn.undocumented.func;
+/* Vérification de la connexion */ 
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
 
+$query = "SELECT Name, CountryCode FROM City ORDER BY Name LIMIT 20";
+if ($stmt = $mysqli->prepare($query)) {
+
+    /* Exécution de la requête */
+    $stmt->execute();
+
+    /* Stockage du résultat */
+    $stmt->store_result();
+
+    printf("Nombre de lignes : %d.\n", $stmt->num_rows);
+
+    /* Libération des résultats */
+    $stmt->free_result();
+
+    /* Fermeture du traitement */
+    $stmt->close();
+}
+
+/* Fermeture de la connexion */
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+    </example>
+    <example>
+     <title>Style procédural</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+/* Ouverture de la connexion */
+$link = mysqli_connect("localhost", "my_user", "my_password", "world");
+
+/* Vérification de la connexion */ 
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
+
+$query = "SELECT Name, CountryCode FROM City ORDER BY Name LIMIT 20";
+if ($stmt = mysqli_prepare($link, $query)) {
+
+    /* Exécution de la requête */
+    mysqli_stmt_execute($stmt);
+
+    /* Stockage du résultat */
+    mysqli_stmt_store_result($stmt);
+
+    printf("Nombre de lignes : %d.\n", mysqli_stmt_num_rows($stmt));
+
+    /* Libération du résultat */
+    mysqli_stmt_free_result($stmt);
+
+    /* Fermeture du traitement */
+    mysqli_stmt_close($stmt);
+}
+
+/* Fermeture de la connexion */
+mysqli_close($link);
+?>
+]]>
+     </programlisting>
+    </example>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Nombre de lignes : 20.
+]]>
+    </screen>
    </refsect1>
   </refentry>
 

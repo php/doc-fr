@@ -1,18 +1,28 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.6 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
-
+<!-- $Revision: 1.7 $ -->
+<!-- EN-Revision: 1.7 Maintainer: yannick Status: ready -->
   <refentry id="function.mysqli-use-result">
    <refnamediv>
     <refname>mysqli_use_result</refname>
+    <refname>mysqli->use_result</refname>
     <refpurpose>Initialise la récupération d'un jeu de résultats</refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
+     &title.procedural;
+    <methodsynopsis>
+     <type>mixed</type><methodname>mysqli_use_result</methodname>
+     <methodparam><type>object</type><parameter>link</parameter></methodparam>
+    </methodsynopsis>
+    &title.oop;
+    <classsynopsis>
+     <ooclass><classname>mysqli</classname></ooclass>
      <methodsynopsis>
-      <type>resource</type><methodname>mysqli_use_result</methodname>
-      <methodparam><type>resource</type><parameter>link</parameter></methodparam>
+      <type>mixed</type>
+      <methodname>use_result</methodname>
+      <methodparam><type>void</type><parameter></parameter></methodparam>
      </methodsynopsis>
+    </classsynopsis>
     <para>
      <function>mysqli_use_result</function> est utilisée pour initialiser
      la récupération d'un jeu de résultats à partir 
@@ -28,7 +38,7 @@
     <note>
      <para>
       La fonction <function>mysqli_use_result</function> ne transfère pas
-      le jeu de résultat en entier à partir de la base de données
+      le jeu de résultats en entier à partir de la base de données
       et on ne peut donc pas utiliser des fonctions telles que 
       <function>mysqli_data_seek</function> pour se déplacer entre les
       enregistrements. Pour utiliser cette fonctionnalité, vous devez
@@ -36,11 +46,112 @@
       <function>mysqli_store_result</function>.
      </para>
     </note>
+   </refsect1>
+   <refsect1>
+    &reftitle.returnvalues;
     <para>
-     Voir aussi
+     Retourne un objet de résultats non sotckés ou &false; si une erreur survient.
+    </para>
+   </refsect1>
+   <refsect1>
+    &reftitle.seealso;
+    <para>
      <function>mysqli_real_query</function> et
      <function>mysqli_store_result</function>.
     </para>
+   </refsect1>
+   <refsect1>
+    &reftitle.examples;
+    <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
+
+/* Vérification de la connexion */
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
+
+$query  = "SELECT CURRENT_USER();";
+$query .= "SELECT Name FROM City ORDER BY ID LIMIT 20, 5";
+
+/* Exécution de plusieurs requêtes */
+if ($mysqli->multi_query($query)) {
+    do {
+        /* Stockage du premier jeu de résultats */
+        if ($result = $mysqli->use_result()) {
+            while ($row = $result->fetch_row()) {
+                printf("%s\n", $row[0]);
+            }
+            $result->close();
+        }
+        /* Affichage d'une démarquation */
+        if ($mysqli->more_results()) {
+            printf("-----------------\n");
+        }
+    } while ($mysqli->next_result());
+}
+
+/* Fermeture de la connexion */
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+    </example>
+    <example>
+     <title>Style procédural</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$link = mysqli_connect("localhost", "my_user", "my_password", "world");
+
+/* Vérification de la connexion */
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
+
+$query  = "SELECT CURRENT_USER();";
+$query .= "SELECT Name FROM City ORDER BY ID LIMIT 20, 5";
+
+/* Exécution de plusieurs requêtes */
+if (mysqli_multi_query($link, $query)) {
+    do {
+        /* Stockage du premier jeu de résultats */
+        if ($result = mysqli_use_result($link)) {
+            while ($row = mysqli_fetch_row($result)) {
+                printf("%s\n", $row[0]);
+            }
+            mysqli_free_result($result);
+        }
+        /* Affichage d'une démarquation */
+        if (mysqli_more_results($link)) {
+            printf("-----------------\n");
+        }
+    } while (mysqli_next_result($link));
+}
+
+/* Fermeture de la connexion */
+mysqli_close($link);
+?>
+]]>
+     </programlisting>
+    </example>
+    &example.outputs;
+    <screen>
+<![CDATA[
+my_user@localhost
+-----------------
+Amersfoort
+Maastricht
+Dordrecht
+Leiden
+Haarlemmermeer
+]]>
+    </screen>
    </refsect1>
   </refentry>
 

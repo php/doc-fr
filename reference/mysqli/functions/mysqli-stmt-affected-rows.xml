@@ -1,20 +1,149 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.3 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.4 $ -->
+<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
   <refentry id="function.mysqli-stmt-affected-rows">
    <refnamediv>
     <refname>mysqli_stmt_affected_rows</refname>
-    <refpurpose></refpurpose>
+    <refname>mysqli_stmt->affected_rows</refname>
+    <refpurpose>Retourne le nombre total de lignes modifiées, effacées ou insérées par la dernière
+    requète
+    </refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
-     <methodsynopsis>
-      <type>mixed</type><methodname>mysqli_stmt_affected_rows</methodname>
-      <methodparam><type>object</type><parameter>stmt</parameter></methodparam>
-     </methodsynopsis>
+    &title.procedural;
+    <methodsynopsis>
+     <type>mixed</type><methodname>mysqli_stmt_affected_rows</methodname>
+     <methodparam><type>object</type><parameter>stmt</parameter></methodparam>
+    </methodsynopsis>
+    &title.oop;
+    <classsynopsis>
+     <ooclass><classname>stmt</classname></ooclass>
+     <fieldsynopsis><type>mixed</type><varname>affected_rows</varname></fieldsynopsis>
+    </classsynopsis>
+    <para>
+     <function>mysqli_stmt_affected_rows</function> retourne le nombre de lignes affectées par
+     une requète INSERT, UPDATE ou DELETE. Si la dernière requète n'est pas valide, cette fonction
+     retournera -1.
+    </para>
+    <para>
+     La fonction <function>mysqli_stmt_affected_rows</function> ne fonctionne que sur les 
+     requètes qui modifient la table. Si vous désirez récupérer le nombre de lignes retournées
+     par une requète SELECT, utilisez plutôt la requète
+     <function>mysqli_stmt_num_rows</function>.
+    </para>
+   </refsect1>
+   <refsect1>
+    &reftitle.returnvalues;
+    <para>
+     Un entier supérieur à zéro indique le nombre de lignes affectées ou retrouvées.
+     Zéro indique qu'aucun enregistrement n'a été modifié par une requète UPDATE/DELETE, 
+     aucune ligne ne correspond à la clause WHERE dans la requète ou bien qu'aucune 
+     requète n'a été encore exécutée.
+     -1 indique que la dernière requète a retourné une erreur.
+    </para>
+    <note> 
+     <para>
+      Si le nombre de lignes affectées est plus grand que la valeur entière maximale de &php;, 
+      le nombre de lignes affectées sera retourné comme une chaîne de caractères.
+     </para>
+    </note>
+   </refsect1>
+   <refsect1>
+    &reftitle.seealso;
+    <para>
+     <function>mysqli_stmt_num_rows</function> et
+     <function>mysqli_prepare</function>.
+    </para>
+   </refsect1>
+   <refsect1>
+    &reftitle.examples;
+    <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-    &warn.undocumented.func;
+/* Vérification de la connexion */
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
 
+/* Création d'une table temporaire */
+$mysqli->query("CREATE TEMPORARY TABLE myCountry LIKE Country");
+
+$query = "INSERT INTO myCountry SELECT * FROM Country WHERE Code LIKE ?";
+
+/* Préparation de la requète */
+if ($stmt = $mysqli->prepare($query)) {
+
+    /* Insertion de la variable */
+    $code = 'A%';
+    $stmt->bind_param("s", $code);
+    
+    /* Exécution de la requète */
+    $stmt->execute();
+
+	printf("Lignes insérées : %d\n", $stmt->affected_rows);
+
+    /* Fermeture du traitement */
+    $stmt->close();
+}
+
+/* Fermeture de la connexion */
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+    </example>
+    <example>
+     <title>Style procédural</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$link = mysqli_connect("localhost", "my_user", "my_password", "world");
+
+/* Vérification de la connexion */
+if (mysqli_connect_errno()) {
+    printf("Echec de la connexion : %s\n", mysqli_connect_error());
+    exit();
+}
+
+/* Création d'une table temporaire */
+mysqli_query($link, "CREATE TEMPORARY TABLE myCountry LIKE Country");
+
+$query = "INSERT INTO myCountry SELECT * FROM Country WHERE Code LIKE ?";
+
+/* Préparation de la requète */
+if ($stmt = mysqli_prepare($link, $query)) {
+
+    /* Insertion de la variable */
+    $code = 'A%';
+    mysqli_stmt_bind_param($stmt, "s", $code);
+    
+    /* Exécution de la requète */
+    mysqli_stmt_execute($stmt);
+
+	printf("Lignes insérées : %d\n", mysqli_stmt_affected_rows($stmt));
+
+    /* Fermeture du traitement*/
+    mysqli_stmt_close($stmt);
+}
+
+/* Fermeture de la connexion */
+mysqli_close($link);
+?>
+]]>
+     </programlisting>
+    </example>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Lignes insérées : 17
+]]>
+    </screen>
    </refsect1>
   </refentry>
 
