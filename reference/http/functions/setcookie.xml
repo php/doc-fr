@@ -9,14 +9,14 @@
    <refsect1>
     <title>Description</title>
      <methodsynopsis>
-      <type>int</type><methodname>setcookie</methodname>
+      <type>bool</type><methodname>setcookie</methodname>
       <methodparam><type>string</type><parameter>name</parameter></methodparam>
       <methodparam choice="opt"><type>string</type><parameter>value</parameter></methodparam>
       <methodparam choice="opt"><type>int</type><parameter>expire</parameter></methodparam>
       <methodparam choice="opt"><type>string</type><parameter>path</parameter></methodparam>
       <methodparam choice="opt"><type>string</type><parameter>domain</parameter></methodparam>
       <methodparam choice="opt"><type>int</type><parameter>secure</parameter></methodparam>
-    </methodsynopsis>
+     </methodsynopsis>
    <para>
     <function>setcookie</function> d&eacute;finit un cookie qui sera envoy&eacute;
     avec le reste des en-t&ecirc;tes. Les cookies doivent passer avant toute autre
@@ -24,6 +24,16 @@
     d'appeler cette fonction avant toute balise <literal>&lt;HTML></literal>
     ou <literal>&lt;HEAD></literal>.
    </para>
+    <note>
+     <para>
+      En PHP 4, vous pouvez utiliser la bufferisation de sortie pour pouvoir
+      envoyer du contenu avant d'appeler cette fonction, avec la contrepartie
+      que toute votre page sera envoy&eacute; en une fois. Vous pouvez faire cela
+      en appelant <function>ob_start</function> et <function>ob_end_flush</function>
+      dans votre script, ou en activant la directive <literal>output_buffering</literal>
+      dans votre fichier de configuration &php.ini;.
+     </para>
+    </note>    
    <para>
     Tous les arguments sauf <parameter>name</parameter> (nom) sont optionnels.
     Si seul le nom est pr&eacute;sent, le cookie portant ce nom sera
@@ -36,7 +46,18 @@
     que le cookie doit &ecirc;tre uniquement transmis &agrave; travers
     une connexion HTTPS s&eacute;curis&eacute;e.
    </para>
-   <para>
+    <para>
+     Une fois que le cookie a &eacute;t&eacute; plac&eacute;, il est accessible dans les variables globales
+     <link linkend="reserved.variables.cookies">$_COOKIE</link> ou bien
+     <varname>$HTTP_COOKIE_VARS</varname> arrays.  Notez que les 
+     <link linkend="language.variables.superglobals">autoglobales</link> 
+     telles que <varname>$_COOKIE</varname> sont disponibles en &php; depuis
+     la version <ulink url="&url.php.release4.1.0;">4.1.0</ulink>.
+     <varname>$HTTP_COOKIE_VARS</varname> existe depuis PHP 3.
+     Les valeurs de cookies existent aussi dans la variable
+     <link linkend="reserved.variables.request">$_REQUEST</link>.
+    </para>
+    <para>
     Erreurs communes :
     <itemizedlist>
      <listitem>
@@ -71,11 +92,13 @@
     <example>
      <title>Exemples avec <function>setcookie</function></title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
   setcookie("TestCookie","Valeur de test");
   setcookie("TestCookie",$value,time()+3600);  /* expire dans une heure */
   setcookie("TestCookie",$value,time()+3600,"/~rasmus/",".utoronto.ca",1);
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
    </para>
@@ -87,13 +110,36 @@
     le cookie. Pour voir le r&eacute;sultat, essayez les scripts suivants :
     <informalexample>
      <programlisting role="php">
-&lt;?php
-  echo $TestCookie;
-  echo $HTTP_COOKIE_VARS["TestCookie"];
-?&gt;
+<![CDATA[
+<?php
+// Afficher un cookie 
+echo $_COOKIE["TestCookie"];
+echo $HTTP_COOKIE_VARS["TestCookie"];
+
+// Une autre m&eacute;thode pour afficher tous les cookies
+print_r($_COOKIE);
+?>
+]]>
      </programlisting>
     </informalexample>
    </para>
+    <para>
+     Lorsque vous effacez un cookie, vous devriez toujours vous assurer
+     que la date d'expiration du cookie est d&eacute;j&agrave; pass&eacute;e, pour d&eacute;clencher
+     le m&eacute;canisme de votre navigateur. Voici comment proc&eacute;der : 
+     <example>
+      <title>Exemple d'effacement de cookies avec <function>setcookie</function></title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+// utilisation de la date moins une heure
+setcookie ("TestCookie", "", time() - 3600);
+setcookie ("TestCookie", "", time() - 3600, "/~rasmus/", ".exemple.com", 1);
+?>
+]]>
+      </programlisting>
+     </example>
+    </para>
    <para>
     Vous pouvez aussi utiliser les cookies avec des tableaux, en utilisant la
     notation des tableaux. Cela a pour effet de cr&eacute;er autant de
@@ -102,16 +148,18 @@
     plac&eacute;es dans un tableau :
     <informalexample>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
   setcookie( "cookie[three]", "cookiethree" );
   setcookie( "cookie[two]", "cookietwo" );
   setcookie( "cookie[one]", "cookieone" );
   if ( isset( $cookie ) ) {
     while( list( $name, $value ) = each( $cookie ) ) {
-      echo "$name == $value&lt;br&gt;\n";
+      echo "$name == $value<br>\n";
     }
   }
-?&gt;
+?>
+]]>
      </programlisting>
     </informalexample>
    </para>

@@ -4,31 +4,47 @@
  <refentry id="function.header">
   <refnamediv>
    <refname>header</refname>
-   <refpurpose>Envoie une en-t&ecirc;te HTTP.</refpurpose>
+   <refpurpose>Envoie une en-t&ecirc;te HTTP</refpurpose>
   </refnamediv>
   <refsect1>
    <title>Description</title>
-    <methodsynopsis>
-     <type>int</type><methodname>header</methodname>
-     <methodparam><type>string</type><parameter>string</parameter></methodparam>
-    </methodsynopsis>
+     <methodsynopsis>
+      <type>int</type><methodname>header</methodname>
+      <methodparam><type>string</type><parameter>string</parameter></methodparam>
+      <methodparam choice="opt"><type>bool</type><parameter>replace</parameter></methodparam>
+      <methodparam choice="opt"><type>int</type><parameter>http_response_code</parameter></methodparam>
+     </methodsynopsis>
    <para>
     <function>header</function> permet de sp&eacute;cifier une
     en-t&ecirc;te HTTP lors de l'envoi des fichiers HTML. Reportez-vous
     &agrave; <ulink url="&spec.http1.1;">HTTP 1.1 Specification</ulink>
     pour plus d'informations sur les en-t&ecirc;tes HTTP.
    </para>
-   <note>
     <para>
-     La fonction <function>header</function> doit &ecirc;tre appel&eacute;e avant la
-     premi&egrave;re balise HTML, et avant n'importe quel envoi de commande
-     PHP. C'est une erreur tr&egrave;s courante que de lire du code avec la
-     fonction <function>include</function> ou avec auto_prepend et d'avoir
-     des espaces ou des lignes vides dans ce code qui produisent un
-     d&eacute;but de sortie avant que <function>header</function>
-     n'ait &eacute;t&eacute; appel&eacute;.
+     Le param&egrave;tre optionnel <parameter>replace</parameter> indique
+     si la fonction <function>header</function> doit remplacer
+     un ent&ecirc;te pr&eacute;c&eacute;demment &eacute;mis, ou bien ajouter un autre ent&ecirc;te
+     du m&ecirc;me type. Par d&eacute;faut, un nouvel ent&ecirc;te va &eacute;craser le
+     pr&eacute;c&eacute;dent, mais si vous passez &false; dans cet argument, vous pouvez
+     forcer les ent&ecirc;tes multiples pour un m&ecirc;me type d'ent&ecirc;tte.
+     Par exemple :
+     <example>
+      <title>Identification HTTP avec <function>header</function></title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+  header('WWW-Authenticate: Negotiate');
+  header('WWW-Authenticate: NTLM', FALSE);
+?>
+]]>
+      </programlisting>
+     </example>
     </para>
-   </note>
+    <para>
+     Le second param&egrave;tre optionnel force 
+     le code de r&eacute;ponse HTTP &agrave; la valeur de the <parameter>http_response_code</parameter>.
+     Ce param&egrave;tre est disponible en &php; 4.3.0 et plus r&eacute;cent.
+    </para>
    <para>
     Il y a cependant deux en-t&ecirc;tes sp&eacute;ciales. Le premier est
     &quot;Location&quot;. Non seulement il renvoie une en-t&ecirc;te au
@@ -36,16 +52,19 @@
     Apache. Du point de vue de l'auteur de script, cela importe peu,
     mais pour ceux qui connaissent les rouages internes d'Apache, c'est
     primordial.
-    <informalexample>
+    <example>
+     <title>Redirection HTTP avec <function>header</function></title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
   header("Location: http://www.php.net/");
 /* Redirige le client vers le site PHP */
   exit();
 /* Garantit que le code ci-dessous n'est jamais ex&eacute;cut&eacute;. */
-?&gt;
+?>
+]]>
      </programlisting>
-    </informalexample>
+    </example>
    </para>
    <note>
     <para>
@@ -53,43 +72,56 @@
      de <ulink url="&spec.http1.1;-sec14.html#sec14.30">Location:</ulink>,
      y compris le protocole, h&ocirc;te et chemin absolu. Mais certains
      navigateurs acceptent les URI relatives. Vous pouvez g&eacute;n&eacute;ralement
-     utiliser les variables globales $HTTP_SERVER_VARS['HTTP_HOST'], 
-     $HTTP_SERVER_VARS['PHP_SELF'] et <function>dirname</function> pour
+     utiliser les variables globales <varname>$_SERVER['HTTP_HOST']</varname>, 
+     <varname>$_SERVER['PHP_SELF']</varname> et <function>dirname</function> pour
      construire vous-m&ecirc;me une URI absolue : 
-     <informalexample>
+     <example>
+      <title>Redirection &agrave; l'aide de <function>header</function></title>
       <programlisting>
-header("Location: http://".$HTTP_SERVER_VARS['HTTP_HOST']
-                     ."/".dirname($HTTP_SERVER_VARS['PHP_SELF'])
+<![CDATA[
+<?php
+  header("Location: http://".$_SERVER['HTTP_HOST']
+                     ."/".dirname($_SERVER['PHP_SELF'])
                      ."/".$relative_url);
+?>
+]]>
       </programlisting>
-     </informalexample>
+     </example>
     </para>
    </note>
    <para>
     Le deuxi&egrave;me type d'appel sp&eacute;cial regroupe toutes les
-    en-t&ecirc;tes qui commencent par &quot;HTTP/&quot; (la casse n'est
+    en-t&ecirc;tes qui commencent par "HTTP/" (la casse n'est
     pas importante). Par exemple, si vous avez votre page d'erreur 404
     Apache qui pointe sur un script PHP, c'est une bonne id&eacute;e
     que de vous assurer que le script PHP g&eacute;n&egrave;re une erreur
     404. La premi&egrave;re chose &agrave; faire dans votre script est  :
-    <informalexample>
+    <example>
+     <title>Limitation d'acc&egrave;s &agrave; l'aide de <function>header</function></title>
      <programlisting role="php">
-&lt;?php
-  header("Location: HTTP/1.0 404");
-?&gt;
+<![CDATA[
+<?php
+  header("HTTP/1.0 404 Not Found");
+?>
+]]>
      </programlisting>
-    </informalexample>
+    </example>
    </para>
     <note>
      <para>
       En PHP 3, cela ne fonctionne que si PHP est compil&eacute; comme
       module Apache. Vous pouvez arriver au m&ecirc;me au r&eacute;sultat
       en utilisant l'ent&ecirc;te <literal>Status</literal>.
-      <informalexample>
+      <example>
+       <title>Limitation d'acc&egrave;s &agrave; l'aide de <function>header</function>, en PHP 3</title>
        <programlisting role="php">
-header("Status: 404 Not Found");
+<![CDATA[
+<?php
+  header("Status: 404 Not Found");
+?>
+]]>
        </programlisting>
-      </informalexample>
+      </example>
      </para>
     </note>
    <para>
@@ -97,16 +129,19 @@ header("Status: 404 Not Found");
     qui ne doit pas &ecirc;tre mis en cache, ni par le client, ni par les
     proxy interm&eacute;diaires. On peut forcer la d&eacute;sactivation du
     cache de nombreux clients et proxy avec
-    <informalexample>
+    <example>
+     <title>Interdire la mise en cache avec <function>header</function></title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
   header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");             // Date du pass&eacute;
   header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT"); // toujours modifi&eacute;
   header("Cache-Control: no-cache, must-revalidate");           // HTTP/1.1
   header("Pragma: no-cache");                                   // HTTP/1.0
-?&gt;
+?>
+]]>
      </programlisting>
-    </informalexample>
+    </example>
    </para>
    <note>
     <para>
@@ -134,18 +169,23 @@ header("Status: 404 Not Found");
     un affichage avant que la fonction <function>header</function>
     ne soit appel&eacute;e. Le m&ecirc;me probl&egrave;me existe avec les fichiers
     PHP/HTML standards.
-    <informalexample>
+    <example>
+     <title><function>header</function> doit toujours être appelé en premier</title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
+
   require("user_logging.inc")
-?&gt;
-&lt;?php
+?>
+<?php
   header("Content-Type: audio/x-pn-realaudio");
-?&gt;
+?>
 &nbsp;
 // Erreur :  Notez la ligne blanche ci-dessus
+?>
+]]>
       </programlisting>
-     </informalexample>
+     </example>
     </para>
    <note>
     <para>
@@ -155,7 +195,7 @@ header("Status: 404 Not Found");
      utiliser les fonctions <function>ob_start</function> et 
      <function>ob_end_flush</function> dans vos scripts, ou en
      modifiant la directive de configuration <literal>output_buffering</literal>
-     dans votre fichier <filename>php.ini</filename> ou vos fichiers
+     dans votre fichier &php.ini; ou vos fichiers
      de configuration du serveur.
     </para>
    </note>
@@ -166,15 +206,19 @@ header("Status: 404 Not Found");
     url="&url.rfc2183;">Content-Disposition</ulink> pour 
     fournir un nom de fichier par d&eacute;faut, &agrave; afficher dans le
     dialogue de sauvegarde.
-    <informalexample>
+    <example>
+     <title>Utilisation de <function>header</function> pour générer un PDF ou autre type</title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 header("Content-type: application/pdf");
 header("Content-Disposition: attachment; filename=downloaded.pdf");
 
 /* ... output pdf file ... */
+?>
+]]>
      </programlisting>
-    </informalexample>
+    </example>
     <note>
      <para>
       Il y a un bug sous Microsoft Internet Explorer 4.01 qui emp&ecirc;che
@@ -185,6 +229,14 @@ header("Content-Disposition: attachment; filename=downloaded.pdf");
      </para>
     </note>
    </para>
+    <note>
+     <simpara>
+      Si &safemode; est activ&eacute;, l'UID du script est ajout&eacute;
+      &agrave; la partie <literal>realm</literal> des ent&ecirc;tes 
+      <literal>WWW-Authenticate</literal> que vous envoyez avec
+      cet ent&ecirc;te.
+     </simpara>
+    </note>
    <para>
     Voir aussi
     <function>headers_sent</function>,
