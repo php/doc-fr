@@ -1,3 +1,5 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.10 $ -->
 <reference id="ref.http">
  <title>HTTP</title>
  <titleabbrev>HTTP</titleabbrev>
@@ -47,14 +49,32 @@
     <informalexample>
      <programlisting role="php">
 &lt;?php
-  header("Location: http://www.php.net/");  
+  header("Location: http://www.php.net/");
 /* Redirige le client vers le site PHP */
-  exit();  
-/* Assure que le code ci-dessous n'est jamais ex&eacute;cut&eacute;. */
+  exit();
+/* Garantit que le code ci-dessous n'est jamais ex&eacute;cut&eacute;. */
 ?&gt;
      </programlisting>
     </informalexample>
    </para>
+   <note>
+    <para>
+     HTTP/1.1 demande une <acronym>URI</acronym> absolue comme argument
+     de <ulink url="&spec.http1.1;-sec14.html#sec14.30">Location:</ulink>,
+     y compris le protocole, h&ocirc;te et chemin absolu. Mais certains
+     navigateurs acceptent les URI relatives. Vous pouvez g&eacute;n&eacute;ralement
+     utiliser les variables globales $HTTP_SERVER_VARS['HTTP_HOST'], 
+     $HTTP_SERVER_VARS['PHP_SELF'] et <function>dirname</function> pour
+     construire vous-m&ecirc;me une URI absolue : 
+     <informalexample>
+      <programlisting>
+header("Location: http://".$HTTP_SERVER_VARS['HTTP_HOST']
+                     ."/".dirname($HTTP_SERVER_VARS['PHP_SELF'])
+                     ."/".$relative_url);
+      </programlisting>
+     </informalexample>
+    </para>
+   </note>
    <para>
     Le deuxi&egrave;me type d'appel sp&eacute;cial regroupe toutes les
     en-t&ecirc;tes qui commencent par &quot;HTTP/&quot; (la casse n'est
@@ -65,11 +85,23 @@
     <informalexample>
      <programlisting role="php">
 &lt;?php
-  header("http/1.0 404 Not Found");
+  header("HTTP/1.0 404 Not Found");
 ?&gt;
      </programlisting>
     </informalexample>
    </para>
+    <note>
+     <para>
+      En PHP 3, cela ne fonctionne que si PHP est compil&eacute; comme
+      module Apache. Vous pouvez arriver au m&ecirc;me au r&eacute;sultat
+      en utilisant l'ent&ecirc;te <literal>Status</literal>.
+      <informalexample>
+       <programlisting role="php">
+header("Status: 404 Not Found");
+       </programlisting>
+      </informalexample>
+     </para>
+    </note>
    <para>
     Les scripts PHP g&eacute;n&egrave;rent souvent du HTML dynamiquement,
     qui ne doit pas &ecirc;tre mis en cache, ni par le client, ni par les
@@ -86,6 +118,22 @@
      </programlisting>
     </informalexample>
    </para>
+   <note>
+    <para>
+     Vous pouvez vous rendre compte que vos pages ne sont jamais mises
+     en cache m&ecirc;me si vous utilisez toutes les ent&ecirc;tes ci-dessus.
+     Il existe toute une collection de param&egrave;tres que les utilisateurs
+     peuvent modifier sur leur navigateur pour modifier le 
+     comportement par d&eacute;faut du cache. En envoyant les ent&ecirc;tes
+     ci-dessus, vous pouvez imposer vos propres valeurs.
+    </para>
+    <para>
+     De plus, les param&egrave;tres <function>session_cache_limiter</function> et
+     <literal>session.cache_limiter</literal> peuvent &ecirc;tre utilis&eacute; pour
+     g&eacute;n&eacute;rer les ent&ecirc;tes de caches corrects, lorsque les sessions sont
+     utilis&eacute;es.
+    </para>
+   </note>
    <para>
     N'oubliez jamais que <function>header</function> doit &ecirc;tre appel&eacute;e
     avant que le moindre contenu ne soit envoy&eacute;, soit par des
@@ -104,12 +152,54 @@
 &lt;?php
   header("Content-Type: audio/x-pn-realaudio");
 ?&gt;
+&nbsp;
 // Erreur :  Notez la ligne blanche ci-dessus
       </programlisting>
      </informalexample>
     </para>
+   <note>
     <para>
-     Voir aussi <function>headers_sent</function>.
+     En PHP 4, vous pouvez utiliser le syst&egrave;me de cache (output buffering)
+     pour contourner ce probl&egrave;me. Tous vos textes g&eacute;n&eacute;r&eacute;s seront
+     mis en buffer sur le serveur jusqu'&agrave; ce que vous les envoyiez. Vous pouvez
+     utiliser les fonctions <function>ob_start</function> et 
+     <function>ob_end_flush</function> dans vos scripts, ou en
+     modifiant la directive de configuration <literal>output_buffering</literal>
+     dans votre fichier <filename>php.ini</filename> ou vos fichiers
+     de configuration du serveur.
+    </para>
+   </note>
+   <para>
+    Si vous voulez que vos utilisateur recoivent une alerte pour sauver
+    les fichiers g&eacute;n&eacute;r&eacute;s, comme par exemple si vous g&eacute;n&eacute;rez un
+    fichier PDF, vous pouvez utiliser l'ent&ecirc;te <ulink
+    url="&url.rfc2183;">Content-Disposition</ulink> pour 
+    fournir un nom de fichier par d&eacute;faut, &agrave; afficher dans le
+    dialogue de sauvegarde.
+    <informalexample>
+     <programlisting role="php">
+&lt;?php
+header("Content-type: application/pdf");
+header("Content-Disposition: attachment; filename=downloaded.pdf");
+
+/* ... output pdf file ... */
+     </programlisting>
+    </informalexample>
+    <note>
+     <para>
+      Il y a un bug sous Microsoft Internet Explorer 4.01 qui emp&ecirc;che
+      cet ent&ecirc;te de fonctionner. Il n'y a pas d'autre solution.
+      Il y a aussi un bug dans Microsoft Internet Explorer 5.5 qui
+      interf&egrave;re avec ceci, mais qui peut &ecirc;tre r&eacute;solu en utilisant
+      le Service Pack 2 ou plus r&eacute;cent.
+     </para>
+    </note>
+   </para>
+   <para>
+    Voir aussi
+    <function>headers_sent</function>,
+    <function>setcookie</function>, et la section sur 
+    <link linkend="features.http-auth">l'authentification HTTP </link>.
     </para>
    </refsect1>
   </refentry>
