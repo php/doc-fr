@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.12 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.13 $ -->
+<!-- EN-Revision: 1.22 Maintainer: didou Status: ready -->
  <refentry id="function.getimagesize">
   <refnamediv>
    <refname>getimagesize</refname>
@@ -16,17 +16,25 @@
    <para>
     <function>getimagesize</function> va déterminer la taille des images
     de type <acronym>GIF</acronym>, <acronym>JPG</acronym>,
-    <acronym>PNG</acronym>, <acronym>SWF</acronym>, <acronym>PSD</acronym> ou
-    <acronym>BMP</acronym> et en retourner
+    <acronym>PNG</acronym>, <acronym>SWF</acronym>,
+    <acronym>SWC</acronym>, <acronym>PSD</acronym>,
+    <acronym>TIFF</acronym>, <acronym>BMP</acronym>,
+    <acronym>IFF</acronym>, <acronym>JP2</acronym>,
+    <acronym>JPX</acronym>, <acronym>JB2</acronym>,
+    <acronym>JPC</acronym>, <acronym>XBM</acronym> ou
+    <acronym>WBMP</acronym> et en retourner
     les dimensions, le type d'image, et une chaîne type
     &quot;height/width&quot;, à placer dans une
-    balise <acronym>HTML</acronym> ou <sgmltag>IMG</sgmltag> normale.
+    balise <acronym>HTML</acronym> <sgmltag>IMG</sgmltag> normale.
    </para>
-   <para>
-    Si l'accès au fichier <parameter>filename</parameter> est impossible,
-    ou si ce n'est pas un format d'image supporté, <function>getimagesize</function>
-    retournera &false; et générera une alerte.
-   </para>   
+   <note>
+    <para>
+     Le support de <acronym>JPC</acronym>, <acronym>JP2</acronym>,
+     <acronym>JPX</acronym>, <acronym>JB2</acronym>,
+     <acronym>XBM</acronym> et <acronym>WBMP</acronym> a été ajouté en &php;
+     4.3.2. Le support de <acronym>SWC</acronym>, lui, en &php; 4.3.0.
+    </para>   
+   </note>
    <para>
     <function>getimagesize</function> retourne un tableau de 4 éléments.
     L'index 0 contient la longueur. L'index 1 contient la largeur. L'index 2
@@ -47,14 +55,14 @@
     Ces valeurs correspondent aux constantes IMAGETYPE
     qui ont été ajoutée en PHP 4.3. 
     L'index 3 contient la chaîne à placer dans les balises
-    <acronym>HTML</acronym> : <literal>"height=xxx width=xxx"</literal>.
+    <acronym>IMGcronym> : <literal>"height=xxx width=xxx"</literal>.
     <example>
      <title>Exemple avec <function>getimagesize</function></title>
      <programlisting role="php">
 <![CDATA[
 <?php
 list($width, $height, $type, $attr) = getimagesize("img/flag.jpg");
-echo "<img src=\"img/flag.jpg\" $attr>";
+echo "<img src=\"img/flag.jpg\" alt=\"Exemple de getimagesize()\" $attr />";
 ?>>
 ]]>
      </programlisting>
@@ -66,17 +74,19 @@ echo "<img src=\"img/flag.jpg\" $attr>";
      <programlisting role="php">
 <![CDATA[
 <?php
-  $size = getimagesize("http://www.php.net/gifs/logo.gif");
+$size = getimagesize("http://www.example.com/gifs/logo.gif");
+// Si le nom du fichier comporte des espaces, encodez-le !
+$size = getimagesize("http://www.example.com/gifs/lo%20go.gif");
 ?>
 ]]>
      </programlisting>
     </example>
    </para>
    <para>
-    Avec les images <acronym>JPEG</acronym>, deux en-têtes supplémentaires sont
-    retournés : <literal>channel</literal> et <literal>bits</literal>.
-    <literal>channel</literal> vaudra 3 avec les images RGB, et 4 avec les
-    images CMYK. <literal>bits</literal> est le nombre de bits de chaque couleur.
+    Avec les images <acronym>JPG</acronym>, deux en-têtes supplémentaires sont
+    retournés : <literal>channels</literal> et <literal>bits</literal>.
+    <literal>channels</literal> vaudra 3 avec les images RGB, et 4 avec les
+    images CMYK. <literal>bits</literal> est le nombre de bits pour chaque couleur.
    </para>
   <para>
     Depuis PHP 4.3, <literal>bits</literal> et
@@ -101,8 +111,8 @@ echo "<img src=\"img/flag.jpg\" $attr>";
      <programlisting role="php">
 <![CDATA[
 <?php
-$size = getimagesize ($filename);
-$fp=fopen($filename, "rb");
+$size = getimagesize($filename);
+$fp = fopen($filename, "rb");
 if ($size && $fp) {
   header("Content-type: {$size['mime']}");
   fpassthru($fp);
@@ -115,7 +125,7 @@ if ($size && $fp) {
      </programlisting>
     </example>
    </para>
-    <para>
+   <para>
     Si l'accès à <parameter>filename</parameter> est impossible,
     ou si ce n'est pas une image valide, <function>getimagesize</function>
     retournera <literal>NULL</literal> et générera une alerte.
@@ -146,22 +156,33 @@ if ($size && $fp) {
     </example>
     <note>
      <simpara>
+      Le support de JPEG 2000 a été ajouté en PHP 4.3.2. Notez que JPC et JP2
+      sont capables d'avoirs des composants avec une profondeur de bit différente.
+      Dans ce cas, la valeur de "bits" est la plus grande profondeur de bit 
+      rencontrée. De même, les fichiers JP2 peuvent contenir le support multiple 
+      JPEG 2000 codestreams. Dans ce cas, <function>getimagesize</function> 
+      retourne les valeurs pour le premier codestream rencontré à la racine du 
+      fichier.
+     </simpara>
+    </note>
+    <note>
+     <simpara>
       <function>getimagesize</function> ne requiert pas la bibliothèque GD.
      </simpara>
      <simpara>
       Le support URL a été ajouté en PHP 4.0.5.
      </simpara>
      <simpara>
-      Voir aussi 
-      <function>image_type_to_mime_type</function>, 
-      <function>exif_imagetype</function>, 
-      <function>exif_read_data</function> et
-      <function>exif_thumbnail</function>.
-     </simpara>
-     <simpara>
       Le support du format TIFF a été ajouté en PHP 4.2.
      </simpara>
     </note>
+   </para>
+   <para>
+    Voir aussi 
+    <function>image_type_to_mime_type</function>, 
+    <function>exif_imagetype</function>, 
+    <function>exif_read_data</function> et
+    <function>exif_thumbnail</function>.
    </para>
   </refsect1>
  </refentry>
