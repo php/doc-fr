@@ -5,14 +5,14 @@
    <refnamediv>
     <refname>ociBindByName</refname>
     <refpurpose>
-     Utilise une variable PHP pour la phase de d&eacute;finition, dans un SELECT.
+     Lie une variable PHP avec une requ&ecirc;te SQL
     </refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
      <methodsynopsis>
-      <type>int</type><methodname>ocibindbyname</methodname>
-      <methodparam><type>resource</type><parameter>stmt</parameter></methodparam>
+      <type>bool</type><methodname>OCIBindByName</methodname>
+      <methodparam><type>int</type><parameter>stmt</parameter></methodparam>
       <methodparam><type>string</type><parameter>ph_name</parameter></methodparam>
       <methodparam><type>mixed &amp;</type><parameter>variable</parameter></methodparam>
       <methodparam><type>int</type><parameter>length</parameter></methodparam>
@@ -38,52 +38,81 @@
      devrait &ecirc;tre fix&eacute;e &agrave; -1. La variable
      <parameter>type</parameter> indique au serveur Oracle, quel type de
      pointeur va &ecirc;tre utilis&eacute;. Les valeurs possibles sont :
-     oci_B_FILE (Fichier binaires), oci_B_CFILE (Fichier texte),
-     oci_B_CLOB (LOB- texte), oci_B_BLOB (LOB binaire)
-     et oci_B_ROWID (ROWID).
+     <constant>OCI_B_FILE</constant> (Fichiers binaires), 
+     <constant>OCI_B_CFILE</constant> (Fichiers texte), 
+     <constant>OCI_B_CLOB</constant> (LOB de texte), 
+     <constant>OCI_B_BLOB</constant> (LOB binaire) et 
+     <constant>OCI_B_ROWID</constant> (ROWID).
     </para>
     <example>
-     <title>ociDefineByName</title>
+     <title>Exemple avec <function>ocibindbyname</function></title>
      <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 /* Exemple ociBindByPos par thies@thieso.net (980221)
   Ins&egrave;re 3 lignes dans emp, et utilise ROWID pour mettre &agrave; jour
   les lignes, juste apr&egrave;s l'insertion.
 */
-$conn = ociLogon("scott","tiger");
-$stmt = ociparse($conn,"insert into emp (empno, ename) ".
-		   "values (:empno,:ename) ".
-		   "returning ROWID into :rid");
-$data = array(1111 =&gt; "Larry", 2222 =&gt; "Bill", 3333 =&gt; "Jim");
-$rowid = ociNewDescriptor($conn,oci_D_ROWID);
-ociBindByName($stmt,":empno",&amp;$empno,32);
-ociBindByName($stmt,":ename",&amp;$ename,32);
-ociBindByName($stmt,":rid",&amp;$rowid,-1,oci_B_ROWID);
-$update = ociparse($conn,"update emp set sal = :sal where ROWID = :rid");
-ociBindByName($update,":rid",&amp;$rowid,-1,oci_B_ROWID);
-ociBindByName($update,":sal",&amp;$sal,32);
+
+$conn = OCILogon("scott","tiger");
+
+$stmt = OCIParse($conn,"insert into emp (empno, ename) ".
+					   "values (:empno,:ename) ".
+					   "returning ROWID into :rid");
+
+$data = array(1111 => "Larry", 2222 => "Bill", 3333 => "Jim");
+
+$rowid = OCINewDescriptor($conn,OCI_D_ROWID);
+
+OCIBindByName($stmt,":empno",&$empno,32);
+OCIBindByName($stmt,":ename",&$ename,32);
+OCIBindByName($stmt,":rid",&$rowid,-1,OCI_B_ROWID);
+
+$update = OCIParse($conn,"update emp set sal = :sal where ROWID = :rid");
+OCIBindByName($update,":rid",&$rowid,-1,OCI_B_ROWID);
+OCIBindByName($update,":sal",&$sal,32);
+
 $sal = 10000;
+
 while (list($empno,$ename) = each($data)) {
-	ociexecute($stmt);
-	ociexecute($update);
-}
+	OCIExecute($stmt);
+	OCIExecute($update);
+} 
+
 $rowid->free();
-ociFreeStatement($update);
-ociFreeStatement($stmt);
-$stmt = ociparse($conn,"select * from emp where empno in (1111,2222,3333)");
-ociexecute($stmt);
-while (ociFetchInto($stmt,&amp;$arr,oci_ASSOC)) {
+
+OCIFreeStatement($update);
+OCIFreeStatement($stmt);
+
+$stmt = OCIParse($conn,"select * from emp where empno in (1111,2222,3333)");
+OCIExecute($stmt);
+while (OCIFetchInto($stmt,&$arr,OCI_ASSOC)) {
 	var_dump($arr);
 }
-ociFreeStatement($stmt);
-/* Effacement des lignes inutiles dans la table emp .... */
-$stmt = ociparse($conn,"delete from emp where empno in (1111,2222,3333)");
-ociexecute($stmt);
-ociFreeStatement($stmt);
-ociLogoff($conn);
-?&gt;
+OCIFreeStatement($stmt);
+
+/* Effacement des lignes inutiles dans la table emp */
+$stmt = OCIParse($conn,"delete from emp where empno in (1111,2222,3333)");
+OCIExecute($stmt);
+OCIFreeStatement($stmt);
+
+OCILogoff($conn);
+?>
+]]>
 	 </programlisting>
 	</example>
+	<warning>
+     <para>
+      C'est une mauvaise id&eacute;e que d'utiliser les magic quotes et la fonction
+      <function>ocibindbyname</function> simultan&eacute;ment, car aucun ajout de
+      guillemets n'est n&eacute;cessaire sur les variables cit&eacute;es, et tout
+      guillemets magiques sera inscrit dans votre base de donn&eacute;es car
+      <function>ocibindbyname</function> n'est pas capable de faire la
+      diff&eacute;rence entre les guillemets et ceux qui ont &eacute;t&eacute; ajout&eacute;s
+      dynamiquement.
+     </para> 
+    </warning>
+
    </refsect1>
   </refentry>
 

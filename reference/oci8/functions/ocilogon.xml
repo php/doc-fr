@@ -3,22 +3,26 @@
 <!-- last change to 'ocilogon' in en/ tree in rev 1.2 -->
   <refentry id="function.ocilogon">
    <refnamediv>
-    <refname>ociLogon</refname>
-    <refpurpose>Etablit une connexion &agrave; un serveur Oracle.</refpurpose>
+    <refname>ocilogon</refname>
+    <refpurpose>Etablit une connexion &agrave; un serveur Oracle</refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
      <methodsynopsis>
-      <type>resource</type><methodname>ocilogon</methodname>
+      <type>int</type><methodname>ocilogon</methodname>
       <methodparam><type>string</type><parameter>username</parameter></methodparam>
       <methodparam><type>string</type><parameter>password</parameter></methodparam>
       <methodparam choice="opt"><type>string</type><parameter>db</parameter></methodparam>
      </methodsynopsis>
     <para>
       <function>ocilogon</function> retourne un identifiant de connexion,
-      n&eacute;cessaire &agrave; la plupart des fonctions oci. Si l'option
-      ORACLE_SID n'est pas pr&eacute;cis&eacute;e, PHP utilisera la variable
-      d'environnement ORACLE_SID pour d&eacute;terminer le serveur de connexion.
+      n&eacute;cessaire &agrave; la plupart des fonctions oci. Le param&egrave;tre
+     optionnel <parameter>db</parameter> peut contenir le nom local
+     du serveur Oracle, ou bien son nom dans la table d'entr&eacute;es 
+     tnsnames.ora &agrave; laquelle vous voulez vous connecter. Si le troisi&egrave;me
+     param&egrave;tre n'est pas sp&eacute;cifi&eacute;, &php; utilisera la variable d'environnement
+     <varname>ORACLE_SID</varname> (instance Oracle) ou <varname>TWO_TASK</varname>
+     (tnsnames.ora) pour d&eacute;terminer la base &agrave; laquelle se connecter.
     </para>
     <para>
       Les connexions sont partag&eacute;es, &agrave; l'int&eacute;rieur
@@ -28,72 +32,97 @@
       m&ecirc;me si vous avez cr&eacute;&eacute; de multiples connexions.
     </para>
     <para>
+     Les connexions sont partag&eacute;es au niveau de la page, lorsque vous utilisez
+     <function>ocilogon</function>.  Cela signifie que les validations et annulations
+     s'appliquent &agrave; toutes les transactions de la page, m&ecirc;me si vous avez
+     cr&eacute;&eacute; de multiples connexions &agrave; un m&ecirc;me serveur Oracle.
+    </para>
+    <para>
      Cet exemple montre comment les connexions sont partag&eacute;es :
      <example>
-      <title>ociLogon</title>
+      <title>Exemple avec <function>ocilogon</function></title>
       <programlisting role="php">
-&lt;?php
-print "&lt;HTML>&lt;PRE>";
+<![CDATA[
+<?php
+print "<HTML><PRE>";
 $db = "";
+
 $c1 = ocilogon("scott","tiger",$db);
 $c2 = ocilogon("scott","tiger",$db);
+
 function create_table($conn)
-{ $stmt = ociparse($conn,"create table scott.hallo (test
-varchar2(64))");
+{ $stmt = ociparse($conn,"create table scott.hallo (test varchar2(64))");
   ociexecute($stmt);
-  echo $conn." created table\n\n";
+  echo $conn." a cr&eacute;&eacute; une table\n\n";
 }
+
 function drop_table($conn)
 { $stmt = ociparse($conn,"drop table scott.hallo");
   ociexecute($stmt);
-  echo $conn." dropped table\n\n";
+  echo $conn." a effac&eacute; une table\n\n";
 }
+
 function insert_data($conn)
-{ $stmt = ociparse($conn,"insert into scott.hallo values('$conn' || ' ' || to_char(sysdate,'DD-MON-YY HH24:MI:SS'))");
-  ociexecute($stmt,oci_DEFAULT);
-  echo $conn." inserted hallo\n\n";
+{ $stmt = ociparse($conn,"insert into scott.hallo 
+            values('$conn' || ' ' || to_char(sysdate,'DD-MON-YY HH24:MI:SS'))");
+  ociexecute($stmt,OCI_DEFAULT);
+  echo $conn." a ins&eacute;r&eacute; dans hallo\n\n";
 }
+
 function delete_data($conn)
 { $stmt = ociparse($conn,"delete from scott.hallo");
-  ociexecute($stmt,oci_DEFAULT);
-  echo $conn." deleted hallo\n\n";
+  ociexecute($stmt,OCI_DEFAULT);
+  echo $conn." a effac&eacute; dans hallo\n\n";
 }
+
 function commit($conn)
 { ocicommit($conn);
-  echo $conn." commited\n\n";
+  echo $conn." valid&eacute;\n\n";
 }
+
 function rollback($conn)
 { ocirollback($conn);
-  echo $conn." rollback\n\n";
+  echo $conn." annul&eacute;\n\n";
 }
+
 function select_data($conn)
 { $stmt = ociparse($conn,"select * from scott.hallo");
-  ociexecute($stmt,oci_DEFAULT);
-  echo $conn."----selecting\n\n";
+  ociexecute($stmt,OCI_DEFAULT);
+  echo $conn."----selection\n\n";
   while (ocifetch($stmt))
-    echo $conn." &lt;".ociresult($stmt,"TEST").">\n\n";
-  echo $conn."----done\n\n";
+    echo $conn." <".ociresult($stmt,"TEST").">\n\n";
+  echo $conn."----fin\n\n";
 }
+
 create_table($c1);
-insert_data($c1);   // Insertion d'une ligne avec c1
-insert_data($c2);   // Insertion d'une ligne avec c2
-select_data($c1);   // Les r&eacute;sultats des deux insertions sont retourn&eacute;s
-select_data($c2);
-rollback($c1);      // Annulation avec c1
-select_data($c1);   // Les r&eacute;sultats des deux insertions sont annul&eacute;s
-select_data($c2);
-insert_data($c2);   // Insertion d'une ligne avec c2
-commit($c2);        // Validation avec using c2
-select_data($c1);   // Le r&eacute;sultat de c2 est retourn&eacute;
+insert_data($c1);   // Insertion avec c1
+insert_data($c2);   // Insertion avec c2
+
+select_data($c1);   // Resultats des insertions
+select_data($c2);   
+
+rollback($c1);      // Annulation sur c1
+
+select_data($c1);   // Les deux insertions ont &eacute;t&eacute; annul&eacute;es
+select_data($c2);   
+
+insert_data($c2);   // Insertion avec c2
+commit($c2);        // Validation avec c2
+
+select_data($c1);   // Le r&eacute;sultat de l'insertion via c2
+
 delete_data($c1);   // Effacement de toutes les lignes avec c1
-select_data($c1);   // Aucune ligne n'est retourn&eacute;e
-select_data($c2);   // Aucune ligne n'est retourn&eacute;e
+select_data($c1);   // Aucune ligne lue
+select_data($c2);   // Aucune ligne lue
 commit($c1);        // Validation avec c1
-select_data($c1);   // Aucune ligne n'est retourn&eacute;e
-select_data($c2);   // Aucune ligne n'est retourn&eacute;e
+
+select_data($c1);   // Aucune ligne lue
+select_data($c2);   // Aucune ligne lue
+
 drop_table($c1);
-print "&lt;/PRE>&lt;/HTML>";
-?&gt;
+print "</PRE></HTML>";
+?>
+]]>
       </programlisting>
      </example>
     </para>

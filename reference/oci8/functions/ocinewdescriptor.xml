@@ -3,91 +3,106 @@
 <!-- last change to 'ocinewdescriptor' in en/ tree in rev 1.2 -->
   <refentry id="function.ocinewdescriptor">
    <refnamediv>
-    <refname>ociNewDescriptor</refname>
+    <refname>ocinewdescriptor</refname>
     <refpurpose>Initialise un nouveau pointeur vide de LOB/FILE</refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
      <methodsynopsis>
-      <type>resource</type><methodname>ocinewdescriptor</methodname>
-      <methodparam><type>resource</type><parameter>connection</parameter></methodparam>
+      <type>string</type><methodname>ocinewdescriptor</methodname>
+      <methodparam><type>int</type><parameter>connection</parameter></methodparam>
       <methodparam choice="opt"><type>int</type><parameter>type</parameter></methodparam>
      </methodsynopsis>
     <para>
      <function>ocinewdescriptor</function> alloue l'espace
      n&eacute;cessaire pour stocker un descripteur, ou un pointeur
      de LOB. Les valeurs accept&eacute;es pour type sont
-     oci_D_FILE, oci_D_LOB et oci_D_ROWID.
+     OCI_D_FILE, OCI_D_LOB et OCI_D_ROWID. 
+     Pour les pointeurs de LOB, les m&eacute;thodes load, save, et savefile sont
+     associ&eacute;es avec le pointeur. Pour les pointeurs de type BFILE,
+     seule la m&eacute;thode load existe. Voyez le second exemple pour une
+     illustration.
       </para>
      <example>
       <title>ocinewdescriptor</title>
       <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php   
     /* Ce script est fait pour &ecirc;tre appel&eacute; dans un formulaire HTML
      * Il attends les variables $user, $password, $table, $where, et $commitsize
      * Le script efface alors les lignes s&eacute;lectionn&eacute;es avec ROWID et valide
      * l'effacement apr&egrave;s chaque groupe de $commitsize lignes.
      * (Utilisez avec prudence, car il n'y a pas d'annulation possible).
      */
-    $conn = ociLogon($user, $password);
-    $stmt = ociparse($conn,"select rowid from $table $where");
-    $rowid = ociNewDescriptor($conn,oci_D_ROWID);
-    ociDefineByName($stmt,"ROWID",&amp;$rowid);
-    ociexecute($stmt);
-    while ( ociFetch($stmt) ) {
-       $nrows = ociRowCount($stmt);
-       $delete = ociparse($conn,"delete from $table where ROWID = :rid");
-       ociBindByName($delete,":rid",&amp;$rowid,-1,oci_B_ROWID);
-       ociexecute($delete);
+    $conn = OCILogon($user, $password);
+    $stmt = OCIParse($conn,"select rowid from $table $where");
+    $rowid = OCINewDescriptor($conn,OCI_D_ROWID);
+    OCIDefineByName($stmt,"ROWID",&$rowid);   
+    OCIExecute($stmt);
+    while ( OCIFetch($stmt) ) {      
+       $nrows = OCIRowCount($stmt);
+       $delete = OCIParse($conn,"delete from $table where ROWID = :rid");
+       OCIBindByName($delete,":rid",&$rowid,-1,OCI_B_ROWID);
+       OCIExecute($delete);      
        print "$nrows\n";
        if ( ($nrows % $commitsize) == 0 ) {
-           ociCommit($conn);
-       }
+           OCICommit($conn);      
+       }   
     }
-    $nrows = ociRowCount($stmt);
-    print "$nrows effac&eacute;es...\n";
-    ociFreeStatement($stmt);
-    ociLogoff($conn);
-?&gt;
+    $nrows = OCIRowCount($stmt);   
+    print "$nrows deleted...\n";
+    OCIFreeStatement($stmt);  
+    OCILogoff($conn);
+?>  
+]]>
    </programlisting>
    <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
     /* Ce script est fait pour &ecirc;tre appel&eacute; depuis un formulaire HTML.
      * Il attends les variables $user, $password, $table, $where, et $commitsize,
      * donn&eacute;es par le formulaire. Le script efface
      * les lignes s&eacute;lectionn&eacute;es avec ROWID est valide les transactions
      * &agrave; chaque jeu de $commitsize lignes. (Attention : il n'y plus d'annulation) */
   if(!isset($lob_upload) || $lob_upload == 'none'){
-?&gt;
-&lt;form action="upload.php3" method="post" enctype="multipart/form-data">
-Upload file: &lt;input type="file" name="lob_upload">&lt;br&gt;
-&lt;input type="submit" value="Upload"> - &lt;input type="reset">
-&lt;/form>
-&lt;?php
+?>
+<form action="upload.php" method="post" enctype="multipart/form-data">
+Fichier &agrave; t&eacute;l&eacute;charger : <input type="file" name="lob_upload"><br>
+<input type="submit" value="Envoyer"> - <input type="reset">
+</form>
+<?php
   } else {
+
      // $lob_upload contains the temporary filename of the uploaded file
-     $conn = ociLogon($user, $password);
-     $lob = ociNewDescriptor($conn, oci_D_LOB);
-     $stmt = ociparse($conn,"insert into $table (id, the_blob) values(my_seq.NEXTVAL, EMPTY_BLOB()) returning the_blob into :the_blob");
-     ociBindByName($stmt, ':the_blob', &amp;$lob, -1, oci_B_BLOB);
-     ociexecute($stmt, oci_DEFAULT);
+
+     // see also the features section on file upload,
+     // if you would like to use secure uploads
+     
+     $conn = OCILogon($user, $password);
+     $lob = OCINewDescriptor($conn, OCI_D_LOB);
+     $stmt = OCIParse($conn,"insert into $table (id, the_blob) 
+               values(my_seq.NEXTVAL, EMPTY_BLOB()) returning the_blob into :the_blob");
+     OCIBindByName($stmt, ':the_blob', &$lob, -1, OCI_B_BLOB);
+     OCIExecute($stmt, OCI_DEFAULT);
      if($lob->savefile($lob_upload)){
-        ociCommit($conn);
-        echo "Blob sauv&eacute;!\n";
+        OCICommit($conn);
+        echo "Blob successfully uploaded\n";
      }else{
-        echo "Impossible de sauver le Blob\n";
+        echo "Couldn't upload Blob\n";
      }
-     ociFreeDescriptor($lob);
-     ociFreeStatement($stmt);
-     ociLogoff($conn);
+     OCIFreeDesc($lob);
+     OCIFreeStatement($stmt);
+     OCILogoff($conn);
   }
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
     <example>
      <title>Exemple avec <function>ocinewdescriptor</function></title>
      <programlisting>
-&lt;?php   
+<![CDATA[
+<?php   
     /* Appel d'une proc&eacute;dure PL/SQL stock&eacute;e qui prend un clobs
      * en entr&eacute;e (PHP 4 >= 4.0.6). 
      * Exemple de signateure de proc&eacute;dure stock&eacute;e PL/SQL :
@@ -111,7 +126,8 @@ Upload file: &lt;input type="file" name="lob_upload">&lt;br&gt;
 	$clob->close();
 	$clob->free();
 	OCIFreeStatement($stmt);
-?&gt;
+?>
+]]>
      </programlisting>
     </example>
    </refsect1>

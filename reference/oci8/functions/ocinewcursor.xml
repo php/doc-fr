@@ -3,7 +3,7 @@
 <!-- last change to 'ocinewcursor' in en/ tree in rev 1.2 -->
   <refentry id="function.ocinewcursor">
    <refnamediv>
-    <refname>ociNewCursor</refname>
+    <refname>ocinewcursor</refname>
     <refpurpose>
      Retourne un nouveau pointeur &agrave; utiliser pour lier
      les pointeurs de r&eacute;f&eacute;rences
@@ -12,7 +12,7 @@
    <refsect1>
     <title>Description</title>
      <methodsynopsis>
-      <type>int</type><methodname>ocinewcursor</methodname>
+      <type>resource</type><methodname>ocinewcursor</methodname>
       <methodparam><type>resource</type><parameter>conn</parameter></methodparam>
      </methodsynopsis>
     <para>
@@ -22,25 +22,31 @@
     <para>
      <example>
       <title>
-        Utiliser un REF CURSOR issue d'une proc&eacute;dure enregistr&eacute;e.
+        Utiliser un REF CURSOR issue d'une proc&eacute;dure enregistr&eacute;e
       </title>
       <programlisting role="php">
-&lt;?php
-// supposons que votre proc&eacute;dure stoqu&eacute;e info.output retourne un pointeur
-// de curseur dans : data
-$conn = ociLogon("scott","tiger");
-$curs = ociNewCursor($conn);
-$stmt = ociparse($conn,"begin info.output(:data); end;");
-ocibindbyname($stmt,"data",&amp;$curs,-1,oci_B_CURSOR);
+<![CDATA[
+<?php   
+// supposons que votre proc&eacute;dure stock&eacute;e info.output retourne un curseur de r&eacute;f&eacute;rence dans :data
+
+$conn = OCILogon("scott","tiger");
+$curs = OCINewCursor($conn);
+$stmt = OCIParse($conn,"begin info.output(:data); end;");
+
+ocibindbyname($stmt,"data",&$curs,-1,OCI_B_CURSOR);
 ociexecute($stmt);
 ociexecute($curs);
-while (ociFetchInto($curs,&amp;$data)) {
+
+while (OCIFetchInto($curs,&$data)) {
     var_dump($data);
 }
-ociFreeStatement($curs);
-ociFreeCursor($stmt);
-ociLogoff($conn);
-?&gt;
+ 
+OCIFreeStatement($stmt);
+OCIFreeCursor($curs);
+OCILogoff($conn);
+?>
+]]>
+
       </programlisting>
      </example>
     </para>
@@ -48,37 +54,41 @@ ociLogoff($conn);
      <example>
       <title>Utiliser un REF CURSOR issue d'une commande SELECT</title>
       <programlisting role="php">
-&lt;?php
-print "&lt;HTML>&lt;BODY>";
-$conn = ociLogon("scott","tiger");
+<![CDATA[
+<?php   
+print "<HTML><BODY>";
+$conn = OCILogon("scott","tiger");
 $count_cursor = "CURSOR(select count(empno) num_emps from emp " .
                 "where emp.deptno = dept.deptno) as EMPCNT from dept";
-$stmt = ociparse($conn,"select deptno,dname,$count_cursor");
+$stmt = OCIParse($conn,"select deptno,dname,$count_cursor");
+
 ociexecute($stmt);
-print "&lt;TABLE BORDER=\"1\">";
-print "&lt;TR>";
-print "&lt;TH>DEPT NAME&lt;/TH>";
-print "&lt;TH>DEPT #&lt;/TH>";
-print "&lt;TH># EMPLOYEES&lt;/TH>";
-print "&lt;/TR>";
-while (ociFetchInto($stmt,&amp;$data,oci_ASSOC)) {
-    print "&lt;TR>";
+print "<TABLE BORDER=\"1\">";
+print "<TR>";
+print "<TH>DEPT NAME</TH>";
+print "<TH>DEPT #</TH>";
+print "<TH># EMPLOYEES</TH>";
+print "</TR>";
+
+while (OCIFetchInto($stmt,&$data,OCI_ASSOC)) {
+    print "<TR>";
     $dname  = $data["DNAME"];
     $deptno = $data["DEPTNO"];
-    print "&lt;TD>$dname&lt;/TD>";
-    print "&lt;TD>$deptno&lt;/TD>";
-    ociexecute($data[ "EMPCNT" ]);
-    while (ociFetchInto($data[ "EMPCNT" ],&amp;$subdata,oci_ASSOC)) {
+    print "<TD>$dname</TD>";
+    print "<TD>$deptno</TD>";
+    ociexecute($data["EMPCNT"]);
+    while (OCIFetchInto($data["EMPCNT"],&$subdata,OCI_ASSOC)) {
         $num_emps = $subdata["NUM_EMPS"];
-        print  "&lt;TD>$num_emps&lt;/TD>";
+        print  "<TD>$num_emps</TD>";
     }
-    print "&lt;/TR>";
+    print "</TR>";
 }
-print "&lt;/TABLE>";
-print "&lt;/BODY>&lt;/HTML>";
-ociFreeStatement($stmt);
-ociLogoff($conn);
-?&gt;
+print "</TABLE>";
+print "</BODY></HTML>";
+OCIFreeStatement($stmt);
+OCILogoff($conn);
+?>
+]]>
       </programlisting>
      </example>
     </para>

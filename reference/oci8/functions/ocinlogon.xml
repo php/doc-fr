@@ -3,24 +3,28 @@
 <!-- last change to 'ocinlogon' in en/ tree in rev 1.15 -->
   <refentry id="function.ocinlogon">
    <refnamediv>
-    <refname>ociNLogon</refname>
+    <refname>ocinlogon</refname>
     <refpurpose>
-      Se connecte &agrave; un serveur Oracle avec une nouvelle connexion.
+      Etablit une nouvelle correction avec un serveur Oracle
     </refpurpose>
    </refnamediv>
    <refsect1>
     <title>Description</title>
      <methodsynopsis>
-      <type>resource</type><methodname>ocinlogon</methodname>
+      <type>int</type><methodname>ocinlogon</methodname>
       <methodparam><type>string</type><parameter>username</parameter></methodparam>
       <methodparam><type>string</type><parameter>password</parameter></methodparam>
       <methodparam choice="opt"><type>string</type><parameter>db</parameter></methodparam>
      </methodsynopsis>
     <para>
      <function>ocinlogon</function> cr&eacute;e une nouvelle connexion &agrave;
-     un serveur Oracle et s'authentifie. Si l'option ORACLE_SID n'est pas
-     sp&eacute;cifi&eacute;, PHP utilisera la variable d'environnement
-     ORACLE_SID pour d&eacute;terminer le serveur de connexion.
+     un serveur Oracle et s'identifie. Le param&egrave;tre
+     optionnel <parameter>db</parameter> peut contenir le nom local
+     du serveur Oracle, ou bien son nom dans la table d'entr&eacute;es 
+     tnsnames.ora &agrave; laquelle vous voulez vous connecter. Si le troisi&egrave;me
+     param&egrave;tre n'est pas sp&eacute;cifi&eacute;, &php; utilisera la variable d'environnement
+     <varname>ORACLE_SID</varname> (instance Oracle) ou <varname>TWO_TASK</varname>
+     (tnsnames.ora) pour d&eacute;terminer la base &agrave; laquelle se connecter.
     </para>
     <para>
        <function>ocinlogon</function> force le serveur &agrave;
@@ -38,69 +42,89 @@
       L'exemple ci-dessous montre l'utilisation des connexions
       s&eacute;par&eacute;es.
      <example>
-      <title>ociNLogon</title>
+     <title>Exemple avec <function>ocinlogon</function></title>
       <programlisting role="php">
-&lt;?php
-print "&lt;HTML>&lt;PRE>";
+<![CDATA[
+<?php
+print "<HTML><PRE>";
 $db = "";
+
 $c1 = ocilogon("scott","tiger",$db);
 $c2 = ocinlogon("scott","tiger",$db);
+
+
 function create_table($conn)
-{ $stmt = ociparse($conn,"create table scott.hallo (test
-varchar2(64))");
+{ $stmt = ociparse($conn,"create table scott.hallo (test varchar2(64))");
   ociexecute($stmt);
-  echo $conn." created table\n\n";
+  echo $conn." a cr&eacute;&eacute; une table\n\n";
 }
+
 function drop_table($conn)
 { $stmt = ociparse($conn,"drop table scott.hallo");
   ociexecute($stmt);
-  echo $conn." dropped table\n\n";
+  echo $conn." a effac&eacute; une table\n\n";
 }
+
 function insert_data($conn)
-{ $stmt = ociparse($conn,"insert into scott.hallo values('$conn' || ' ' || to_char(sysdate,'DD-MON-YY HH24:MI:SS'))");
-  ociexecute($stmt,oci_DEFAULT);
-  echo $conn." inserted hallo\n\n";
+{ $stmt = ociparse($conn,"insert into scott.hallo 
+            values('$conn' || ' ' || to_char(sysdate,'DD-MON-YY HH24:MI:SS'))");
+  ociexecute($stmt,OCI_DEFAULT);
+  echo $conn." a ins&eacute;r&eacute; dans hallo\n\n";
 }
+
 function delete_data($conn)
 { $stmt = ociparse($conn,"delete from scott.hallo");
-  ociexecute($stmt,oci_DEFAULT);
-  echo $conn." deleted hallo\n\n";
+  ociexecute($stmt,OCI_DEFAULT);
+  echo $conn." a effac&eacute; dans hallo\n\n";
 }
+
 function commit($conn)
 { ocicommit($conn);
-  echo $conn." commited\n\n";
+  echo $conn." valid&eacute;\n\n";
 }
+
 function rollback($conn)
 { ocirollback($conn);
-  echo $conn." rollback\n\n";
+  echo $conn." annul&eacute;\n\n";
 }
+
 function select_data($conn)
 { $stmt = ociparse($conn,"select * from scott.hallo");
-  ociexecute($stmt,oci_DEFAULT);
-  echo $conn."----selecting\n\n";
+  ociexecute($stmt,OCI_DEFAULT);
+  echo $conn."----selection\n\n";
   while (ocifetch($stmt))
-    echo $conn." &lt;".ociresult($stmt,"TEST").">\n\n";
-  echo $conn."----done\n\n";
+    echo $conn." <".ociresult($stmt,"TEST").">\n\n";
+  echo $conn."----fin\n\n";
 }
+
 create_table($c1);
 insert_data($c1);
+
+select_data($c1);   
+select_data($c2);   
+
+rollback($c1);      
+
+select_data($c1);   
+select_data($c2);   
+
+insert_data($c2);   
+commit($c2);        
+
+select_data($c1);   
+
+delete_data($c1);   
+select_data($c1);   
+select_data($c2);   
+commit($c1);        
+
 select_data($c1);
 select_data($c2);
-rollback($c1);
-select_data($c1);
-select_data($c2);
-insert_data($c2);
-commit($c2);
-select_data($c1);
-delete_data($c1);
-select_data($c1);
-select_data($c2);
-commit($c1);
-select_data($c1);
-select_data($c2);
+
 drop_table($c1);
-print "&lt;/PRE>&lt;/HTML>";
-?&gt;
+print "</PRE></HTML>";
+?>
+]]>
       </programlisting>
      </example>
     </para>

@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.2 $ -->
+<!-- $Revision: 1.3 $ -->
  <reference id="ref.oci8">
   <title>Oracle 8</title>
   <titleabbrev>oci8</titleabbrev>
   <partintro>
-   <para>
+   <section id="oci8.intro">
+    &reftitle.intro;
+    <para>
      Ces fonctions vous permettront d'acc&eacute;der aux serveurs Oracle8 et
      Oracle7. Elles utilisent l'interface Oracle8 Call-Interface (oci8).
      Vous aurez donc besoin des librairies clientes Oracle8 pour pouvoir
@@ -17,6 +19,10 @@
      compl&egrave;tement les types LOB, FILE et ROWID et vous permet
      d'utiliser des variables de d&eacute;finitions personnalisables.
   </para>
+   </section>
+
+   <section id="oci8.requirements">
+    &reftitle.required;
    <para>
     Avant d'utiliser cette extension, assurez-vous que vous avez bien
     param&eacute;tr&eacute; vos variables d'environnement Oracle, ainsi que votre
@@ -64,57 +70,97 @@
       Si votre serveur web ne d&eacute;marre pas, ou crashe au d&eacute;marrage
      </title>
     <para>
-     V&eacute;rifiez que Apache a bien &eacute;t&eacute; compil&eacute; avec la librairie pthread :
+     V&eacute;rifiez que Apache a bien &eacute;t&eacute; compil&eacute; 
+     avec la librairie pthread :
     </para>
     <para>
-     <informalexample>
+     <example>
+      <title>Configuration Apache avec pthread</title>
       <programlisting>
-# ldd /www/apache/bin/httpd
+<![CDATA[
+# ldd /www/apache/bin/httpd 
     libpthread.so.0 => /lib/libpthread.so.0 (0x4001c000)
     libm.so.6 => /lib/libm.so.6 (0x4002f000)
     libcrypt.so.1 => /lib/libcrypt.so.1 (0x4004c000)
     libdl.so.2 => /lib/libdl.so.2 (0x4007a000)
     libc.so.6 => /lib/libc.so.6 (0x4007e000)
     /lib/ld-linux.so.2 => /lib/ld-linux.so.2 (0x40000000)
+]]>
       </programlisting>
-     </informalexample>
+     </example>
     </para>
     <para>
      Si la libpthread n'est pas list&eacute;e, vous devez r&eacute;installer Apache :
     </para>
     <para>
-     <informalexample>
+     <example>
+      <title>Reinstaller Apache avec pthread</title>
       <programlisting>
+<![CDATA[
 # cd /usr/src/apache_1.3.xx
 # make clean
 # LIBS=-lpthread ./config.status
 # make
 # make install
+]]>
       </programlisting>
-     </informalexample>
+     </example>
     </para>
    </note>
    <para>
+     Notez bien que sur certains syst&egrave;mes comme UnixWare il faut utiliser
+     libthread au lieu de libpthread. PHP et Apache doivent alors &ecirc;tre configur&eacute;s
+     avec EXTRA_LIBS=-lthread.
+   </para>
+   </section>
+   
+	&reference.oci8.configure;
+
+   <section id="oci8.configuration">
+    &reftitle.runtime;
+    &no.config;
+   </section>
+
+   <section id="oci8.resources">
+    &reftitle.resources;
+    <para>
+    </para>
+   </section>
+
+   &reference.oci8.constants;
+
+   <section id="oci8.examples">
+   &reftitle.examples;
+    <para>
     <example>
-     <title>Aide oci</title>
+     <title>Exemple avec OCI8</title>
       <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 // par sergo@bacup.ru
-// Utilisez l'option : oci_DEFAULT pour &eacute;x&eacute;cuter les commandes avec un d&eacute;lai
-ociExecute($stmt, oci_DEFAULT);
-// pour lire les donn&eacute;es apr&egrave;s lecture, utilisez :
-$result = ociResult($stmt, $n);
+
+// Utilisez l'option: OCI_DEFAULT pour ex&eacute;cuter la commande avec ex&eacute;cution
+// retard&eacute;e.
+OCIExecute($stmt, OCI_DEFAULT);
+
+// pour lire les donn&eacute;es, apr&egrave;s un fetch : 
+
+$result = OCIResult($stmt, $n);
 if (is_object ($result)) $result = $result->load();
-// Pour les commandes INSERT ou UPDATE utilisez:
+
+// Pour les commandes INSERT et UPDATE utilisez :
+
 $sql = "insert into table (field1, field2) values (field1 = 'value',
  field2 = empty_clob()) returning field2 into :field2";
-ociparse($conn, $sql);
-$clob = ociNewDescriptor($conn, oci_D_LOB);
-ociBindByName ($stmt, ":field2", &amp;$clob, -1, oci_B_CLOB);
-ociexecute($stmt, oci_DEFAULT);
-$clob->save ("Du texte");
-ocicommit($conn);
-?&gt;
+OCIParse($conn, $sql);
+$clob = OCINewDescriptor($conn, OCI_D_LOB);
+OCIBindByName ($stmt, ":field2", &$clob, -1, OCI_B_CLOB);
+OCIExecute($stmt, OCI_DEFAULT);
+$clob->save ("some text");
+OCICommit($conn);
+
+?>
+]]>
      </programlisting>
     </example>
    </para>
@@ -124,21 +170,28 @@ ocicommit($conn);
     <example>
      <title>Utilisation de proc&eacute;dures stock&eacute;es</title>
       <programlisting role="php">
-&lt;?php
+<![CDATA[
+<?php
 // par webmaster@remoterealty.com
-$sth = ociparse ( $dbh, "begin sp_newaddress( :address_id, '$firstname',
+$sth = OCIParse ( $dbh, "begin sp_newaddress( :address_id, '$firstname',
  '$lastname', '$company', '$address1', '$address2', '$city', '$state',
  '$postalcode', '$country', :error_code );end;" );
-// Ce script appelle la proc&eacute;dure stock&eacute;e sp_newaddress, avec address_id qui est
-// une variable entrante/sortante et :error_code une variable sortante.
-// Lorsque vous les liez :
-   ociBindByName ( $sth, ":address_id", $addr_id, 10 );
-   ociBindByName ( $sth, ":error_code", $errorcode, 10 );
-   ociExecute ( $sth );
-?&gt;
+
+// Cela appelle la proc&eacute;dure stock&eacute;e sp_newaddress, avec la variable :address_id 
+// pour les entr&eacute;es/sorties et :error_code comme variable de sortie.
+// Ensuite, vous faites les liaisons suivantes : 
+
+   OCIBindByName ( $sth, ":address_id", $addr_id, 10 );
+   OCIBindByName ( $sth, ":error_code", $errorcode, 10 );
+   OCIExecute ( $sth );
+
+?>
+]]>
      </programlisting>
     </example>
    </para>
+   </section>
+
   </partintro>
 
 &reference.oci8.functions;
