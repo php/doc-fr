@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.26 Maintainer: yannick Status: ready -->
+ <chapter id="faq.html">
+  <title>PHP et HTML</title>
+  <titleabbrev>PHP et HTML</titleabbrev>
+
+  <para>
+   &php; et HTML sont très intéractifs : &php; peut générer du HTML et HTML
+   peut passer des informations à &php;. Avant de lire cette <literal>faq</literal> (foire aux 
+   questions), il est important que vous appreniez comme <link 
+   linkend="language.variables.external">récupérer des variables externes à &php;</link>.
+   La page du manuel correspondante contient beaucoup d'exemples.
+   Faîtes particulièrement attention à ce que signifie <literal>register_globals</literal>.
+  </para>
+
+  <qandaset>
+   <qandaentry id="faq.html.encoding">
+    <question>
+     <para>
+      Quel encodage/décodage ai-je besoin lors du passage d'une valeur via
+      un formulaire/une URL ?
+     </para>
+    </question>
+    <answer>
+     <para>
+      Il y a plusieurs étapes pour lesquelles le codage est important. En supposant que vous avez
+      une chaîne de caractères <varname>$data</varname>, qui contient la chaîne
+      que vous voulez passer de manière non-encodée, voici les étapes appropriées :
+      <itemizedlist>
+       <listitem>
+        <para>
+         Interprétation HTML. Afin d'indiquer une chaîne aléatoire, vous 
+         <emphasis>devez</emphasis> l'inclure entre doubles guillemets et
+         utiliser la fonction <function>htmlspecialchars</function> pour encoder
+         la chaîne.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         URL : une URL est constituée de plusieurs parties. Si vous voulez que vos données
+         soient interprétées comme un seul élément, vous <emphasis>devez</emphasis>
+         les encoder avec la fonction <function>urlencode</function>.
+        </para>
+       </listitem>
+      </itemizedlist>
+     </para>
+     <para>
+      <example>
+       <title>Un élément de formulaire HTML caché</title>
+        <programlisting role="php">
+<![CDATA[
+<?php
+echo '<input type="hidden" value="' . htmlspecialchars($data) . '" />';
+?>
+]]>
+        </programlisting>
+      </example>
+      <note>
+       <simpara>
+        Il n'est pas correct d'utilliser la fonction <function>urlencode</function>
+        pour vos données <varname>$data</varname>, car il en est de la responsabilité du 
+        navigateur de les encoder. Tous les navigateurs populaires le font correctement.
+        Notez que celà s'effectue sans considération de la méthode utilisée (i.e 
+        <literal>GET</literal> ou <literal>POST</literal>).
+        Vous devez uniquement noter ce cas pour les requêtes <literal>GET</literal>, 
+        car les requêtes <literal>POST</literal> sont généralement cachées.
+       </simpara>
+      </note>
+      <example>
+       <title>Données éditables par l'utilisateur</title>
+        <programlisting role="php">
+<![CDATA[
+<?php
+echo "<textarea name=\"mydata\">\n";
+echo htmlspecialchars($data)."\n";
+echo '</textarea>';
+?>
+]]>
+        </programlisting>
+      </example>
+      <note>
+       <simpara>
+        Les données sont montrées dans le navigateur comme prévues, car celui-ci interprétera
+        les symboles HTML échappés.
+       </simpara>
+       <simpara>
+        Au moment de la validation, via la méthode <literal>GET</literal> ou 
+        <literal>POST</literal>, les données devraient être
+        url-encodées par le navigateur avant le transfert et directement url-décodées par &php;.
+        Donc, finalement, vous n'avez pas à effectuer d'url-encodage/url-decodage vous-même,
+        tout est effectué automatiquement.
+       </simpara>
+      </note>
+      <example>
+       <title>Dans une URL</title>
+        <programlisting role="php">
+<![CDATA[
+<?php
+echo "<a href=\"" . htmlspecialchars("/nextpage.php?stage=23&data=" .
+        urlencode($data)) . "\">\n";
+?>
+]]>
+        </programlisting>
+      </example>
+      <note>
+       <simpara>
+        En fait, vous simulez une requête <literal>GET</literal> HTML, il est nécessaire 
+        d'utiliser manuellement la fonction <function>urlencode</function> sur vos données.
+       </simpara>
+      </note>
+      <note>
+       <simpara>
+        Vous devez utiliser <function>htmlspecialchars</function> sur l'URL complète,
+        car l'URL se comporte comme la valeur d'un attribut HTML. Dans ce cas, le navigateur
+        fera un <function>htmlspecialchars</function> sur la valeur et passera le résultat à
+        l'URL. &php; devrait comprendre l'URL correctement, car vous avez url-encodé les données.
+       </simpara>
+       <simpara>
+        Vous devez noter que <literal>&amp;</literal> dans l'URL est remplacé par
+        <literal>&amp;amp;</literal>. Bien que la plus part des navigateurs devraient
+        corriger celà si vous l'oubliez, ce n'est pas toujours le cas. Donc, même si votre URL
+        n'est pas dynamique, vous <emphasis>devez</emphasis> utiliser
+        la fonction <function>htmlspecialchars</function> sur l'URL.
+       </simpara>
+      </note>
+     </para>
+     <!-- TODO: a note about addgpcslashes? -->
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.html.form-image">
+    <question>
+     <para>
+      J'essaye d'utiliser &lt;input type="image"&gt; mais
+      les variables <varname>$foo.x</varname> et <varname>$foo.y</varname>
+      ne sont pas disponibles. <varname>$_GET['foo.x']</varname> n'existe pas non plus.
+      Où sont-elles ?  
+     </para>
+    </question>
+    <answer>
+     <para>
+      Lorsque vous validez un formulaire, il est possible d'utiliser une image au lieu du bouton
+      standart de type "<literal>submit</literal>" avec une balise du type :
+      <programlisting role="html">
+<![CDATA[
+<input type="image" src="image.gif" name="foo" />
+]]>
+      </programlisting>
+      Lorsque l'utilisateur clique sur l'image, le formulaire est transmis au serveur avec deux
+      variables supplémentaires : <varname>foo.x</varname> et 
+      <varname>foo.y</varname> qui représentent les coordonnées du point cliqué.
+     </para>
+     <para>
+      Parceque <varname>foo.x</varname> et <varname>foo.y</varname> sont
+      des noms de variables invalides en &php;, elles sont automatiquement converties
+      en <varname>foo_x</varname> et <varname>foo_y</varname>. Les points sont 
+      remplacés par des soulignés-inférieurs. Donc, vous devez accéder à ces variables
+      comme n'importe quelle autre variable tel que décrit dans la section
+      "<link linkend="language.variables.external">Variables externes à &php;</link>".
+      Par exemple, en utilisant <varname>$_GET['foo_x']</varname>.
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.html.arrays">
+    <question>
+     <para>Comment créer un tableau dans une balise &lt;form&gt; HTML ?</para>
+    </question>
+    <answer>
+     <para>
+      Pour envoyer le résultat du &lt;form&gt; comme un tableau de variables à votre script
+      &php;, vous devez nommer, via l'attribut <literal>name</literal>, les balises
+      &lt;input&gt;, &lt;select&gt; ou &lt;textarea&gt; comme celà :
+      <programlisting role="html">
+<![CDATA[
+<input name="MonTableau[]" />
+<input name="MonTableau[]" />
+<input name="MonTableau[]" />
+<input name="MonTableau[]" />
+]]>
+      </programlisting>
+      Noter les crochets après le nom de la variable, c'est ce qui fait que celle-ci sera un tableau.
+      Vous pouvez grouper les éléments dans différents tableaux de variables en assignant le même
+      nom à différents éléments :
+      <programlisting role="html">
+<![CDATA[
+<input name="MonTableau[]" />
+<input name="MonTableau[]" />
+<input name="MonAutreTableau[]" />
+<input name="MonAutreTableau[]" />
+]]>
+      </programlisting>
+      Celà produira deux tableaux de variables, MonTableau et MonAutreTableau, qui seront
+      envoyés au script &php;. Il est également possible d'assigner des clés spécifiques à votre
+      tableau :
+      <programlisting role="html">
+<![CDATA[
+<input name="UnAutreTableau[]" />
+<input name="UnAutreTableau[]" />
+<input name="UnAutreTableau[email]" />
+<input name="UnAutreTableau[telephone]" />
+]]>
+      </programlisting>
+      Le tableau UnAutreTableau contiendra les clés 0, 1, email et telephone.
+     </para>
+     <para>
+      <note>
+       <para>
+         Le fait de spécifier une clé à un tableau est optionnel en HTML. Si vous ne le faîtes pas,
+         les clés du tableaux suiveront l'ordre d'apparition des éléments dans le formulaire.
+         Dans notre premier exemple, le tableau contiend les clés 0, 1, 2 et 3.
+        </para>
+       </note>
+      </para>
+      <para>
+      Voir aussi les 
+      <link linkend="ref.array">fonctions sur les tableaux de variables</link> et la section sur les
+      <link linkend="language.variables.external">variables externes à &php;</link>.
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.html.select-multiple">
+    <question>
+     <para>
+      Comment puis-je récupérer le résultat d'un champs HTML <literal>SELECT</literal> multiple ?
+     </para>
+    </question>
+    <answer>
+     <para>
+      Le champ <literal>SELECT</literal> multiple en HTML permet à l'utilisateur de sélectionner 
+      plusieurs éléments d'une liste. Ces éléments seront transmis à la page pointée par l'attribut 
+      <literal>action</literal> de la balise <literal>form</literal>.
+      Le problème est que ces éléments sont tous passés avec le même nom de variable.
+      <programlisting role="html">
+<![CDATA[
+<select name="var" multiple="yes">
+]]>
+      </programlisting>
+      Chaque option sélectionnée arrivera au mécanisme de traitement sous la forme :
+      <programlisting>
+var=option1
+var=option2
+var=option3
+      </programlisting>
+      Chaque option effacera donc le contenu de la précédente variable 
+      <varname>$var</varname>. La solution consiste à utiliser un tableau de variables
+      dans cette élément de formulaire HTML, comme par exemple :
+      <programlisting role="html">
+<![CDATA[
+<select name="var[]" multiple="yes">
+]]>
+      </programlisting>
+      Celà fera que &php; traitera <varname>$var</varname> comme un tableau de variables
+      et que chaque assignement de valeur à var[] ajoutera un index au tableau.
+      La première option choisie sera mise dans <varname>$var[0]</varname>,
+      la suivante sera mise dans <varname>$var[1]</varname>, etc. La fonction
+      <function>count</function> peut être utilisée pour déterminer combien
+      d'options ont été sélectionnées, et la fonction <function>sort</function>
+      peut être utilisée pour trier le tableau, si nécessaire.
+     </para>
+     <para>
+      Notez que si vous utilisez Javascript, <literal>[]</literal> dans le nom de l'élément peut
+      vous poser problème lorsque vous tenterez d'accéder à celui-ci par son nom.
+      Utilisez plutôt l'indice numérique de l'élément dans ce cas, ou bien utilisez les simples 
+      guillements pour entourer cette élément, comme par exemple :
+      <programlisting>
+variable = documents.forms[0].elements['var[]'];
+      </programlisting>
+     </para>
+    </answer>
+   </qandaentry>
+
+   <qandaentry id="faq.html.javascript-variable">
+    <question>
+     <para>
+      Comment puis-je passer une variable de Javascript vers &php; ?
+     </para>
+    </question>
+    <answer>
+     <para>
+      Javascript est (habituellement) une technologie coté client et &php;
+      est (habituellement) une technologie coté serveur et sachant que HTTP est un 
+      protocole statique, les deux langages ne peuvent pas directement partager des
+      variables.
+     </para>
+     <para>
+      Cependant, il est possible de faire passer des variables entre les deux.
+      Une des solutions pour celà est de générer un code Javascript à l'aide de &php;
+      et de faire rafraîchir le navigateur tout seul, passant ansi des variables spécifiques
+      au script &php;. L'exemple suivant montre précisemment comme réaliser celà --
+      il permet à &php; de récupérer les dimensions de l'écran du client, ce qui est normalement
+      possible qu'en technologie coté client.
+     </para>
+     <para>
+      <programlisting role="php">
+<![CDATA[
+<?php
+if (isset($_GET['largeur']) AND isset($_GET['hauteur'])) {
+  // Affichage des variables
+  echo "La largeur de l'écran est : ". $_GET['largeur'] ."<br />\n";
+  echo "La hauteur de l'écran est : ". $_GET['hauteur'] ."<br />\n";
+} else {
+  // passage des variables de dimensions
+  // (préservation de la requête d'origine
+  //   -- les variables par méthode POST doivent être traitées différemment)
+
+  echo "<script type=\"text/javascript\">\n";
+  echo "  location.href=\"${_SERVER['SCRIPT_NAME']}?${_SERVER['QUERY_STRING']}"
+            . "&width=\" + screen.width + \"&height=\" + screen.height;\n";
+  echo "</script>\n";
+  exit();
+}
+?>
+]]>
+      </programlisting>
+     </para>
+    </answer>
+   </qandaentry>
+
+  </qandaset>
+ </chapter>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
