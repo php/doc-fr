@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.14 $ -->
+<!-- $Revision: 1.15 $ -->
  <chapter id="features.file-upload">
   <title>Gestion des chargements de fichier</title>
   <sect1 id="features.file-upload.post-method">
@@ -170,14 +170,22 @@ Envoyez ce fichier : <INPUT NAME="userfile" TYPE="file">
      <programlisting role="php">
 <![CDATA[
 <?php 
-// En PHP < 4.1.0, $HTTP_POST_FILES doit &ecirc;tre utilis&eacute; &agrave; la place de $_FILES.
-if (is_uploaded_file($_FILES['userfile']['tmp_name'])) {
-    copy($_FILES['userfile']['tmp_name'], "/place/to/put/uploaded/file");
+// En PHP < 4.1.0, $HTTP_POST_FILES doit &ecirc;tre utilis&eacute; 
+//    &agrave; la place de $_FILES.
+// En PHP plus ancien que 4.0.3, utilisez copy() et is_uploaded_file() 
+//    &agrave; la place de move_uploaded_file
+
+$uploaddir = '/var/www/uploads/';
+
+print "<pre>";
+if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploaddir . $_FILES['userfile']['name'])) {
+    print "Le fichier est valide, et a ŽtŽ tŽlŽchargŽ 
+           avec succs. Voici plus d'informations :\n";
+    print_r($_FILES);
 } else {
-    echo "Attaque par upload potentielle le fichier : " . $_FILES['userfile']['name'];
+    echo "Attaque par upload potentielle. Voici plus d'informations :\n";
+    print_r($_FILES);
 }
-/* ...ou bien... */
-move_uploaded_file($_FILES['userfile']['tmp_name'], "/place/to/put/uploaded/file");
 ?>
 ]]>
      </programlisting>
@@ -355,6 +363,41 @@ move_uploaded_file($_FILES['userfile']['tmp_name'], "/place/to/put/uploaded/file
   </sect1>
   <sect1 id="features.file-upload.put-method">
    <title>Chargement par m&eacute;thode PUT </title>
+   <simpara>
+    Le suppor de la mŽthode PUT a ŽtŽ modifiŽ entre PHP 3 et PHP 4.
+    En PHP 4, il faut utiliser le fl™t d'entrŽe standard pour recevoir
+    le contenu du fichier.
+   </simpara>
+   <para>
+    <example>
+     <title>Sauver un fichier par mŽthode PUT en PHP 4</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+/* Les donnŽes via la mŽthode PUT arrivent dans stdin */
+$putdata = fopen("php://stdin","r");
+
+/* Ouvre un fichier pour Žcriture */
+$fp = fopen("myputfile.ext","w");
+
+/* Lit les donnŽes par bloc de 1ko 
+   et les Žcrit dans le fichier */
+while ($data = fread($putdata,1024))
+  fwrite($fp,$data);
+
+/* Ferme les fl™ts */
+fclose($fp);
+fclose($putdata);
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+   <note>
+    <para>
+     Toute la documentation ci-dessous s'applique ˆ &php; 3 uniquement.
+    </para>
+   </note>
    <para>
      PHP supporte la m&eacute;thode HTTP PUT utilis&eacute;e par
      les navigateurs tels que Netscape Composer et W3C Amaya. Les
