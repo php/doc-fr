@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.15 $ -->
+<!-- $Revision: 1.16 $ -->
 <!-- EN-Revision: 1.13 Maintainer: dams Status: ready -->
 
 <appendix id="filters">
@@ -432,6 +432,118 @@ Le texte original est long de 3288 octets.
 Le fichier compressé fait 1488 octets de long.
 
  */
+?>
+]]>
+   </programlisting>
+  </example>
+ </section>
+ <section id="filters.encryption">
+  <title>Filtres de chiffrement</title>
+
+  <simpara>
+   <literal>mcrypt.*</literal> et <literal>mdecrypt.*</literal>
+   fournissent un système de chiffrement symétrique basé sur 
+   libmcrypt. Les deux filtres supportent les mêmes algorithmes
+   disponibles avec la bibliothèque <link linkend="ref.mcrypt">mcrypt</link>,
+   sous la forme de la directive <literal>mcrypt.ciphername</literal> 
+   où <parameter>ciphername</parameter> est le nom du chiffrement qui sera
+   passé à <function>mcrypt_module_open</function>. Les cinq paramètres
+   suivants sont aussi disponibles : 
+  </simpara>
+
+  <para>
+   <table>
+    <title>Paramètres du filtre mcrypt</title>
+    <tgroup cols="4">
+     <thead>
+      <row>
+       <entry>Paramètre</entry>
+       <entry>Obligatoire</entry>
+       <entry>Par défaut</entry>
+       <entry>Valeurs possibles</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>mode</entry>
+       <entry>Optionnel</entry>
+       <entry>cbc</entry>
+       <entry>cbc, cfb, ecb, nofb, ofb, stream</entry>
+      </row>
+      <row>
+       <entry>algorithms_dir</entry>
+       <entry>Optionnel</entry>
+       <entry>ini_get('mcrypt.algorithms_dir')</entry>
+       <entry>Chemin vers les algorithmes de modules</entry>
+      </row>
+      <row>
+       <entry>modes_dir</entry>
+       <entry>Optionnel</entry>
+       <entry>ini_get('mcrypt.modes_dir')</entry>
+       <entry>Chemin vers les modes de modules</entry>
+      </row>
+      <row>
+       <entry>iv</entry>
+       <entry>Obligatoire</entry>
+       <entry>N/A</entry>
+       <entry>Généralement 8, 16 ou 32 octets de données binaires. Dépend du chiffrement</entry>
+      </row>
+      <row>
+       <entry>key</entry>
+       <entry>Obligatoire</entry>
+       <entry>N/A</entry>
+       <entry>Généralement 8, 16 ou 32 octets de données binaires. Dépend du chiffrement</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+
+  <example>
+   <title>Chiffrement d'un fichier avec 3DES</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$passphrase = 'My secret';
+
+/* Transforme un mot de passe humain
+ * en une paire iv/clé
+ */
+$iv = substr(md5('iv'.$passphrase, true), 0, 8);
+$key = substr(md5('pass1'.$passphrase, true) . 
+               md5('pass2'.$passphrase, true), 0, 24);
+$opts = array('iv'=>$iv, 'key'=>$key);
+
+$fp = fopen('secert-file.enc', 'wb');
+stream_filter_append($fp, 'mcrypt.tripledes', STREAM_FILTER_WRITE, $opts);
+fwrite($fp, 'Secret secret secret data');
+fclose($fp);
+?>
+]]>
+   </programlisting>
+  </example>
+
+  <example>
+   <title>Lecture d'un fichier chiffré</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$passphrase = 'My secret';
+
+/* Transforme un mot de passe humain
+ * en une paire iv/clé
+ */
+$iv = substr(md5('iv'.$passphrase, true), 0, 8);
+$key = substr(md5('pass1'.$passphrase, true) . 
+               md5('pass2'.$passphrase, true), 0, 24);
+$opts = array('iv'=>$iv, 'key'=>$key);
+
+$fp = fopen('secert-file.enc', 'rb');
+stream_filter_append($fp, 'mdecrypt.tripledes', STREAM_FILTER_WRITE, $opts);
+$data = rtrim(stream_get_contents($fp));
+fclose($fp);
+
+echo $data;
 ?>
 ]]>
    </programlisting>
