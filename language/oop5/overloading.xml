@@ -1,12 +1,179 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.3 Maintainer: yannick Status: ready -->
  <sect1 id="language.oop5.overloading">
   <title>Surcharge</title>
+
   <para>
-   .
+   Les appels de méthode et l'accès aux membres peuvent être surchargés
+   via les méthodes __call, __get et __set. Ces méthodes peuvent uniquement
+   être déclenchées lorsque votre objet ou votre objet hérité ne contient pas
+   le membre ou la méthode dont vous tentez d'accéder.
   </para>
 
+  <sect2 id="language.oop5.overloading.members">
+   <title>Surcharge de membre</title>
+
+   <methodsynopsis>
+    <type>void</type><methodname>__set</methodname>
+    <methodparam><type>string</type><parameter>name</parameter></methodparam>
+    <methodparam><type>mixed</type><parameter>value</parameter></methodparam>
+   </methodsynopsis>
+   <methodsynopsis>
+    <type>void</type><methodname>__get</methodname>
+    <methodparam><type>mixed</type><parameter>name</parameter></methodparam>
+   </methodsynopsis>
+
+   <para>
+    Les membres d'une classe peuvent être surchargés pour exécuter du code fait sur commande
+    défini dans votre classe en définissant ces méthodes spécialement nommées.
+    Le paramètre <varname>$name</varname> utilisé est le nom de la variable
+    qui doit être définie ou recherchée.
+    Le paramètre <varname>$value</varname> de la méthode __set() spécifie
+    la valeur du paramètre <varname>$name</varname> que l'objet doit définir.
+   </para>
+
+   <example>
+    <title>Exemple de surcharge avec __get et __set</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Setter {
+  public $n;
+  private $x = array("a" => 1, "b" => 2, "c" => 3);
+
+  function __get($nm) {
+    print "Récupération de [$nm]\n";
+
+    if (isset($this->x[$nm])) {
+      $r = $this->x[$nm];
+      print "Retour : $r\n";
+      return $r;
+    } else {
+      print "Rien!\n";
+    }
+  }
+
+  function __set($nm, $val) {
+    print "Définition de [$nm] à $val\n";
+
+    if (isset($this->x[$nm])) {
+      $this->x[$nm] = $val;
+      print "OK!\n";
+    } else {
+      print "Pas OK!\n";
+    }
+  }
+}
+
+$foo = new Setter();
+$foo->n = 1;
+$foo->a = 100;
+$foo->a++;
+$foo->z++;
+var_dump($foo);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen role="php">
+<![CDATA[
+Définition de [a] à 100
+OK!
+Récupération de [a]
+Retour : 100
+Définition de [a] à 101
+OK!
+Récupération de [z]
+Rien!
+Définition de [z] à 1
+Pas OK!
+object(Setter)#1 (2) {
+  ["n"]=>
+  int(1)
+  ["x:private"]=>
+  array(3) {
+    ["a"]=>
+    int(101)
+    ["b"]=>
+    int(2)
+    ["c"]=>
+    int(3)
+  }
+}
+]]>
+    </screen>
+
+   </example>
+  </sect2>
+
+  <sect2 id="language.oop5.overloading.methods">
+   <title>Surcharge de méthode</title>
+
+   <methodsynopsis>
+    <type>mixed</type><methodname>__call</methodname>
+    <methodparam><type>string</type><parameter>name</parameter></methodparam>
+    <methodparam><type>array</type><parameter>arguments</parameter></methodparam>
+   </methodsynopsis>
+
+   <para>
+    Les méthodes d'une classe peuvent être surchargés pour exécuter du code fait sur 
+    commande défini dans votre classe en définissant ces méthodes spécialement nommées.
+    Le paramètre <varname>$name</varname> utilisé est le nom de la fonction
+    que l'on souhaite utiliser. Les arguments qui étaient passés à la fonction doivent
+    être définis en tant que tableau dans le paramètre <varname>$arguments</varname>.
+    La valeur retournée par la méthode __call() sera retournée à l'appeleur de la méthode.
+   </para>
+
+   <example>
+    <title>Exemple de surcharge avec __call</title>
+    <programlisting role="php">
+  <![CDATA[
+<?php
+class Caller {
+  private $x = array(1, 2, 3);
+
+  function __call($m, $a) {
+    print "Méthode $m appelée :\n";
+    var_dump($a);
+    return $this->x;
+  }
+}
+
+$foo = new Caller();
+$a = $foo->test(1, "2", 3.4, true);
+var_dump($a);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen role="php">
+<![CDATA[
+
+Méthode test appelée :
+array(4) {
+  [0]=>
+  int(1)
+  [1]=>
+  string(1) "2"
+  [2]=>
+  float(3.4)
+  [3]=>
+  bool(true)
+}
+array(3) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(2)
+  [2]=>
+  int(3)
+}
+]]>
+    </screen>
+   </example>
+
+  </sect2>
 
  </sect1>
  
