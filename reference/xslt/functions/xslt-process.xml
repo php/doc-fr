@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.8 $ -->
-<!-- EN-Revision: 1.11 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.9 $ -->
+<!-- EN-Revision: 1.14 Maintainer: yannick Status: ready -->
   <refentry id="function.xslt-process">
    <refnamediv>
     <refname>xslt_process</refname>
@@ -20,19 +20,17 @@
        <methodparam choice="opt"><type>array</type><parameter>parameters</parameter></methodparam>
      </methodsynopsis>
     <para>
-     <function>xslt_process</function> fait partie de la nouvelle
-     vague de fonctions <acronym>XSLT</acronym>. Elle vous permet de 
-     réaliser des transformations <acronym>XSLT</acronym> en 
-     utilisant n'importe quelle type de source : des conteneurs.
-     Cela se fait grâce à l'utilisation de buffers 
-     d'arguments : un concept issu de Sablotron (actuellement, 
-     c'est le seul processeur <acronym>XSLT</acronym> qui le
-     supporte). Les conteneurs sont par défaut des fichiers 
-     qui contiennent le document à traiter. Le conteneur 
-     de résultat est par défaut un fichier qui recevra 
-     le document traité. Si le conteneur de résultat 
-     n'est pas fourni (l'argument vaut alors &null;), le résultat 
-     sera retourné par la fonction.
+     <function>xslt_process</function> fait partie de la nouvelle vague de 
+     fonctions <acronym>XSLT</acronym>. Elle vous permet de réaliser des 
+     transformations <acronym>XSLT</acronym> en utilisant n'importe quelle
+     type de source : des conteneurs. Cela se fait grâce à l'utilisation de
+     buffers d'arguments : un concept issu de 
+     <productname>Sablotron</productname> (actuellement, c'est le seul 
+     processeur <acronym>XSLT</acronym> qui le supporte). Les conteneurs sont
+     par défaut des fichiers qui contiennent le document à traiter. Le 
+     conteneur de résultat est par défaut un fichier qui recevra le document 
+     traité. Si le conteneur de résultat n'est pas fourni (l'argument vaut 
+     alors &null;), le résultat sera retourné par la fonction.
     </para>
     <para>
      <warning>
@@ -192,12 +190,61 @@ xslt_free($xh);
      En d'autres termes, vous ne pouvez pas passer des groupes de noeuds 
      (<literal>node-sets</literal>) comme paramètre au document <acronym>XSLT</acronym>.
     </para>
-    <note>
-     <simpara>
-      Notez que <emphasis>file://</emphasis> est nécessaire au début des 
-      chemin si vous utilisez Windows.
-     </simpara>
-    </note>
+    <para>
+     <example>
+      <title>Passer des vaiables PHP à un fichier XSL</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+
+// XML string
+$xml = '<?xml version="1.0"?>
+<para>
+ change me
+</para>';
+
+// XSL string
+$xsl = '
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:output method="html" encoding="ISO-8859-1" indent="no" 
+ omit-xml-declaration="yes"  media-type="text/html"/>
+ <xsl:param name="myvar"/>
+ <xsl:param name="mynode"/>
+ <xsl:template match="/">
+Ma variable PHP : <xsl:value-of select="$myvar"/><br />
+Mon node set : <xsl:value-of select="$mynode"/>
+ </xsl:template>
+</xsl:stylesheet>';
+
+
+$xh = xslt_create();
+
+// le deuxième paramètre sera interprété comme une chaîne
+$parameters = array (
+  'myvar' => 'test',
+  'mynode' => '<foo>bar</foo>'
+);
+
+$arguments = array (
+  '/_xml' => $xml,
+  '/_xsl' => $xsl
+);
+
+echo xslt_process($xh, 'arg:/_xml', 'arg:/_xsl', NULL, $arguments, $parameters);
+
+?>
+]]>
+      </programlisting>
+      &example.outputs;
+      <screen>
+<![CDATA[
+Ma variable PHP : test<br>
+Mon node set : &lt;foo&gt;bar&lt;/foo&gt;
+]]>
+      </screen>
+     </example>
+    </para>
+    &note.xslt.windows;
    </refsect1>
   </refentry>
 
