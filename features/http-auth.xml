@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.23 $ -->
+<!-- $Revision: 1.24 $ -->
 <!-- EN-Revision: 1.40 Maintainer: dams Status: ready -->
  <chapter id="features.http-auth">
   <title>Identification HTTP avec &php;</title>
+  
   <simpara>
    Les fonctions d'identification <acronym>HTTP</acronym> de &php; ne sont disponibles
    que si &php; est exécuté comme module Apache, et non
@@ -15,8 +16,10 @@
    appelée, avec les variables <varname>PHP_AUTH_USER</varname>,
    <varname>PHP_AUTH_PW</varname> et  <varname>AUTH_TYPE</varname>
    contenant respectivement le nom d'utilisateur, le mot de passe et
-   le type d'identification. Actuellement, seule l'identification
-   simple ("Basic") est supportée. Reportez-vous à la fonction
+   le type d'identification. Ces variables prédéfinies sont trouvées dans les tableaux
+   <link linkend="reserved.variables.server">$_SERVER</link> et
+   <varname>$HTTP_SERVER_VARS</varname> arrays.
+   Actuellement, seule l'identification simple ("Basic") est supportée. Reportez-vous à la fonction
    <function>header</function> pour plus d'informations.
   </simpara>
 
@@ -24,8 +27,7 @@
    <title>Note sur les versions de &php;</title>
    <para>
     Les <link linkend="language.variables.superglobals">auto-globales</link>, 
-    telles que 
-    <link linkend="reserved.variables.server"><varname>$_SERVER</varname></link>, 
+    telles que <link linkend="reserved.variables.server">$_SERVER</link>, 
     ont été ajoutée en &php; à partir de la version 
     <ulink url="&url.php.release4.1.0;">4.1.0</ulink>. 
     <varname>$HTTP_SERVER_VARS</varname> est disponible depuis &php; 3.
@@ -35,6 +37,8 @@
   <para>
    Voici un exemple de script qui force l'identification du client
    pour accéder à une page :
+  </para>
+  <para>
    <example>
     <title>Exemple d'identification HTTP</title>
     <programlisting role="php">
@@ -74,6 +78,7 @@ if (!isset($_SERVER['PHP_AUTH_USER'])) {
    Par exemple, en envoyant ces informations à une base de données,
    ou en recherchant dans un fichier dbm.
   </para>
+  
   <para>
    Méfiez-vous des navigateurs bogués, tels que Internet Explorer.
    Ils semblent très susceptibles concernant l'ordre des en-têtes.
@@ -81,6 +86,7 @@ if (!isset($_SERVER['PHP_AUTH_USER'])) {
    avant le code de <literal>HTTP/1.0 401</literal> semble lui convenir
    jusqu'à présent.
   </para>
+  
   <simpara>
    Pour éviter que quelqu'un écrive un script qui
    révèle les mots de passe d'une page, à la
@@ -91,6 +97,7 @@ if (!isset($_SERVER['PHP_AUTH_USER'])) {
    utilisée pour identifier l'utilisateur à l'extérieur.
    De même que <varname>$_SERVER['REMOTE_USER']</varname>.
   </simpara>
+  
   <note>
    <title>Note de configuration</title>
    <para>
@@ -115,13 +122,13 @@ if (!isset($_SERVER['PHP_AUTH_USER'])) {
    et son mot de passe. Certains programmeurs l'utilisent pour donner un
    délai d'expiration, ou alors, fournissent un bouton de déconnexion.
   </simpara>
-  <example>
-   <title>Identification HTTP avec nom d'utilisateur/mot de passe forcé</title>
-   <programlisting role="php">
+  <para>
+   <example>
+    <title>Identification HTTP avec nom d'utilisateur/mot de passe forcé</title>
+    <programlisting role="php">
 <![CDATA[
 <?php
-function authenticate()
-{
+function authenticate() {
     header('WWW-Authenticate: Basic realm="Test Authentication System"');
     header('HTTP/1.0 401 Unauthorized');
     echo "Vous devez entrer un identifiant et un mot de passe valide pour accéder
@@ -143,8 +150,9 @@ if ( !isset($_SERVER['PHP_AUTH_USER']) ||
 }
 ?>
 ]]>
-   </programlisting>
-  </example>
+    </programlisting>
+   </example>
+  </para>
   <simpara>
    Ce comportement n'est pas nécessaire par le standard
    d'identification <literal>HTTP Basic</literal>. Les tests avec 
@@ -157,13 +165,34 @@ if ( !isset($_SERVER['PHP_AUTH_USER']) ||
    <literal>'_'</literal> pour détruire les anciennes identifications.
   </simpara>
   <simpara>
-   Notez aussi que tout ceci ne fonctionne pas sous Microsoft IIS et que les
-   limitations de &php; en version CGI sont dues aux limitations de IIS.
+   Notez également que avant &php; 4.3.3, l'identification HTTP ne fonctionne
+   pas sous le serveur Mircosoft IIS avec la version CGI de &php; dû à une
+   limitation de IIS. Pour que celà fonctionne en &php; 4.3.3+, vous devez éditer
+   votre configuration de IIS "<literal>Directory Security</literal>". Cliquez
+   sur "<literal>Edit</literal>" et activez uniquement 
+   "<literal>Anonymous Access</literal>", tous les autres champs doivent
+   être laissés non actifs.
+  </simpara>
+  <simpara>
+   Une autre limitation si vous utilisez le module IIS (ISAPI), vous ne devez 
+   pas utiliser les variables <literal>PHP_AUTH_*</literal> mais à la place,
+   la variable <literal>HTTP_AUTHORIZATION</literal> est disponible. Par exemple,
+   utilisez le code suivant : <literal>list($user, $pw) = explode(':',  
+   base64_decode(substr($_SERVER['HTTP_AUTHORIZATION'], 6)));</literal>
   </simpara>
   <note>
+   <title>Note pour les utilisateurs de IIS :</title>
+   <simpara>
+    Pour que l'identification HTTP fonctionne avec IIS, la directive &php; 
+    <link linkend="ini.cgi.rfc2616-headers">cgi.rfc2616_headers</link> 
+    doit être définie à &zero; (la valeur par défaut).
+   </simpara>
+  </note>
+  <note>
    <para>
-    Si le &safemode; est activé, l'uid du script es ajouté automatiquement
-    dans l'en-tête <literal>realm</literal>, comme faisant partie de l'en-tête
+    Si le <link linkend="ini.safe-mode">safe mode</link> est activé, le 
+    <literal>uid</literal> de ce script est ajouté à la partie 
+    <literal>realm</literal> des en-têtes 
     <literal>WWW-Authenticate</literal>.
    </para>
   </note>
