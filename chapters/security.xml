@@ -281,25 +281,26 @@ AddHandler php3-script .php3
     <sect1 id="security.filesystem">
    <title>S&eacute;curit&eacute; des fichiers</title>
    <simpara>
-    PHP respecte la s&eacute;curit&eacute; interne de la plus part des serveurs,
-    notamment gr&acirc;ce aux permissions des fichiers et dossiers. Cela
-    vous permet de contr&ocirc;ler l'acc&egrave;s aux fichiers. Tous les fichiers
-    qui sont accessibles &agrave; tous doivent &ecirc;tre surveill&eacute;s de pr&egrave;s, pour 
-    s'assurer qu'ils ne posent aucun probl&egrave;me s'ils sont acc&eacute;d&eacute; par 
-    n'importe qui.
+     PHP est soumis aux r&egrave;gles de s&eacute;curit&eacute; intrins&egrave;ques de la plus part
+     des syst&egrave;mes serveurs : il respecte notamment les droits des fichiers,
+     et des dossiers. Une attention particuli&egrave;re doit &ecirc;tre port&eacute;e aux
+     fichiers qui sont accessible &agrave; tout le monde, afin de s'assurer qu'il
+     ne divulguent pas d'informations critiques.
    </simpara>
    <simpara>
-    Puisque PHP a &eacute;t&eacute; fait pour permettre aux utilisateurs d'acc&eacute;der aux
-    fichiers, il est possible de cr&eacute;er un script qui vous permet de
-    lire des fichiers tels que /etc/password. Cela a des implications
-    &eacute;videntes, qui sont que vous devez vous assurer que les fichiers
+    Puisque PHP a &eacute;t&eacute; fait pour permettre aux utilisateurs
+    d'acc&eacute;der aux fichiers, il est possible de cr&eacute;er un 
+    script qui vous permet de lire des fichiers tels que /etc/password,
+    de modifier les connexions ethernet, lancer des impressions de documents,
+    etc... Cela implique notamment que vous devez vous assurer que les fichiers
     acc&eacute;d&eacute;s par les scripts sont bien ceux qu'il faut.
    </simpara>
    <simpara>
-    Consid&eacute;rez le script suivant, o&ugrave; l'utilisateur indique qu'il souhaite
-    effacer un fichier dans son dossier racine. Nous supposons que PHP est
-    utilis&eacute; comme interface web pour g&eacute;rer les fichiers, et que l'utilisateur
-    Apache est autoris&eacute; &agrave; effacer les fichiers dans le dossier racine des
+    Consid&eacute;rez le script suivant, o&ugrave; l'utilisateur indique 
+    qu'il souhaite effacer un fichier dans son dossier racine. Nous 
+    supposons que PHP est utilis&eacute; comme interface web pour 
+    g&eacute;rer les fichiers, et que l'utilisateur Apache est 
+    autoris&eacute; &agrave; effacer les fichiers dans le dossier racine des
     utilisateurs.
    </simpara>
    <para>
@@ -336,7 +337,8 @@ echo "/home/../etc/passwd" has been deleted!";
 ?>
      </programlisting>
     </example>   
-    Il y a deux mesures &agrave; prendre pour &eacute;viter ces manoeuvres : 
+    Il y a deux mesures primordiales &agrave; prendre pour &eacute;viter 
+    ces manoeuvres : 
     <itemizedlist>
      <listitem>
       <simpara>
@@ -371,7 +373,28 @@ fclose($fp);
 echo "$file_to_delete a &eacute;t&eacute; &eacute;ffac&eacute;!";
 ?>
      </programlisting>
-    </example>      
+    </example>
+    Vous pouvez vous prot&eacute;ger avec une v&eacute;rification telle que : 
+    <example>
+     <title>V&eacute;rfication de noms de fichier s&eacute;curis&eacute;e</title>
+     <programlisting role="php">
+&lt;?php
+$username = $HTTP_REMOTE_USER;
+$homedir = "/home/$username";
+
+if (!ereg('^[^./][^/]*$', $userfile))
+    die('Erreur de nom de fichier'); //meurt, ne pas traiter!
+    
+//etc...
+?>
+     </programlisting>
+    </example> 
+    Suivant votre syst&egrave;me d'exploitation, vous devrez prot&eacute;ger
+    un grand nombre de fichiers, notamment les entr&eacute;es de p&eacute;riph&eacute;riques,
+    (/dev/ ou COM1), les fichiers de configuration (fichiers /etc/ et .ini),
+    les lieux de stockages d'informations (/home/, My Documents), etc. 
+    Pour cette raison, il est g&eacute;n&eacute;ralement plus s&ucirc;r d'&eacute;tablir une 
+    politique qui interdit TOUT sauf ce que vous autorisez.
    </para>   
   </sect1>
 
@@ -484,22 +507,38 @@ exec ($evil_var);
     avec ces recommandations en t&ecirc;tes, vous garantirez pas la s&eacute;curit&eacute;
     de votre syst&egrave;me, mais vous contribuerez &agrave; l'am&eacute;liorer.
    </para>
+   <para>
+    Vous pouvez aussi envisager de supprimer l'acquisition automatique des
+    variables d'environnement, les guillemets magiques (magic_quotes),
+    ou encore toute option qui pourrait vous conduire &agrave; m&eacute;s&eacute;valuer la
+    validit&eacute;, la source ou la valeur d'une variable. En travaillant avec 
+    error_reporting(E_ALL), vous pouvez &ecirc;tre averti que certaines variables
+    sont utilis&eacute;es avant d'&ecirc;tre exploit&eacute;es, ou v&eacute;rifi&eacute;es (et donc, vous pourrez
+    traiter des valeurs exotiques &agrave; la source).
+   </para>
   </sect1>
 
   <sect1 id="security.general">
    <title>Consid&eacute;rations g&eacute;n&eacute;rales</title>
    <simpara>
-    Un syst&egrave;me compl&egrave;tement s&eacute;curis&eacute; est virtuellement impossible. De
-    ce fait, une approche qui &eacute;quilibre les risques et l'ergonomie est
-    souvent choisie. Si toutes les variables envoy&eacute;es par l'utilisateur
-    n&eacute;cessitait deux formes d'identification biom&eacute;trique (comme par 
-    exemple un scanner de la r&eacute;tine, et une empreinte digitale), vous
-    pourriez avoir un niveau de s&eacute;curit&eacute; &eacute;lev&eacute;. Cela prendrai aussi
-    une demi-heure pour remplir les conditions de s&eacute;curit&eacute;, ce qui
-    pousserai les utilisateurs &agrave; &eacute;viter d'utiliser votre syst&egrave;me. 
-    La meilleure s&eacute;curit&eacute; est celle qui prot&egrave;ge votre syst&egrave;me, sans
-    emp&ecirc;cher les utilisateurs de faire leur travail. En g&eacute;n&eacute;ral, les
-    attaques exploitent les s&eacute;curit&eacute;s trop complexes.
+    Un syst&egrave;me compl&egrave;tement s&eacute;curis&eacute; est
+    virtuellement impossible. De ce fait, une approche qui 
+    &eacute;quilibre les risques et l'ergonomie est souvent retenue. 
+    Si toutes les variables envoy&eacute;es par l'utilisateur 
+    n&eacute;cessitaient deux formes d'identification biom&eacute;triques 
+    (comme par exemple un scanner de la r&eacute;tine, et une 
+    empreinte digitale), vous pourriez avoir un niveau de 
+    s&eacute;curit&eacute; &eacute;lev&eacute;. Cela prendrai aussi
+    une demi-heure pour remplir les conditions de s&eacute;curit&eacute;,
+    ce qui pousserait les utilisateurs &agrave; &eacute;viter d'utiliser
+    votre syst&egrave;me. 
+   </simpara>
+   <simpara>    
+    La meilleure s&eacute;curit&eacute; est celle qui prot&egrave;ge
+    votre syst&egrave;me, sans emp&ecirc;cher les utilisateurs de faire
+    leur travail. En g&eacute;n&eacute;ral, les attaques exploitent
+    des trous de s&eacute;curit&eacute; entre diverses couches d'identification : cet
+    empilement devient trop complexe, et finalement, peu fiable.
    </simpara>
    <simpara>
     Une phrase qui vaut la peine d'&ecirc;tre retenue : un syst&egrave;me est
@@ -507,17 +546,20 @@ exec ($evil_var);
     transactions sont exhaustivement not&eacute; (heure, lieu, type, etc...)
     mais que l'utilisateur n'est authentifi&eacute; que par un cookie,
     la validit&eacute; de votre syst&egrave;me de surveillance est intimement
-    li&eacute; &agrave; la validit&eacute; du cookie (et donc, s&eacute;v&egrave;rement r&eacute;duite).
+    li&eacute; &agrave; la validit&eacute; du cookie (et donc, 
+    s&eacute;v&egrave;rement r&eacute;duite).
    </simpara>
    <simpara>
     Lors de vos tests, gardez &agrave; l'esprit que vous ne pourrez pas
     tester toutes les configurations, mais probablement les plus
-    simples. Les donn&eacute;es en entr&eacute;es auxquelles vous pouvez vous attendre
-    ne seront rien compar&eacute;es aux donn&eacute;es incoh&eacute;rentes qu'un employ&eacute;
-    n&eacute;gligent, un hacker disposant d'autant de temps qu'il veut, ou
-    du chat de la main marchant sur le clavier. Il est donc bon de
-    regarder le code logiquement, de voir d'o&ugrave; des donn&eacute;es incoh&eacute;rentes
-    peuvent &ecirc;tre introduites, modifi&eacute;es, r&eacute;duites ou amplifi&eacute;es. 
+    simples. Les donn&eacute;es en entr&eacute;es auxquelles vous pouvez vous 
+    attendre ne seront rien compar&eacute;es aux donn&eacute;es 
+    incoh&eacute;rentes qu'un employ&eacute; n&eacute;gligent, un
+    hacker disposant d'autant de temps qu'il veut, ou du chat de la 
+    maison marchant sur le clavier. Il est donc bon de regarder le 
+    code logiquement, de voir d'o&ugrave; des donn&eacute;es incoh&eacute;rentes
+    peuvent &ecirc;tre introduites, modifi&eacute;es, r&eacute;duites ou 
+    amplifi&eacute;es. 
    </simpara>
    <simpara>
     L'Internet est rempli de personnes qui tentent de se faire une renomm&eacute;e
@@ -525,9 +567,10 @@ exec ($evil_var);
     inappropri&eacute;s, qui rendent vos journ&eacute;es si inhabituelles. 
     Peut importe que vous ayez un grand portail ou un petit web, vous pouvez
     &ecirc;tre la cible pour tout quidam avec une connexion. Vous &ecirc;tes une
-    cible potentielle d&egrave;s que vous &ecirc;tes connect&eacute; vous m&ecirc;me. Certains programmes
-    de piratage ne font pas dans la demi mesure, et teste syst&eacute;matiquement
-    des millions d'IP, &agrave; la recherche de victimes : ne soyez pas la prochaine.
+    cible potentielle d&egrave;s que vous &ecirc;tes connect&eacute; vous m&ecirc;me.
+    Certains programmes de piratage ne font pas dans la demi-mesure, et
+    teste syst&eacute;matiquement des millions d'IP, &agrave; la recherche
+    de victimes : ne soyez pas la prochaine.
    </simpara>
   </sect1>
     
