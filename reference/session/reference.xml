@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.15 $ -->
-<!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
+<!-- $Revision: 1.16 $ -->
+<!-- EN-Revision: 1.44 Maintainer: yannick Status: ready -->
  <reference id="ref.session">
    <title>Sessions</title>
   <titleabbrev>Sessions</titleabbrev>
@@ -10,15 +10,10 @@
    <section id="session.intro">
     &reftitle.intro;
    <para>
-    Le support des sessions de PHP est un moyen de préserver
+    Le support des sessions de &php; est un moyen de préserver
     des données entre plusieurs accès. Cela vous permet de
     créer des applications personnalisées, et d'augmenter 
     l'attractivité de votre site.
-   </para>
-   <para>
-    Si vous êtes familier avec la gestion de session de la 
-    librairie PHPLIB, vous remarquerez que certains concepts
-    sont similaires.
    </para>
    <para>
     Chaque visiteur accédant à votre page web se voit assigné un
@@ -29,13 +24,22 @@
     Le support des sessions vous permet d'enregistrer un
     nombre illimité de variables qui doivent être préservées
     entre les requêtes. Lorsqu'un visiteur accède à votre site,
-    PHP va vérifier automatiquement (si session.auto_start est
-    activé1)  ou sur demande (explicitement avec 
+    &php; va vérifier automatiquement (si <link 
+     linkend="ini.session.auto-start">session.auto_start</link> est
+    activé)  ou sur demande (explicitement avec 
     <function>session_start</function> ou  implicitement avec 
     <function>session_register</function>) si il existe une
     session du même nom. Si c'est le cas, l'environnement
     précédemment sauvé sera recréé.
    </para>
+     <caution>
+      <para>
+       Si vous activé <link linkend="ini.session.auto-start">
+       session.auto_start</link>, alors vous ne pourrez pas enregistrer
+       d'objets dans votre session tant que la définition de la classe
+       ne sera pas chargée avant le début de la session, pour recréer les objets de votre session.
+      </para>
+     </caution>
    <para>
     Toutes les variables sont sérialisées après l'exécution du
     script PHP. Les variables qui sont indéfinies sont marquées
@@ -45,6 +49,16 @@
     <note>
      <para>
       La gestion des sessions a été ajoutée en PHP 4.0.
+     </para>
+    </note>
+    <note>
+     <para>
+      Notez que lorsque vous travaillez avec les sessions, un enregistrement
+      dans la session ne sera pas créé tant que la variable ne sera pas enregistré
+      en utilisant la fonction <function>session_register</function> ou en ajoutant
+      une clé à la variable super-globale <varname>$_SESSION</varname>.
+      Celà n'est vrai que si vous avez débuté une session en appelant la fonction
+      <function>session_start</function>.
      </para>
     </note>
    </section>
@@ -69,6 +83,9 @@
      gravité de ce problème? Ou bien, il peut accèder aux commandes
      d'un client, et même, modifier son panier d'achat. A priori, c'est
      moins problématique pour un fleuriste que pour un pharmacien.
+     Si vous voulez résoudre ce souci de façon simple, il peut être utile
+     d'activer <literal>session.use_only_cookies</literal>. Dans ce cas, 
+     les cookies devront être activés par le client, sinon, les sessions ne fonctionneront pas.
     </para>
     <para>
      Par conséquent, lorsque vous manipulez des données importantes,
@@ -84,13 +101,27 @@
      aussi de la discipline de l'utilisateur qui referme son navigateur
      à la fin de la session pour tout clore proprement.
      De plus, même les cookies de session peuvent être
-     surveillés sur un réseau, ou bien notés par un proxy.
+     surveillés sur un réseau, ou bien notés par un proxy car ils transitent en clairsurle réseau.
+     Pour rémédier à celà, vous devriez implémenter un chiffrage SSL sur votre plateforme.
     </para>
    </section>
 
    <section id="session.requirements">
     &reftitle.required;
     &no.requirement;
+    <note>
+     <para>
+      Optionnellement, vous pouvez utiliser l'allocation de mémoire partagée (mm),
+      développé par Ralf S.Engelschall, pour stocker votre session.
+      Vous devez télécharger <ulink url="&url.mm;">mm</ulink> et l'installer.
+      Cette option n'est pas disponible pour les environnements Windows.
+      Notez que le module de sotckage de session mm ne garantie pas
+      les verrous de session en cas d'accès multiple à la même session.
+      Il peut être moins approprié d'utiliser un système de fichiers basé sur la mémoire partagée
+      (comme par exemple tmpfs sur Solaris/Linux ou /dev/md sur BSD) pour stocker les
+      sessions dans des fichiers, car ils ne seront pas proprement verrouillés.
+     </para>
+    </note>
    </section>
 
    &reference.session.configure;
@@ -118,7 +149,9 @@
       avec <varname>$_SESSION</varname>. Notez que cette documentation
       a été modifiée pour utiliser <varname>$_SESSION</varname>. 
       Vous pouvez toujours le remplacer par <varname>$HTTP_SESSION_VARS</varname> 
-      si vous préférez l'ancienne version.
+      si vous préférez l'ancienne version. Notez également vous devez démarrer votre session
+      en utilisant la fonction <function>session_start</function> avant d'utiliser
+      la variable super-globale <varname>$_SESSION</varname>.
      </para>
      <para>
       Les clés du tableau <varname>$_SESSION</varname> sont sujettes
@@ -147,7 +180,7 @@
      sont accessibles comme toute autre variable.
      <example>
       <title>
-       Enregistrer une variable avec $_SESSION.
+       Enregistrer une variable avec <varname>$_SESSION</varname>.
       </title>
       <programlisting role="php">
 <![CDATA[
@@ -165,7 +198,8 @@ if (!isset($_SESSION['compteur'])) {
      </example>
      <example>
       <title>
-       Retirer une variable de session avec $_SESSION et register_globals inactif.
+       Retirer une variable de session avec <varname>$_SESSION</varname> et <link
+       linkend="ini.register-globals">register_globals</link> inactif.
       </title>
       <programlisting role="php">
 <![CDATA[
@@ -177,10 +211,24 @@ unset($_SESSION['compteur']);
 ]]>
       </programlisting>
      </example>
+     </para>
+    <para>
+     <caution>
+      <para>
+       N'utilisez PAS la fonction <function>unset</function> 
+       avec <varname>$_SESSION</varname> sous la forme 
+       <literal>unset($_SESSION)</literal> sinon, celà rendra impossible d'enregistrement
+       de données dans la session en utilisant la super-globale 
+       <varname>$_SESSION</varname>.
+      </para>
+     </caution>
+    </para>
+     <para>
      <example>
       <title>
-       Retirer une variable de session avec $_SESSION et register_globals activé,
-       après l'avoir enregistré avec $_SESSION.
+       Retirer une variable de session avec <varname>$_SESSION</varname> et <link 
+       linkend="ini.register-globals">register_globals</link> activé,
+       après l'avoir enregistré avec <varname>$_SESSION</varname>.
       </title>
       <programlisting role="php">
 <![CDATA[
@@ -223,22 +271,20 @@ session_unregister('compteur');
      </caution>
      <example>
       <title>
- Enregistrer une variable avec 
-      <link linkend="ini.register-globals"><literal>register_globals</literal></link>
+      Enregistrer une variable avec 
+      <link linkend="ini.register-globals">register_globals</link>
       activé
       </title>
       <programlisting role="php">
 <![CDATA[
 <?php
-if (!session_is_registered('compteur')) {
-    session_register("compteur");
-    $compteur = 0;
-}
-else {
-    $compteur++;
+if (! isset($_SESSION['compteur'])) {
+    $_SESSION['compteur'] = 1;
+} else {
+    $_SESSION['compteur']++;
 }
 ?>
-]]>
+]]>      
       </programlisting>
      </example>
     </para>
@@ -255,11 +301,11 @@ else {
      <function>session_register</function>, l'entrée dans l'environnement
      globale et <varname>$_SESSION</varname> ne fera pas de référence vers la 
      même valeur jusqu'à la prochaine utilisation de 
-     <function>session_start</function> (ceci s'applique à PHP 4.2 est
+     <function>session_start</function> (ceci s'applique à &php; 4.2 est
      avant seulement). C'est à dire qu'une modification dans les variables
      globales ne seront pas répercutés dans les entrées de <varname>$_SESSION</varname>.
      Il est peu probable que cela ait un impact en pratique, et de plus,
-     cela a été corrigé en PHP 4.3.
+     cela a été corrigé en &php; 4.3.
     </para>
    </section>
     
@@ -287,7 +333,7 @@ else {
     méthode place l'identifiant de session directement dans les URL.
    </para>
    <para>
-    PHP est capable de faire cela de manière transparente, lorsqu'il est compilé
+    &php; est capable de faire cela de manière transparente, lorsqu'il est compilé
     avec l'option <link linkend="install.configure.enable-trans-sid">
     <literal>--enable-trans-sid</literal></link>. Si vous activez
     cette option, les URL relatives seront modifiées pour contenir
@@ -298,11 +344,19 @@ else {
     <literal>session_name=session_id</literal> ou une chaîne vide.
     <note>
      <para>
-     L'option <link linkend="misc.configuration">arg_separator.output</link>
-     de &php.ini; vous permet de personnaliser le séparateur d'arguments.
+     L'option <link linkend="ini.arg-separator.output">arg_separator.output</link>
+     de &php.ini; vous permet de personnaliser le séparateur d'arguments. 
+     Pour être complètement en accord avec les spécifications XHTML, spécifiez 
+     &amp;amp; ici.
      </para>
     </note> 
    </para>
+    <para>
+     Alternativement, vous pouvez utiliser la constante <literal>SID</literal> qui est toujours
+     définie. Si le client n'envoie pas un cookie de session approprié, il aura la forme
+     <literal>session_name=session_id</literal>.
+     Sinon, il vaudra une chaîne vide. Ainsi, vous pouvez dans tous les cas l'inclure dans l'URL.
+    </para>
    <para>
     L'exemple suivant vous montre comment enregistrer une variable et comment
     réaliser un lien correct avec une autre page, avec <constant>SID</constant>.
@@ -314,30 +368,31 @@ else {
 if (!session_is_registered('compteur')) {
     session_register('compteur');
     $compteur = 1;
-}
-else {
+} else {
     $compteur++;
 }
 ?>
 
-Bonjour visiteur, vous avez vu cette page <?php echo $compteur; ?> fois.<p>;
+<p>
+Bonjour visiteur, vous avez vu cette page <?php echo $compteur; ?> fois.
+</p>
 
-Pour continuer, <A HREF="nextpage.php?<?php echo SID?>">cliquez ici</A>.
+<p>
+Pour continuer, <a href="nextpage.php?<?php echo strip_tags(SID); ?>">cliquez ici</a>.
+</p>
 ]]>
       </programlisting>
      </example>
     </para>
     <para>
-     <literal>&lt;?php echo SID?&gt;</literal>
-     (ou bien <literal>&lt;?=SID?&gt;</literal> peut être utilisé si les
-     <link linkend="ini.short-open-tag">short_open_tag</link> sont actifs) est 
-     nécessaire pour préserver l'identifiant de session dans le cas où
-     l'utilisateur a désactivé les cookies.
-     <literal>&lt;? echo SID?&gt;</literal> n'est pas nécessaire, si
-     <link linkend="install.configure.enable-trans-sid">
-     <literal>--enable-trans-sid</literal></link> a été 
-     activé à la compilation de PHP.
-   </para>
+     La fonction <function>strip_tags</function> est utilisé lors de l'affichage du SID
+     dans le but de contrer les attaques XSS.
+    </para>
+    <para>
+     L'affichage du SID, comme montré dans l'exemple ci-dessus, n'est pas nécessaire
+     si <link linkend="install.configure.enable-trans-sid">
+     --enable-trans-sid</link> a été utilisé pour compiler &php;.
+    </para>
     <note>
      <para>
      Les URLS non relatives sont considérées comme externes au site, et ne
