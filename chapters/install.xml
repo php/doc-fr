@@ -1,7 +1,7 @@
  <chapter id="installation">
   <title>Installation</title>
 
-  <sect1 id="downloading">
+  <sect1 id="install.downloading">
    <title>T&eacute;l&eacute;charger la derni&egrave;re version</title>
    <simpara>
 	Le code source ainsi que des binaires pour certaines plates-formes 
@@ -38,13 +38,62 @@
     </itemizedlist>
    </para>
    
-   <sect2>
+     <para>
+    Il y a plusieurs fa&ccedil;ons de compiler et configurer PHP pour une
+    plate-forme UNIX. Le processus de compilation est contr™ler enti&egrave;rement
+    par les options de ligne de commande du script <filename>configure</filename>
+    Cette documentation souligne les options les plus fr&eacute;quentes, mais il 
+    en existe un grand nombre. Jetez un oeil &agrave; <link
+    linkend="install.configure"> la liste compl&egrave;te des 
+    option </link> pour une documentation exhaustive.
+    <itemizedlist>
+     <listitem>
+      <simpara>
+       <link linkend="install.unix.apache-module">Module Apache</link>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <link linkend="install.unix.fhttpd">module fhttpd</link>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       Pour l'utiliser avec <link
+       linkend="install.unix.otherhttpd">AOLServer, NSAPI,
+       phttpd, Pi3Web, Roxen, thttpd, ou Zeus.</link>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       Sous forme d'<link linkend="install.unix.commandline">&eacute;xecutable CGI </link>
+      </simpara>
+     </listitem>
+    </itemizedlist>
+   </para>
+   
+   <sect2 id="install.unix.apache-module">
     <title>
      Installation rapide (Version Module Apache)
     </title>
 
     <para>
-     <informalexample>
+     PHP peut &ecirc;tre compil&eacute; de nombreuses mani&egrave;res diff&eacute;rentes pour en
+     faire un module Apache. Voyons d'abord les instructions rapides,
+     puis une liste d'exemples divers, avec les explications. Comme cela
+     nous aurons survol&eacute; l'ensemble de l'installation.
+    </para>
+    
+    <para>
+     Vous pouvez selectionner les arguments &agrave; ajouter &agrave; la commande
+     <command>configure</command> (ligne 8, ci dessous) parmi la liste <link
+     linkend="install.configure"> compl&egrave;te des options de configuration.</link>.
+    </para>
+
+<example id="install.unix.apache-module.quick">
+     <title>
+      Instructions d'installation rapide (Version Module Apache)
+     </title>
       <programlisting>
 1.  gunzip apache_1.3.x.tar.gz
 2.  tar xvf apache_1.3.x.tar
@@ -72,7 +121,7 @@ httpd. Assurez-vous d'avoir bien arr&ecirc;t&eacute; le d&eacute;mon d'abord.
 	il faut utiliser l'option de configuration --with-config-file-path=/path 
 	&agrave; l'&eacute;tape 8.
 
-17. Editez le fichier de configuration apache httpd.conf or srm.conf et ajoutez : 
+17. Editez le fichier de configuration apache httpd.conf ou srm.conf et ajoutez : 
             
       AddType application/x-httpd-php3 .php3
  
@@ -83,59 +132,83 @@ Ici, il faut choisir l'extension que vous souhaitez donner au fichier php.
     devez imp&eacute;rativement arr&ecirc;ter et red&eacute;marrer le serveur Apache, et pas 
     seulement le relancer &agrave; l'aide d'un signal HUP ou USR1).
       </programlisting>
-     </informalexample>
-    </para>
+     </example>
 
-   </sect2>
- 
-   <sect2>
-    <title>Configuration</title>
+     <para>
+      <informalexample>
+       <programlisting>
+./configure --with-apxs --with-pgsql
+       </programlisting>
+      </informalexample>
+     </para>
+     <para>
+      Cette option va cr&eacute;er un fichier <filename>libphp4.so</filename>, qui est
+      une librairie partag&eacute;e, charg&eacute;e par Apache gr&acirc;ce &agrave; la ligne
+      LoadModule dans le fichier de configuration d'Apache 
+      <filename>httpd.conf</filename>. Le suport de la base de donn&eacute;es PostgreSQL
+      est compris dans la librairie <filename>libphp4.so</filename>.
+     </para>
+     <para>
+      <informalexample>
+       <programlisting>
+./configure --with-apxs --with-pgsql=shared
+       </programlisting>
+      </informalexample>
+     </para>
+     <para>
+      Cette option va cr&eacute;er un fichier <filename>libphp4.so</filename> qui est
+      une librairie partag&eacute;e Apache, mais elle va aussi cr&eacute;er une librairie
+      partag&eacute;e <filename>pgsql.so</filename> qui sera charg&eacute;e par PHP
+      soit avec les directives de chargement du fichier de 
+      configuration <filename>php.ini</filename> ou avec la fonction de
+      chargement <function>dl</function>.
+     </para>
+     <para>
+      <informalexample>
+       <programlisting>
+./configure --with-apache=/path/to/apache_source --with-pgsql
+       </programlisting>
+      </informalexample>
+     </para>
+     <para>
+      Cette option va cr&eacute;er la librairie <filename>libmodphp4.a</filename>, le
+      fichier <filename>mod_php4.c</filename> et quelques autres fichiers 
+      utilitaires, puis copier tout cela dans le dossier 
+      <literal>src/modules/php4</literal> du dossier source Apache.
+      Lorsque vous compilez Apache avec l'option
+      <literal>--activate-module=src/modules/php4/libphp4.a</literal>,
+      le compilateur d'Apache cr&eacute;era le fichier <filename>libphp4.a</filename> 
+      et le liera statiquement avec <filename>httpd</filename>.
+      Le support PostgreSQL est inclus directement dnas l'ex&eacute;cutable
+      <filename>httpd</filename>, ce qui fait que le r&eacute;sultat est un
+      fichier ex&eacute;cutable unique <filename>httpd</filename>, qui combine
+      Apache et tout PHP.
+     </para>
+     <para>
+      <informalexample>
+       <programlisting>
+./configure --with-apache=/path/to/apache_source --with-pgsql=shared
+       </programlisting>
+      </informalexample>
+     </para>
+     <para>
+      M&ecirc;me chose que le pr&eacute;c&eacute;dent, mais au lieu d'inclure le support de
+      PostgreSQL directement dans le <filename>httpd</filename> final, 
+      vous obtiendrez une librairie partag&eacute;e <filename>pgsql.so</filename>
+      que vous pourrez charger dans PHP, gr&acirc;ce au fichier
+      de configuration <filename>php.ini</filename> ou la fonction
+      <function>dl</function>.
+     </para>
+     <para>
+      Lors du choix de compilation de PHP, prenez bien en consid&eacute;ration 
+      les avantages et les inconv&eacute;nients de chaque m&eacute;thode. Compiler PHP comme
+      une librairie partag&eacute;e vous permet de compiler s&eacute;par&eacute;ment Apache et 
+      toutes les extensions PHP. Compiler PHP statiquement vous donne une plus
+      grande vitesse d'ex&eacute;cution. Pour plus de d&eacute;tails reportez vous &agrave; 
+      la documentation Apache 
+      <ulink url="&url.apachedso;">support DSO</ulink> (en anglais).
+     </para>
 
-    <para>
-     Il y a deux moyens de configurer PHP.
-     <itemizedlist>
-      <listitem>
-       <para>
-	Utilisation du script "setup" qui est fourni avec la distribution PHP. 
-	Ce script vous pose une s&eacute;rie de questions (comme le script d'installation 
-	de PHP/FI 2.0) et lance le script "configure" &agrave; la fin. 
-	Afin de lancer le script, tapez <command>./setup</command>.
-       </para>
-       <para>
-	Ce script va aussi cr&eacute;er un fichier appel&eacute; "do-conf", qui contient les options 
-	de configuration. Vous pouvez &eacute;diter ce fichier afin de modifier certaines
-	options sans avoir &agrave; r&eacute;ex&eacute;cuter la totalit&eacute; du script "setup". 
-	Dans ce cas l&agrave;, tapez <command>./do-conf</command> afin de lancer le script 
-	"configure" avec les nouvelles options.
-       </para>
-      </listitem>
-      <listitem>
-       <para>
-	Lancez le script "configure" manuellement. Pour voir toutes les options de 
-	configuration disponibles, tapez <command>./configure --help</command>.
-       </para>
-      </listitem>
-     </itemizedlist>
-    </para>
-    <para>
-    	Tous les d&eacute;tails &agrave; propos des diff&eacute;rentes options de configuration 
-	sont regroup&eacute;s ici:
-    </para>
-   </sect2>
-
-   <sect2 id="with-apache">
-    <title>Module Apache</title>
-
-    <para>
-	Pour compiler PHP comme un module Apache, r&eacute;pondre "yes" &agrave; la question 
-	"Build as an Apache module ?" (cela correspond &agrave; l'option de configuration 
-	<option><link linkend="with-apache">--with-apache</link>=<replaceable>DIR</replaceable></option>) 
-	et sp&eacute;cifie la racine de la distribution Apache. Si vous avez 
-	d&eacute;compress&eacute; Apache dans le r&eacute;pertoire 
-	<filename class="directory">/usr/local/www/apache_1.2.4</filename>, 
-	c'est la racine de la distribution Apache. Le r&eacute;pertoire par d&eacute;faut est : 
-	<filename class="directory">/usr/local/etc/httpd</filename>.
-    </para>
    </sect2>
 
    <sect2 id="with-fhttpd">
@@ -153,8 +226,18 @@ Ici, il faut choisir l'extension que vous souhaitez donner au fichier php.
 	distance.
     </para>
    </sect2>
+
+   <sect2 id="install.unix.otherhttpd">
+    <title>Autres serveurs web</title>
+    <para>
+     PHP peut &ecirc;tre compiler pour fonctionner avec de nombreux autres
+     serveurs web. Reportez vous &agrave; 
+     <link linkend="install.configure.servers">Options particuli&egrave;res
+     aux serveurs web</link> pour une liste compl&egrave;te des options de configuration.
+    </para>
+   </sect2>
      
-   <sect2 id="install-cgi">
+   <sect2 id="install.unix.commandline">
     <title><filename
      class="directory">/usr/local/src/fhttpd</filename></title>
     <para>
@@ -166,657 +249,2381 @@ Ici, il faut choisir l'extension que vous souhaitez donner au fichier php.
 	cette solution.
     </para>
    </sect2>
-
+   
    <sect2>
-    <title>Configuration pour le support des bases de donn&eacute;es</title>
-    <para>
-     PHP supporte de nombreuses bases de donn&eacute;es (et aussi ODBC):
-    </para>
-
-    <sect3 id="with-adabas">
-     <title>Adabas D</title>
-     <synopsis>
-      <option>--with-adabas<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Configure PHP pour le support des bases de donn&eacute;es Adabas D. 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de la base de donn&eacute;es 
-	et par d&eacute;faut <filename class="directory">/usr/local/adabasd</filename>.
-     </simpara>
-     <simpara>
-      <ulink url="http://www.adabas.com/">Adabas home page</ulink>
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-dbase">
-     <title>dBase</title>
-     <synopsis>
-      <option>--with-dbase</option>
-     </synopsis>
-     <simpara>
-	Configure PHP pour le support des bases de donn&eacute;es dbase. Aucune librairie n'est n&eacute;cessaire.
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-filepro">
-     <title>filePro</title>
-     <synopsis>
-      <option>--with-filepro</option>
-     </synopsis>
-     <simpara>
-	Configure PHP pour le support des bases de donn&eacute;es filePro. 
-	Aucune librairie suppl&eacute;mentaire n'est n&eacute;cessaire.
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-msql">
-     <title>mSQL</title>
-     <synopsis>
-      <option>--with-msql<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Compile PHP pour le support des bases de donn&eacute;es mSQL. Le param&egrave;tre est 
-	le r&eacute;pertoire d'installation de la base de donn&eacute;es et par d&eacute;faut c'est
-	<filename class="directory">/usr/local/Hughes</filename>, c'est &agrave; dire,  
-	le r&eacute;pertoire par d&eacute;faut o&uacute; est install&eacute; mSQL 2.0. 
-	<command>configure</command> d&eacute;tecte automatiquement quelle version de mSQL 
-	est install&eacute;e. PHP supporte aussi bien la version 1.0 que la version 2.0, 
-	mais si vous compilez PHP avec mSQL 1.0, vous pourrez ne acc&eacute;der qu'&agrave; mSQL 1.0, 
-	et vice-versa.
-     </simpara>
-     <simpara>
-	Voir aussi <link linkend="ini.sect.msql">configuration de mSQL</link> 
-	au chapitre <link linkend="configuration.file">fichier de configuration</link>.
-     </simpara>
-     <simpara>
-      <ulink url="http://www.hughes.com.au">mSQL home page</ulink>
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-mysql">
-     <title>MySQL</title>
-     <synopsis>
-      <option>--with-mysql<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Compile PHP pour le support des bases de donn&eacute;es MySQL. 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de la base de donn&eacute;es 
-	et par d&eacute;faut 
-	<filename class="directory">/usr/local</filename>. 
-	C'est le r&eacute;pertoire par d&eacute;faut o&uacute; est install&eacute; MySQL.
-     </simpara>
-     <simpara>
-	Voir aussi <link linkend="ini.sect.mysql">configuration de MySQL</link>
-	au chapitre <link linkend="configuration.file">fichier de configuration</link>.
-     </simpara>
-     <simpara>
-      <ulink url="http://www.tcx.se">Home page MySQL</ulink>
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-iodbc">
-     <title>iODBC</title>
-     <synopsis>
-      <option>--with-iodbc<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Compile PHP pour le support des bases de donn&eacute;es iODBC. 
-	Cette fonction a &eacute;t&eacute; d&eacute;velopp&eacute;e au d&eacute;part pour supporter "iODBC Driver Manager", 
-	un pilote ODBC qui fonctionne sous la plupart des versions d'UNIX. 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de la base de donn&eacute;es et 
-	par d&eacute;faut : <filename class="directory">/usr/local</filename>.
-     </simpara>
-     <simpara>
-      <ulink url="http://users.ids.net/~bjepson/freeODBC/">Home page FreeODBC</ulink>
-      ou <ulink url="http://www.iodbc.org">home page iODBC</ulink>
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-openlink">
-     <title>OpenLink ODBC</title>
-     <synopsis>
-      <option>--with-openlink<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Compile PHP pour le support des bases de donn&eacute;es OpenLink ODBC. 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de la base de donn&eacute;es 
-	et par d&eacute;faut <filename class="directory">/usr/local/openlink</filename>.
-     </simpara>
-     <simpara>
-      <ulink url="http://www.openlinksw.com/">Home page OpenLink Software</ulink>
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-oracle">
-     <title>Oracle</title>
-     <synopsis>
-      <option>--with-oracle<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Compile PHP pour le support des bases de donn&eacute;es Oracle. 
-	Cette option fonctionne avec les versions 7.0 &agrave; 7.3 d'Oracle. 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de la base de donn&eacute;es et 
-	par d&eacute;faut : <envar>ORACLE_HOME</envar>.
-	Vous n'avez pas &agrave; sp&eacute;cifier ce param&egrave;tre si votre base de donn&eacute;es Oracle 
-	est d&eacute;j&agrave; install&eacute;e.
-     </simpara>
-     <simpara>
-      <ulink url="http://www.oracle.com">Home page Oracle</ulink>
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-pgsql">
-     <title>PostgreSQL</title>
-     <synopsis>
-      <option>--with-pgsql<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Compile PHP pour le support des bases de donn&eacute;es PostgreSQL. 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de la base de donn&eacute;es 
-	PostgreSQL et par d&eacute;faut<filename class="directory">/usr/local/pgsql</filename>.
-     </simpara>
-     <simpara>
-      Voir aussi <link linkend="ini.sect.pgsql">Configuration Postgres</link> 
-      dans le fichier <link linkend="configuration.file">de configuration</link>.
-     </simpara>
-     <simpara>
-      <ulink url="http://www.postgreSQL.org/">Home page PostgreSQL</ulink>
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-solid">
-     <title>Solid</title>
-     <synopsis>
-      <option>--with-solid<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Compile PHP pour le support des bases de donn&eacute;es Solid. 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de la base de donn&eacute;es et par 
-	d&eacute;faut <filename class="directory">/usr/local/solid</filename>.
-     </simpara>
-     <simpara>
-      <ulink url="http://www.solidtech.com">Home page Solid</ulink>
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-sybase">
-     <title>Sybase</title>
-     <synopsis>
-      <option>--with-sybase<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Compile PHP pour le support des bases de donn&eacute;es Sybase. 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de la base de donn&eacute;es et 
-	par d&eacute;faut <filename class="directory">/home/sybase</filename>.
-     </simpara>
-     <simpara>
-     Voir aussi <link linkend="ini.sect.sybase">Configuration de Sybase</link> 
-     dans le fichier <link linkend="configuration.file">de configuration</link>.
-     </simpara>
-     <simpara>
-      <ulink url="http://www.sybase.com">Home page Sybase</ulink>
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-sybase-ct">
-     <title>Sybase-CT</title>
-     <synopsis>
-      <option>--with-sybase-ct<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Compile PHP pour le support des bases de donn&eacute;s Sybase-CT. 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de la base de donn&eacute;es Sybase-CT 
-	et par d&eacute;faut <filename class="directory">/home/sybase</filename>.
-     </simpara>
-     <simpara>
-      Voir aussi <link linkend="ini.sect.sybct">configuration de Sybase-CT</link> 
-      dans le <link linkend="configuration.file">fichier de configuration</link>.
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-velocis">
-     <title>Velocis</title>
-     <synopsis>
-      <option>--with-velocis<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Compile PHP pour le support des bases de donn&eacute;es Velocis. 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de la base de donn&eacute;es Velocis 
-	et par d&eacute;faut <filename class="directory">/usr/local/velocis</filename>.
-     </simpara>
-     <simpara>
-      <ulink url="http://www.raima.com">Home page Velocis</ulink>
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-custom-odbc">
-     <title>A custom ODBC library</title>
-     <synopsis>
-      <option>--with-custom-odbc<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Compile PHP pour le support d'une autre libraire ODBC. 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de la base de donn&eacute;es et 
-	par d&eacute;faut <filename class="directory">/usr/local</filename>.
-     </simpara>
-     <simpara>
-	Cette option implique que vous ayez d&eacute;fini la variable CUSTOM_ODBC_LIBS avant 
-	de lancer le script de configuration. Vous devez aussi avoir un fichier 
-	odbc.h quelque part dans votre r&eacute;pertoire d'installation. 
-	Si vous n'en avez pas, cr&eacute;ez en un et incluez le dans vos fichiers d'entete. 
-	Vos ent&ecirc;tes demanderons s&ucirc;rement des d&eacute;finitions suppl&eacute;mentaires, 
-	notamment en cas de base de donn&eacute;es multiplateforme. D&eacute;finissez les dans 
-	la variable CFLAGS.
-     </simpara>
-     <simpara>
-	Par exemple, vous pouvez utiliser Sybase SQL n'import o&uacute; sous QNX en 
-	d&eacute;finissant la variable CFLAGS comme suit: 
-      <literal>
-       CFLAGS=-DODBC_QNX LDFLAGS=-lunix CUSTOM_ODBC_LIBS="-ldblib
-       -lodbc" ./configure --with-custom-odbc=/usr/lib/sqlany50
-      </literal>
-     </simpara>
-    </sect3>
-
-    <sect3 id="disable-unified-odbc">
-     <title>ODBC unifi&eacute;</title>
-     <synopsis>
-      <option>--disable-unified-odbc</option>
-     </synopsis>
-     <simpara>
-	D&eacute;sactive le module ODBC unifi&eacute;, qui est une interface commune &agrave; toutes les 
-	bases de donn&eacute;es dot&eacute;es d'une interface ODBC tel que Solid et Adabas D. Cette
-	interface fonctionne aussi avec les librairies classiques ODBC. Elle a &eacute;t&eacute; test&eacute; 
-	avec iODBC, Solid, Adabas D et Sybase SQL, sur tous les types d'OS. Cela 
-	implique qu'un et un seul des modules o&uacute; le module Velocis est utilis&eacute; 
-	ou bien une librairie personnelle ODBC. Cette option n'est valide que si 
-	une des options suivantes est utilis&eacute;e: 
-      <link
-      linkend="with-iodbc">--with-iodbc</link>, <link
-      linkend="with-solid">--with-solid</link>, <link
-      linkend="with-adabas">--with-adabas</link>, <link
-      linkend="with-velocis">--with-velocis</link>, or <link
-      linkend="with-adabas">--with-custom-odbc</link>.
-     </simpara>
-     <simpara>
-      Voir aussi <link linkend="ini.sect.uodbc">configuration d'ODBC Unifi&eacute;</link> 
-      dans le <link linkend="configuration.file">fichier de configuration</link>.
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-ldap">
-     <title>LDAP</title>
-     <synopsis>
-      <option>--with-ldap<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Ajoute le support <acronym>LDAP</acronym>(Lightweight Directory Access Protocol). 
-	Le param&egrave;tre est le r&eacute;pertoire d'installation de LDAP et 
-	par d&eacute;faut <filename class="directory">/usr/local/ldap</filename>.
-     </simpara>
-     <simpara>
-	Plus d'informations &agrave; propos de LDAP sont disponibles dans les 
-	<ulink url="ftp://ftp.isi.edu/in-notes/rfc1777.txt">RFC1777</ulink> et
-        <ulink url="ftp://ftp.isi.edu/in-notes/rfc1778.txt">RFC1778</ulink>.
-     </simpara>
-    </sect3>
-
-   </sect2>
-
-   <sect2>
-    <title>Autres options de configuration</title>
-
-    <sect3 id="with-mcrypt">
-     <title>--with-mcrypt<replaceable>=DIR</replaceable></title>
-     <synopsis>
-      <option>--with-mcrypt</option>
-     </synopsis>
-     <simpara>
- 	Ajoute le support de la librairie mcrypt. Consultez la documentation concernant 
-	<link linkend="ref.mcrypt">mcrypt documentation</link> pour plus d'informations. 
-	Si vous utilisez le param&egrave;tre optionnel, <replaceable>DIR</replaceable>, PHP 
-	cherchera le fichier mcrypt.h dans le r&eacute;pertoire 
-	<replaceable>DIR</replaceable>/include.
-     </simpara>
-    </sect3>
-     
-    <sect3 id="enable-sysvsem">
-     <title>--enable-sysvsem</title>
-     <synopsis>
-      <option>--enable-sysvsem</option>
-     </synopsis>
-     <simpara>
-	Ajoute le support des s&eacute;maphores Sys V (support&eacute;s par la plupart des versions 
-	d'UNIX). Consultez la documentation concernant 
-	<link linkend="ref.sem">s&eacute;maphores et m&eacute;moire partag&eacute;e</link> pour plus 
-	d'informations.
-     </simpara>
-    </sect3>
-    
-    <sect3 id="enable-sysvshm">
-     <title>--enable-sysvshm</title>
-     <synopsis>
-      <option>--enable-sysvshm</option>
-     </synopsis>
-     <simpara>
-	Ajoute le support des s&eacute;maphores Sys V (support&eacute;s par la plupart des versions d'UNIX) Consulter la documentation concernant <link linkend="ref.sem">S&eacute;maphores et m&eacute;moire partag&eacute;e</link> pour plus d'information.
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-xml">
-     <title>--with-xml</title>
-     <synopsis>
-      <option>--with-xml</option>
-     </synopsis>
-     <simpara>
-	Ajoute le support du XML en utilisant la librairie 
-	<ulink url="&url.expat;">expat</ulink>de James Clark. Voir aussi les 
-	r&eacute;f&eacute;rences aux <link linkend="ref.xml">fonctions XML</link> pour plus de 
-	renseignements.
-     </simpara>
-    </sect3>
-
-    <sect3 id="enable-maintainer-mode">
-     <title>--enable-maintainer-mode</title>
-     <synopsis>
-      <option>--enable-maintainer-mode</option>
-     </synopsis>
-     <simpara>
-	Ajoute des d&eacute;pendences suppl&eacute;mentaires ainsi que des options de compilation 
-	utilis&eacute;es par certains d&eacute;veloppeurs du language PHP.
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-system-regex">
-     <title>--with-system-regex</title>
-     <synopsis>
-      <option>--with-system-regex</option>
-     </synopsis>
-     <simpara>
-	Cette option permet d'utiliser les expressions r&eacute;guli&egrave;res du syst&egrave;me en lieu et 
-	place de celles fournies avec le language. Si vous compilez PHP comme module 
-	serveur, vous devez utilisez la m&ecirc;me librairie lorsque vous compilez PHP et 
-	lorsque vous le linkez au serveur. Vous pouvez ajouter cette option si la 
-	librairie syst&egrave;me ajoute des fonctionnalit&eacute;s suppl&eacute;mentaires dont vous avez 
-	besoin. Dans le cas contraire, il est recommand&eacute; d'utiliser la librairie 
-	fournie avec le language.
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-config-file-path">
-     <title>--with-config-file-path</title>
-     <synopsis>
-      <option>--with-config-file-path=DIR</option>
-     </synopsis>
-     <simpara>
-      Le chemin utilis&eacute; pour rechercher le <link linkend="configuration.file">fichier 
-      de configuration</link> lorsque PHP est lanc&eacute;.
-     </simpara>
-    </sect3>
-
-    <sect3 id="with-exec-dir">
-     <title>--with-exec-dir</title>
-     <synopsis>
-      <option>--with-exec-dir<replaceable>=DIR</replaceable></option>
-     </synopsis>
-     <simpara>
-	Permet l'ex&eacute;cution des programmes qui se trouvent dans le r&eacute;pertoire 
-	DIR lorsque l'option "safe mode" est activ&eacute;e. Par d&eacute;faut, 
-	DIR =<filename class="directory">/usr/local/bin</filename>.
-	Cette option ne permet pas de modifier la valeur par d&eacute;faut. 
-	Cette valeur peut &ecirc;tre modifi&eacute;e avec la directive 
-	<link linkend="ini.safe-mode-exec-dir">safe_mode_exec_dir</link> 
-	dans le <link linkend="configuration.file">fichier de configuration</link>.
-     </simpara>
-    </sect3>
-
-    <sect3 id="enable-debug">
-     <title>--enable-debug</title>
-     <synopsis>
-      <option>--enable-debug</option>
-     </synopsis>
-     <simpara>
-	Ajoute la possibilit&eacute; d'obtenir des informations compl&eacute;mentaires. Il est alors 
-	possible d'obtenir plus d'informations, notamment lorsqu'il y a des probl&egrave;mes 
-	avec PHP. (Il est &agrave; noter que cela n'a rien &agrave; voir avec des facilit&eacute;s de 
-	d&eacute;buggage ou des informations &agrave; propos des scripts PHP.)
-     </simpara>
-    </sect3>
-
-    <sect3 id="enable-safe-mode">
-     <title>--enable-safe-mode</title>
-     <synopsis>
-      <option>--enable-safe-mode</option>
-     </synopsis>
-     <simpara>
-	Active le "safe mode" par d&eacute;faut. Cela impose de nombreuses restrictions sur 
-	les fonctionnalit&eacute;s du PHP, concernant notamment l'ouverture des fichiers. 
-	Consultez le chapitre sur la <link linkend="security">s&eacute;curit&eacute;</link> 
-	pour avoir plus de renseignements. 
-	Si vous compilez PHP comme CGI, vous devriez toujours activer le "safe mode". 
-	Cela active l'option par d&eacute;faut. Ce mode peut &ecirc;tre activ&eacute; ou d&eacute;sactiv&eacute; en 
-	utilisant la directive <link linkend="ini.safe-mode">safe_mode</link> dans le 
-	<link linkend="configuration.file">fichier de configuration</link>.
-     </simpara>
-    </sect3>
-
-    <sect3 id="enable-track-vars">
-     <title>--enable-track-vars</title>
-     <synopsis>
-      <option>--enable-track-vars</option>
-     </synopsis>
-     <simpara>
-	Permet au PHP de stocker dans les tableaux HTTP_GET_VARS, HTTP_POST_VARS et
-	HTTP_COOKIE_VARS les informations recues par les m&eacute;thodes GET/POST ou bien en 
-	provenance d'un cookie. Cela active l'option par d&eacute;faut. 
-	Cette option peut &ecirc;tre activ&eacute;e ou d&eacute;sactiv&eacute;e grâce &agrave; la directive 
-	<link linkend="ini.track-vars">track_vars</link> dans le 
-	<link linkend="configuration.file">fichier de configuration</link>.
-     </simpara>
-    </sect3>
-
-    <sect3 id="enable-magic-quotes">
-     <title>--enable-magic-quotes</title>
-     <synopsis>
-      <option>--enable-magic-quotes</option>
-     </synopsis>
-     <simpara>
-	Active l'option "magic quotes" par d&eacute;faut. 
-	Cette option peut &ecirc;tre activ&eacute;e ou d&eacute;sactiv&eacute;e grâce &agrave; la directive 
-	<link linkend="ini.magic-quotes-runtime">magic_quotes_runtime</link> 
-	dans le <link linkend="configuration.file">fichier de configuration</link>.
-	Voir aussi les directives 
-	<link linkend="ini.magic-quotes-gpc">magic_quotes_gpc</link> et 
-	<link linkend="ini.magic-quotes-sybase">magic_quotes_sybase</link>.
-     </simpara>
-    </sect3>
-
-    <sect3 id="enable-debugger">
-     <title>--enable-debugger</title>
-     <synopsis>
-      <option>--enable-debugger</option>
-     </synopsis>
-     <simpara>
-	Permet d'utiliser le d&eacute;buggeur interne du PHP. Cette fonctionnalit&eacute; est 
-	encore au stade exp&eacute;rimental. Voir aussi la directive 
-	<link linkend="ini.sect.debugger">Debugger Configuration</link>
-	dans le <link linkend="configuration.file">fichier de configuration</link>.
-     </simpara>
-    </sect3>
-
-    <sect3 id="enable-discard-path">
-     <title>--enable-discard-path</title>
-     <synopsis>
-      <option>--enable-discard-path</option>
-     </synopsis>
-     <simpara>
-	Si cette option est activ&eacute;e, l'ex&eacute;cutable PHP (dans le cas d'une compilation 
-	comme CGI) peut &ecirc;tre plac&eacute;e en toute s&ucirc;ret&eacute; &agrave; l'ext&eacute;rieur de l'arborescence 
-	du serveur web. Les utilisateurs ne pourront pas aller au del&agrave; des r&egrave;gles de 
-	s&eacute;curit&eacute; impos&eacute;e par le fichier ".htaccess". 
-	Voir aussi le chapitre concernant la 
-	<link linkend="security.cgi.shell">s&eacute;curit&eacute;</link> &agrave; propos de cette option.
-     </simpara>
-    </sect3>
-
-    <sect3 id="enable-bcmath">
-     <title>--enable-bcmath</title>
-     <synopsis>
-      <option>--enable-bcmath</option>
-     </synopsis>
-     <simpara>
-	Ajoute les fonctions math&eacute;matiques de pr&eacute;cision arbitraire <command>bc</command>.
-	Voir aussi l'option 
-	<link linkend="ini.sect.bcmath">bcmath.scale </link> dans le 
-	<link linkend="configuration.file">fichier de configuration</link>.
-     </simpara>
-    </sect3>
-
-    <sect3 id="enable-force-cgi-redirect">
-     <title>--enable-force-cgi-redirect</title>
-     <synopsis>
-      <option>--enable-force-cgi-redirect</option>
-     </synopsis>
-     <simpara>
-	Active une option de s&eacute;curit&eacute; concernant la redirection interne du serveur 
-	web. Si vous utilisez Apache comme CGI, vous devriez utiliser cette option.
-     </simpara>
-     <simpara>
-	Lorsque vous utilisez PHP comme CGI, PHP v&eacute;rifie toujours par d&eacute;faut 
-	qu'il est utilis&eacute; par redirection. (par exemple, sous Apache, en 
-	utilisant les directives "Action Directives"). Cela assure que l'&eacute;x&eacute;cutable
-	PHP ne peut pas &ecirc;tre utilis&eacute; pour passer par dessus les proc&eacute;dures 
-	d'authentification du serveur web en appelant une proc&eacute;dure directement. 
-	Par exemple, <filename role="url">http://my.host/cgi-bin/php/secret/doc.html</filename>.
-	
-	Dans cette exemple, on acc&egrave;de &agrave; la page 
-	<filename role="url">http://my.host/secret/doc.html</filename>
- 	mais cela n'utilise aucune r&egrave;gle de s&eacute;curit&eacute; pour le r&eacute;pertoire 
-	<filename role="dir">/secret</filename>.
-     </simpara>
-     <simpara>
-	Ne pas activer cette option revient &agrave; annuler la v&eacute;rification et 
-	permet &eacute;ventuellement de passer par dessus les proc&eacute;dures d'authentification 
-	et de s&eacute;curit&eacute; du d&eacute;mon httpd. D&eacute;sactivez cette option uniquement 
-	si votre serveur n'est pas capable d'indiquer si une redirection s&eacute;curis&eacute;e 
-	a &eacute;t&eacute; effectu&eacute;e et si tous les fichiers sur votre serveur et dans les 
-	r&eacute;pertoires utilisateurs peuvent &ecirc;tre accessibles de l'ext&eacute;rieur par tout le 
-	monde.
-     </simpara>
-     <simpara>
-	Consultez le chapitre concernant la <link linkend="security.cgi.force-redirect">s&eacute;curit&eacute;</link>
-	&agrave; propos de cette option.
-     </simpara>
-    </sect3>
-
-    <sect3 id="disable-short-tags">
-     <title>--disable-short-tags</title>
-     <synopsis>
-      <option>--disable-short-tags</option>
-     </synopsis>
-     <simpara>
-	D&eacute;sactive la version courte <literal>&lt;? ?&gt;</literal>des balises PHP. 
-	Vous devez d&eacute;sactiver la version courte des balises si vous souhaitez utiliser 
-	le PHP avec XML. Si vous d&eacute;sactivez la version courte des balises, les seules 
-	balises PHP accept&eacute;es sont <literal>&lt;?php ?&gt;</literal>. 
-	Cette option &eacute;tablit la valeur par d&eacute;faut. Elle peut &ecirc;tre activ&eacute;e ou 
-	d&eacute;sactiv&eacute;e avec la directive <link linkend="ini.short-open-tag">short_open_tag</link>
-	dans le <link linkend="configuration.file">fichier de configuration</link>.
-     </simpara>
-    </sect3>
-
-    <sect3 id="enable-url-includes">
-     <title>--enable-url-includes</title>
-     <synopsis>
-      <option>--enable-url-includes</option>
-     </synopsis>
-     <simpara>
-	Ajoute la possibilit&eacute; d'ex&eacute;cuter du code PHP &agrave; partir d'un autre serveur 
-	HTTP ou FTP directement grâce &agrave; la fonction <function>include</function>.
-	Voir aussi l'option <link linkend="ini.include-path">include_path</link> 
-	dans le <link linkend="configuration.file">fichier de configuration</link>.
-     </simpara>
-    </sect3>
-
-    <sect3 id="disable-syntax-hl">
-     <title>--disable-syntax-hl</title>
-     <synopsis>
-      <option>--disable-syntax-hl</option>
-     </synopsis>
-     <simpara>
-      Annule la surbrillance de la syntaxe.
-     </simpara>
-    </sect3>
-
-    <sect3>
-     <title>CPPFLAGS et LDFLAGS</title>
-     <para>
-	Pour que, lors de la compilation et de l'installation, PHP cherche les 
-	diff&eacute;rents fichiers ou librairies dans des r&eacute;pertoires pr&eacute;cis, vous devez 
-	modifier les variables d'environnement <envar>CPPFLAGS</envar> et
-      <envar>LDFLAGS</envar> . Si vous utilisez un shell "sensible" (non-s&eacute;curis&eacute;?),
-	 vous pouvez aussi ex&eacute;cuter la commande suivante : 
-	<command>
-       	LDFLAGS=-L/my/lib/dir CPPFLAGS=-I/my/include/dir ./configure
-        </command>
-     </para>
-    </sect3>
-  </sect2>
-
-  <sect2>
     <title>Compilation</title>
     <simpara>
-	Lorsque vous avez ex&eacute;cut&eacute; le script de configuration, vous &ecirc;tes pr&ecirc;t pour 
-	compiler le PHP comme module ou bien comme CGI. La commande 
-	<command>make</command> devrait s'occuper de la compilation. Si cela ne 
-	fonctionne pas correctement, vous trouverez dans le paragraphe probl&egrave;mes 
-	de nombreuses r&eacute;ponses aux <link linkend="install-problems">probl&egrave;mes courants</link> 
-	de compilation.
+     Lorsque PHP est configur&eacute;, vous &ecirc;tes pr&ecirc;ts &agrave; compiler un ex&eacute;cutable
+     CGI, ou une librairie HP. La commande <command>make</command> devrait
+     faire le travail. Si ce n'est pas le cas, et que vous comprenez pas pourquoi,
+     allez &agrave; <link linkend="install-problems">la section des probl&egrave;mes</link>.
     </simpara>
    </sect2>
 
    <sect2>
-    <title>Testing</title>
+    <title>Tests</title>
     <simpara>
-	Si vous avez compil&eacute; PHP comme CGI, vous pouvez v&eacute;rifier que votre 
-	compilation c'est bien d&eacute;roul&eacute;e en tapant la commande 
-	<command>make test</command>.
- 	C'est toujours une bonne id&eacute;e pour v&eacute;rifier que la compilation s'est 
-	bien d&eacute;roul&eacute;e. Dans ce sens, vous serez capable de d&eacute;tecter une erreur &agrave; la 
-	source au lieu de chercher des erreurs le probl&egrave;mes plus tard.
+     Si vous avez compil&eacute; PHP comme programme CGI, vous pouvez tester 
+     votre produit en tapant : <command>make test</command>.  C'est toujours
+     une bonne chose de tester le r&eacute;sultat d'une compilation. 
+     Cela vous permet de rep&eacute;rer des probl&egrave;mes entre PHP et votre
+     plate-forme, bien plus facilement que si vous attendez.
     </simpara>
    </sect2>
 
    <sect2>
-    <title>Etalonnage</title>
+    <title>Performances</title>
     <simpara>
-	Si vous avez compil&eacute; PHP comme CGI, vous pouvez utiliser le script de 
-	benchmark en tapant la commande <command>make bench</command>. Il est &agrave; noter 
-	que si le "safe mode" est activ&eacute;, le bench ne pourra pas se finir si 
-	l'ex&eacute;cution prend plus que les 30 secondes permises. 
-	Cela tient au fait que la fonction  <function>set_time_limit</function> 
-	ne peut pas &ecirc;tre utilis&eacute; lorsque le "safe mode" est activ&eacute;. Utilisez la 
-	directive <link linkend="ini.max-execution-time">max_execution_time</link> 
-	pour contr&ocirc;ler le temps d'ex&eacute;cution dans vos scripts. 
-	<command>make bench</command> ne tient pas compte du 
-	<link linkend="configuration.file">fichier de configuration</link>.
+     Si vous avez compil&eacute; PHP comme programme CGI, vous pouvez &eacute;valuer
+     les performances de PHP avec la commande <command>make bench</command>.
+     Notez que si le "safe mode" est activ&eacute; (par d&eacute;faut), vous ne risquer de
+     voir l'&eacute;valuation s'arr&ecirc;ter une fois les 30 secondes r&eacute;glementaires
+     &eacute;coul&eacute;es. En effet, la fonction <function>set_time_limit</function> 
+     ne peut pas &ecirc;tre utilis&eacute; si le "safe mode" fonctionne. Utilisez l'option
+     <link linkend="ini.max-execution-time">max_execution_time</link>
+     pour contr™ler le temps d'&eacute;x&eacute;cutions de vos scripts. 
+     <command>make bench</command> ignore le fichier de <link
+      linkend="configuration.file">configuration file</link>.
     </simpara>
    </sect2>
 
   </sect1>
 
+  <sect1 id="install.configure">
+   <title>Liste compl&egrave;te des options de configuration</title>
+
+   <note>
+    <para>
+     Ces options ne sont utilis&eacute;es que lors de la compilation. Si vous voulez
+     modifier le comportement de PHP au moment de l'ex&eacute;cution, reportez vous &agrave;
+     la partie <link linkend="configuration">configuration</link>.
+    </para>
+   </note>
+
+   <para>
+    Ceci est la liste compl&egrave;te des options de configurations support&eacute;es
+    par le script de configuration PHP 3 et PHP 4 <filename>configure</filename>,
+    utilis&eacute; lors de la compilation en environnement UNIX. Certaines sont
+    disponibles sous PHP 3, d'autres sous PHP 4, d'autres encore pour les
+    deux versions. De nombreuses options ont chang&eacute; de nom entre PHP 3 et
+    PHP 4, mais font exactement la m&ecirc;me chose. Les entr&eacute;es disposent
+    d'un lien entre elles (si vous avez un probl&egrave;me avec une option PHP 3,
+    v&eacute;rifier ainsi que les noms n'ont pas chang&eacute;).
+   </para>
+
+   <itemizedlist>
+    <listitem>
+     <para>
+      <link linkend="install.configure.databases">Base de donn&eacute;es</link>
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      <link linkend="install.configure.ecommerce">Commerce &eacute;lectronique</link>
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      <link linkend="install.configure.graphics">Graphismes</link>
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      <link linkend="install.configure.misc">Divers</link>
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      <link linkend="install.configure.networking">R&eacute;seau</link>
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      <link linkend="install.configure.php">Comportement PHP</link>
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      <link linkend="install.configure.servers">Serveur</link>
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      <link linkend="install.configure.text">Texte et langages</link>
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      <link linkend="install.configure.xml">XML</link>
+     </para>
+    </listitem>
+   </itemizedlist>
+
+  <sect2 id="install.configure.databases">
+    <title>Configuration pour le support des bases de donn&eacute;es</title>
+    <para>
+     PHP supporte de nombreuses bases de donn&eacute;es (et aussi ODBC):
+    </para>
+    
+    <para>
+     Pour la liste d&eacute;taill&eacute;e des options de <filename>configure</filename>, 
+     reportez vous &agrave; <link linkend="install.configure"> la liste compl&egrave;te
+     des options.</link>.
+    </para>
+   
+    <variablelist>
+     <varlistentry id="install.configure.with-adabas">
+      <term>
+       <parameter>--with-adabas[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Ajoute le support Adabas. DIR est le dossier de
+        l'installation Adabas (par d&eacute;faut : /usr/local).
+       </para>
+       <para>
+        <ulink url="&url.adabas;">Site d'Adabas</ulink>
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-dba">
+      <term>
+       <parameter>--enable-dba=shared</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Compile DBA comme librairie partag&eacute;e
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-dbase">
+      <term>
+       <parameter>--enable-dbase</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible; utilisez <link
+         linkend="install.configure.with-dbase">--with-dbase</link>.
+       </para>
+       <para>
+        PHP 4: Active la librairie dbase. Par de librairie externe
+        n&eacute;cessaire.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-dbase">
+      <term>
+       <parameter>--with-dbase</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus la librairie dbase. Par de librairie externe
+        n&eacute;cessaire.
+       </para>
+       <para>
+        PHP 4: Option non disponible; utilisez <link
+         linkend="install.configure.enable-dbase">--enable-dbase</link>.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-db2">
+      <term>
+       <parameter>--with-db2[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Ajoute le support de Berkeley DB2
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-db3">
+      <term>
+       <parameter>--with-db3[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support Berkeley DB3
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-dbm">
+      <term>
+       <parameter>--with-dbm[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support DBM
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-dbmaker">
+      <term>
+       <parameter>--with-dbmaker[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support DBMaker. DIR est le dossier de l'installation
+        de DBMaker (par d&eacute;faut, c'est le chemin jusqu'&agrave; la derni&egrave;re
+        installation de DBMaker, ou /home/dbmaker/3.6).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-empress">
+      <term>
+       <parameter>--with-empress[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support Empress. DIR est le dossier d'installation
+        d'Empress (par d&eacute;faut, $EMPRESSPATH).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-filepro">
+      <term>
+       <parameter>--enable-filepro</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible; utilisez <link
+         linkend="install.configure.with-filepro">--with-filepro</link>.
+       </para>
+       <para>
+        PHP 4: Active le support de filePro (lecture seule). Par de librairie externe
+        n&eacute;cessaire.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-filepro">
+      <term>
+       <parameter>--with-filepro</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Active le support de filePro (lecture seule). Par de librairie externe
+        n&eacute;cessaire.
+       </para>
+       <para>
+        PHP 4: Option non disponible; utilisez <link
+         linkend="install.configure.enable-filepro">--enable-filepro</link>.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-gdbm">
+      <term>
+       <parameter>--with-gdbm[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support GDBM
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-hyperwave">
+      <term>
+       <parameter>--with-hyperwave</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support Hyperwave
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-ibm-db2">
+      <term>
+       <parameter>--with-ibm-db2[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support IBM DB2. DIR est le chemin jusqu'au
+        dossier d'installation de DB2 (par d&eacute;faut 
+        <filename>/home/db2inst1/sqllib</filename>).
+       </para>
+       <para>
+        <ulink url="&url.ibmdb2;">Site IBM DB2</ulink>
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-informix">
+      <term>
+       <parameter>--with-informix[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support Informix. DIR est le dossier d'installation
+        de Informix (pas de valeur par d&eacute;faut).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-ingres">
+      <term>
+       <parameter>--with-ingres[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le supportIngres II support. DIR est le dossier d'installation
+        de Ingres (par d&eacute;fault /II/ingres)
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-interbase">
+      <term>
+       <parameter>--with-interbase[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support InterBase. DIR est le dossier d'installation
+        de InterBase (par d&eacute;faut <filename>/usr/interbase</filename>).
+       </para>
+       <simpara>
+        <link linkend="ref.ibase">Fonctions Interbase</link>
+       </simpara>
+       <simpara>
+        <ulink url="&url.ibase;">Site Interbase</ulink>
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-ldap">
+      <term>
+       <parameter>--with-ldap[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support LDAP. DIR est le dossier d'installation
+        de LDAP (par d&eacute;faut <filename>/usr</filename> et
+        <filename>/usr/local</filename>).
+       </para>
+       <para>
+        PHP 4: Inclus le support LDAP. DIR est le dossier d'installation
+        de LDAP.
+       </para>
+       <simpara>
+        Cette option fournit un acc&egrave;s aux serveurs <acronym>LDAP</acronym> 
+        (Lightweight Directory Access Protocol support). Le param&egrave;tre est
+        le dossier d'installation de LDAP (par d&eacute;faut, <filename
+         class="directory">/usr/local/ldap</filename>).
+       </simpara>
+       <simpara>
+        Pour plus de d&eacute;tails sur LDAP allez &agrave; <ulink
+         url="&url.rfc;rfc1777.html">RFC1777</ulink> et
+        <ulink
+         url="&url.rfc;rfc1778.html">RFC1778</ulink>.
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-msql">
+      <term>
+       <parameter>--with-msql[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Active le support mSQL. Le param&egrave;tre est
+        le dossier d'installation de mSQL (par d&eacute;faut, <filename
+        class="directory">/usr/local/Hughes</filename>, le dossier par
+        d&eacute;faut de l'installation mSQL 2.0).
+        <command>configure</command> automatiquement d&eacute;tecte quelle version 
+        de mSQL vous utilisez et g&egrave;re le point avec les deux versions 
+        1.0 et 2.0, mais si vous compilez PHP avec mSQL 1.0, vous ne pourrez
+        acc&eacute;der qu'aux bases mSQL 1.0, et vice-versa.
+       </para>
+       <simpara>
+        Voir aussi les directives de <link linkend="ini.sect.msql">Configuration mSQL
+        </link> du fichier <link
+        linkend="configuration.file">de configuration</link>.
+       </simpara>
+       <simpara>
+        <ulink url="&url.msql;">site mSQL</ulink>
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-mysql">
+      <term>
+       <parameter>--with-mysql[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support MySQL. DIR est le dossier d'installation
+        de  MySQL (par d&eacute;faut, il recherche dans les lieux standards d'installation
+        de MySQL).
+       </para>
+       <para>
+        PHP 4: Inclus le support MySQL. DIR est le dossier d'installation
+        de MySQL. Si il n'est pas sp&eacute;cifi&eacute;, la librairie MySQL sera
+        utilis&eacute;e (option par d&eacute;faut).
+       </para>
+       <para>
+        Voir aussi les directives de <link linkend="ini.sect.mysql">
+        configuration MySQL</link> du fichier de <link
+        linkend="configuration.file">configuration</link>.
+       </para>
+       <para>
+        <ulink url="&url.mysql;">Site de MySQL</ulink>
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-ndbm">
+      <term>
+       <parameter>--with-ndbm[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support NDBM
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-oci8">
+      <term>
+       <parameter>--with-oci8[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support Oracle-oci8. DIR est le dossier d'installation
+        de Oracle (par d&eacute;faut ORACLE_HOME).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-oracle">
+      <term>
+       <parameter>--with-oracle[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support Oracle . DIR est le dossier d'installation
+        de  Oracle (par d&eacute;faut $ORACLE_HOME).
+       </para>
+       <para>
+        PHP 4: Inclus le support Oracle-oci7. DIR est le dossier d'installation
+        de Oracle (par d&eacute;faut ORACLE_HOME).
+       </para>
+       <simpara>
+        Inclus le support Oracle. Cette option a &eacute;t&eacute; test&eacute;e et devrait 
+        fonctionner au moins avec les versions d'Oracle de 7.0 &agrave; 7.3.  
+        Le param&egrave;tre DIR est <envar>ORACLE_HOME</envar>. Vous n'avez pas &agrave;
+        sp&eacute;cifier ce param&egrave;tre, si votre environnement Oracle a &eacute;t&eacute;
+        install&eacute;.
+       </simpara>
+       <simpara>
+        <ulink url="&url.oracle;">Site Oracle</ulink>
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-pgsql">
+      <term>
+       <parameter>--with-pgsql[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support PostgresSQL. DIR est le dossier d'installation
+        de PostgresSQL (par d&eacute;faut <filename>/usr/local/pgsql</filename>).
+       </para>
+       <para>
+        PHP 4: Inclus le support PostgreSQL. DIR est le dossier d'installation
+        de PostgreSQL (par d&eacute;faut <filename>/usr/local/pgsql</filename>).
+        Utilisez "shared" pour compiler PostgreSQL en librairie dynamique,
+        ou "shared,DIR" pour compiler PostgreSQL en librairie dynamique tout
+        en sp&eacute;cifiant DIR.
+       </para>
+       <simpara>
+        Voir aussiles directives de configurations de 
+        <link linkend="ini.sect.pgsql">Postgres</link> dans le fichier de
+        <link linkend="configuration.file">configuration file</link>.
+       </simpara>
+       <simpara>
+        <ulink url="&url.pgsql;">Site PostgreSQL</ulink>
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-solid">
+      <term>
+       <parameter>--with-solid[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support Solid. DIR est le dossier d'installation
+        de Solid (par d&eacute;faut /usr/local/solid).
+       </para>
+       <simpara>
+        <ulink url="&url.solid;">Site Solid</ulink>
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-sybase-ct">
+      <term>
+       <parameter>--with-sybase-ct[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support Sybase-CT. DIR est le dossier d'installation
+        de  Sybase (par d&eacute;faut /home/sybase).
+       </para>
+       <simpara>
+        Voir aussi les directives de configuration de 
+        <link linkend="ini.sect.sybct">Sybase-CT</link> dans le fichier
+        de <link linkend="configuration.file">configuration</link>.
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-sybase">
+      <term>
+       <parameter>--with-sybase[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support Sybase-DB. DIR est le dossier d'installation
+        de  Sybase (par d&eacute;faut <filename>/home/sybase</filename>).
+       </para>
+       <simpara>
+        Voir aussi les directives de configuration de 
+        <link linkend="ini.sect.sybase">Sybase</link> dans le dossier
+        de <link linkend="configuration.file">configuration</link>.
+       </simpara>
+       <simpara>
+        <ulink url="&url.sybase;">site Sybase</ulink>
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-openlink">
+      <term>
+       <parameter>--with-openlink[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support OpenLink ODBC . DIR est le dossier d'installation
+        de OpenLink (par d&eacute;faut /usr/local/openlink).
+       </para>
+       <simpara>
+        <ulink url="&url.openlink;">Site OpenLink Software</ulink>
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-iodbc">
+      <term>
+       <parameter>--with-iodbc[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support iODBC. DIR est le dossier d'installation
+        de  iODBC (par d&eacute;faut <filename>/usr/local</filename>).
+       </para>
+       <para>
+        Cette option a &eacute;t&eacute; d&eacute;velopp&eacute;e pour le gestionnaire de pilote
+        iODBC, qui &eacute;tait librement redistribuable, et fonctionnait sous
+        la plus part des UNIX.
+       </para>
+       <simpara>
+        <ulink url="&url.freeodbc;">Site FreeODBC</ulink> 
+        or <ulink url="&url.iodbc;">Site iODBC</ulink>
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-custom-odbc">
+      <term>
+       <parameter>--with-custom-odbc[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support pour une librairie arbitraire
+        ODBC. Le param&egrave;tre est le dossier d'installation et par
+        d&eacute;faut, c'est <filename class="directory">/usr/local</filename>.
+       </para>
+       <simpara>
+        Cette option implique que vous avez d&eacute;finit la variable 
+        CUSTOM_ODBC_LIBS, lorsque vous ex&eacute;cutez le script de configuration.
+        Vous devez aussi fournir un ent&ecirc;te odbc.h valide, dans le chemin
+        d'inclusion. Si vous n'en avez pas, cr&eacute;ez le, et incluez y 
+        vos ent&ecirc;tes sp&eacute;cifiques. Ces ent&ecirc;tes peuvent aussi utiliser 
+        des d&eacute;finitions suppl&eacute;mentaires, surtout si ils sont 
+        multi-plateformes. D&eacute;finissez les dans CFLAGS.
+       </simpara>
+       <simpara>
+        Par exemple, vous pouvez utiliser Sybase SQL Anywhere sous QNX comme
+        suit : 
+        <literal>
+         CFLAGS=-DODBC_QNX LDFLAGS=-lunix CUSTOM_ODBC_LIBS="-ldblib
+         -lodbc" ./configure --with-custom-odbc=/usr/lib/sqlany50
+        </literal>
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.disable-unified-odbc">
+      <term>
+       <parameter>--disable-unified-odbc</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inactive le support ODBC unifi&eacute;. Uniquement utile si 
+        iODBC, Adabas, Solid, Velocis ou une interface ODBC personnalis&eacute;e est 
+        activ&eacute;e.
+       </para>
+       <para>
+        PHP 4: Option non disponible en PHP 4
+       </para>
+       <simpara>
+        Le module ODBC unifi&eacute;, qui est une interface r&eacute;pandue
+        vers toutes les bases de donn&eacute;es ODBC, comme par exemple Solid, IBM
+        DB2 et Adabas D.  Elle fonctionne aussi pour les
+        librairie ODBC normales. Elle a &eacute;t&eacute; test&eacute;e avec iODBC, Solid, Adabas D, 
+        IBM DB2 et Sybase SQL Anywhere. Requiert qu'un (et seulement un)
+        de ces module ait &eacute;t&eacute; activ&eacute;, ou que le module Velocis soit
+        activ&eacute;, ou encore que la librairie ODBC personnalis&eacute;e soit charg&eacute;e.
+        Cette option ne sert que si l'une de ces options est utilis&eacute;e : 
+        <link
+        linkend="install.configure.with-iodbc">--with-iodbc</link>,
+        <link
+        linkend="install.configure.with-solid">--with-solid</link>,
+        <link
+        linkend="install.configure.with-ibm-db2">--with-ibm-db2</link>,
+        <link
+        linkend="install.configure.with-adabas">--with-adabas</link>,
+        <link
+        linkend="install.configure.with-velocis">--with-velocis</link>,
+        ou <link
+        linkend="install.configure.with-custom-odbc">--with-custom-odbc</link>.
+       </simpara>
+       <simpara>
+        Voir aussi les directives de configuration de <link linkend="ini.sect.uodbc">ODBC unifi&eacute;</link>
+        dans le fichier de <link linkend="configuration.file">configuration</link>.
+       </simpara>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-unixODBC">
+      <term>
+       <parameter>--with-unixODBC[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support unixODBC. DIR est le dossier d'installation
+        de unixODBC (par d&eacute;faut /usr/local).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-velocis">
+      <term>
+       <parameter>--with-velocis[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support Velocis. DIR est le dossier d'installation
+        de Velocis (par d&eacute;faut /usr/local/velocis).
+       </para>
+       <simpara>
+        <ulink url="&url.velocis;">Site Velocis</ulink>
+       </simpara>
+      </listitem>
+     </varlistentry>
+    </variablelist>
+   </sect2>
+   
+   <sect2 id="install.configure.ecommerce">
+    <title>Ecommerce</title>
+
+    <variablelist>
+     <varlistentry id="install.configure.with-ccvs">
+      <term>
+       <parameter>--with-ccvs[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support CCVS de PHP 4. Passez le dossier d'installation
+        de CCVS comme valeur de DIR.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-mck">
+      <term>
+       <parameter>--with-mck[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support Cybercash MCK. DIR est le dossier d'installation
+        de cybercash mck (par d&eacute;faut <filename>/usr/src/mck-3.2.0.3-linux</filename>).
+        Pour plus d'informations, <filename>extra/cyberlib</filename>.
+       </para>
+       <para>
+        PHP 4: Option non disponible; utilisez <link
+         linkend="install.configure.with-cybercash">--with-cybercash</link>.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-cybercash">
+      <term>
+       <parameter>--with-cybercash[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible; utilisez plut™t <link
+         linkend="install.configure.with-mck">--with-mck</link>.
+       </para>
+       <para>
+        PHP 4: Inclus le support CyberCash. DIR est le dossier d'installation
+        de  CyberCash MCK.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-pfpro">
+      <term>
+       <parameter>--with-pfpro[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus de support Verisign Payflow Pro.
+       </para>
+      </listitem>
+     </varlistentry>
+    </variablelist>
+
+   </sect2>
+   
+   <sect2 id="install.configure.graphics">
+    <title>Graphisme</title>
+
+    <variablelist>
+     <varlistentry id="install.configure.enable-freetype-4bit-antialias-hack">
+      <term>
+       <parameter>--enable-freetype-4bit-antialias-hack</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support de FreeType2 (exp&eacute;rimental).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-gd">
+      <term>
+       <parameter>--with-gd[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support GD (DIR est le dossier d'installation
+        de GD).
+       </para>
+       <para>
+        PHP 4: Inclus le support GD (DIR est le dossier d'installation
+        de GD). Utilisez "shared" pour compiler GD en librairie dynamique,
+        ou "shared,DIR" pour compiler GD en librairie dynamique tout
+        en sp&eacute;cifiant DIR.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.without-gd">
+      <term>
+       <parameter>--without-gd</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inactive le support GD.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-imagick">
+      <term>
+       <parameter>--with-imagick[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support ImageMagick. DIR est le dossier d'installation
+        (par d&eacute;faut, PHP essaiera de se d&eacute;brouiller).[exp&eacute;rimental]
+       </para>
+       <para>
+        PHP 4: Option non disponible en PHP 4
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-jpeg-dir">
+      <term>
+       <parameter>--with-jpeg-dir[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Dossier jpeg pour pdflib 2.0
+       </para>
+       <para>
+        PHP 4: Dossier jpeg pour pdflib 3.x
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-png-dir">
+      <term>
+       <parameter>--with-png-dir[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Dossier png pour pdflib 3.x
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-t1lib">
+      <term>
+       <parameter>--enable-t1lib</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Active le support t1lib.
+       </para>
+       <para>
+        PHP 4: Option non disponible; utilisez plut™t <link
+         linkend="install.configure.with-t1lib">--with-t1lib</link>.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-t1lib">
+      <term>
+       <parameter>--with-t1lib[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible; utilisez plut™t <link
+         linkend="install.configure.enable-t1lib">--enable-t1lib</link>.
+       </para>
+       <para>
+        PHP 4: Inclus le support t1lib.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-tiff-dir">
+      <term>
+       <parameter>--with-tiff-dir[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Dossier tiff pour pdflib 2.0
+       </para>
+       <para>
+        PHP 4: Dossier tiff pour pdflib 3.x
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-ttf">
+      <term>
+       <parameter>--with-ttf[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support ttf
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-xpm-dir">
+      <term>
+       <parameter>--with-xpm-dir[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Dossier xpm pour gd-1.8+
+       </para>
+      </listitem>
+     </varlistentry>
+    </variablelist>
+   </sect2>
+
+   <sect2 id="install.configure.misc">
+    <title>Divers</title>
+
+    <para>
+     Cette section est en cours de tri.
+    </para>
+
+    <variablelist>
+     <varlistentry id="install.configure.disable-bcmath">
+      <term>
+       <parameter>--disable-bcmath</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inactive la librairie de nombre BC (taille arbitraire).
+        Ces fonctions vous permettent de manipuler des nombres 
+        hors des limites habituelles des entiers et des nombres &agrave;
+        virgules flottantes. Voir aussi <link linkend="ref.bc">
+        Math&eacute;matiques sur de grands nombres</link>.
+       </para>
+       <para>
+        PHP 4: Option non disponible; bcmath n'est pas compil&eacute; par d&eacute;faut.
+        Utilisez <link
+         linkend="install.configure.enable-bcmath">--enable-bcmath</link>.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.disable-display-source">
+      <term>
+       <parameter>--disable-display-source</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Compilation sans affichage du source.
+       </para>
+       <para>
+        PHP 4: Option non disponible en PHP 4
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.disable-libtool-lock">
+      <term>
+       <parameter>--disable-libtool-lock</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Emp&ecirc;che le verrouillage (peut bloquer certaines compilations
+        paralelle).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.disable-pear">
+      <term>
+       <parameter>--disable-pear</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: N'installe pas PEAR
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.disable-pic">
+      <term>
+       <parameter>--disable-pic</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inactive PIC pour les objets partag&eacute;s.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.disable-posix">
+      <term>
+       <parameter>--disable-posix</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3; utilisez <link
+         linkend="install.configure.without-posix">--without-posix</link>.
+       </para>
+       <para>
+        PHP 4: D&eacute;sactive les fonctions POSIX.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.disable-rpath">
+      <term>
+       <parameter>--disable-rpath</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inactive le passage automatique de dossier de recherche suppl&eacute;mentaires.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.disable-session">
+      <term>
+       <parameter>--disable-session</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inactive les sessions
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-bcmath">
+      <term>
+       <parameter>--enable-bcmath</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3; bcmath est compil&eacute; par 
+        Utilisez <link linkend="install.configure.disable-bcmath">--disable-bcmath</link>
+        pour le d&eacute;sactiver.
+       </para>
+       <para>
+        PHP 4: Compile PHP avec les fonctions math&eacute;matiques BC.
+        Lisez le fichier README-BCMATH pour conna&icirc;tre les instructions
+        d'installation de ce module. Ces fonctions vous permettent de
+        travailler avec des nombres de tailles illimit&eacute;es. Reportez vous aux
+        fonctions <link linkend="ref.bc">Math&eacute;matiques sur de grands nombres
+        </link> pour plus d'informations.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-c9x-inline">
+      <term>
+       <parameter>--enable-c9x-inline</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Active la s&eacute;mantique C9x-inline.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-calendar">
+      <term>
+       <parameter>--enable-calendar</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Active le support des conversions calendaires
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-debug">
+      <term>
+       <parameter>--enable-debug</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Ajoute le d&eacute;buggage des symboles.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-debugger">
+      <term>
+       <parameter>--enable-debugger</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Ajoute les fonctions de d&eacute;buggage distants.
+       </para>
+       <para>
+        PHP 4: Option non disponible en PHP 4
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-discard-path">
+      <term>
+       <parameter>--enable-discard-path</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Si cette option est activ&eacute;e, l'ex&eacute;cutable PHP CGI
+        peut &ecirc;tre plac&eacute; sžrement hors de l'arborescence web, et personne
+        ne pourra contourer la s&eacute;curit&eacute; .htaccess.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-dmalloc">
+      <term>
+       <parameter>--enable-dmalloc</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Active dmalloc
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-exif">
+      <term>
+       <parameter>--enable-exif</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Active le support exif
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-experimental-zts">
+      <term>
+       <parameter>--enable-experimental-zts</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Cette option risque de d&eacute;truire votre compilation
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-fast-install">
+      <term>
+       <parameter>--enable-fast-install[=PKGS]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Optimise la vitesse d'ex&eacute;cution [ par d&eacute;faut=yes]
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-force-cgi-redirect">
+      <term>
+       <parameter>--enable-force-cgi-redirect</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Active la v&eacute;rification des redirections internes au
+        serveur. Il est recommand&eacute; d'utiliser cette option si vous utilisez
+        la version CGI avec Apache. 
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-inline-optimization">
+      <term>
+       <parameter>--enable-inline-optimization</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Si vous avez beaucoup de m&eacute;moire libre, et que vous utilisez
+        gcc, vous pouvez essayer cela.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-libgcc">
+      <term>
+       <parameter>--enable-libgcc</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Active explicitement le linkage avec libgcc
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-maintainer-mode">
+      <term>
+       <parameter>--enable-maintainer-mode</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Active des r&egrave;gles de compilation rarment utile (
+        et m&ecirc;me parfois confuse) &agrave; l'installeur occasionnel.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-memory-limit">
+      <term>
+       <parameter>--enable-memory-limit</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Compile avec limitation de consommation de m&eacute;moire.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-safe-mode">
+      <term>
+       <parameter>--enable-safe-mode</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Active le safe mode par d&eacute;faut.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-satellite">
+      <term>
+       <parameter>--enable-satellite</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Active le support CORBA via Satellite (Requiert ORBit)
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-shared">
+      <term>
+       <parameter>--enable-shared[=PKGS]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Compile les librairies partag&eacute;es [par d&eacute;faut=yes]
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-sigchild">
+      <term>
+       <parameter>--enable-sigchild</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Active le gestionnaire SIGCHLD interne &agrave; PHP.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-static">
+      <term>
+       <parameter>--enable-static[=PKGS]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Compile les librairies statiquement [par d&eacute;faut=yes]
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-sysvsem">
+      <term>
+       <parameter>--enable-sysvsem</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Active le support des s&eacute;maphores System V.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-sysvshm">
+      <term>
+       <parameter>--enable-sysvshm</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Active le syst&egrave;me  System V de m&eacute;moire partag&eacute;e
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-trans-sid">
+      <term>
+       <parameter>--enable-trans-sid</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Active la propagation transparente d'identification de session
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-cdb">
+      <term>
+       <parameter>--with-cdb[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support cdb
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-config-file-path">
+      <term>
+       <parameter>--with-config-file-path=PATH</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Indique le chemin dans lequel il faut chercher le fichier 
+        php3.ini (par d&eacute;faut, <filename>/usr/local/lib</filename>).
+       </para>
+       <para>
+        PHP 4: Indique le chemin dans lequel il faut chercher le fichier 
+        php.ini (par d&eacute;faut, <filename>/usr/local/lib</filename>).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-cpdflib">
+      <term>
+       <parameter>--with-cpdflib[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support cpdflib. DIR est le dossier d'installation
+        de ClibPDF (par d&eacute;faut, /usr/local).
+       </para>
+       <para>
+        PHP 4: Inclus le support cpdflib (requiert cpdflib &gt;= 2). DIR est le dossier d'installation
+        de ClibPDF (par d&eacute;faut, /usr/local).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-esoob">
+      <term>
+       <parameter>--with-esoob[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support Easysoft OOB. DIR est le dossier d'installation
+        de  OOB (par d&eacute;faut /usr/local/easysoft/oob/client).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-exec-dir">
+      <term>
+       <parameter>--with-exec-dir[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Autorise uniquement les ex&eacute;cutables dans le dossier DIR
+        lorsque le safe mode est activ&eacute; (par d&eacute;faut, /usr/local/php/bin).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-fdftk">
+      <term>
+       <parameter>--with-fdftk[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support fdftk. DIR est le dossier d'installation
+        de  fdftk (par d&eacute;faut,/usr/local).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-gnu-ld">
+      <term>
+       <parameter>--with-gnu-ld</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Suppor que le compilateur C utilise GNU ld [par d&eacute;faut =no]
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-icap">
+      <term>
+       <parameter>--with-icap[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support ICAP.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-imap">
+      <term>
+       <parameter>--with-imap[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support IMAP. DIR est le dossier d'installation
+        de IMAP (celui qui contient les include et c-client.a).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-imsp">
+      <term>
+       <parameter>--with-imsp[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support IMSP (DIR est le dossier d'installation
+        de IMSP (celui qui contient les include et c-client.a).
+       </para>
+       <para>
+        PHP 4: Option non disponible en PHP 4
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-java">
+      <term>
+       <parameter>--with-java[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support Java. DIR est le dossier d'installation
+        du JDK. Cette extension ne peut &ecirc;tre compil&eacute; que comme une
+        librairie partag&eacute;e.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-kerberos">
+      <term>
+       <parameter>--with-kerberos[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support Kerberos avec IMAP.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-mcal">
+      <term>
+       <parameter>--with-mcal[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support MCAL.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-mcrypt">
+      <term>
+       <parameter>--with-mcrypt[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support mcrypt. DIR est le dossier d'installation
+        de mcrypt.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-mhash">
+      <term>
+       <parameter>--with-mhash[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support mhash. DIR est le dossier d'installation
+        de mhash.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-mm">
+      <term>
+       <parameter>--with-mm[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support mm pour le stockage des sessions
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-mod_charset">
+      <term>
+       <parameter>--with-mod_charset</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Active les tables de transfert pour mod_charset (Rus Apache).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-pdflib">
+      <term>
+       <parameter>--with-pdflib[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support pdflib (test&eacute;e avec 0.6 et 2.0). DIR est le dossier
+        d'installation de pdflib (par d&eacute;faut, <filename>/usr/local</filename>).
+       </para>
+       <para>
+        PHP 4: Inclus le support pdflib 3.x. DIR est le dossier d'installation
+        de pdflib (par d&eacute;faut, <filename>/usr/local</filename>).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-readline">
+      <term>
+       <parameter>--with-readline[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support readline. DIR est le dossier d'installation
+        de readline.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-regex">
+      <term>
+       <parameter>--with-regex=TYPE</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Librairie de regex : system, apache, php
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-servlet">
+      <term>
+       <parameter>--with-servlet[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support des servlets . DIR est le dossier d'installation
+        du JSDK. Ces SAPI requiert la compliation de l'extension Java comme 
+        librairie partag&eacute;e.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-swf">
+      <term>
+       <parameter>--with-swf[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support swf.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-system-regex">
+      <term>
+       <parameter>--with-system-regex</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: N'utilise pas la librairie de regex fournie.
+       </para>
+       <para>
+        PHP 4: (obsol&egrave;te) Utilise la librairie de regex.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-tsrm-pth">
+      <term>
+       <parameter>--with-tsrm-pth[=pth-config]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Utilise GNU Pth.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-tsrm-pthreads">
+      <term>
+       <parameter>--with-tsrm-pthreads</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Utilise les threads POSIX (par d&eacute;faut)
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-x">
+      <term>
+       <parameter>--with-x</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Utilise le syst&egrave;me X Window
+       </para>
+       <para>
+        PHP 4: Option non disponible en PHP 4
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-zlib-dir">
+      <term>
+       <parameter>--with-zlib-dir[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Dossier zlib pour pdflib 2.0 ou Inclus le support zlib
+       </para>
+       <para>
+        PHP 4: Dossier zlib pour pdflib 3.x ou Inclus le support zlib
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-zlib">
+      <term>
+       <parameter>--with-zlib[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support zlib (requiert zlib &gt;= 1.0.9). DIR est
+        le dossier d'installation de zlib (par d&eacute;faut, /usr).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.without-pcre-regex">
+      <term>
+       <parameter>--without-pcre-regex</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Exclus les expressions r&eacute;guli&egrave;res compatibles Perl.
+       </para>
+       <para>
+        PHP 4: Exclus les expressions r&eacute;guli&egrave;res compatibles Perl. Use
+        --with-pcre-regex=DIR pour sp&eacute;cifier le dossier DIR qui contient
+        les dossier d'include et de libraries, si vous n'utilisez pas
+        la librairie fournie.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.without-posix">
+      <term>
+       <parameter>--without-posix</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Exclus les fonctions POSIX
+       </para>
+       <para>
+        PHP 4: Option non disponible en PHP 4; utilisez <link
+         linkend="install.configure.disable-posix">--disable-posix</link>.
+       </para>
+      </listitem>
+     </varlistentry>
+    </variablelist>
+   </sect2>
+
+   <sect2 id="install.configure.networking">
+    <title>R&eacute;seau</title>
+
+    <variablelist>
+     <varlistentry id="install.configure.with-curl">
+      <term>
+       <parameter>--with-curl[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support CURL
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-ftp">
+      <term>
+       <parameter>--enable-ftp</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible; utilisez plut™t <link
+         linkend="install.configure.with-ftp">--with-ftp</link>.
+       </para>
+       <para>
+        PHP 4: Enable FTP support
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-ftp">
+      <term>
+       <parameter>--with-ftp</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support FTP.
+       </para>
+       <para>
+        PHP 4: Option non disponible; utilisez plut™t <link
+         linkend="install.configure.enable-ftp">--enable-ftp</link>
+        instead
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.disable-url-fopen-wrapper">
+      <term>
+       <parameter>--disable-url-fopen-wrapper</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inactive la version am&eacute;lior&eacute;e de fopen, qui 
+        permet l'acc&egrave;s aux fichiers par HTTP ou FTP.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-mod-dav">
+      <term>
+       <parameter>--with-mod-dav=DIR</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support DAV gr&acirc;ce &agrave; mod_dav, DIR est le
+        dossier d'installation de mod_dav's (version Apache module seulement!)
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-openssl">
+      <term>
+       <parameter>--with-openssl[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support OpenSSL de SNMP.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-snmp">
+      <term>
+       <parameter>--with-snmp[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support SNMP. DIR est le dossier d'installation
+        de SNMP (par d&eacute;faut, PHP va chercher dans les un certains nombre d'endroits
+        classiques d'installation de snmp). Utilisez "shared" pour compiler SNMP
+        en librairie dynamique, ou "shared,DIR" pour compiler SNMP en librairie 
+        dynamique tout en sp&eacute;cifiant DIR.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-ucd-snmp-hack">
+      <term>
+       <parameter>--enable-ucd-snmp-hack</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Active le hack UCD SNMP
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-sockets">
+      <term>
+       <parameter>--enable-sockets</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Active le support des sockets
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-yaz">
+      <term>
+       <parameter>--with-yaz[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support YAZ (ANSI/NISO Z39.50). DIR est le dossier d'installation
+        de YAZ.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-yp">
+      <term>
+       <parameter>--enable-yp</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible; utilisez plut™t <link
+         linkend="install.configure.with-yp">--with-yp</link>.
+       </para>
+       <para>
+        PHP 4: Inclus le support YP
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-yp">
+      <term>
+       <parameter>--with-yp</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support YP
+       </para>
+       <para>
+        PHP 4: Option non disponible; utilisez plut™t <link
+         linkend="install.configure.enable-yp">--enable-yp</link>.
+       </para>
+      </listitem>
+     </varlistentry>
+    </variablelist>
+
+   </sect2>
+
+   <sect2 id="install.configure.php">
+    <title>Configuration de PHP</title>
+
+    <variablelist>
+     <varlistentry id="install.configure.enable-magic-quotes">
+      <term>
+       <parameter>--enable-magic-quotes</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Active les magic quotes par d&eacute;faut.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.disable-short-tags">
+      <term>
+       <parameter>--disable-short-tags</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: D&eacute;sactive les balises courtes (&lt;?).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-track-vars">
+      <term>
+       <parameter>--enable-track-vars</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Active la lecture des variables GET/POST/Cookie par d&eacute;faut.
+       </para>
+       <para>
+        PHP 4: Option non disponible en PHP 4; sous PHP 4.0.2,
+        track_vars est toujours &agrave; on.
+       </para>
+      </listitem>
+     </varlistentry>
+    </variablelist>
+
+   </sect2>
+
+   <sect2 id="install.configure.servers">
+    <title>Serveur</title>
+    
+    <variablelist>
+     <varlistentry id="install.configure.with-aolserver-src">
+      <term>
+       <parameter>--with-aolserver-src=DIR</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Specifie le chemin jusqu'&agrave; la distribution du serveur AOLserver
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-aolserver">
+      <term>
+       <parameter>--with-aolserver=DIR</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Specifie le chemin jusqu'au serveur AOLserver
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-apache">
+      <term>
+       <parameter>--with-apache[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Compile un module Apache. DIR est le dossier d'installation
+        d'Apache (par d&eacute;faut, /usr/local/etc/httpd).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-apxs">
+      <term>
+       <parameter>--with-apxs[=FILE]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Compile un module partag&eacute; Apache. FILE est un chemin
+        optionnel jusqu'aux outils Apache apxs (par d&eacute;fauts, apxs).
+       </para>
+      </listitem>
+     </varlistentry>
+     
+     <varlistentry id="install.configure.enable-versioning">
+      <term>
+       <parameter>--enable-versioning</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Profite du versioning et du scoping de Solaris 2.x et Linux
+       </para>
+       <para>
+        PHP 4: Export uniquement les symboles requis. Voir INSTALL pour plus d'informations.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-fhttpd">
+      <term>
+       <parameter>--with-fhttpd[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Compile un module fhttpd. DIR est le dossier d'installation
+        de fhttpd (par d&eacute;faut, /usr/local/src/fhttpd).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-nsapi">
+      <term>
+       <parameter>--with-nsapi=DIR</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Specifie le chemin jusqu'&agrave; Netscape
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-phttpd">
+      <term>
+       <parameter>--with-phttpd=DIR</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: 
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-pi3web">
+      <term>
+       <parameter>--with-pi3web=DIR</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Compile PHP comme module pour Pi3Web.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-roxen">
+      <term>
+       <parameter>--with-roxen=DIR</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Compile PHP comme module pour Pike . DIR est le dossier d'installation
+        de Roxen (par d&eacute;faut, /usr/local/roxen/server).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-roxen-zts">
+      <term>
+       <parameter>--enable-roxen-zts</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Compile le module Roxen avec Zend Thread Safety.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-thttpd">
+      <term>
+       <parameter>--with-thttpd=SRCDIR</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: 
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-zeus">
+      <term>
+       <parameter>--with-zeus=DIR</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Compile PHP comme module ISAPI pour Zeus.
+       </para>
+      </listitem>
+     </varlistentry>
+    </variablelist>
+    
+   </sect2>
+
+   <sect2 id="install.configure.text">
+    <title>Texte et langue</title>
+ 
+    <variablelist>
+     <varlistentry id="install.configure.with-aspell">
+      <term>
+       <parameter>--with-aspell[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support ASPELL.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-gettext">
+      <term>
+       <parameter>--with-gettext[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3, PHP 4: Inclus le support GNU gettext. DIR est le dossier d'installation
+        de gettext (par d&eacute;faut, /usr/local).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-pspell">
+      <term>
+       <parameter>--with-pspell[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support PSPELL.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-recode">
+      <term>
+       <parameter>--with-recode[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Include GNU recode support.
+       </para>
+       <para>
+        PHP 4: Inclus le support recode. DIR est le dossier d'installation
+        de recode.
+       </para>
+      </listitem>
+     </varlistentry>
+    </variablelist>
+
+   </sect2>
+   
+   <sect2 id="install.configure.xml">
+    <title>XML</title>
+
+    <variablelist>   
+     <varlistentry id="install.configure.with-dom">
+      <term>
+       <parameter>--with-dom[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support DOM (requiert libxml &gt;= 2.0). DIR est le dossier d'installation
+        de libxml (par d&eacute;faut, <filename>/usr</filename>).
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-sablot-errors-descriptive">
+      <term>
+       <parameter>--enable-sablot-errors-descriptive</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Active les erreurs descriptives.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-sablot">
+      <term>
+       <parameter>--with-sablot[=DIR]</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Inclus le support Sablotron
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.enable-wddx">
+      <term>
+       <parameter>--enable-wddx</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3
+       </para>
+       <para>
+        PHP 4: Active le support WDDX
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.disable-xml">
+      <term>
+       <parameter>--disable-xml</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Option non disponible en PHP 3; Les fonctionnalit&eacute;s XML
+        ne sont pas compil&eacute;es par d&eacute;faut. Utilisez <link
+         linkend="install.configure.with-xml">--with-xml</link>.
+       </para>
+       <para>
+        PHP 4: D&eacute;sactive le support XML qui utilise la librairie fournie expat.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry id="install.configure.with-xml">
+      <term>
+       <parameter>--with-xml</parameter>
+      </term>
+      <listitem>
+       <para>
+        PHP 3: Inclus le support XML
+       </para>
+       <para>
+        PHP 4: Option non disponible; XML est compil&eacute; par d&eacute;faut. 
+        Utilisez <link
+         linkend="install.configure.disable-xml">--disable-xml</link> pour 
+         le d&eacute;sactiver.
+       </para>
+      </listitem>
+     </varlistentry>
+    </variablelist>
+   </sect2>
+
+  </sect1>
+
   <sect1 id="install-windows95-nt">
-   <title>Installation sous Windows 95/98/NT systems</title>
+   <title>Installation sous Windows 95/98/NT</title>
 
    <simpara>
-	Ce guide d'installation vous guidera pour installer et configurer PHP sur vos 
-	serveurs Windows 9x/NT. Ce guide a &eacute;t&eacute; pr&eacute;par&eacute; par Bob Silva, et traduit 
-	par Damien Seguy. La version la plus r&eacute;cente est disponible (en anglais) 
-	&agrave; <ulink url="&url.win32install">&url.win32install</ulink>.
+    Ce guide d'installation vous aidera &agrave; installer et configurer
+    PHP sur vos serveurs Windows 9x/NT. Ce guide a &eacute;t&eacute; compil&eacute; par 
+    &link.bob;. La derni&egrave;re r&eacute;vision peut &ecirc;tre  trouv&eacute;e <ulink
+     url="&url.win32install;">&url.win32install;</ulink>.
    </simpara>
    <para>
-    Ce guide fournit des informations pour les logiciels :
+    Ce guide fourni une aide d'installation pour :
     <itemizedlist>
+     <listitem>
+      <para>
+       Personal Web Server (Version la plus r&eacute;cente recommand&eacute;e)
+      </para>
+     </listitem>
+     <listitem>
+      <para>
+       Internet Information Server 3 ou 4
+      </para>
+     </listitem>
      <listitem>
       <para>
        Apache 1.3.x
@@ -829,274 +2636,279 @@ Ici, il faut choisir l'extension que vous souhaitez donner au fichier php.
      </listitem>
     </itemizedlist>
    </para>
- 
+   
    <sect2>
-    <title>Configuration de PHP</title>
+    <title>Installation</title>
 
     <para>
-     Les instructions suivantes doivent &ecirc;tre suivies pour tous les types d'installation,
-     avant de prendre en compte les sp&eacute;cificit&eacute;s de chaque serveur.
-
+     Les instructions doivent &ecirc;tre fa&icirc;tes pour toutes les 
+     installations avant d'attaquer les insctructions sp&eacute;cifiques &agrave; chaque 
+     serveur.
      <itemizedlist>
       <listitem>
        <para>
-	D&eacute;compressez la distribution dans le dossier de votre choix.
-	"C:\PHP3\" est une bonne id&eacute;e.
+        Extrayez la distribution dans un dossier de votre choix.
+        "C:\PHP\" est une bonne id&eacute;e.
        </para>
       </listitem>
       <listitem>
        <para>
-	Tous les modules sont pr&eacute;fix&eacute;s par 'php3_'. Il faudra que vous modifiez 
-	le fichier <filename>php3.ini</filename> et/ou tous les scripts de chargement 
-	d'extension avec la fonction <function>dl</function>. Vous pouvez toujours 
-	supprimer le pr&eacute;fixe 'php3_', mais il &eacute;vite les confusions entre les modules 
-	PHP et leur biblioth&egrave;que de support.
-	<simplelist>
-	 <member>c:\windows for Windows 95/98</member>
-	 <member>c:\winnt or c:\winnt40 for NT servers</member>
-	</simplelist>
+        Copiez le fichier, 'php.ini-dist' dans le dossier '%WINDOWS%' 
+        et renommer le en 'php.ini'. '%WINDOWS%' est typiquement
+        <simplelist>
+         <member>c:\windows pour Windows 95/98</member>
+         <member>c:\winnt ou c:\winnt40 pour les servuers NT</member>
+        </simplelist>
        </para>	
       </listitem>
       <listitem>
        <para>
-	Editez votre fichier 'php3.ini' :
-	<itemizedlist>
-	 <listitem>
-	  <simpara>
-		Vous devez changer 'extension_dir' pour qu'il d&eacute;signe votre dossier 
-		d'installation de PHP, c'est &agrave; dire l'endroit o&uacute; vous avez install&eacute; les 
-		fichiers 'php3_*.dll'. Par exemple : c:\php3 
-	  </simpara>
-	 </listitem>
-	 <listitem>
-	  <simpara>
-		Si vous utilisez Omni Httpd, passez &agrave; l'&eacute;tape suivante. Modifiez 
-		'doc_root' pour qu'il d&eacute;signe la racine de votre serveur web. 
-		Par exemple : c:\apache\htdocs ou c:\webroot 
-	  </simpara>
-	 </listitem>
-	 <listitem>
-	  <simpara>
-		Choisissez les modules que vous voulez lancer au d&eacute;marrage de PHP. 
-		Vous pouvez d&eacute;commenter la ligne : 'extension=php3_*.dll' pour charger 
-		automatiquement ces modules. Certains modules n&eacute;cessitent d'autres 
-		librairies dans votre syst&egrave;me pour fonctionner correctement. La 
-		<ulink url="&url.php.faq">FAQ</ulink> a plus d'informations sur ces 
-		librairies suppl&eacute;mentaires. Vous pouvez toujours charger dynamiquement 
-		un module avec: <command>dl("php_*.dll")("php_*.dll");</command>
-	  </simpara>
-	 </listitem>
-	 <listitem>
-	  <simpara>
-		Avec PWS et IIS, vous pouvez modifier le fichier browscap.ini pour 
-		qu'il pointe sur: 'c:\windows\system\inetsrv\browscap.ini' sous 
-		Windows 95/98 et 'c:\winnt\system32\inetsrv\browscap.ini' sur les 
-		serveur NT. 
-		D'autres informations sur les fonctionnalit&eacute;s de browscap sous PHP 
-		sont disponibles (en anglais) <ulink url="&url.browscap;">ici</ulink>, 
-		s&eacute;lectionnez le bouton "source" pour le voir en action.
-	  </simpara>
-	 </listitem>
-	</itemizedlist>
+        Editez votre fichier 'php.ini' :
+        <itemizedlist>
+         <listitem>
+          <simpara>
+           Vous devez changer votre option 'extension_dir' pour qu'il
+           pointe sur votre dossier d'installation PHP, ou vers l'endroit
+           o&ugrave; vous avez install&eacute; vos 'php_*.dll'. ex: c:\php
+          </simpara>
+         </listitem>
+         <listitem>
+          <simpara>
+           Si vous utilisez Omni Httpd, sautez l'&eacute;tape suivante.
+           Modifiez 'doc_root' pour qu'il pointe sur votre
+           racine de serveur web. ex: c:\apache\htdocs ou c:\webroot
+          </simpara>
+         </listitem>
+         <listitem>
+          <simpara>
+           Choisissez les modules que vous voulez charger lorsque
+           PHP d&eacute;marre. Vous pouvez d&eacute;commenter les lignes 
+           'extension=php_*.dll' pour charger ces modules.
+           Certains modules requi&egrave;rent que des librairies suppl&eacute;mentaires 
+           soient install&eacute;es sur votre syst&egrave;me. La <ulink
+           url="&url.php.faq;">FAQ</ulink> PHP a plus d'informations
+           sur ces librairies. Vous pouvez aussi charger dynamiquement 
+           ces librairies avec <command>dl("php_*.dll");</command>
+          </simpara>
+         </listitem>
+         <listitem>
+          <simpara>
+           Sous PWS et IIS, vous pouvez modifier le fichier browscap.ini pour
+           qu'il pointe sur : 'c:\windows\system\inetsrv\browscap.ini' sous
+           Windows 95/98 et 'c:\winnt\system32\inetsrv\browscap.ini' sous NT
+           Plus de d&eacute;tails sur l'utilisation de browscap sont accessibles
+           sur ce <ulink url="&url.browscap;">mirroir</ulink>, selectionnez
+           le bouton "source" pour le voir en action.
+          </simpara>
+         </listitem>
+        </itemizedlist>
        </para>
       </listitem>
      </itemizedlist></para>
     <simpara>
-     Les DLLs des extensions PHP sont pr&eacute;fix&eacute;es avec 'php3_'.  Cela &eacute;vite la 
-     confusion avec les extensions PHP, et leurs librairies.
+     Les DLLs des extensions PHP sont pr&eacute;fix&eacute; avec 'php_', pour &eacute;viter
+     les confusions entre les extenions PHP et leur librairies.
     </simpara>
+
    </sect2>
 
    <sect2>
     <title>Windows 95/98/NT et PWS/IIS 3</title>
+
     <simpara>
-	La m&eacute;thode recommand&eacute;e pour configurer ces serveurs est d'utiliser le fichier 
-	INF inclus avec la distribution (php_iis_reg.inf). Vous aurez &agrave; &eacute;diter 
-	ce fichier pour vous assurer que les extensions et les dossiers d'installation 
-	de PHP sont bien ceux de votre configuration. Ou alors, il vous faudra le faire 
-	manuellement.
+     La m&eacute;thode recommend&eacute;e pour configurer ces serveurs est d'utiliser
+     le fichier INF inclus dans la distribution (php_iis_reg.inf).
+     Vous pouvez &eacute;diter ce fichier, pour vous assurer que les
+     extenstions et les dossiers d'installation de PHP sont bien
+     ceux de votre configuration. Ou alors, vous pouvez suivre les
+     instructions suivantes : 
     </simpara>
     <simpara>
-	ATTENTION : Ces instructions impliquent la modification directe des tables 
-	de registry de Windows. Une erreur peut laisser votre syst&egrave;me dans un &eacute;tat
-	instable. Nous recommandons que vous fassiez une sauvegarde de secours de 
-	votre registry d'abord. L'&eacute;quipe de developpement et le traducteur de 
-	cette page ne pourront pas &ecirc;tre tenu pour responsable si vous endommagez 
-	votre registry.
+     ATTENTION: Ces instructions requi&egrave;rt la manipulation du fichier de
+     registry de Windows. Une erreur peut laisser votre syst&egrave;me dans un
+     &eacute;tat instable. Nous vous recommandons vivement de sauvegarder ce
+     fichier en lieu sžr. L'&eacute;quipe de d&eacute;veloppement ne pourra pas &ecirc;tre
+     reconnue responsable d'un quelconque dommage dans votre registry.
     </simpara>
 
     <para>
      <itemizedlist>
       <listitem>
        <simpara>
-	Lancez Regedit. 
+        Lancez Regedit.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Allez jusqu'&agrave; : 
-<literal>HKEY_LOCAL_MACHINE /System/CurrentControlSet/Services/W3Svc/Parameters/ScriptMap</literal>.
+        Naviguez jusqu'&agrave; : <literal>HKEY_LOCAL_MACHINE /System
+         /CurrentControlSet /Services /W3Svc /Parameters
+         /ScriptMap</literal>.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Dans le menu edit, s&eacute;lectionnez : <literal>New->String Value</literal>.
+        Dans le menu edit, selectionnez : <literal>New->String Value</literal>.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Entrez l'extension que vous voulez utiliser pour vos script PHP. 
-	Par exemple:  <literal>.php3</literal>
+        Entrez l'extension que vous voulez utiliser pour les scripts PHP.
+        ex: <literal>.php</literal>
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Double-cliquez sur la valeur de la cha&icirc;ne et entrez le chemin jusqu'&agrave; 
-	<literal>php.exe</literal> dans la valeur du champs. 
-	Par exemple <literal>c:\php3\php.exe %s %s</literal>. 
-	La cha&icirc;ne '%s %s' est TRES TRES importante, PHP ne fonctionnera pas 
-	correctement sans!
+        Double cliquez sur la cha&icirc;ne, et entrez le chemin jusqu'&agrave;
+        <literal>php.exe</literal> dans le champ "value data". ex:
+        <literal>c:\php\php.exe %s %s</literal>. Les '%s %s' sont TRES
+        importants, PHP ne fonctionnera pas sans.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Recommencez ces deux derni&egrave;res instructions avec chacune des extensions que 
-	vous souhaitez utiliser pour vos scripts PHP. 
+        R&eacute;petez ces instructions pour toutes les extensions que vous voulez
+        associer aux scripts PHP.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Allez maintenant jusqu'&agrave;:  <literal>HKEY_CLASSES_ROOT</literal>
+        Naviguez jusqu'&agrave; : <literal>HKEY_CLASSES_ROOT</literal>
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Dans le menu edit, s&eacute;lectionnez : <literal>New->Key</literal>.
+        Dans le menu edit, selectionnez: <literal>New->Key</literal>.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Donnez &agrave; la cl&eacute; le nom de l'extension que vous avez donn&eacute; &agrave; la pr&eacute;c&eacute;dente 
-	section. 
-	Par exemple: <literal>.php3</literal>
+        Donnez le nom de votre extension &agrave; la cl&eacute; : 
+        ex: <literal>.php</literal>
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Selectionnez la nouvelle cl&eacute;, et dans la bo&icirc;te de droite, double cliquez sur 
-	"default value" et entrez <literal>phpfile</literal>.
+        Selectionnez le nom de la nouvelle cl&eacute;e dans le panneau de
+        droite, et double cliquez dans "default value", puis entrez 
+        <literal>phpfile</literal>.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Recommencez ces deux derni&egrave;res instructions avec chacune des extensions de 
-	la derni&egrave;re section. 
+        R&eacute;petez ces instructions pour toutes les extensions que vous avez
+        associ&eacute; aux scripts PHP.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Dans le menu edit, s&eacute;lectionnez <literal>New->Key</literal> dans 
-	<literal>HKEY_CLASSES_ROOT</literal> et donnez lui le nom de 
-	<literal>phpfile</literal>.
+        Cr&eacute;ez une autre <literal>New->Key</literal> sous
+        <literal>HKEY_CLASSES_ROOT</literal> et nommez la
+        <literal>phpfile</literal>.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	S&eacute;lectionnez la cl&eacute;  <literal>phpfile</literal> et dans la bo&icirc;te de droite, 
-	double cliquez sur et dans le panneau de droite, double cliquez dans 
-	"default value" et entrez <literal>Script PHP</literal>.
+        Selectionnez la nouvelle cl&eacute; <literal>phpfile</literal>  et dans
+        le panneau de doite, double cliquez dans "default value" et 
+        entrez <literal>PHP Script</literal>.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Clic-droit dans la cl&eacute; <literal>phpfile</literal> et dans la bo&icirc;te de droite, 
-	double cliquez sur <literal>New->Key</literal>,et entrez <literal>Shell</literal>.
+        Fa&icirc;tes un clic droit dans <literal>phpfile</literal> et selectionnez
+        <literal>New->Key</literal>, appelez-le <literal>Shell</literal>.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Clic-droit dans la cl&eacute; <literal>Shell</literal> et selectionnez
-	<literal>New->Key</literal>, appelez la <literal>open</literal>.
+        Fa&icirc;tes un clic droit dans <literal>Shell</literal> et selectionnez
+        <literal>New->Key</literal>, appelez-le <literal>open</literal>.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Clic-droit dans la cl&eacute; <literal>open</literal> et selectionnez
-	<literal>New->Key</literal>, appelez la	<literal>command</literal>. 
+        Fa&icirc;tes un clic droit dans <literal>open</literal> et selectionnez
+        <literal>New->Key</literal>, appelez-le
+        <literal>command</literal>. 
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	S&eacute;lectionnez la cl&eacute; <literal>command</literal> dans la bo&icirc;te de droite, 
-	double cliquez sur "default value" et entrez le chemin jusqu'&agrave; 
-	<literal>php.exe</literal>. 
-	Par exemple : <literal>c:\php3\php.exe -q %1</literal>. 
-	(n'omettez pas le <literal>%1</literal>). 
+        Selectionnez la nouvelle cl&eacute;e <literal>command</literal> et dans le 
+        panneau de droite, fa&icirc;tes un double clic dans "default value", puis entrez
+        le chemin jusqu'&agrave; <literal>php.exe</literal>. ex:
+        <literal>c:\php\php.exe -q %1</literal>. (n'oubliez pas le 
+        <literal>%1</literal>). 
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Exit Regedit.
+        Exit Regedit.
        </simpara>
       </listitem>
      </itemizedlist>
     </para>
     <simpara>
-	Les utilisateurs PWS et IIS 3 sont maintenant pr&ecirc;ts &agrave; travailler. 
-	Les utilisateurs IIS 3 peuvent utiliser l'
-	<ulink url="http://www.genusa.com/iis/iiscfg.html">outil</ulink>
-	de Steven Genusa pour configurer leur script maps.
+     Les utilisateurs de PWS et IIS 3 sont pr&ecirc;ts &agrave; utiliser leur serveur.
+     Avec IIS 3, vous pouvez utiliser un <ulink
+      url="&url.iiscfg;">outil</ulink> bien pratique de 
+     Steven Genusa pour configurer votre carte des scripts.
     </simpara>
+
    </sect2>
 
    <sect2>
     <title>Windows NT et IIS 4</title>
+
     <simpara>
-     Pour installer PHP sur un serveur NT avec IIS 4, 
-     suivez les instructions suivantes :
+     Pour installer PHP sur des serveurs NT avec IIS 4, suivez les insctructions
+     suivantes : 
     </simpara>
 
     <para>
      <itemizedlist>
       <listitem>
        <simpara>
-	Dans Internet Service Manager (MMC), s&eacute;lectionnez le site web, ou le dossier 
-	racine d'une application. 
+        Dans l'Internet Service Manager (MMC), selectionnez le site web,
+        ou le dossier racine.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Ouvrez la bo&icirc;te de propri&eacute;t&eacute; du dossier (clic droit et 
-	s&eacute;lectionnez l'item de propri&eacute;t&eacute;s), puis cliquez dans Home Directory, Virtual 
-	Directory, ou Directory tab. 
+        Ouvrez la feuille de propri&eacute;t&eacute;s du dossier (avec un clic droit
+        dessus, puis en selectionnant properties), puis clicquez dans
+        l'onglet Home Directory, Virtual Directory, ou Directory.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Cliquez dans le bouton Configuration, puis cliquez dans l'onglet App Mappings. 
+        Cliquez dans le bouton Configuration, puis cliquez dans 
+        l'onglet App Mappings.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Cliquez dans Add, et dans la bo&icirc;te Executable, tapez: 
-	<literal>c:\path-to-php-dir\php.exe %s %s</literal>.
-	Vous DEVEZ mettre les %s %s &agrave; la fin, sinon PHP ne fonctionnera pas. 
+        Clicquez dans la bouton Add, et dans la bo&icirc;te Executable, tapez:
+        <literal>c:\path-to-php-dir\php.exe %s %s</literal>. Vous DEVEZ
+        ajouter les %s %s &agrave; la fin, car sinon, PHP ne fonctionnera pas
+        sans.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Dans la bo&icirc;te Extension, tapez le nom de l'extension que vous voulez 
-	associer &agrave; vos script PHP (Vous devrez r&eacute;petez les &eacute;tapes 5 et 6 pour chaque 
-	extension que vous voulez associer &agrave; vos script PHP). (<literal>.php3</literal> 
-	et <literal>.phtml</literal> sont les valeurs les plus r&eacute;pandues). 
+        Dans la bo&icirc;te Extension, tapez le nom de l'extension de fichier
+        que vous voulez associer &agrave; PHP. (Vous devez r&eacute;p&eacute;ter les &eacute;tapes 
+        5 et 6 pour toutes les extensions que vous voulez associer &agrave; PHP.
+        (<literal>.php</literal> et
+        <literal>.phtml</literal> sont les plus r&eacute;pandus).
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	Mettez en place la s&eacute;curit&eacute; appropri&eacute;e. (Cela se fait dans le gestionnaier
-	Internet Service Manager), et si votre serveur NT utilise le syt&egrave;me de fichier
-	NTFS, ajoutez les droits d'ex&eacute;cution &agrave; I_USR_, pour le dossier qui contient
-	<literal>php.exe</literal>.
+        Selectionnez la s&eacute;curit&eacute; appropri&eacute;e (gr&acirc;ce &agrave; l'Internet
+        Service Manager), et si votre serveur NT utilise NTFS,
+        ajoutez les droits d'ex&eacute;cutions pour I_USR_ au dossier qui contient
+        <literal>php.exe</literal>.
        </simpara>
       </listitem>
      </itemizedlist>
@@ -1108,170 +2920,192 @@ Ici, il faut choisir l'extension que vous souhaitez donner au fichier php.
     <title>Windows 9x/NT et Apache 1.3.x</title>
     
     <simpara>
-	Vous devez &eacute;diter votre fichier <literal>srm.conf</literal> ou 
-	<literal>httpd.conf</literal> pour configurer Apache et PHP.
+     Vous devez &eacute;diter <literal>srm.conf</literal> ou
+     <literal>httpd.conf</literal> pour configurer Apache, afin qu'il
+     fonctionne avec PHP CGI.
     </simpara>
     <simpara>
-	Bien qu'il y ait quelques variations de configuration PHP sous Apache, 
-	elle est suffisamment simple pour &ecirc;tre ma&icirc;tris&eacute;e par le n&eacute;ophyte. 
-	Reportez vous aux documentations Apache (Apache Docs) pour plus de d&eacute;tails 
-	sur les directives de configuration.
+     Bien qu'il puisse y avoir quelques variations de configurations
+     de PHP sous Apache, elle est suffisamment simple pour &ecirc;tre fa&icirc;te
+     par un novice. Reportez vous &agrave; la doc Apache pour plus de 
+     d&eacute;tails.
     </simpara>
 
     <para>
      <itemizedlist>
       <listitem>
        <simpara>
-	<literal>
-	 ScriptAlias /php3/ "c:/path-to-php-dir/"
-	</literal>
+        <literal>
+         ScriptAlias /php/ "c:/path-to-php-dir/"
+        </literal>
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	<literal>
-	 AddType application/x-httpd-php3 .php3
-	</literal>
+        <literal>
+         AddType application/x-httpd-php .php
+        </literal>
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	<literal>
-	 AddType application/x-httpd-php3 .phtml
-	</literal>
+        <literal>
+         AddType application/x-httpd-php .phtml
+        </literal>
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-	<literal>
-	 Action application/x-httpd-php3 "/php3/php.exe"
-	</literal>
+        <literal>
+         Action application/x-httpd-php "/php/php.exe"
+        </literal>
        </simpara>
       </listitem>
      </itemizedlist>
     </para>
 
     <simpara>
-	Pour utiliser le fonction de surimpression du code, cr&eacute;ez simplement un script 
-	PHP et mettez-y le code: <literal>&lt;?php show_source ("original_php_script.php3"); ?></literal>.
-	Remplacez <literal>original_php_script.php3</literal> par le nom du fichier 
-	dont vous souhaitez afficher le code source. (C'est le seul moyen de le faire).
-	<emphasis>Note:</emphasis> sous Win-Apache tous les back slashes d'un chemin 
-	tel que: "c:\directory\file.ext", doivent &ecirc;tre convertis en slash.
+     Pour utiliser la fonction de colorisation de la syntaxe, cr&eacute;ez
+     simplement un script PHP, et ajoutez le code suivant : 
+     <literal>&lt;?php show_source
+      ("original_php_script.php"); ?></literal>. Substitutez
+     <literal>original_php_script.php</literal> avec le nom du fichier
+     dont vous voulez voir le source. (c'est le seul moyen de faire cela).
+     <emphasis>Note:</emphasis> Sous Win-Apache tous les back-slash (\)
+     dans un chemin de fichier (tel que "c:\directory\file.ext"),
+     doivent &ecirc;tre convertis en slash (/).
     </simpara>
+
    </sect2>
 
    <sect2>
     <title>Omni HTTPd 2.0b1 pour Windows</title>
-     <simpara>
-      Ceci est la configuration la plus simple : 
-     </simpara>
+    
+    <simpara>
+     La m&eacute;thode la plus simple pour configurer le serveur est : 
+    </simpara>
 
-     <para>
-     <simplelist>
-      <member>
-       1: Installez Omni server
-      </member>
-      <member>
-       2: Clic droit sur l'ic&ocirc;ne bleue OmniHTTPd et s&eacute;lectionnez 
-	<literal>Propri&eacute;t&eacute;s</literal>
-      </member>
-      <member>
-       3: Cliquez sur <literal>Web Server Global Settings</literal>
-      </member> 
-      <member>
-       4: : Dans l'onglet 'Externe', entrez :<literal>virtual = .php3
-       | actual = c:\path-to-php-dir\php.exe</literal>
-      </member>
-      <member>
-       5: Dans l'onglet <literal>Mime</literal>, entrez: <literal>virtual = wwwserver/stdcgi | actual = .php3</literal>
-       6: Cliquez <literal>OK</literal>
-      </member>
-     </simplelist>
+    <para>
+     <itemizedlist>
+      <listitem>
+       <para>
+        Step 1: Installez Omni server
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        Step 2: Fa&icirc;tes un clic-droit sur l'icone bleur d'OmniHTTPd, sur le 
+        bureau, et selectionnez <literal>Properties</literal>
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        Step 3: Cliquez sur <literal>Web Server Global Settings</literal>
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        Step 4: Dans l'onglet 'External', entrez: <literal>virtual = .php
+         | actual = c:\path-to-php-dir\php.exe</literal>
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        Step 5: Dans l'onglet <literal>Mime</literal>, entrez:
+        <literal>virtual = wwwserver/stdcgi | actual = .php</literal>
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        Step 6: Cliquez sur <literal>OK</literal>
+       </para>
+      </listitem>
+     </itemizedlist>
     </para>
 
     <simpara>
-  R&eacute;petez les &eacute;tapes 2 - 6 pour chaque nouvelle extension &agrave; associer avec PHP.
+     R&eacute;ptez les &eacute;tapes 2 &agrave; 6 pour chaque extension que vous voulez associer &agrave; 
+     PHP.
     </simpara>
 
    </sect2>
 
    <sect2>
-    <title>PHP Modules</title>
+    <title>Modules PHP</title>
 
     <para>
      <table>
       <title>Modules PHP</title>
       <tgroup cols="2">
        <tbody>
-	<row>
-	 <entry>php3_calendar.dll</entry>
-	 <entry>Fonction de conversions calendaires</entry>
-	</row>
-	<row>
-	 <entry>php3_crypt.dll</entry>
-	 <entry>Fonction de cryptage </entry>
-	</row>
-	<row>
-	 <entry>php3_dbase.dll</entry>
-	 <entry>Fonctions DBase </entry>
-	</row>
-	<row>
-	 <entry>php3_dbm.dll</entry>
-	 <entry>Emulation GDBM avec la librairie Berkely DB2 </entry>
-	</row>
-	<row>
-	 <entry>php3_filepro.dll</entry>
-	 <entry>Acc&egrave;s aux bases de donn&eacute;es File pro (acc&egrave;s en lecture seule).</entry>
-	</row>
-	<row>
-	 <entry>php3_gd.dll</entry>
-	 <entry>Manipulation des images GIF/JPG/PNG avec GD Library</entry>
-	</row>
-	<row>
-	 <entry>php3_hyperwave.dll</entry>
-	 <entry>Fonctions HyperWave</entry>
-	</row>
-	<row>
-	 <entry>php3_imap4r2.dll</entry>
-	 <entry>Fonctions IMAP 4</entry>
-	</row>
-	<row>
-	 <entry>php3_ldap.dll</entry>
-	 <entry>Fonctions LDAP</entry>
-	</row>
-	<row>
-	 <entry>php3_msql1.dll</entry>
-	 <entry>Fonctions client mSQL 1</entry>
-	</row>
-	<row>
-	 <entry>php3_msql2.dll</entry>
-	 <entry>Fonctions client mSQL 2 client</entry>
-	</row>
-	<row>
-	 <entry>php3_mssql.dll</entry>
-	 <entry>Fonctions client MSSQL client (requiert MSSQL DB-Libraries)</entry>
-	</row>
-	<row>
-	 <entry>php3_mysql.dll</entry>
-	 <entry>Fonctions MySQL</entry>
-	</row>
-	<row>
-	 <entry>php3_nsmail.dll</entry>
-	 <entry>Fonctions Netscape mail</entry>
-	</row>
-	<row>
-	 <entry>php3_oci73.dll</entry>
-	 <entry>Fonctions Oracle</entry>
-	</row>
-	<row>
-	 <entry>php3_snmp.dll</entry>
-	 <entry>Fonctions SNMP get et walk (NT seulement!)</entry>
-	</row>
-	<row>
-	 <entry>php3_zlib.dll</entry>
-	 <entry>Fonctions ZLib</entry>
-	</row>
+        <row>
+         <entry>php_calendar.dll</entry>
+         <entry>Fonctions de conversions calendaires</entry>
+        </row>
+        <row>
+         <entry>php_crypt.dll</entry>
+         <entry>Fonctions de cryptage</entry>
+        </row>
+        <row>
+         <entry>php_dbase.dll</entry>
+         <entry>Fonctions DBase</entry>
+        </row>
+        <row>
+         <entry>php_dbm.dll</entry>
+         <entry>Librairie d'&eacute;mulation GDBM via Berkely DB2</entry>
+        </row>
+        <row>
+         <entry>php_filepro.dll</entry>
+         <entry>Lecture des bases filepro</entry>
+        </row>
+        <row>
+         <entry>php_gd.dll</entry>
+         <entry>Biblioth&egrave;que GD (pour les manipulations d'images)</entry>
+        </row>
+        <row>
+         <entry>php_hyperwave.dll</entry>
+         <entry>Fonctions HyperWave</entry>
+        </row>
+        <row>
+         <entry>php_imap4r2.dll</entry>
+         <entry>Fonctions IMAP 4</entry>
+        </row>
+        <row>
+         <entry>php_ldap.dll</entry>
+         <entry>Fonctions LDAP</entry>
+        </row>
+        <row>
+         <entry>php_msql1.dll</entry>
+         <entry>Fonctions mSQL 1</entry>
+        </row>
+        <row>
+         <entry>php_msql2.dll</entry>
+         <entry>Fonctions mSQL 2</entry>
+        </row>
+        <row>
+         <entry>php_mssql.dll</entry>
+         <entry>Fonctions MSSQL (requiert MSSQL DB-Libraries)</entry>
+        </row>
+        <row>
+         <entry>php3_mysql.dll (compil&eacute; dans PHP 4)</entry>
+         <entry>Fonctions MySQL</entry>
+        </row>
+        <row>
+         <entry>php_nsmail.dll</entry>
+         <entry>Fonctions Netscape mail</entry>
+        </row>
+        <row>
+         <entry>php_oci73.dll</entry>
+         <entry>Fonctions Oracle</entry>
+        </row>
+        <row>
+         <entry>php_snmp.dll</entry>
+         <entry>Fonctions SNMP get and walk (NT uniquement!)</entry>
+        </row>
+        <row>
+         <entry>php_zlib.dll</entry>
+         <entry>Fonctions ZLib</entry>
+        </row>
        </tbody>
       </tgroup>
      </table>
@@ -1285,22 +3119,21 @@ Ici, il faut choisir l'extension que vous souhaitez donner au fichier php.
    <title>Probl&egrave;mes?</title>
 
    <sect2>
-    <title>Consultez la FAQ</title>
+    <title>Lisez la FAQ</title>
     <simpara>
-	Certains probl&egrave;mes sont plus courants que d'autres. La solution aux probl&egrave;mes 
-	les plus courants sont rassembl&eacute;s dans la FAQ PHP, disponibles &agrave; l'adresse 
-	<ulink url="&url.php.faq;">&url.php.faq;</ulink>.
+     Certains probl&egrave;mes sont r&eacute;currents : Les plus commun sont list&eacute;s dans 
+     la FAQ PHP, disponible &agrave; <ulink url="&url.php.faq;">&url.php.faq;</ulink>
     </simpara>
    </sect2>
 
    <sect2>
-    <title>Rapporter un bug</title>
+    <title>Rapport de bug</title>
     <simpara>
-	Si vous pensez que vous avez trouv&eacute; un bug dans PHP, veuillez le faire savoir. 
-	Les d&eacute;veloppeurs PHP ne le connaissent probablement pas, et si vous ne le 
-	faites pas conna&icirc;tre, il n'y a aucune chance que celui-ci soit corrig&eacute;. 
-	Vous pouvez le faire savoir en utilisant le bug-tracking syst&egrave;me &agrave; l'adresse 
-	<ulink url="&url.php.bugs;">&url.php.bugs;</ulink>.
+     Si vous pensez avoir trouv&eacute; un bug dans PHP, n'oubliez pas de le
+     signaler. L'&eacute;quipe de d&eacute;veloppement PHP ne le connait peut &ecirc;tre pas,
+     et sans le signaler, vos chances de voir le bug corrig&eacute;s sont nulles.
+     Vous pouvez rapporter des bugs gr&acirc;ce au syst&egrave;me de suivi, accessible &agrave;
+     <ulink url="&url.php.bugs;">&url.php.bugs;</ulink>.
     </simpara>
    </sect2>
 
@@ -1308,23 +3141,21 @@ Ici, il faut choisir l'extension que vous souhaitez donner au fichier php.
     <title>Autres probl&egrave;mes</title>
 
     <simpara>
-	Si vous &ecirc;tes toujours dans l'impasse, il y a probablement quelqu'un sur la 
-	liste de diffusion PHP qui pourra vous aider. 
-	Vous devriez d&eacute;j&agrave; v&eacute;rifier dans les archives de la liste de diffusion au cas 
-	o&uacute; quelqu'un aurait d&eacute;j&agrave; r&eacute;pondu &agrave; votre question.
-	Les archives sont accessibles &agrave; partir de la page "support" &agrave; l'adresse 
-	<ulink url="&url.php;">&url.php;</ulink>. Pour s'inscrire sur la liste de 
-	diffusion PHP, envoyer un message vide &agrave; l'adresse suivante: 
-	<ulink url="mailto:&email.php3.subscribe;">&email.php3.subscribe;</ulink>. 
-
-	L'adresse de la liste de diffusion est: <literal>&email.php3;</literal>.
+     Si vous &ecirc;tes compl&egrave;tements bloqu&eacute;s, quelqu'un sur la liste de diffusion
+     PHP pourra probablement vous aider. Essayez de consulter les archives,
+     au cas o&ugrave; quelqu'un aurait d&eacute;j&agrave; rencontr&eacute; votre probl&egrave;me. Les archives sont
+     toujours accessibles &agrave; : <ulink url="&url.php;">&url.php;</ulink>.  
+     Pour souscrire &agrave; la liste de diffusion, envoyez un mail vide &agrave; 
+     <ulink url="mailto:&email.php3.subscribe;">&email.php3.subscribe;</ulink>.
+     L'adresse de la mailing liste : <literal>&email.php3;</literal>.
     </simpara>
     <simpara>
-	Si vous voulez obtenir de l'aide sur la liste de diffusion, veuillez essayer de 
-	pr&eacute;ciser votre environnement (quel OS, quelle version de PHP, quel 
-	serveur web, si vous utilisez PHP comme CGI ou commer module serveur, etc...), 
-	et donnez assez de code afin que les membres de la liste puissent reproduire 
-	votre probl&egrave;me et le tester.
+     Si vous voulez obtenir de l'aide sur la liste
+     de diffusion PHP, essayez d'&ecirc;tre concis et clair, et pensez &agrave; 
+     donner tous les d&eacute;tails sur votre environnement (OS, version de PHP,
+     serveur web, CGI ou module, safe_mode...), et n'h&eacute;sitez pas &agrave;
+     envoyer suffisamment de code pour que nous puissions reproduire
+     l'erreur.
     </simpara>
    </sect2>
 
@@ -1332,19 +3163,19 @@ Ici, il faut choisir l'extension que vous souhaitez donner au fichier php.
 
  </chapter>
 
-<!-- Keep this comment at the end of the file
-Local variables:
-mode: sgml
-sgml-omittag:t
-sgml-shorttag:t
-sgml-minimize-attributes:nil
-sgml-always-quote-attributes:t
-sgml-indent-step:1
-sgml-indent-data:t
-sgml-parent-document:nil
-sgml-default-dtd-file:"../../manual.ced"
-sgml-exposed-tags:nil
-sgml-local-catalogs:nil
-sgml-local-ecat-files:nil
-End:
--->
+ <!-- Keep this comment at the end of the file
+ Local variables:
+ mode: sgml
+ sgml-omittag:t
+ sgml-shorttag:t
+ sgml-minimize-attributes:nil
+ sgml-always-quote-attributes:t
+ sgml-indent-step:1
+ sgml-indent-data:t
+ sgml-parent-document:nil
+ sgml-default-dtd-file:"../../manual.ced"
+ sgml-exposed-tags:nil
+ sgml-local-catalogs:nil
+ sgml-local-ecat-files:nil
+ End:
+ -->
