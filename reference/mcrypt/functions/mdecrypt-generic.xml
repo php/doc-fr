@@ -14,35 +14,74 @@
       <methodparam><type>string</type><parameter>data</parameter></methodparam>
      </methodsynopsis>
     <para>
-     <function>mdecrypt_generic</function> d&eacute;chiffre les donn&eacute;es <parameter>data</parameter>.
-     Notez que la longueur de
-     la cha&icirc;ne d&eacute;crypt&eacute;e peut &ecirc;tre plus longue que
+     <function>mdecrypt_generic</function> d&eacute;chiffre les donn&eacute;es 
+     <parameter>data</parameter>. Notez que la longueur de
+     la cha&icirc;ne d&eacute;chiffr&eacute;e peut &ecirc;tre plus longue que
      la cha&icirc;ne originale, car elle peut avoir &eacute;t&eacute;
-     compl&eacute;t&eacute;e par des "<literal>\0</literal>".
+     compl&eacute;t&eacute;e par des caract&egrave;res "<literal>\0</literal>".
     </para>
     <para>
      <example>
       <title>Exemple avec <function>mdecrypt_generic</function></title>
       <programlisting role="php">
-&lt;?php
-$iv_size = mcrypt_enc_get_iv_size ($td));
-$iv = @mcrypt_create_iv ($iv_size, MCRYPT_RAND);
-if (@mcrypt_generic_init ($td, $key, $iv) != -1)
-{
-    $c_t = mcrypt_generic ($td, $plain_text);
-    @mcrypt_generic_init ($td, $key, $iv);
-    $p_t = mdecrypt_generic ($td, $c_t);
-}
-if (strncmp ($p_t, $plain_text, strlen($plain_text)) == 0)
-    echo "ok";
-else
-    echo "erreur";
-?&gt;
+<![CDATA[
+<?php
+    /* Donn&eacute;es */
+    $key = 'Ceci est une tr&egrave;s longue cl&eacute; de chiffrement, voire m&ecirc;me trop longue';
+    $plain_text = 'Ceci sont des donn&eacute;es importantes';
+   
+    /* Ouvre le module et cr&eacute;e un VI */ 
+    $td = mcrypt_module_open ('des', '', 'ecb', '');
+    $key = substr ($key, 0, mcrypt_enc_get_key_size ($td));
+    $iv_size = mcrypt_enc_get_iv_size ($td);
+    $iv = mcrypt_create_iv ($iv_size, MCRYPT_RAND);
+
+    /* Initialise le module de chiffrement */
+    if (mcrypt_generic_init ($td, $key, $iv) != -1) {
+
+        /* Chiffre les donn&eacute;es */
+        $c_t = mcrypt_generic ($td, $plain_text);
+        mcrypt_generic_deinit ($td);
+
+        /* R&eacute;initialise les buffers pour le d&eacute;chiffrement */
+        mcrypt_generic_init ($td, $key, $iv);
+        $p_t = mdecrypt_generic ($td, $c_t);
+
+        /* Nettoye */
+        mcrypt_generic_deinit ($td);
+        mcrypt_module_close ($td);
+    }
+
+    if (strncmp ($p_t, $plain_text, strlen($plain_text)) == 0) {
+        echo "ok\n";
+    } else {
+        echo "erreur\n";
+    }
+?>
+]]>
       </programlisting>
      </example>
+    </para>
+    <para>
      L'exemple ci-dessus montre comment v&eacute;rifier que les donn&eacute;es avant
      chiffrage sont bien les m&ecirc;mes que celles apr&egrave;s
-     chiffrage/d&eacute;chiffrage.
+     chiffrage/d&eacute;chiffrage. Il est tr&egrave;s important de r&eacute;initialiser
+     le buffer de chiffrement avec <function>mcrypt_generic_init</function> 
+     avant que nous ne d&eacute;chiffriez les donn&eacute;es.
+    </para>
+    <para>
+     Le gestionnaire de d&eacute;chiffrement doit toujours &ecirc;tre initialis&eacute;
+     par la fonction <function>mcrypt_generic_init</function> avec une cl&eacute;e 
+     et un VI avant d'appeler cette fonction. Lorsque le chiffrement est fait,
+     il faut que vous lib&eacute;rirez les donn&eacute;es chiffr&eacute;es en appelant 
+     <function>mcrypt_generic_deinit</function>.
+     Voir <function>mcrypt_module_open</function> pour un exemple.
+    </para>
+    <para>
+     Voir aussi
+     <function>mcrypt_generic</function>,
+     <function>mcrypt_generic_init</function> et
+     <function>mcrypt_generic_deinit</function>.
     </para>
    </refsect1>
   </refentry>
