@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.30 $ -->
-<!-- EN-Revision: 1.41 Maintainer: dams Status: ready -->
+<!-- $Revision: 1.31 $ -->
+<!-- EN-Revision: 1.42 Maintainer: jsgoupil Status: ready -->
  <chapter id="features.http-auth">
   <title>Identification HTTP avec &php;</title>
   
@@ -16,10 +16,11 @@
    appelée, avec les variables <varname>PHP_AUTH_USER</varname>,
    <varname>PHP_AUTH_PW</varname> et  <varname>AUTH_TYPE</varname>
    contenant respectivement le nom d'utilisateur, le mot de passe et
-   le type d'identification. Ces variables pré-définies sont trouvées dans les tableaux
+   le type d'identification. Ces variables prédéfinies sont trouvées dans les tableaux
    <link linkend="reserved.variables.server">$_SERVER</link> et
-   <varname>$HTTP_SERVER_VARS</varname> arrays.
-   Actuellement, seule l'identification simple ("Basic") est supportée. Reportez-vous à la fonction
+   <varname>$HTTP_SERVER_VARS</varname>.
+   Les méthodes d'identification simple ("Basic") et de type "Digest" (depuis PHP 5.1.0)
+   sont supportées. Reportez-vous à la fonction
    <function>header</function> pour plus d'informations.
   </simpara>
 
@@ -40,7 +41,7 @@
   </para>
   <para>
    <example>
-    <title>Exemple d'identification HTTP</title>
+    <title>Exemple d'identification HTTP simple</title>
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -53,6 +54,56 @@ if (!isset($_SERVER['PHP_AUTH_USER'])) {
     echo "<p>Bonjour, {$_SERVER['PHP_AUTH_USER']}.</p>";
     echo "<p>Votre mot de passe est {$_SERVER['PHP_AUTH_PW']}.</p>";
 }
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+
+   
+  <para>
+   <example>
+    <title>Exemple d'identification HTTP Digest</title>
+    <para>
+     Cet exemple montre comment appliquer l'utilisation d'un script
+     d'identification HTTP de type "Digest". Pour plus d'information,
+     lisez la documentation <ulink url="&url.rfc;2617">RFC 2617</ulink>.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$realm = 'Restricted area';
+
+//utilisateur => mot de passe
+$users = array('admin' => 'mypass', 'guest' => 'guest');
+
+
+if (!isset($_SERVER['PHP_AUTH_DIGEST'])) {
+    header('HTTP/1.1 401 Unauthorized');
+    header('WWW-Authenticate: Digest realm="'.$realm.
+           '" qop="auth" nonce="'.uniqid().'" opaque="'.md5($realm).'"');
+
+    die('Texte utilisé si le visiteur utilise le bouton d\'annulation');
+}
+
+// analyse la variable PHP_AUTH_DIGEST
+preg_match('/username="(?P<username>.*)",\s*realm="(?P<realm>.*)",\s*nonce="(?P<nonce>.*)",\s*uri="(?P<uri>.*)",\s*response="(?P<response>.*)",\s*opaque="(?P<opaque>.*)",\s*qop=(?P<qop>.*),\s*nc=(?P<nc>.*),\s*cnonce="(?P<cnonce>.*)"/', $_SERVER['PHP_AUTH_DIGEST'], $digest);
+
+if (!isset($users[$digest['username']]))
+    die('Nom d\'utilisateur invalide!');
+
+
+// Génération de réponse valide
+$A1 = md5($digest['username'] . ':' . $realm . ':' . $users[$digest['username']]);
+$A2 = md5($_SERVER['REQUEST_METHOD'].':'.$digest['uri']);
+$valid_response = md5($A1.':'.$digest['nonce'].':'.$digest['nc'].':'.$digest['cnonce'].':'.$digest['qop'].':'.$A2);
+
+if ($digest['response'] != $valid_response)
+    die('Mauvaise Pièces d\'identité!');
+
+// ok, utilisateur & mot de passe valide
+echo 'Vous êtes identifié en tant que : ' . $digest['username'];
+
 ?>
 ]]>
     </programlisting>
@@ -102,8 +153,8 @@ if (!isset($_SERVER['PHP_AUTH_USER'])) {
    <title>Note de configuration</title>
    <para>
     &php; utilise la présence de la directive <literal>AuthType</literal>
-    pour déterminer si une identification externe est activé.
-    évitez donc cette directive de contexte si vous voulez utiliser
+    pour déterminer si une identification externe est activée.
+    Évitez donc cette directive de contexte si vous voulez utiliser
     l'identification de &php; (sinon, les deux identifications se contrediront, 
     et échoueront).
    </para>
