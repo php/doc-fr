@@ -1,84 +1,96 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.9 $ -->
-<!-- EN-Revision: 1.7 Maintainer: yannick Status: ready -->
-  <refentry id="function.pg-send-query">
-   <refnamediv>
-    <refname>pg_send_query</refname>
-    <refpurpose>Exécute une requête PostgreSQL asynchrone</refpurpose>
-   </refnamediv>
-   <refsect1>
-    &reftitle.description;
-     <methodsynopsis>
-      <type>bool</type><methodname>pg_send_query</methodname>
-      <methodparam><type>resource</type><parameter>connection</parameter></methodparam>
-      <methodparam><type>string</type><parameter>query</parameter></methodparam>
-     </methodsynopsis>
-     <methodsynopsis>
-      <type>bool</type><methodname>pg_send_query</methodname>
-      <methodparam><type>string</type><parameter>query</parameter></methodparam>
-     </methodsynopsis>
-    <para>
-     <function>pg_send_query</function> exécute la requête <parameter>query</parameter>
-     sur la connexion <parameter>connection</parameter>, de manière asynchrone.
-     Contrairement à <function>pg_query</function>, cette fonction permet d'envoyer
-     plusieurs requêtes à un serveur PostgreSQL et de lire les résultats un par
-     un, avec la fonction <function>pg_get_result</function>. L'exécution du script n'est
-     pas bloquée durant l'exécution de la requête. Utilisez 
-     <function>pg_connection_busy</function> pour vérifier si la connexion est
-     encore occupée. Les requêtes peuvent être annulées avec 
-     <function>pg_cancel_query</function>.
-    </para>
-    <para>
-     Bien que l'on puisse envoyer plusieurs requêtes en même temps,
-     il n'est pas possible d'envoyer plusieurs requêtes sur une connexion
-     occupée. Si une requête est envoyée alors que la connexion est occupée,
-     elle attendra que la requête précédente soit finie.
-    </para>
-    <para>
-     <example>
-      <title>Exemple avec <function>pg_send_query</function></title>
-      <programlisting role="php">
+<!-- $Revision: 1.10 $ -->
+<!-- EN-Revision: 1.11 Maintainer: jsgoupil Status: ready -->
+<refentry id="function.pg-send-query">
+ <refnamediv>
+  <refname>pg_send_query</refname>
+  <refpurpose>
+   Exécute une requête PostgreSQL asynchrone
+  </refpurpose>
+ </refnamediv>
+ 
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>bool</type><methodname>pg_send_query</methodname>
+   <methodparam><type>resource</type><parameter>connection</parameter></methodparam>
+   <methodparam><type>string</type><parameter>query</parameter></methodparam>
+  </methodsynopsis>
+  <methodsynopsis>
+   <type>bool</type><methodname>pg_send_query</methodname>
+   <methodparam><type>string</type><parameter>query</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   <function>pg_send_query</function> exécute la requête <parameter>query</parameter>
+   sur la connexion <parameter>connection</parameter>, de manière asynchrone.
+   Contrairement à <function>pg_query</function>, cette fonction permet d'envoyer
+   plusieurs requêtes à un serveur PostgreSQL et de lire les résultats un par
+   un, avec la fonction <function>pg_get_result</function>. L'exécution du script n'est
+   pas bloquée durant l'exécution de la requête. Utilisez 
+   <function>pg_connection_busy</function> pour vérifier si la connexion est
+   encore occupée. Les requêtes peuvent être annulées avec 
+   <function>pg_cancel_query</function>.
+  </para>
+  <para>
+   Bien que l'on puisse envoyer plusieurs requêtes en même temps,
+   il n'est pas possible d'envoyer plusieurs requêtes sur une connexion
+   occupée. Si une requête est envoyée alors que la connexion est occupée,
+   elle attendra que la requête précédente soit finie.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Requêtes Asynchrones</title>
+    <programlisting role="php">
 <![CDATA[
 <?php
-$dbconn = pg_connect("dbname=publisher") or die("Impossible de se connecter");
+  $dbconn = pg_connect("dbname=publisher") or die("Connexion impossible");
 
-if (!pg_connection_busy($dbconn)) {
-    pg_send_query($dbconn,"select * from authors; select count(*) from authors;");
-}
+  if (!pg_connection_busy($dbconn)) {
+      pg_send_query($dbconn,"select * from auteurs; select count(*) from auteurs;");
+  }
     
-$res1 = pg_get_result($dbconn);
-echo "Premier appel à pg_get_result() : $res1\n";
-$rows1 = pg_num_rows($res1);
-echo "$res1 a $rows1 enregistrements\n\n";
+  $res1 = pg_get_result($dbconn);
+  echo "Premier appel de pg_get_result() : $res1\n";
+  $rows1 = pg_num_rows($res1);
+  echo "$res1 a $rows1 enregistrements\n\n";
     
-$res2 = pg_get_result($dbconn);
-echo "Second appel à pg_get_result() : $res2\n";
-$rows2 = pg_num_rows($res2);
-echo "$res2 a $rows2 enregistrements\n";
+  $res2 = pg_get_result($dbconn);
+  echo "Second appel de pg_get_result() : $res2\n";
+  $rows2 = pg_num_rows($res2);
+  echo "$res2 a $rows2 enregistrements\n";
 ?>
 ]]>
-      </programlisting>
-      &example.outputs;
-      <screen>
+    </programlisting>
+    &example.outputs;
+    <screen>
 <![CDATA[
-Premier appel à pg_get_result() : Resource id #3
+Premier appel de pg_get_result() : Resource id #3
 Resource id #3 a 3 enregistrements
 
-Second appel à pg_get_result() : Resource id #4
+Second appel de pg_get_result() : Resource id #4
 Resource id #4 a 1 enregistrements
 ]]>
-      </screen>
-     </example> 
-    </para>
-    <para>
-     Voir aussi
-     <function>pg_query</function>,
-     <function>pg_cancel_query</function>,
-     <function>pg_get_result</function> et
-     <function>pg_connection_busy</function>.
-    </para>
-   </refsect1>
-  </refentry>
+    </screen>
+   </example> 
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>pg_query</function></member>
+    <member><function>pg_cancel_query</function></member>
+    <member><function>pg_get_result</function></member>
+    <member><function>pg_connection_busy</function></member>
+   </simplelist>
+  </para>
+ </refsect1>
+</refentry>
 
 <!-- Keep this comment at the end of the file
 Local variables:
