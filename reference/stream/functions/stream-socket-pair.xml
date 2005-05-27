@@ -1,28 +1,138 @@
 <?xml version='1.0' encoding='iso-8859-1'?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: dams Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: dams Status: ready -->
 <refentry id="function.stream-socket-pair">
-   <refnamediv>
-    <refname>stream_socket_pair</refname>
-    <refpurpose>
-     Crée une paire de sockets connectées et indissociables
-    </refpurpose>
-   </refnamediv>
-   <refsect1>
-    &reftitle.description;
-    <methodsynopsis>
-     <type>array</type><methodname>stream_socket_pair</methodname>
-     <methodparam><type>int</type><parameter>domain</parameter></methodparam>
-     <methodparam><type>int</type><parameter>type</parameter></methodparam>
-     <methodparam><type>int</type><parameter>protocol</parameter></methodparam>
-    </methodsynopsis>
+ <refnamediv>
+  <refname>stream_socket_pair</refname>
+  <refpurpose>
+   Crée une paire de sockets connectées et indissociables
+  </refpurpose>
+ </refnamediv>
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>array</type><methodname>stream_socket_pair</methodname>
+   <methodparam><type>int</type><parameter>domain</parameter></methodparam>
+   <methodparam><type>int</type><parameter>type</parameter></methodparam>
+   <methodparam><type>int</type><parameter>protocol</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   <function>stream_socket_pair</function> crée une paire de sockets connectées
+   et indissociables. Cette fonction est communément utilisée en IPC
+   (<literal>InterProcess Communication</literal>).
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>domain</parameter></term>
+     <listitem>
+      <para>
+       La famille de protocole à utiliser : <constant>STREAM_PF_INET</constant>,
+       <constant>STREAM_PF_INET6</constant> ou
+       <constant>STREAM_PF_UNIX</constant>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>type</parameter></term>
+     <listitem>
+      <para>
+       Le type de communication à utiliser :
+       <constant>STREAM_SOCK_DGRAM</constant>,
+       <constant>STREAM_SOCK_RAW</constant>,
+       <constant>STREAM_SOCK_RDM</constant>,
+       <constant>STREAM_SOCK_SEQPACKET</constant> ou
+       <constant>STREAM_SOCK_STREAM</constant>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>protocol</parameter></term>
+     <listitem>
+      <para>
+       Le protocole à utiliser : <constant>STREAM_IPPROTO_ICMP</constant>,
+       <constant>STREAM_IPPROTO_IP</constant>,
+       <constant>STREAM_IPPROTO_RAW</constant>,
+       <constant>STREAM_IPPROTO_TCP</constant> ou
+       <constant>STREAM_IPPROTO_UDP</constant>
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+  <note>
+   <simpara>
+    Consultez la <link linkend="stream.constants">liste des constantes de flux</link> 
+    pour plus de détails sur chaque constante.
+   </simpara>
+  </note>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Retourne un &array; contenant les ressources des deux sockets en cas de succès, ou
+   &false; en cas d'échec.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>stream_socket_pair</function></title>
     <para>
-     <function>stream_socket_pair</function> crée une paire de sockets connectéesà
-     et indissociables. Cette fonction est communément utilisée en IPC
-     (<literal>InterProcess Communication</literal>).     
+     Cet exemple montre une utilisation basique de
+     <function>stream_socket_pair</function> dans une communication inter-processus.
     </para>
-   </refsect1>
-  </refentry>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$sockets = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+$pid     = pcntl_fork();
+
+if ($pid == -1) {
+  die('Impossible de forker');
+
+} else if ($pid) {
+  /* parent */
+  fclose($sockets[0]);
+
+  fwrite($sockets[1], "PID enfant : $pid\n");
+  echo fgets($sockets[1]);
+
+  fclose($sockets[1]);
+
+} else {
+  /* enfant */
+  fclose($sockets[1]);
+
+  fwrite($sockets[0], "message de l'enfant\n");
+  echo fgets($sockets[0]);
+
+  fclose($sockets[0]);
+}
+
+     ?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+PID enfant : 1378
+message de l'enfant
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
+
+</refentry>
 
 <!-- Keep this comment at the end of the file
 Local variables:
