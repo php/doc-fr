@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-affected-rows">
  <refnamediv>
   <refname>maxdb_affected_rows</refname>
+  <refname>maxdb->affected_rows</refname>
   <refpurpose>
    Récupère le nombre de lignes affectées par la dernière opération MaxDB
   </refpurpose>
@@ -15,6 +16,11 @@
    <type>mixed</type><methodname>maxdb_affected_rows</methodname>
    <methodparam><type>resource</type><parameter>link</parameter></methodparam>
   </methodsynopsis>
+  &title.oop;
+  <classsynopsis>
+   <ooclass><classname>maxdb</classname></ooclass>
+   <fieldsynopsis><type>mixed</type><varname>affected_rows</varname></fieldsynopsis>
+  </classsynopsis>
   <para>
    <function>maxdb_affected_rows</function> retourne le nombre de lignes affectées
    par la dernière requête INSERT, UPDATE ou DELETE associée avec 
@@ -47,11 +53,57 @@
  <refsect1>
   &reftitle.examples;
   <example>
+   <title>Style orienté objet</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$maxdb = new maxdb("localhost", "MONA", "RED", "DEMODB");
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+  printf("Echec de la connexion : %s\n", maxdb_connect_error());
+  exit();
+}
+
+maxdb_report (MAXDB_REPORT_OFF);
+$maxdb->query("DROP TABLE mycustomer");
+maxdb_report (MAXDB_REPORT_ERROR);
+
+/* Insertion de lignes */
+$maxdb->query("CREATE TABLE mycustomer AS SELECT * from hotel.customer");
+printf("Affected rows (INSERT): %d\n", $maxdb->affected_rows);
+
+$maxdb->query("ALTER TABLE mycustomer ADD Status int default 0");
+
+/* Mise à jour de lignes */
+$maxdb->query("UPDATE mycustomer SET Status=1 WHERE cno > 50");
+printf("Affected rows (UPDATE): %d\n", $maxdb->affected_rows);
+
+/* Effacement de lignes */
+$maxdb->query("DELETE FROM mycustomer WHERE cno < 50");
+printf("Affected rows (DELETE): %d\n", $maxdb->affected_rows);
+
+/* Sélection de toutes les lignes */
+$result = $maxdb->query("SELECT title FROM mycustomer");
+printf("Affected rows (SELECT): %d\n", $maxdb->affected_rows);
+
+$result->close();
+
+/* Effacement de la table Language */
+$maxdb->query("DROP TABLE mycustomer");
+
+/* Fermeture de la connexion */
+$maxdb->close();
+?>
+]]>
+   </programlisting>
+  </example>
+  <example>
    <title>Style procédural</title>
    <programlisting role="php">
 <![CDATA[
 <?php
-$link = maxdb_connect("localhost", "MONA", "RED");
+     $link = maxdb_connect("localhost", "MONA", "RED", "DEMODB");
 
 if (!$link) {
    printf("Impossible de se connecter à localhost. Erreur : %s\n", maxdb_connect_error());
@@ -97,7 +149,7 @@ maxdb_close($link);
 Affected rows (INSERT): 15
 Affected rows (UPDATE): 15
 Affected rows (DELETE): 0
-Affected rows (SELECT): -1
+Affected rows (SELECT): 15
 ]]>
   </screen>
  </refsect1>
