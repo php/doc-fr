@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-fetch-array">
    <refnamediv>
     <refname>maxdb_fetch_array</refname>
+    <refname>result->fetch_array</refname>
     <refpurpose>Récupère une ligne de résultat dans un
     tableau numérique, associatif ou les deux</refpurpose>
    </refnamediv>
@@ -15,6 +16,15 @@
       <methodparam><type>resource</type><parameter>result</parameter></methodparam>
       <methodparam choice='opt'><type>int</type><parameter>resulttype</parameter></methodparam>
      </methodsynopsis>
+     &title.oop;
+     <classsynopsis>
+      <ooclass><classname>result</classname></ooclass>
+      <methodsynopsis>
+       <type>mixed</type>
+       <methodname>fetch_array</methodname>
+       <methodparam choice='opt'><type>int</type><parameter>resulttype</parameter></methodparam>
+      </methodsynopsis>
+     </classsynopsis>
     <para>
      Retourne un tableau qui correspond à la ligne récupérée ou
      &null; s'il n'y a plus de lignes pour le jeu de résultats
@@ -44,10 +54,14 @@
      indiquant quel type de tableau doit être produit pour les données
      de la ligne courante. Les valeurs possibles pour ce paramètre
      sont les constantes <literal>MAXDB_ASSOC</literal>, 
+     <literal>MAXDB_ASSOC_UPPER</literal>, 
+     <literal>MAXDB_ASSOC_LOWER</literal>, 
      <literal>MAXDB_NUM</literal>, ou 
      <literal>MAXDB_BOTH</literal>. Par défaut, la fonction 
      <function>maxdb_fetch_array</function> prendra
-     la valeur <literal>MAXDB_BOTH</literal> pour ce paramètre.
+     la valeur <literal>MAXDB_BOTH</literal>, qui est une combinaison de
+     <literal>MAXDB_NUM</literal> et de <literal>MAXDB_ASSOC</literal>,
+     pour ce paramètre.
     </para>
     <para>
      En utilisant la constante <literal>MAXDB_ASSOC</literal>,
@@ -57,6 +71,16 @@
      que la fonction <function>maxdb_fetch_row</function>. 
      L'option <literal>MAXDB_BOTH</literal> créera un seul
      tableau contenant les deux sortes d'attributs.
+    </para>
+    <para>
+     En utilisant la constante MAXDB_ASSOC_UPPER, le comportement de cette fonction est identique
+     à l'utilisation de MAXDB_ASSOC à la seule différence que l'index de la colonne du tableau
+     est le nom du champs en majuscule.
+    </para>
+    <para>
+     En utilisant la constante MAXDB_ASSOC_LOWER, le comportement de cette fonction est identique 
+     à l'utilisation de MAXDB_ASSOC à la seule différence que l'index de la colonne du tableau
+     est le nom du champs en minuscule.
     </para>
    </refsect1>
    <refsect1>
@@ -70,11 +94,48 @@
    <refsect1>
     &reftitle.examples;
     <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$maxdb = new maxdb("localhost", "MONA", "RED", "DEMODB");
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+printf("Connect failed: %s\n", maxdb_connect_error());
+exit();
+}
+
+$query = "SELECT name, state FROM hotel.city ORDER by zip";
+$result = $maxdb->query($query);
+
+/* Tableau numérique */
+$row = $result->fetch_array(MAXDB_NUM);
+printf ("%s (%s)\n", $row[0], $row[1]);  
+
+/* Tableau associatif */
+$row = $result->fetch_array(MAXDB_ASSOC);
+printf ("%s (%s)\n", $row["NAME"], $row["STATE"]);  
+
+/* Tableau associatif et numérique */
+$row = $result->fetch_array(MAXDB_BOTH);
+printf ("%s (%s)\n", $row[0], $row["STATE"]);  
+
+/* Libération du jeu de résultats */
+$result->close();
+
+/* Fermeture de la connexion */
+$maxdb->close();
+?>
+]]>
+     </programlisting>
+    </example>
+    <example>
      <title>Style procédural</title>
      <programlisting role="php">
 <![CDATA[
 <?php
-$link = maxdb_connect("localhost", "MONA", "RED");
+$link = maxdb_connect("localhost", "MONA", "RED", "DEMODB");
 
 /* Vérification de la connexion */
 if (maxdb_connect_errno()) {
