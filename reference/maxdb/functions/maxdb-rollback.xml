@@ -1,17 +1,28 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-rollback">
    <refnamediv>
     <refname>maxdb_rollback</refname>
+    <refname>maxdb->rollback</refname>
     <refpurpose>Annule la transaction courante</refpurpose>
    </refnamediv>
    <refsect1>
     &reftitle.description;
+    &title.procedural;
      <methodsynopsis>
       <type>bool</type><methodname>maxdb_rollback</methodname>
       <methodparam><type>resource</type><parameter>link</parameter></methodparam>
      </methodsynopsis>
+     &title.oop;
+     <classsynopsis>
+      <ooclass><classname>maxdb</classname></ooclass>
+      <methodsynopsis>
+       <type>bool</type>
+       <methodname>rollback</methodname>
+       <void/>
+      </methodsynopsis>
+    </classsynopsis>
     <para>
      Annule la transaction courante pour la base de données spécifiée par
      le paramètre <parameter>link</parameter>.
@@ -26,11 +37,11 @@
    <refsect1>
     &reftitle.examples;
     <example>
-     <title>Style procédural</title>
+     <title>Style orienté objet</title>
      <programlisting role="php">
 <![CDATA[
 <?php
-$link = maxdb_connect("localhost", "MONA", "RED");
+$maxdb = new maxdb("localhost", "MONA", "RED", "DEMODB");
 
 /* Vérification de la connexion */
 if (maxdb_connect_errno()) {
@@ -38,7 +49,57 @@ if (maxdb_connect_errno()) {
    exit();
 }
 
-/* Désactive l'autocommit */
+/* Désactive l'auto-commit */
+$maxdb->autocommit(FALSE);
+
+$maxdb->query("CREATE TABLE temp.mycity LIKE hotel.city");
+$maxdb->query("INSERT INTO temp.mycity SELECT * FROM hotel.city");
+
+/* Exécution */
+$maxdb->commit();
+
+/* Efface toutes les lignes */
+$maxdb->query("DELETE FROM temp.mycity");
+
+if ($result = $maxdb->query("SELECT COUNT(*) FROM temp.mycity")) {
+   $row = $result->fetch_row();
+   printf("%d rows in table mycity.\n", $row[0]);
+   /* Free result */
+   $result->close();
+}
+
+/* Rollback */
+$maxdb->rollback();
+
+if ($result = $maxdb->query("SELECT COUNT(*) FROM temp.mycity")) {
+   $row = $result->fetch_row();
+   printf("%d ligne dans la table mycity (après annulation).\n", $row[0]);
+   /* Libération du résultat */
+   $result->close();
+}
+
+/* Effacement de la table myCity */
+$maxdb->query("DROP TABLE temp.mycity");
+
+$maxdb->close();
+?>
+]]>
+     </programlisting>
+    </example>
+    <example>
+     <title>Style procédural</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$link = maxdb_connect("localhost", "MONA", "RED", "DEMODB");
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+   printf("Echec de la connexion : %s\n", maxdb_connect_error());
+   exit();
+}
+
+/* Désactive l'auto-commit */
 maxdb_autocommit($link, FALSE);
 
 maxdb_query($link, "CREATE TABLE temp.mycity LIKE hotel.city");
@@ -86,8 +147,8 @@ maxdb_close($link);
    <refsect1>
     &reftitle.seealso;
     <para>
-     <function>maxdb_commit</function>
-     <function>maxdb_autocommit</function>
+     <function>maxdb_commit</function> et
+     <function>maxdb_autocommit</function>.
     </para>
    </refsect1>
   </refentry>

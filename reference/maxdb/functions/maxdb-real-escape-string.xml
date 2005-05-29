@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-real-escape-string">
    <refnamediv>
     <refname>maxdb_real_escape_string</refname>
+    <refname>maxdb->real_escape_string</refname>
     <refpurpose>
      Echappe les caractères spéciaux d'une chaîne afin de l'utiliser
      dans une requpête SQL, en tenant compte du jeu de caractères courant
@@ -18,6 +19,15 @@
       <methodparam><type>resource</type><parameter>link</parameter></methodparam>
       <methodparam><type>string</type><parameter>escapestr</parameter></methodparam>
      </methodsynopsis>
+     &title.oop;
+     <classsynopsis>
+      <ooclass><classname>maxdb</classname></ooclass>
+      <methodsynopsis>
+       <type>string</type>
+       <methodname>real_escape_sring</methodname>
+       <methodparam><type>string</type><parameter>escapestr</parameter></methodparam>
+      </methodsynopsis>
+     </classsynopsis>
      <para>
       Cette fonction est utilisée pour créer une chaîne SQL légale que vous pouvez
       utiliser dans une requête SQL. La chaîne <literal>escapestr</literal> 
@@ -37,11 +47,45 @@
    <refsect1>
     &reftitle.examples;
     <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$maxdb = new maxdb("localhost", "MONA", "RED", "DEMODB");
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+   printf("Echec de la connexion : %s\n", maxdb_connect_error());
+   exit();
+}
+
+$maxdb->query("CREATE TABLE temp.mycity LIKE hotel.city");
+
+$city = "'s Hertogenbosch";
+
+/* Cette requête échouera, car nous n'avons pas échappé $city */
+if (!$maxdb->query("INSERT into temp.mycity VALUES ('11111','$city','NY')")) {
+   printf("Erreur : %s\n", $maxdb->sqlstate);
+}
+
+$city = $maxdb->real_escape_string($city);
+
+/* Cette requête, avec $city échappé, fonctionnera */
+if ($maxdb->query("INSERT into temp.mycity VALUES ('22222','$city','NY')")) {
+   printf("%d ligne insérée.\n", $maxdb->affected_rows);
+}
+
+$maxdb->close();
+?>
+]]>
+     </programlisting>
+    </example>
+    <example>
      <title>Style procédural</title>
      <programlisting role="php">
 <![CDATA[
 <?php
-$link = maxdb_connect("localhost", "MONA", "RED");
+$link = maxdb_connect("localhost", "MONA", "RED", "DEMODB");
 
 /* Vérification de la connexion */
 if (maxdb_connect_errno()) {
@@ -63,7 +107,7 @@ $city = maxdb_real_escape_string($link, $city);
 /* Cette requête, avec $city échappé, fonctionnera */
 if (maxdb_query($link, "INSERT into temp.mycity VALUES ('22222','$city','NY')")) {
    printf("%d ligne insérée.\n", maxdb_affected_rows($link));
-} 
+}
 
 maxdb_close($link);
 ?>
