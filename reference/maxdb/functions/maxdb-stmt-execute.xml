@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-stmt-execute">
    <refnamediv>
     <refname>maxdb_stmt_execute</refname>
+    <refname>stmt->execute</refname>
     <refpurpose>Exécute une requête préparée</refpurpose>
    </refnamediv>
    <refsect1>
@@ -13,6 +14,15 @@
       <type>bool</type><methodname>maxdb_stmt_execute</methodname>
       <methodparam><type>resource</type><parameter>stmt</parameter></methodparam>
      </methodsynopsis>
+     &title.oop;
+     <classsynopsis>
+      <ooclass><classname>stmt</classname></ooclass>
+      <methodsynopsis>
+       <type>bool</type>
+       <methodname>execute</methodname>
+       <void />
+      </methodsynopsis>
+     </classsynopsis>
     <para>
      <function>maxdb_stmt_execute</function> exécute une requête qui a été
      préparée auparavant en utilisant la fonction 
@@ -42,20 +52,77 @@
    <refsect1>
     &reftitle.examples;
     <example>
-     <title>Style procédural</title>
+     <title>Style orienté objet</title>
      <programlisting role="php">
 <![CDATA[
 <?php
-$link = maxdb_connect("localhost", "MONA", "RED");
-   
+$maxdb = new maxdb("localhost", "MONA", "RED", "DEMODB");
+
 /* Vérification de la connexion */
 if (maxdb_connect_errno()) {
    printf("Echec de la connexion : %s\n", maxdb_connect_error());
    exit();
 }
-   
+
+$maxdb->query("CREATE TABLE temp.mycity LIKE hotel.city");
+
+/* Prépare une requête d'insertion */
+$query = "INSERT INTO temp.mycity (zip, name, state) VALUES (?,?,?)";
+$stmt = $maxdb->prepare($query);
+
+$stmt->bind_param("sss", $val1, $val2, $val3);
+
+$val1 = '11111';
+$val2 = 'Georgetown';
+$val3 = 'NY';
+
+/* Exécute la requête */
+$stmt->execute();
+
+$val1 = '22222';
+$val2 = 'Hubbatown';
+$val3 = 'CA';
+
+/* Exécute la requête */
+$stmt->execute();
+
+/* Fermeture de la requête */
+$stmt->close();
+
+/* Récupère toutes les lignes depuis myCity */
+$query = "SELECT zip, name, state FROM temp.mycity";
+if ($result = $maxdb->query($query)) {
+   while ($row = $result->fetch_row()) {
+      printf("%s (%s,%s)\n", $row[0], $row[1], $row[2]);
+   }
+   /* Libération du jeu de résultats */
+   $result->close();
+}
+
+/* Effacement de la table */
+$maxdb->query("DROP TABLE temp.mycity");
+
+/* Fermeture de la connexion */
+$maxdb->close();
+?>
+]]>
+     </programlisting>
+    </example>
+    <example>
+     <title>Style procédural</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$link = maxdb_connect("localhost", "MONA", "RED", "DEMODB");
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+   printf("Echec de la connexion : %s\n", maxdb_connect_error());
+   exit();
+}
+
 maxdb_query($link, "CREATE TABLE temp.mycity LIKE hotel.city");
- 
+
 /* Prépare une requête d'insertion */
 $query = "INSERT INTO temp.mycity (zip, name, state) VALUES (?,?,?)";
 $stmt = maxdb_prepare($link, $query);
@@ -65,14 +132,14 @@ maxdb_stmt_bind_param($stmt, "sss", $val1, $val2, $val3);
 $val1 = '11111';
 $val2 = 'Georgetown';
 $val3 = 'NY';
-   
+
 /* Exécute la requête */
 maxdb_stmt_execute($stmt);
 
 $val1 = '22222';
 $val2 = 'Hubbatown';
 $val3 = 'CA';
-   
+
 /* Exécute la requête */
 maxdb_stmt_execute($stmt);
 
@@ -92,7 +159,7 @@ if ($result = maxdb_query($link, $query)) {
 /* Effacement de la table */
 maxdb_query($link, "DROP TABLE temp.mycity");
 
-/* Fermeture de la connexion */    
+/* Fermeture de la connexion */
 maxdb_close($link); 
 ?>
 ]]>

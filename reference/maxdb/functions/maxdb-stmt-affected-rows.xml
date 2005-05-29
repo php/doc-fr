@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-stmt-affected-rows">
    <refnamediv>
     <refname>maxdb_stmt_affected_rows</refname>
+    <refname>maxdb_stmt->affected_rows</refname>
     <refpurpose>Retourne le nombre total de lignes modifiées, effacées ou
     insérées par la dernière requête
     </refpurpose>
@@ -15,6 +16,11 @@
      <type>mixed</type><methodname>maxdb_stmt_affected_rows</methodname>
      <methodparam><type>resource</type><parameter>stmt</parameter></methodparam>
     </methodsynopsis>
+    &title.oop;
+    <classsynopsis>
+     <ooclass><classname>stmt</classname></ooclass>
+     <fieldsynopsis><type>mixed</type><varname>affected_rows</varname></fieldsynopsis>
+    </classsynopsis>
     <para>
      <function>maxdb_stmt_affected_rows</function> retourne le nombre de lignes
      affectées par la dernière requête INSERT, UPDATE ou DELETE. Si la dernière
@@ -36,11 +42,51 @@
    <refsect1>
     &reftitle.examples;
     <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$maxdb = new maxdb("localhost", "MONA", "RED", "DEMODB");
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+   printf("Echec de la connexion : %s\n", maxdb_connect_error());
+   exit();
+}
+
+/* Création d'une table temporaire */
+$maxdb->query("CREATE TABLE temp.mycity LIKE hotel.city");
+
+$query = "INSERT INTO temp.mycity SELECT * FROM hotel.city WHERE state LIKE ?";
+
+/* Prépare une requête */
+if ($stmt = $maxdb->prepare($query)) {
+
+   /* Lie les variables à un endroit */
+   $code = 'N%';
+   $stmt->bind_param("s", $code);
+
+   /* Exécute la requête */
+   $stmt->execute();
+
+   printf("Lignes insérées : %d\n", $stmt->affected_rows);
+
+   /* Fermeture de la requête */
+   $stmt->close();
+}
+
+/* Fermeture de la connexion */
+$maxdb->close();
+?>
+]]>
+     </programlisting>
+    </example>
+    <example>
      <title>Style procédural</title>
      <programlisting role="php">
 <![CDATA[
 <?php
-$link = maxdb_connect("localhost", "MONA", "RED");
+$link = maxdb_connect("localhost", "MONA", "RED", "DEMODB");
 
 /* Vérification de la connexion */
 if (maxdb_connect_errno()) {
@@ -59,7 +105,7 @@ if ($stmt = maxdb_prepare($link, $query)) {
    /* Lie les variables à un endroit */
    $code = 'N%';
    maxdb_stmt_bind_param($stmt, "s", $code);
-   
+
    /* Exécute la requête */
    maxdb_stmt_execute($stmt);
 

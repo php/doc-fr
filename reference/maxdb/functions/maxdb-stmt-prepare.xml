@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-stmt-prepare">
    <refnamediv>
     <refname>maxdb_stmt_prepare</refname>
+    <refname>stmt->prepare</refname>
     <refpurpose>
      Prépare une requête SQL pour exécution
     </refpurpose>
@@ -16,6 +17,15 @@
       <methodparam><type>resource</type><parameter>stmt</parameter></methodparam>
       <methodparam><type>string</type><parameter>query</parameter></methodparam>
      </methodsynopsis>
+     &title.oop;
+     <classsynopsis>
+      <ooclass><classname>stmt</classname></ooclass>
+      <methodsynopsis>
+       <type>mixed</type>
+       <methodname>prepare</methodname>
+       <methodparam><type>string</type><parameter>query</parameter></methodparam>
+      </methodsynopsis>
+     </classsynopsis>
      <para>
       <function>maxdb_stmt_prepare</function> prépare une requête SQL pointée
       par une chaîne. La ressource de requête doit avoir été allouée par la 
@@ -69,11 +79,54 @@
    <refsect1>
     &reftitle.examples;
     <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$maxdb = new maxdb("localhost", "MONA", "RED", "DEMODB");
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+   printf("Echec de la connexion : %s\n", maxdb_connect_error());
+   exit();
+}
+
+$city = "Portland";
+
+/* Création d'une requête préparée */
+$stmt =  $maxdb->stmt_init();
+if ($stmt->prepare("SELECT state FROM hotel.city WHERE name=?")) {
+
+   /* Lie les paramètres aux marqueurs */
+   $stmt->bind_param("s", $city);
+
+   /* Exécute la requête */
+   $stmt->execute();
+
+   /* Lie les variables de résultats */
+   $stmt->bind_result($district);
+
+   /* Récupère la valeur */
+   $stmt->fetch();
+
+   printf("%s est dans %s\n", $city, $district);
+
+   /* Fermeture de la requête */
+   $stmt->close();
+}
+
+/* Fermeture de la connexion */
+$maxdb->close();
+?>
+]]>
+     </programlisting>
+    </example>
+    <example>
      <title>Style procédural</title>
      <programlisting role="php">
 <![CDATA[
 <?php
-$link = maxdb_connect("localhost", "MONA", "RED");
+$link = maxdb_connect("localhost", "MONA", "RED", "DEMODB");
 
 /* Vérification de la connexion */
 if (maxdb_connect_errno()) {
@@ -87,7 +140,7 @@ $city = "Portland";
 $stmt = maxdb_stmt_init($link);
 if (maxdb_stmt_prepare($stmt, "SELECT state FROM hotel.city WHERE name=?")) {
 
-   /* lie les paramètres aux marqueurs */
+   /* Lie les paramètres aux marqueurs */
    maxdb_stmt_bind_param($stmt, "s", $city);
 
    /* Exécute la requête */
@@ -103,7 +156,7 @@ if (maxdb_stmt_prepare($stmt, "SELECT state FROM hotel.city WHERE name=?")) {
 
    /* Fermeture de la requête */
    maxdb_stmt_close($stmt);
-} 
+}
 
 /* Fermeture de la connexion */
 maxdb_close($link);
