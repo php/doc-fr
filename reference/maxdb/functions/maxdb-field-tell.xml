@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-field-tell">
    <refnamediv>
     <refname>maxdb_field_tell</refname>
+    <refname>result->current_field</refname>
     <refpurpose>
      Récupère la position du champs courant pour un pointeur de résultat
     </refpurpose>
@@ -15,6 +16,14 @@
       <type>int</type><methodname>maxdb_field_tell</methodname>
       <methodparam><type>resource</type><parameter>result</parameter></methodparam>
      </methodsynopsis>
+     &title.oop;
+     <classsynopsis>
+      <ooclass><classname>result</classname></ooclass>
+      <fieldsynopsis>
+       <type>int</type>
+       <varname>current_field</varname>
+      </fieldsynopsis>
+     </classsynopsis>
      <para> 
       Retourne la position du curseur de champs utilisé par 
       le dernier appel à <function>maxdb_fetch_field</function>. 
@@ -31,11 +40,50 @@
    <refsect1>
     &reftitle.examples;
     <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$maxdb = new maxdb("localhost", "MONA", "RED", "DEMODB");
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+   printf("Echec de la connexion : %s\n", maxdb_connect_error());
+   exit();
+}
+
+$query = "SELECT name, cno from hotel.customer ORDER BY cno";
+
+if ($result = $maxdb->query($query)) {
+
+   /* Récupère les informations pour tous les champs */
+   while ($finfo = $result->fetch_field()) {
+
+      /* Récupère le position du curseur de champs */
+      $currentfield = $result->current_field;
+
+      printf("Colonne    %d:\n", $currentfield); 
+      printf("Nom:     %s\n", $finfo->name);
+      printf("Table:    %s\n", $finfo->table);
+      printf("Longueur max. : %d\n", $finfo->max_length);
+      printf("Flags:    %d\n", $finfo->flags);
+      printf("Type:     %d\n\n", $finfo->type);
+   }
+   $result->close();
+}
+
+/* Fermeture de la connexion */
+$maxdb->close();
+?>
+]]>
+     </programlisting>
+    </example>
+    <example>
      <title>Style procédural</title>
      <programlisting role="php">
 <![CDATA[
 <?php
-$link = maxdb_connect("localhost", "MONA", "RED");
+$link = maxdb_connect("localhost", "MONA", "RED", "DEMODB");
 
 /* Vérification de la connexion */
 if (maxdb_connect_errno()) {
@@ -49,7 +97,7 @@ if ($result = maxdb_query($link, $query)) {
 
    /* Récupère les informations pour tous les champs */
    while ($finfo = maxdb_fetch_field($result)) {
- 
+
        /* Récupère le position du curseur de champs */
        $currentfield = maxdb_field_tell($result);
 
@@ -74,14 +122,14 @@ maxdb_close($link);
 Colonne    1:
 Nom :     NAME
 Table :
-Longueur max.: 10
+Longueur max. : 10
 Flags :    -1
 Type :     2
 
 Colonne    2:
 Nom :     CNO
 Table :
-Longueur max.: 4
+Longueur max. : 4
 Flags :    -1
 Type :     0
 ]]>
