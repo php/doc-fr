@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-insert-id">
    <refnamediv>
     <refname>maxdb_insert_id</refname>
+    <refname>maxdb->insert_id</refname>
     <refpurpose>Retourne le dernier identifiant généré automatiquement
     par la dernière requête</refpurpose>
    </refnamediv>
@@ -14,6 +15,11 @@
       <type>mixed</type><methodname>maxdb_insert_id</methodname>
       <methodparam><type>resource</type><parameter>link</parameter></methodparam>
      </methodsynopsis>
+     &title.oop;
+     <classsynopsis>
+      <ooclass><classname>maxdb</classname></ooclass>
+      <fieldsynopsis><type>mixed</type><varname>insert_id</varname></fieldsynopsis>
+     </classsynopsis>
     <para>
      <function>maxdb_insert_id</function> retourne le denier identifiant
      généré par une requête sur une table qui a une colonne possédant
@@ -39,11 +45,45 @@
  <refsect1>
   &reftitle.examples;
   <example>
+   <title>Style orienté objet</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$maxdb = new maxdb("localhost", "MONA", "RED", "DEMODB");
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+printf("Echec de la connexion : %s\n", maxdb_connect_error());
+exit();
+}
+
+maxdb_report (MAXDB_REPORT_OFF);
+$maxdb->query("DROP TABLE mycity");
+maxdb_report (MAXDB_REPORT_ERROR);
+
+$maxdb->query("CREATE TABLE mycity LIKE hotel.city");
+$maxdb->query("ALTER TABLE mycity ADD id FIXED(11) DEFAULT SERIAL");
+
+$query = "INSERT INTO mycity (zip,name,state) VALUES ('12203','Albany' ,'NY')";
+$maxdb->query($query);
+
+printf ("Le nouvel enregistrement a comme identifiant %d.\n", $maxdb->insert_id);
+
+/* Effacement de la table */
+$maxdb->query("DROP TABLE mycity");
+
+/* Fermeture de la connexion */
+$maxdb->close();
+?>
+]]>
+   </programlisting>
+  </example>
+  <example>
    <title>Style procédural</title>
    <programlisting role="php">
 <![CDATA[
 <?php
-$link = maxdb_connect("localhost", "MONA", "RED");
+$link = maxdb_connect("localhost", "MONA", "RED", "DEMODB");
 
 /* Vérification de la connexion */
 if (maxdb_connect_errno()) {
@@ -61,7 +101,7 @@ maxdb_query($link, "ALTER TABLE mycity ADD id FIXED(11) DEFAULT SERIAL");
 $query = "INSERT INTO mycity (zip,name,state) VALUES ('12203','Albany' ,'NY')";
 maxdb_query($link, $query);
 
-printf ("Le nouvel identifiant a comme identifiant %d.\n", maxdb_insert_id($link));
+printf ("Le nouvel enregistrement a comme identifiant %d.\n", maxdb_insert_id($link));
 
 /* Effacement de la table */
 maxdb_query($link, "DROP TABLE mycity");
@@ -74,7 +114,7 @@ maxdb_close($link);
    &example.outputs;
    <screen>
 <![CDATA[
-Le nouvel identifiant a comme identifiant 1.
+Le nouvel enregistrement a comme identifiant 1.
 ]]>
    </screen>
   </example>

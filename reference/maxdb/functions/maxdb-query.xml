@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-query">
    <refnamediv>
     <refname>maxdb_query</refname>
+    <refname>maxdb->query</refname>
     <refpurpose>Exécute une requête sur une base de données</refpurpose>
    </refnamediv>
    <refsect1>
@@ -15,6 +16,15 @@
      <methodparam><type>string</type><parameter>query</parameter></methodparam>
      <methodparam choice='opt'><type>int</type><parameter>resultmode</parameter></methodparam>
     </methodsynopsis>
+    &title.oop;
+    <classsynopsis>
+     <ooclass><classname>maxdb</classname></ooclass>
+     <methodsynopsis>
+      <type>mixed</type>
+      <methodname>query</methodname>
+      <methodparam><type>string</type><parameter>query</parameter></methodparam>
+     </methodsynopsis>
+    </classsynopsis>
     <para>
      <function>maxdb_query</function> est utilisé pour simplifier l'exécution
      d'une requête sur une base de données représentée par le paramètre
@@ -32,11 +42,47 @@
    <refsect1>
     &reftitle.examples;
     <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$maxdb = new maxdb("localhost", "MONA", "RED", "DEMODB");
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+   printf("Echec de la connexion : %s\n", maxdb_connect_error());
+   exit();
+}
+
+/* La création d'une table ne retourne pas de jeu de résultats*/
+if ($maxdb->query("CREATE TABLE temp.mycity LIKE hotel.city") === TRUE) {
+   printf("La table mycity a été créée avec succès.\n");
+}
+
+/* Les requêtes SELECT retournent un jeu de résultats */
+if ($result = $maxdb->query("SELECT name FROM hotel.city")) {
+   printf("SELECT a retourné %d lignes.\n", $result->num_rows);
+
+   /* Libération des résultats */
+   $result->close();
+}
+
+/* Si nous devons récupérer une grosse quantité de données, nous utilisons MAXDB_USE_RESULT */
+if ($result = $maxdb->query("SELECT * FROM hotel.city", MAXDB_USE_RESULT)) {
+   $result->close();
+}
+
+$maxdb->close();
+?>
+]]>
+     </programlisting>
+    </example>
+    <example>
      <title>Style procédural</title>
      <programlisting role="php">
 <![CDATA[
 <?php
-$link = maxdb_connect("localhost", "MONA", "RED");
+$link = maxdb_connect("localhost", "MONA", "RED", "DEMODB");
 
 /* Vérification de la connexion */
 if (maxdb_connect_errno()) {
@@ -70,7 +116,7 @@ maxdb_close($link);
      <screen>
 <![CDATA[
 La table mycity a été créée avec succès.
-SELECT a retourné -1 lignes.
+SELECT a retourné 25 lignes.
 ]]>
      </screen>
     </example>

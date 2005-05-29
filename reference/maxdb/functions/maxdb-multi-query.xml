@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.4 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-multi-query">
    <refnamediv>
     <refname>maxdb_multi_query</refname>
+    <refname>maxdb->multi_query</refname>
     <refpurpose>Exécute une requête sur une base de données</refpurpose>
    </refnamediv>
    <refsect1>
@@ -14,6 +15,15 @@
      <methodparam><type>resource</type><parameter>link</parameter></methodparam>
      <methodparam><type>string</type><parameter>query</parameter></methodparam>
     </methodsynopsis>
+    &title.oop;
+    <classsynopsis>
+     <ooclass><classname>maxdb</classname></ooclass>
+     <methodsynopsis>
+      <type>bool</type>
+      <methodname>multi_query</methodname>
+      <methodparam><type>string</type><parameter>query</parameter></methodparam>
+     </methodsynopsis>
+    </classsynopsis>
     <para>
      <function>maxdb_multi_query</function> fonctionne de la même 
      manière que la fonction 
@@ -30,11 +40,49 @@
    <refsect1>
     &reftitle.examples;
     <example>
+     <title>Style orienté objet</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$maxdb = new maxdb("localhost", "MONA", "RED", "DEMODB");
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+   printf("Echec de la connexion : %s\n", maxdb_connect_error());
+   exit();
+}
+
+$query  = "SELECT * FROM dual";
+
+/* Exécute de multiples requêtes */
+if ($maxdb->multi_query($query)) {
+   do {
+      /* Stock le premier jeu de résultats */
+      if ($result = $maxdb->store_result()) {
+         while ($row = $result->fetch_row()) {
+            printf("%s\n", $row[0]);
+         }
+         $result->close();
+      }
+      /* Affiche une séparation */
+      if ($maxdb->more_results()) {
+         printf("-----------------\n");
+      }
+   } while ($maxdb->next_result());
+}
+
+/* Fermeture de la connexion */
+$maxdb->close();
+?>
+]]>
+     </programlisting>
+    </example>
+    <example>
      <title>Style procédural</title>
      <programlisting role="php">
 <![CDATA[
 <?php
-$link = maxdb_connect("localhost", "MONA", "RED");
+$link = maxdb_connect("localhost", "MONA", "RED", "DEMODB");
 
 /* Vérification de la connexion */
 if (maxdb_connect_errno()) {
@@ -43,7 +91,6 @@ if (maxdb_connect_errno()) {
 }
 
 $query = "SELECT * FROM dual";
-$query .= "SELECT name FROM hotel.city ORDER BY zip";
 
 /* Exécute de multiples requêtes */
 if (maxdb_multi_query($link, $query)) {
