@@ -1,139 +1,193 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.10 $ -->
-<!-- EN-Revision: 1.6 Maintainer: yannick Status: ready -->
-  <refentry id="function.yaz-search">
-   <refnamediv>
-    <refname>yaz_search</refname>
-    <refpurpose>Prépare une recherche</refpurpose>
-   </refnamediv>
-   <refsect1>
-    &reftitle.description;
-     <methodsynopsis>
-      <type>int</type><methodname>yaz_search</methodname>
-      <methodparam><type>resource</type><parameter>id</parameter></methodparam>
-      <methodparam><type>string</type><parameter>type</parameter></methodparam>
-      <methodparam><type>string</type><parameter>query</parameter></methodparam>
-     </methodsynopsis>
-    <para>
-     <function>yaz_search</function> prépare une recherche sur le serveur
-     identifié par <parameter>id</parameter>. <parameter>type</parameter>
-     représente le type de requête : seul RPN est supporté
-     actuellement, et dans ce cas, le troisième argument est un
-     préfixe de notation de requête utilisé par YAZ.
-     Comme pour <function>yaz_connect</function>, <function>yaz_search</function>
-     n'est pas bloquante, et ne fait que préparer la recherche pour
-     exécution ultérieure, avec <function>yaz_wait</function>.
-    </para>
-   </refsect1>
-   <refsect1>
-    <title>Requêtes RPN</title>
-    <para>
-     Les requêtes RPN sont des représentation textuelles des
-     requêtes de type Type-1, comme définit dans le standard
-     Z39.50. Cependant, dans la représentation textuelle utilisée
-     par YAZ, une notation à préfixage est utilisée,
-     c'est-à-dire que l'opérateur précède
-     l'opérande. La chaîne de requête est une
-     séquence de mots réservés, où les espaces sont
-     ignorés, à moins qu'ils n'aient été
-     mis entre guillemets doubles. Les mots réservés qui commencent
-     par un arobase (<literal>&#64;</literal>) sont considérés
-     comme des opérateurs et traités comme tels.
-    </para>
-    <table>
-     <title>Opérateurs RPN</title>
-     <tgroup cols="2">
-      <colspec colwidth="1*" colname="construct"/>
-      <colspec colwidth="2*" colname="description"/>
-      <thead>
-        <row>
+<!-- $Revision: 1.11 $ -->
+<!-- EN-Revision: 1.8 Maintainer: jsgoupil Status: ready -->
+<refentry id="function.yaz-search">
+ <refnamediv>
+  <refname>yaz_search</refname>
+  <refpurpose>Prépare une recherche</refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>int</type><methodname>yaz_search</methodname>
+   <methodparam><type>resource</type><parameter>id</parameter></methodparam>
+   <methodparam><type>string</type><parameter>type</parameter></methodparam>
+   <methodparam><type>string</type><parameter>query</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   <function>yaz_search</function> prépare une recherche sur la connexion
+   donnée
+  </para>
+  <para>
+   Comme pour <function>yaz_connect</function>, cette fonction
+     n'est pas bloquante et ne fait que préparer la recherche pour
+     exécution ultérieure lorsque <function>yaz_wait</function> est appelée.
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>id</parameter></term>
+     <listitem>
+      <para>
+       La ressource de connexion retournée par
+       <function>yaz_connect</function>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>type</parameter></term>
+     <listitem>
+      <para>
+       Ce paramètre représente le type de requête - seul
+       <literal>"rpn"</literal> est supporté actuellement, et dans ce cas, le
+       troisième argument est un préfixe de notation de requête utilisé par
+       YAZ.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>query</parameter></term>
+     <listitem>
+      <para>
+       Les requêtes RPN sont des représentations textuelles des
+       requêtes de type Type-1, comme définit dans le standard
+       Z39.50. Cependant, dans la représentation textuelle utilisée
+       par YAZ, une notation à préfixage est utilisée,
+       c'est-à-dire que l'opérateur précède
+       l'opérande. La chaîne de requête est une
+       séquence de mots réservés, où les espaces sont
+       ignorés, à moins qu'ils n'aient été
+       mis entre guillemets doubles. Les mots réservés qui commencent
+       par un arobase (<literal>@</literal>) sont considérés
+       comme des opérateurs et traités comme tels.
+      </para>
+      <table>
+       <title>Opérateurs RPN</title>
+       <tgroup cols="2">
+        <colspec colwidth="1*" colname="construct"/>
+        <colspec colwidth="2*" colname="description"/>
+        <thead>
+         <row>
           <entry>Syntaxe</entry>
           <entry>Description</entry>
-        </row>
-      </thead>
-      <tbody>
-        <row>
-         <entry><literal>@and query1 query2</literal></entry>
-         <entry>intersection des requêtes query1 et query2</entry>
-        </row>
-        <row>
-         <entry><literal>@or query1 query2</literal></entry>
-         <entry>union des requêtes  query1 et query2</entry>
-        </row>
-        <row>
-         <entry><literal>@;not query1 query2</literal></entry>
-         <entry>requêtes "query1 et non(query2)"</entry>
-        </row>
-        <row>
-         <entry><literal>@set name</literal></entry>
-         <entry>nomme le résultat</entry>
-        </row>
-        <row>
-         <entry><literal>@attrset set query</literal></entry>
-         <entry>spécifie le jeu d'attributs de la requête. Cette construction
-         n'est autorisée qu'une seule fois, au début d'une requête.</entry>
-        </row>
-        <row>
-          <entry><literal>@attr set type=value query</literal></entry>
-          <entry>Applique les attributs à une requête. Le type et la valeur
-          sont des entiers indiquant les types et valeurs des attributs, dans
-          cet ordre. Le jeu, si fourni, spécifie le jeu d'attributs utilisé.
-         </entry>
-        </row>
-      </tbody>
-     </tgroup>
-    </table>
-    <example>
-    <title>Exemples de requêtes</title>
-    <para>
-     Vous pouvez rechercher des termes simples comme
-     <screen>ordinateur</screen>
-     qui identifieront les documents où "ordinateur" apparaît.
-     Aucun attribut n'est spécifié.
-    </para>
-     <para>
-     La requête <screen>"knuth donald"</screen>
-     recherche les documents où "knuth donald" apparaît (en
-     supposant que le serveur supporte la recherche par phrase).
-     </para>
-     <para>
-     Cette requête applique deux attributs à la phrase recherchée : 
-     <screen>@attr 1=1003 @attr 4=1 "knuth donald"</screen>
-     Le premier attribut est de type 1 (Bib-1), et sa valeur est 1003
-     (Auteur).
-     Le second attribut est de type 4 (structure), valeur 1 (phrase),
-     ce qui fait que la requête recherche les documents dont 
-     Donald Knuth est l'auteur.
-     </para>
-     <para>
-      Cette requête 
-      <screen>@and @or a b @not @or c d e</screen>
-      sera traduite en notation infix comme ceci : 
-        <literal>(a or b) and ((c or d) not e)</literal>.
-     </para>
-     <para>
-     Un autre exemple plus complexe : 
-<screen>@attrset gils @and @attr 1=4 art @attr 1=2000 company</screen>.
-     La requête utilise l'ensemble de sous attributs GILS. La requête
-     recherche les documents où le mot <literal>art</literal>
-     apparaît dans le titre (GILS,BIB-1) et dont la société 
-     (<literal>company</literal>) apparaît comme distributeur (GILS).
-     </para>
-    </example>
-    <para>
-     Vous pouvez trouver plus d'informations sur les requêtes et attributs
-     sur le site de 
-     <ulink url="&url.yaz-loc-bib1;">Z39.50 Maintenance Agency</ulink>.
-    </para>
-    <note>
-     <para>
-      Si vous préférez une notation plus conviviale, utilisez l'analyseur
-      CCL  : <function>yaz_ccl_conf</function> et <function>yaz_ccl_parse</function>.
-     </para>
-    </note>
-
-   </refsect1>
-  </refentry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry><literal>@and</literal> query1 query2</entry>
+          <entry>intersection des requêtes query1 et query2</entry>
+         </row>
+         <row>
+          <entry><literal>@or</literal> query1 query2</entry>
+          <entry>union des requêtes query1 et query2</entry>
+         </row>
+         <row>
+          <entry><literal>@not</literal> query1 query2</entry>
+          <entry>requêtes "query1 et non(query2)"</entry>
+         </row>
+         <row>
+          <entry><literal>@set</literal> name</entry>
+          <entry>nomme le résultat</entry>
+         </row>
+         <row>
+          <entry><literal>@attrset</literal> set query</entry>
+          <entry>spécifie le jeu d'attributs de la requête. Cette construction
+          n'est autorisée qu'une seule fois, au début d'une requête.</entry>
+         </row>
+         <row>
+           <entry><literal>@attr</literal> [set] type=value query</entry>
+           <entry>Applique les attributs à une requête. Le type et la valeur
+           sont des entiers indiquant les types et valeurs des attributs, dans
+           cet ordre. Le jeu, si fourni, spécifie le jeu d'attributs utilisé.
+          </entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </table>
+      <para>
+       Vous pouvez trouver des informations sur les attributs sur le site
+       <ulink url="&url.yaz-loc-bib1;">Z39.50 Maintenance Agency</ulink>.
+      </para>
+      <note>
+       <para>
+        Si vous voudriez utiliser une notation plus facile, utilisez
+        l'analyseur CCL - fonctions <function>yaz_ccl_conf</function> et
+        <function>yaz_ccl_parse</function>.
+       </para>
+      </note>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   &return.success;
+  </para>
+ </refsect1>
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemples de Requête</title>
+   <para>
+    Vous pouvez chercher pour des termes simples, comme ceci :
+    <screen>
+<![CDATA[
+ordinateur
+]]>
+    </screen>
+    qui concorde avec les documents où "ordinateur" se trouve. Aucun attribut
+    n'est spécifiés.
+   </para>
+   <para>
+    La requête
+    <screen>
+<![CDATA[
+"knuth donald"
+]]>
+    </screen>
+    concorde avec les documents où "knuth donald" se trouve (en supposant que
+    le serveur supporte la recherche de phrase).
+   </para>
+   <para>
+    Cette requête applique deux attributs à la même phrase.
+    <screen>@attr 1=1003 @attr 4=1 "knuth donald"</screen>
+    Le premier attribut est de type 1 (Bib-1), et sa valeur est 1003
+    (Auteur).
+    Le second attribut est de type 4 (structure), valeur 1 (phrase),
+    ce qui fait que la requête recherche les documents dont 
+    Donald Knuth est l'auteur.
+   </para>
+   <para>
+    La requête
+    <screen>
+<![CDATA[
+@and @or a b @not @or c d e
+]]>
+    </screen>
+    ressemblerait en notation infix <literal>(a or b) and ((c or d) not e)</literal>.
+   </para>
+   <para>
+    Un autre exemple, plus complexe :
+    <screen>
+<![CDATA[
+@attrset gils @and @attr 1=4 art @attr 1=2000 company
+]]>
+    </screen>
+    La requête utilise l'ensemble de sous attributs GILS. La requête
+    recherche les documents où le mot <literal>art</literal>
+    apparaît dans le titre (GILS,BIB-1) et dont la société 
+    (<literal>company</literal>) apparaît comme distributeur (GILS).
+   </para>
+  </example>
+ </refsect1>
+</refentry>
 
 <!-- Keep this comment at the end of the file
 Local variables:
