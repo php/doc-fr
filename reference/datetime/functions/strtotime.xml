@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.16 $ -->
-<!-- EN-Revision: 1.13 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.17 $ -->
+<!-- EN-Revision: 1.14 Maintainer: yannick Status: ready -->
 <refentry id="function.strtotime">
  <refnamediv>
   <refname>strtotime</refname>
@@ -8,7 +8,7 @@
    Transforme un texte anglais en timestamp
   </refpurpose>
  </refnamediv>
- <refsect1>
+ <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
    <type>int</type><methodname>strtotime</methodname>
@@ -21,37 +21,92 @@
    et de la transformer en timestamp Unix (le nombre de secondes depuis
    le 1er Janvier 1970 à 00:00:00 GMT), relativement au timestamp
    <parameter>now</parameter>, ou à la date courante si ce dernier
-   est omis. En cas d'erreur, <literal>-1</literal> est retourné.
+   est omis.
   </simpara>
-  <simpara>
-   Comme <function>strtotime</function> suit la syntaxe de date GNU,
-   vous pouvez lire le manuel GNU intitulé 
-   <ulink url="&url.gnu.man.date-input;">Date Input Formats</ulink>.
-   Ci-dessous, vous trouverez une syntaxe valide pour le paramètre 
-   <parameter>time</parameter>.
-  </simpara>
-  <warning>
-   <para>
-    Dans les versions de &php; supérieures à 5.0.2, <literal>"now"</literal>
-    et les autres valeurs de temps relatives sont incorrectement calculées depuis
-    minuit du jour courant. Ce comportement diffère des versions antérieures
-    où elles étaient correctement calculées depuis l'heure courante.
-   </para>
-  </warning>
+  <para>
+   Cette fonction devrait utiliser la variable d'environnement <envar>TZ</envar> (si
+   disponible) pour calculer le timestamp. Depuis &php; 5.1.0 et si la variable
+   <envar>TZ</envar> n'est pas définie, l'option de configuration <link
+   linkend="ini.date.timezone">date.timezone</link> du &php.ini;
+   sera utilisée. Si aucune de ces variables n'est disponible, "GMT" sera utilisé.
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>time</parameter></term>
+     <listitem>
+      <para>
+       La chaîne à analyser, en accord avec la <ulink
+       url="&url.gnu.man.date-input;">synthaxe des dates</ulink> GNU
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>now</parameter></term>
+     <listitem>
+      <para>
+       Le timestamp utilisé pour calculer la valeur retournée
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Retourne un timestamp en cas de succès, &false; sinon. Avant &php; 5.1.0,
+   cette fonction retournait <literal>-1</literal> en cas d'échec.
+  </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>5.1.0</entry>
+       <entry>
+        La fonction retourne maintenant &false; en cas d'échec, au lieu de
+        <literal>-1</literal>.
+        Ajout de l'option <link linkend="ini.date.timezone">date.timezone</link>
+        dans le &php.ini;.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
   <para>
    <example>
     <title>Exemple avec <function>strtotime</function></title>
     <programlisting role="php">
 <![CDATA[
 <?php
-// l'exemple n'est pas traduit, car cela ne fonctionne qu'en anglais
-echo strtotime ("now"), "\n";
-echo strtotime ("10 September 2000"), "\n";
-echo strtotime ("+1 day"), "\n";
-echo strtotime ("+1 week"), "\n";
-echo strtotime ("+1 week 2 days 4 hours 2 seconds"), "\n";
-echo strtotime ("next Thursday"), "\n";
-echo strtotime ("last Monday"), "\n";
+echo strtotime("now"), "\n";
+echo strtotime("10 September 2000"), "\n";
+echo strtotime("+1 day"), "\n";
+echo strtotime("+1 week"), "\n";
+echo strtotime("+1 week 2 days 4 hours 2 seconds"), "\n";
+echo strtotime("next Thursday"), "\n";
+echo strtotime("last Monday"), "\n";
 ?>
 ]]>
     </programlisting>
@@ -59,33 +114,56 @@ echo strtotime ("last Monday"), "\n";
   </para>
   <para>
    <example>
-    <title>Vérification des erreurs avec <function>strtotime</function></title>
+    <title>Checking for failure</title>
     <programlisting role="php">
 <![CDATA[
 <?php
-$str = 'Pas une bonne date';
-if (($timestamp = strtotime($str)) === -1) {
-  echo "La chaîne ($str) est bogus";
+$str = 'Pas bon';
+
+// Avant PHP 5.1.0, vous devez comparer avec  -1, au lieu de false
+if (($timestamp = strtotime($str)) === false) {
+   echo "La chaîne ($str) est boguée";
 } else {
-  echo "$str == ". date('l dS of F Y h:i:s A',$timestamp);
+   echo "$str == " . date('l dS of F Y h:i:s A', $timestamp);
 }
 ?>
 ]]>
     </programlisting>
    </example>
   </para>
+ </refsect1>
+
+ <refsect1 role="notes">
+  &reftitle.notes;
+  <warning>
+   <para>
+    En &php; 5 supérieur à 5.0.2, <literal>"now"</literal> et les autres 
+    valeurs de temps relatives sont incorrectement calculées depuis
+    minuit du jour courant. Ce comportement diffère des versions antérieures
+    où elles étaient correctement calculées depuis l'heure courante.
+   </para>
+  </warning>
   <note>
    <para>
     L'intervalle de validité d'un timestamp va du 
-    Vendredi 13 Décembre 1901 20:45:54 GMT au Mardi 19 Jan 2038 03:14:07 GMT : 
-    cela correspond aux dates maximales et minimales pour un
-    entier de 32 bits signé.
+    Vendredi 13 Décembre 1901 20:45:54 GMT au Mardi 19 Janvier 2038 03:14:07 GMT.
+    (Cela correspond aux dates maximales et minimales pour un
+    entier de 32 bits signé.)
     Toutes les plates-formes ne supportent pas les timestamp négatifs et dans ce cas,
     l'intervalle de date sera limitée à environs l'époque Unix. Cela signifie que
     les dates antérieures au 1 Janvier 1970 ne fonctionneront pas sous Windows, 
     quelques distributions Linux et quelques autres systèmes.
    </para>
   </note>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>strptime</function></member>
+   </simplelist>
+  </para>
  </refsect1>
 </refentry>
 
