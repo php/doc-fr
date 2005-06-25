@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.20 $ -->
-<!-- EN-Revision: 1.6 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- $Revision: 1.21 $ -->
+<!-- EN-Revision: 1.10 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
   <refentry id="reference.pcre.pattern.syntax">
    <refnamediv>
     <refname>syntaxe des masques</refname>
@@ -74,8 +74,8 @@
      <listitem>
       <simpara>
        Les séquence d'échappement suivantes ne sont pas
-       supportées par le Perl: \l, \u, \L, \U, \E,
-       \Q. En fait, elles sont implémentées par la gestion
+       supportées par le Perl: \l, \u, \L, \U.
+       En fait, elles sont implémentées par la gestion
        intrinsèque de chaînes du Perl, et ne font pas partie
        de ses caractères spéciaux.
       </simpara>
@@ -488,6 +488,12 @@
        Après "<literal>\x</literal>", deux caractères
        hexadécimaux sont lus (les lettres peuvent être en majuscule
        ou minuscule).
+       En mode <emphasis>UTF-8</emphasis>, "<literal>\x{...}</literal>"
+       est aurotisé, où le contenu des accolades est une chaîne hexadécimale.
+       Il sera interprété comme un caractère UTF-8 où le numéro de code est
+       le numéro hexadécimal donné. La séquence d'échappement hexadécimale
+       originale, <literal>\xhh</literal>, correspond à un caractère UTF-8
+       sur 2 octets si la valeur est plus grande que 127.
       </para>
       <para>
        Après "<literal>\0</literal>", deux caractères octaux sont lus.
@@ -730,6 +736,14 @@
          </listitem>
         </varlistentry>
         <varlistentry>
+         <term><emphasis>\G</emphasis></term>
+         <listitem>
+          <simpara>
+           position de la première occurence trouvé dans la chaîne sujet
+          </simpara>
+         </listitem>
+      </varlistentry>
+        <varlistentry>
          <term><emphasis>\z</emphasis></term>
          <listitem>
           <simpara>
@@ -765,7 +779,137 @@
        chaîne sujet, tandis que <literal>\z</literal> ne recherche
        que la fin de la chaîne.
       </para>
-     </refsect2>
+      <para>
+       L'assertion <literal>\G</literal> est réalisée uniquement lorsque
+       la position courante de l'occurence trouvée est au début de l'occurence,
+       comme spécifié par l'argument <parameter>offset</parameter> de la
+       fonction <function>preg_match</function>. Elle diffère de <literal>\A</literal>
+       lorsque la valeur du paramètre <parameter>offset</parameter> est différente
+       de zéro. Elle est disponible depuis &php; 4.3.3.
+      </para>
+
+      <para>
+       <literal>\Q</literal> et <literal>\E</literal> peuvent être utilisés
+       pour ignorer les méta-caractères regexp dans le masque depuis &php; 4.3.3.
+       Par exemple : <literal>\w+\Q.$.\E$</literal> recherchera un ou plusieurs
+       caractères suivis par la chaîne litérale <literal>.$.</literal> et ancrés à la
+       fin de la chaîne.
+     </para>
+    </refsect2>
+
+    <refsect2 id="regexp.reference.unicode">
+     <title>Propriétés des caractères Unicode</title>
+     <para>
+      Depuis &php; 4.4.0 et 5.1.0, trois nouvelles séquences d'échappement
+      pour trouver des types de caractères sont disponibles lorsque
+      le mode <emphasis>UTF-8</emphasis> est sélectionné. Elles sont :
+     </para>
+     <variablelist>
+      <varlistentry>
+       <term><emphasis>\p{xx}</emphasis></term>
+       <listitem><simpara>un caractère avec les propriétés xx</simpara></listitem>
+      </varlistentry>
+      <varlistentry>
+       <term><emphasis>\P{xx}</emphasis></term>
+       <listitem><simpara>un caractère sans les propriétés xx</simpara></listitem>
+      </varlistentry>
+      <varlistentry>
+       <term><emphasis>\X</emphasis></term>
+       <listitem><simpara>une séquence étendue Unicode</simpara></listitem>
+      </varlistentry>
+     </variablelist>
+     <para>
+      Les noms des propriétés représentés par <literal>xx</literal> ci-dessus
+      sont limités aux catégories de propriétés générales Unicode. Chaque caractère
+      a exactement une seule de ces propriétés, spécifié par une abbréviation sur deux caractères.
+      Pour des raisons de compatibilité avec Perl, la négation peut être spécifiée
+      en incluant un accent circonflexe entre l'accolade ouvrante et le nom de la
+      propriété. Par exemple, <literal>\p{^Lu}</literal> équivaut à la même chose que
+      <literal>\P{Lu}</literal>.
+     </para>
+     <para>
+      Si une seule lettre est spécifiée avec <literal>\p</literal> ou <literal>\P</literal>,
+      il inclut toutes les propriétés qui commencent par cete lettre. Dans ce cas,
+      en l'absence de négation, les accolades dans la séquence d'échappement sont
+      optionnelles ; ceci revient à la même chose :
+     </para>
+     <literallayout>
+      \p{L}
+      \pL
+     </literallayout>
+     <table>
+      <title>Codes des propriétés supportées</title>
+      <tgroup cols="2">
+       <tbody>
+        <row><entry><literal>C</literal></entry><entry>Autre</entry></row>
+        <row><entry><literal>Cc</literal></entry><entry>Contrôle</entry></row>
+        <row><entry><literal>Cf</literal></entry><entry>Format</entry></row>
+        <row><entry><literal>Cn</literal></entry><entry>Non affecté</entry></row>
+        <row><entry><literal>Co</literal></entry><entry>Utilisation privée</entry></row>
+        <row rowsep="1"><entry><literal>Cs</literal></entry><entry>Substitut</entry></row>
+        <row><entry><literal>L</literal></entry><entry>Lettre</entry></row>
+        <row><entry><literal>Ll</literal></entry><entry>Lettre en minuscule</entry></row>
+        <row><entry><literal>Lm</literal></entry><entry>Lettre de modification</entry></row>
+        <row><entry><literal>Lo</literal></entry><entry>Autres lettres</entry></row>
+        <row><entry><literal>Lt</literal></entry><entry>Lettre titrée</entry></row>
+        <row rowsep="1"><entry><literal>Lu</literal></entry><entry>Lettre en majuscule</entry></row>
+        <row><entry><literal>M</literal></entry><entry>Marque</entry></row>
+        <row><entry><literal>Mc</literal></entry><entry>Marque d'espacement</entry></row>
+        <row><entry><literal>Me</literal></entry><entry>Marque d'enfermement</entry></row>
+        <row rowsep="1"><entry><literal>Mn</literal></entry><entry>Marque non espacée</entry></row>
+        <row><entry><literal>N</literal></entry><entry>Nombre</entry></row>
+        <row><entry><literal>Nd</literal></entry><entry>Nombre décimal</entry></row>
+        <row><entry><literal>Nl</literal></entry><entry>Nombre Lettre</entry></row>
+        <row rowsep="1"><entry><literal>No</literal></entry><entry>Autres nombres</entry></row>
+        <row><entry><literal>P</literal></entry><entry>Pnctuation</entry></row>
+        <row><entry><literal>Pc</literal></entry><entry>Ponctuation de connecteur</entry></row>
+        <row><entry><literal>Pd</literal></entry><entry>Tiret de ponctuation</entry></row>
+        <row><entry><literal>Pe</literal></entry><entry>Ponctuation de fermeture</entry></row>
+        <row><entry><literal>Pf</literal></entry><entry>Ponctuation finale</entry></row>
+        <row><entry><literal>Pi</literal></entry><entry>Ponctuation initiale</entry></row>
+        <row><entry><literal>Po</literal></entry><entry>Autres ponctuations</entry></row>
+        <row rowsep="1"><entry><literal>Ps</literal></entry><entry>Ponctuation ouvrante</entry></row>
+        <row><entry><literal>S</literal></entry><entry>Symbole</entry></row>
+        <row><entry><literal>Sc</literal></entry><entry>Symbole monétaire</entry></row>
+        <row><entry><literal>Sk</literal></entry><entry>Symbole de modification</entry></row>
+        <row><entry><literal>Sm</literal></entry><entry>Symbole mathématique</entry></row>
+        <row rowsep="1"><entry><literal>So</literal></entry><entry>Other symbol</entry></row>
+        <row><entry><literal>Z</literal></entry><entry>Séparateur</entry></row>
+        <row><entry><literal>Zl</literal></entry><entry>Séparateur de ligne</entry></row>
+        <row><entry><literal>Zp</literal></entry><entry>Séparateur de paragraphe</entry></row>
+        <row><entry><literal>Zs</literal></entry><entry>Séparateur d'espace</entry></row>
+       </tbody>
+      </tgroup>
+     </table>
+     <para>
+      Les propriétés étendues comme "Greek" ou "InMusicalSymbols" ne sont pas supportées
+      par PCRE.
+     </para>
+     <para>
+      Spécifié la casse pour la recherche n'affecte pas les séquences d'échappement.
+      Par exemple, <literal>\p{Lu}</literal> cherchera toujours uniquement
+      les lettres en majuscules
+     </para>
+     <para>
+      L'échappement <literal>\X</literal> cherchera n'importe quel numéro de caractères Unicode
+      qui forme une séquence étendue Unicode. <literal>\X</literal> est l'équivalent de
+      <literal>(?>\PM\pM*)</literal>.
+     </para>
+     <para>
+      C'est-à-dire qu'il cherchera un caractère sans la propriété "Marque",
+      suivi par zéro ou plus caractères avec la propriété "Marque",
+      et traitera la séquence en tant que groupe atomique (voir ci-dessous).
+      Les caractères avec la propriété "Marque" sont typiquement des accents
+      qui affectent le caractère précédent.
+     </para>
+     <para>
+      La recherche de caractères par les propriétés Unicode n'est pas la méthode
+      la plus rapide, car PCRE doit chercher une structure qui contient les données
+      dans plus de quinze mille caractères. C'est pour cela que les séquences
+      d'échappement traditionnelles comme <literal>\d</literal> et
+      <literal>\w</literal> n'utilisent pas les propriétés Unicode dans PCRE.
+     </para>
+    </refsect2>
 
      <refsect2 id="regexp.reference.circudollar">
       <title>Accent circonflexe et Dollar</title>
@@ -850,6 +994,12 @@
        Le point n'a pas de comportement particulier dans une classe de
        caractères.
       </para>
+      <para>
+       <emphasis>\C</emphasis> peut être utilisé pour chercher un seul octet.
+       Il prend tout son sens en mode <emphasis>UTF-8</emphasis>
+       où le point correspond à un caractère entier qui peut être constitué de plusieurs
+       octets.
+     </para>
      </refsect2>
 
      <refsect2 id="regexp.reference.squarebrackets">
@@ -973,7 +1123,8 @@
        Les options <link linkend="reference.pcre.pattern.modifiers">PCRE_CASELESS</link>,
        <link linkend="reference.pcre.pattern.modifiers">PCRE_MULTILINE</link>,
        <link linkend="reference.pcre.pattern.modifiers">PCRE_DOTALL</link>,
-       <link linkend="reference.pcre.pattern.modifiers">PCRE_EXTENDED</link> et
+       <link linkend="reference.pcre.pattern.modifiers">PCRE_UNGREEDY</link>,
+       <link linkend="reference.pcre.pattern.modifiers">PCRE_EXTRA</link> et
        <link linkend="reference.pcre.pattern.modifiers">PCRE_EXTENDED</link> peuvent
        être changées à l'intérieur du masque
        lui-même, avec des séquences mises entre
@@ -1003,6 +1154,10 @@
            <entry><literal>U</literal></entry>
            <entry>pour <link linkend="reference.pcre.pattern.modifiers">PCRE_UNGREEDY</link></entry>
           </row>
+          <row>
+           <entry><literal>X</literal></entry>
+           <entry>Pour <link linkend="reference.pcre.pattern.modifiers">PCRE_EXTRA</link></entry>
+         </row>
          </tbody>
         </tgroup>
        </table>
@@ -1027,17 +1182,13 @@
        "abc" et "abC". Ce comportement a été modifié en PCRE 4.0 et est inclus depuis
        &php; 4.3.3. Dans les versions précédentes, <literal>/ab(?i)c/</literal> fonctionne
        de la même façon que <literal>/abc/i</literal> (e.g. valide "ABC" et "aBc").
-      </para>      
+      </para>
       <para>
        Si une option intervient dans un sous-masque, le comportement est différent.
        C'est un changement de comportement apparu en Perl 5.005. Une option à
        l'intérieur d'un sous-masque n'affecte que cette partie du masque, ce
-       qui fait que 
-       
-         <literal>(a(?i)b)c</literal> 
-         
-       acceptera <literal>abc</literal> et <literal>aBc</literal> mais aucune 
-       autre chaîne (en supposant que <link
+       qui fait que <literal>(a(?i)b)c</literal> acceptera <literal>abc</literal> et 
+       <literal>aBc</literal> mais aucune autre chaîne (en supposant que <link
        linkend="reference.pcre.pattern.modifiers">PCRE_CASELESS</link> n'est pas
        utilisé). Cela signifie que les options permettent d'avoir
        différentes configurations de recherche pour différentes
@@ -1045,10 +1196,10 @@
       </para>
       <para>
        Une séquence d'options dans une alternative affecte toute
-       l'alternative. Par exemple : 
-       
-         <literal>(a(?i)b|c)</literal> 
-         
+       l'alternative. Par exemple :
+
+         <literal>(a(?i)b|c)</literal>
+
        accepte "<literal>ab</literal>", "<literal>aB</literal>", "<literal>c</literal>",
        et "<literal>C</literal>", même si, comme dans le cas de
        "<literal>C</literal>", la première alternative qui porte
@@ -1117,6 +1268,13 @@
        séquences d'options sont valables sur toute une alternative,
        les masques ci-dessus accepteront aussi bien "DIMANCHE" que "Dimanche".
       </para>
+
+      <para>
+       Il est possible de nommer le sous-masque avec
+       <literal>(?P&lt;name&gt;pattern)</literal> depuis &php; 4.3.3.
+       Les tableaux avec les masques doivent contenir le masque indexé par la
+       chaîne à côté le masque indexé par le numéro.
+     </para>
      </refsect2>
 
      <refsect2 id="regexp.reference.repetition">
@@ -1256,15 +1414,16 @@
        minimum de répétition. Dans ces conditions, le masque
        <literal>/\*.*?\*/</literal> trouvera bien les commentaires du code
        C. La signification des autres quantificateurs n'est pas changée.
-      </para>
-      <para>
        Attention à ne pas confondre l'utilisation du point d'interrogation
        ici avec son utilisation comme quantificateur lui-même.
        A cause de cette ambigüité, il peut apparaître des situations
        où il faut le doubler : <literal>\d??\d</literal>. Ce masque va
        tenter de lire un seul chiffre, mais, le cas échéant,
        il acceptera 2 chiffres pour permettre à la recherche
-       d'aboutir. Si l'option <link linkend="reference.pcre.pattern.modifiers">PCRE_UNGREEDY</link>
+       d'aboutir. 
+      </para>
+      <para>
+       Si l'option <link linkend="reference.pcre.pattern.modifiers">PCRE_UNGREEDY</link>
        est activée, (une option qui
        n'est pas disponible avec Perl) alors les quantificateurs sont
        non gourmands par défaut, mais peuvent être
@@ -1272,6 +1431,14 @@
        après. En d'autres termes, cette option inverse le comportement par
        défaut.
       </para>
+      <para>
+       Les quantificateurs suivis par <literal>+</literal> sont "possessifs". Ils
+       mangent autant de caractères que possible et ne retournent pas
+       pour chercher le reste du masque. <literal>.*abc</literal> trouvera "abc"
+       mais <literal>.*+abc</literal>, non, car, <literal>.*+</literal> mange
+       la chaîne complètement. Les quantificateurs possessifs peuvent être utilisés
+       pour accélérer le traitement depuis &php; 4.3.3
+    </para>
       <para>
        Lorsqu'un sous-masque est quantifié avec un nombre minimum
        de répétitions, qui soit plus grand que 1, ou avec
@@ -1649,13 +1816,17 @@
         Si une parenthèse ouvrante a été trouvée,
         elle a été capturée, et donc la première capture
         existe, et la condition est exécutée. Sinon, elle est
-        ignorée.
+        ignorée. Ce masque recherche donc une séquence de lettres, 
+        éventuellement placées entre parenthèse.
        </para>
        <para>
-        Ce masque recherche donc une séquence de lettres, éventuellement
-        placées entre parenthèse. Si la condition n'est pas une
-        séquence de chiffres, il faut que ce soit une assertion.
-        Ce peut être une assertion positive ou négative,
+        Si la condition est la chaîne <literal>(R)</literal>, elle sera
+        satisfaite si un appel récursif au masque ou au sous-masque
+        a été fait. Au premier appel, la condition n'est pas vérifiée.
+    </para>
+       <para>
+         Si la condition n'est pas une séquence de chiffres, il faut que ce soit 
+         une assertion. Ce peut être une assertion positive ou négative,
         arrière ou avant. Considérons le masque suivant
         (même conditions que le précédent) et avec deux
         alternatives en seconde ligne :
@@ -1750,6 +1921,25 @@
         générer une erreur de mémoire lors d'une
         récursion.
        </para>
+
+       <para>
+        Depuis &php; 4.3.3, <literal>(?1)</literal>, <literal>(?2)</literal> et suivant 
+        peuvent être également utilisés pour les sous masques récursifs. Il est également
+        possible d'utiliser les sous masques nommés : <literal>(?P>foo)</literal>.
+       </para>
+       <para>
+        Si la synthaxe pour une référence de sous masque récursif (soit par un
+        nombre ou par un nom) est utilisée en dehors des parenthèses à laquelle
+        elle fait référence, il opère comme un sous routine dans un langage de programmation.
+        Un exemple ci-dessus a montré que le masque
+        <literal>(sens|respons)e and \1ibility</literal>
+        trouvera "sense and sensibility" et "response and responsibility", mais pas
+        "sense and responsibility". Si on utilise plutôt le masque
+        <literal>(sens|respons)e and (?1)ibility</literal>
+        alors, il trouvera "sense and responsibility" tout comme les deux autres chaînes.
+        De telles références doivent, dependant, suivre le sous masque auquel
+        elles se réfèrent.
+     </para>
       </refsect2>
 
       <refsect2 id="regexp.reference.performances">
