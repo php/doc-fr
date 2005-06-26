@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='iso-8859-1'?>
-<!-- $Revision: 1.6 $ -->
-<!-- EN-Revision: 1.9 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.7 $ -->
+<!-- EN-Revision: 1.11 Maintainer: yannick Status: ready -->
 <refentry id="function.PDO-construct">
  <refnamediv>
   <refname>PDO::__construct</refname>
@@ -16,7 +16,7 @@
    <methodparam choice="opt"><type>string</type><parameter>username</parameter></methodparam>
    <methodparam choice="opt"><type>string</type><parameter>password</parameter></methodparam>
    <methodparam choice="opt"><type>array</type><parameter>driver_options</parameter></methodparam>
-    </methodsynopsis>
+  </methodsynopsis>
   &warn.experimental.func;
   <para>
    <function>PDO::__construct</function> crée une instance PDO qui représente
@@ -30,6 +30,79 @@
     <varlistentry><term>dsn</term>
      <listitem>
       <para>
+       Le nom de la source de données, ou DSN, contient l'information nécessaire
+       pour se connecter à la base de données.
+      </para>
+      <para>
+       En général, un DSN consiste en un nom de driver PDO, suivit par deux points (:),
+       suivit par la synthaxe spécifique au driver PDO. Des exemples pour chaque driver 
+       sont données ci-dessous :
+      </para>
+      <para>
+       <variablelist>
+        <varlistentry>
+         <term><constant>PDO_DBLIB</constant></term>
+         <listitem>
+          <para>
+           Le préfixe DSN est soit <userinput>sybase:</userinput>,
+           soit <userinput>mssql:</userinput> dépendamment des librairies
+           sur lesquelles il est lié au moment de la compilation.
+          </para>
+          <para><userinput>sybase:host=localhost; dbname=testdb</userinput></para>
+          <para><userinput>mssql:host=localhost; dbname=testdb</userinput></para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><constant>PDO_FIREBIRD</constant></term>
+         <listitem>
+          <para><userinput>firebird:User=john;Password=mypass;Database=DATABASE.GDE;DataSource=localhost;Port=3050</userinput></para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><constant>PDO_MYSQL</constant></term>
+         <listitem>
+          <para><userinput>mysql:host=localhost;dbname=testdb</userinput></para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><constant>PDO_OCI</constant></term>
+         <listitem>
+          <para>Pour se cnnecter via <filename>tnsnames.ora</filename>, utilisez :</para>
+          <para><userinput>oci:mydb</userinput></para>
+          <para>Si vous utilisez instantclient, utilisez :</para>
+          <para><userinput>oci:dbname=//localhost:1521/testdb</userinput></para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><constant>PDO_ODBC</constant></term>
+         <listitem>
+          <para><userinput>odbc:DSN=SAMPLE;UID=john;PWD=mypass</userinput></para>
+          <para>DSN=SAMPLE se réfère à la source de données SAMPLE configurée dans le gestionnaire du driver ODBC.</para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><constant>PDO_PGSQL</constant></term>
+         <listitem>
+          <para><userinput>pgsql:host=localhost port=5432 dbname=testdb user=john password=mypass</userinput></para>
+          <para>
+           Notez qu'en passant <varname>user</varname> et <varname>password</varname>
+           au DSN, les paramètres <parameter>username</parameter>
+           et <parameter>password</parameter> deviennent optionnels.
+           S'ils sont spécifiés, ils seront mis à la fin de la chaîne de connexion.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><constant>PDO_SQLITE</constant></term>
+         <listitem>
+          <para><userinput>sqlite:/path/to/database</userinput></para>
+          <para>Pour créer une base de données en mémoire, utilisez :</para>
+          <para><userinput>sqlite::memory:</userinput></para>
+         </listitem>
+        </varlistentry>
+       </variablelist>
+      </para>
+      <para>
        Le paramètre <parameter>dsn</parameter> supporte trois méthodes 
        différentes de spécification des arguments requis pour créer une connexion
        à une base de données :
@@ -37,14 +110,7 @@
         <varlistentry><term>Invocation du Driver</term>
          <listitem>
           <para>
-           <parameter>dsn</parameter> consiste en le nom du driver PDO, suivi par
-           deux points (<literal>:</literal>), suivi par la syntaxe spécifique de connexion
-           du driver PDO. 
-           Par exemple, 
-           <userinput>'odbc:DSN=SAMPLE;UID=db2inst1;PWD=ibmdb2'</userinput>
-           créera une connexion PDO_ODBC à une base de données ODBC, tandis que
-           <userinput>'mysql:host=127.0.0.1;dbname=testdb'</userinput> créera une 
-           connexion PDO_MYSQL à une base de données MySQL.
+           <parameter>dsn</parameter> contient le DSN complet.
           </para>
          </listitem>
         </varlistentry>
@@ -55,6 +121,7 @@
            suivi par une URI qui définie l'emplacement d'un fichier contenant la chaîne DSN.
            L'URI peut spécifier un fichier local ou une URL distante.
           </para>
+          <para><userinput>uri:file:///path/to/dsnfile</userinput></para>
          </listitem>
         </varlistentry>
         <varlistentry><term>Utilisation d'un alias</term>
@@ -63,9 +130,13 @@
            <parameter>dsn</parameter> consiste en le nom 
            <parameter>name</parameter> qui équivaut à 
            <literal>pdo.dsn.<parameter>name</parameter></literal>
-           du &php.ini; définissant la chaîne DSN. <parameter>name</parameter> ne 
-           doit pas contenir de doubles points (<literal>:</literal>).
+           du &php.ini; définissant la chaîne DSN.
           </para>
+          <note>
+           <para>
+            L'alias doit être défini dans le &php.ini; et non pas dans un &htaccess;, ni dans le &httpd.conf;.
+           </para>
+          </note>
          </listitem>
         </varlistentry>
        </variablelist>
@@ -101,14 +172,14 @@
    </variablelist>
   </para>
  </refsect1>
- 
+
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
    Retourne un objet PDO en cas de succès.
   </para>
  </refsect1>
- 
+
  <refsect1 role="exceptions">
   &reftitle.exceptions;
   <para>
@@ -116,7 +187,7 @@
    de connexion à la base de données échoue.
   </para>
  </refsect1>
- 
+
  <refsect1 role="examples">
   &reftitle.examples;
   <para>
@@ -126,16 +197,16 @@
 <![CDATA[
 <?php
 /* Connexion à une base de données ODBC en invoquant un driver */
-                   
 $dsn = 'mysql:dbname=testdb;host=127.0.0.1';
 $user = 'dbuser';
 $password = 'dbpass';
+
 try {
   $dbh = new PDO($dsn, $user, $password);
-}
-catch (PDOException $e) {
+} catch (PDOException $e) {
   echo 'Echec de la connexion : ' . $e->getMessage();
 }
+
 ?>
 ]]>
     </programlisting>
@@ -148,11 +219,11 @@ catch (PDOException $e) {
      lecture. Le fichier contient le DSN PDO pour se connecter à une base de données 
      DB2 via le driver PDO_ODBC :
     </para>
-    <programlisting>
+    <screen>
 <![CDATA[
-odbc:DSN=SAMPLE;UID=db2inst1;PWD=password
+odbc:DSN=SAMPLE;UID=john;PWD=mypass
 ]]>
-    </programlisting>
+    </screen>
     <para>
      Le script &php; peut maintenant créer une connexion à la base de données
      en passant simplement le paramètre <literal>uri:</literal> pointant vers le
@@ -161,17 +232,17 @@ odbc:DSN=SAMPLE;UID=db2inst1;PWD=password
     <programlisting role="php">
 <![CDATA[
 <?php
-     /* Connexion à une base de données ODBC en invoquant un driver */
-                            
+/* Connexion à une base de données ODBC en invoquant un driver */
 $dsn = 'uri:file:///usr/local/dbconnect';
 $user = '';
 $password = '';
+
 try {
   $dbh = new PDO($dsn, $user, $password);
-}
-catch (PDOException $e) {
+} catch (PDOException $e) {
   echo 'Echec de la connexion : ' . $e->getMessage();
 }
+
 ?>
 ]]>
     </programlisting>
@@ -182,22 +253,25 @@ catch (PDOException $e) {
      L'exemple suivant présume que le &php.ini; contient l'entrée suivante pour activer
      une connexion à une base de données MySQL en utilisant uniquement l'alias
      <literal>mydb</literal>:
-     <screen>pdo.dsn.mydb=mysql:dbname=testdb;host=127.0.0.1</screen>
+     <programlisting role="ini">
+      [PDO]
+      pdo.dsn.mydb="mysql:dbname=testdb;host=localhost"
+     </programlisting>
     </para>
     <programlisting role="php">
 <![CDATA[
 <?php
 /* Connexion à une base de données ODBC en utilisant un alias */
-                                     
 $dsn = 'mydb';
 $user = '';
 $password = '';
+
 try {
   $dbh = new PDO($dsn, $user, $password);
-}
-catch (PDOException $e) {
+} catch (PDOException $e) {
   echo 'Echec de la connexion : ' . $e->getMessage();
 }
+
 ?>
 ]]>
     </programlisting>

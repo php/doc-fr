@@ -1,21 +1,31 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
 <refentry id="function.PDOStatement-getColumnMeta">
  <refnamediv>
   <refname>PDOStatement::getColumnMeta</refname>
   <refpurpose>
-   Retourne les méta-données pour une colonne numérotée
+   Retourne les méta-données pour une colonne d'un jeu de résultats
   </refpurpose>
  </refnamediv>
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <type>array</type><methodname>PDOStatement::getColumnMeta</methodname>
-   <methodparam><type>int</type><parameter>$column</parameter></methodparam>
+   <type>mixed</type><methodname>PDOStatement::getColumnMeta</methodname>
+   <methodparam><type>int</type><parameter>column</parameter></methodparam>
   </methodsynopsis>
 
   &warn.undocumented.func;
+  <para>
+   Récupère les méta-informations pour une colonne d'un jeu de résultat
+   dans un tableau associatif.
+  </para>
+  <warning>
+   <simpara>
+    Tous les drivers PDO ne supportent pas la fonction
+    <function>PDOStatement::getColumnMeta</function>.
+   </simpara>
+  </warning>
 
  </refsect1>
  <refsect1 role="parameters">
@@ -23,21 +33,165 @@
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>$column</parameter></term>
+     <term><parameter>column</parameter></term>
       <listitem>
        <para>
-        Le nom de la colonne
+        Le nom de la colonne dans le jeu de résultat.
        </para>
       </listitem>
      </varlistentry>
    </variablelist>
   </para>
  </refsect1>
+
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   </para>
+   Retourne un tableau associatif contenant les valeurs suivantes représentant les méta-informations
+   pour une colonne :
+  </para>
+  <table>
+   <title>Méta-informations d'une colonne</title>
+   <tgroup cols='2'>
+    <colspec colname='c1'/> 
+    <colspec colname='c2'/> 
+    <thead>
+     <row>
+      <entry>Nom</entry>
+      <entry>Valeur</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry><literal>native_type</literal></entry>
+      <entry>Le type natif &php; utilisé pour représenter la valeur de la colonne.</entry>
+     </row>
+     <row>
+      <entry><literal><varname>driver</varname>:decl_type</literal></entry>
+      <entry>Le type SQL utilisé pour représenter la valeur de la colonne dans la base de données.
+       Si la colonne du jeu de résultat est le résultat d'une fonction, cette valeur
+       n'est pas retournée par la fonction <function>PDOStatement::getColumnMeta</function>.
+      </entry>
+     </row>
+     <row>
+      <entry><literal>flags</literal></entry>
+      <entry>N'importe quelle balise définie pour cette colonne.</entry>
+     </row>
+     <row>
+      <entry><literal>name</literal></entry>
+      <entry>Le nom de cete colonne, comme retourné par la base de données.</entry>
+     </row>
+     <row>
+      <entry><literal>len</literal></entry>
+      <entry>La longueur de cette colonne. Normalement, <literal>-1</literal>
+       pour les types autres que les nombres décimaux à virgule flottante.</entry>
+     </row>
+     <row>
+      <entry><literal>precision</literal></entry>
+      <entry>La précision numérique pour cette colonne. Normalement,
+       <literal>0</literal> pour les types autres que les nombres décimaux à virgule flottante.</entry>
+     </row>
+     <row>
+      <entry><literal>pdo_type</literal></entry>
+      <entry>Le type de cette colonne comme représenté par la constante 
+       <literal>PDO_PARAM_*</literal> constants.</entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </table>
+  <para>
+   Retorne &false; si la colonne demandée n'existe pas dans le jeu de résultats,
+   ou si aucun jeu de résultats n'existe.
+  </para>
  </refsect1>
+
+ <!-- Use when EXCEPTIONS exist
+      <refsect1 role="exceptions">
+       &reftitle.exceptions;
+       <para>
+        When does this function throw exceptions?
+       </para>
+      </refsect1>
+      -->
+
+      <!-- Use when a CHANGELOG exists
+           <refsect1 role="changelog">
+            &reftitle.changelog;
+            <para>
+             <informaltable>
+              <tgroup cols="2">
+               <thead>
+                <row>
+                 <entry>&Version;</entry>
+                 <entry>&Description</entry>
+                </row>
+               </thead>
+               <tbody>
+                <row>
+                 <entry>Enter the PHP version of change here
+                  <entry>Description of change
+                  </row>
+                 </tbody>
+                </tgroup>
+               </informaltable>
+              </para>
+             </refsect1>
+             -->
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Récupération des méta-informations pour une colonne</title>
+    <para>
+     L'exemple suivant montre le résultat de la récupération des méta-informations
+     pour une colonne générée par une fonction (COUNT) dans un driver
+     PDO_SQLITE.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$select = $DB->query('SELECT COUNT(*) FROM fruit');
+$meta = $select->getColumnMeta(0);
+var_dump($meta);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(6) {
+   ["native_type"]=>
+   string(7) "integer"
+   ["flags"]=>
+      array(0) {
+      }
+   ["name"]=>
+   string(8) "COUNT(*)"
+   ["len"]=>
+   int(-1)
+   ["precision"]=>
+   int(0)
+   ["pdo_type"]=>
+   int(2)
+}
+
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>PDOStatement::columnCount</function></member>
+    <member><function>PDOStatement::rowCount</function></member>
+   </simplelist>
+  </para>
+ </refsect1>
+
 </refentry>
 
 <!-- Keep this comment at the end of the file
