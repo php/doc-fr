@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.9 $ -->
-<!-- EN-Revision: 1.8 Maintainer: jsgoupil Status: ready -->
+<!-- $Revision: 1.10 $ -->
+<!-- EN-Revision: 1.9 Maintainer: jsgoupil Status: ready -->
 <refentry id="function.pg-last-oid">
  <refnamediv>
   <refname>pg_last_oid</refname> 
   <refpurpose>
-   Retourne l'identifiant du dernier objet
+   Retourne l'identifiant de la dernière ligne
   </refpurpose>
  </refnamediv>
  
@@ -16,27 +16,78 @@
    <methodparam><type>resource</type><parameter>result</parameter></methodparam>
   </methodsynopsis>
   <para>
-   <function>pg_last_oid</function> sert à lire le dernier
-   <varname>oid</varname> assigné à un ligne, qui est stocké dans la
-   ressource <parameter>result</parameter>, obtenu lors de la
-   dernière commande <function>pg_query</function>. Il faut que 
-   cette commande ait été un INSERT. Retourne un nombre positif
-   s'il y a eu un <varname>oid</varname> valide. Retourne &false;
-   si une erreur est survenue, ou si la commande utilisée avec
-   <function>pg_query</function> n'était pas un INSERT, ou que cette
-   commande a échoué.
+   <function>pg_last_oid</function> sert à récupérer le <varname>OID</varname>
+   assigné à une ligne insérée.
   </para>
   <para>
-   Le champ OID est devenu optionnel depuis PostgreSQL 7.2. Lorsque
-   le champ OID n'est pas défini dans la table, le programmeur doit utiliser
+   Le champ OID est devenu optionnel depuis PostgreSQL 7.2 et ne sera plus
+   présent par défaut dans PostgreSQL 8.1. Lorsque
+   le champ OID n'est pas présent dans la table, le programmeur doit utiliser
    <function>pg_result_status</function> pour vérifier si la ligne
    a été correctement insérée.
+  </para>
+  <para>
+   Pour obtenir la valeur d'un champ <literal>SERIAL</literal> dans une ligne
+   insérée, il est nécessaire d'utiliser la fonction
+   <literal>CURRVAL</literal> de PostgreSQL en nommant la séquence à qui la
+   dernière valeur est requise. Si le nom de la séquence est inconnu, la
+   fonction PostgreSQL 8.0 <literal>pg_get_serial_sequence</literal> est
+   nécessaire.
   </para>
   <note>
    <para>
     Auparavant, cette fonction s'appelait <function>pg_getlastoid</function>.
    </para>
   </note>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>result</parameter></term>
+     <listitem>
+      <para>
+       Ressource de résultat de requête PostgreSQL, retournée par
+       <function>pg_query</function>, <function>pg_query_params</function> ou
+       <function>pg_execute</function> (entre autres).
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Une &string; contenant le OID assigné à la plus récente ligne insérée dans
+   la connexion <parameter>connection</parameter> spécifiée ou &false; en cas
+   d'erreur ou de OID indisponible.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>pg_last_error</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+  $pgsql_conn = pg_connect("dbname=mark host=localhost");
+  
+  $res1 = pg_query("CREATE TABLE test (a INTEGER) WITH OIDS");
+
+  $res2 = pg_query("INSERT INTO test VALUES (1)");
+  
+  $oid = pg_last_oid($res2);
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
  </refsect1>
 
  <refsect1 role="seealso">
