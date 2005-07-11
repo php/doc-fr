@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='iso-8859-1'?>
-<!-- $Revision: 1.5 $ -->
-<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.6 $ -->
+<!-- EN-Revision: 1.6 Maintainer: yannick Status: ready -->
   <refentry id="function.PDOStatement-bindColumn">
    <refnamediv>
     <refname>PDOStatement::bindColumn</refname>
@@ -15,19 +15,24 @@
      <methodparam><type>mixed</type><parameter>column</parameter></methodparam>
      <methodparam><type>mixed</type><parameter role="reference">param</parameter></methodparam>
      <methodparam choice="opt"><type>int</type><parameter>type</parameter></methodparam>
-     <methodparam choice="opt"><type>int</type><parameter>maxlen</parameter></methodparam>
-     <methodparam choice="opt"><type>mixed</type><parameter>driver_options</parameter></methodparam>
     </methodsynopsis>
 
      &warn.experimental.func;
-    <para>
-     Pour chaque ligne récupérée, <parameter>param</parameter> doit contenir
-     la valeur de la colonne correspondante. <parameter>column</parameter> 
-     est la position de la colonne ou le nom de la colonne. Pour une portabilité
-     maximale, n'appelez pas cette fonction avant d'appeler la fonction 
-     <function>PDOStatement::execute</function>.
+     <para>
+      <function>PDOStatement::bindColumn</function> fait en sorte qu'une
+      variable particulière soit liée à une colonne données dans le jeu de résultats
+      depuis une requête. Chaque appel à la fonction <function>PDOStatement::fetch</function>
+      ou <function>PDOStatement::fetchAll</function> mettera à jour toutes les variables
+      qui sont liées aux colonnes.
     </para>
-
+    <note>
+     <para>
+      Vû que les informations sur les colonnes ne sont pas toujours disponibles
+      à PDO tant que la requête n'est pas exécutée, les applications portables
+      doivent appeler cette fonction <emphasis>après</emphasis>
+      la fonction <function>PDO::execute</function>.
+     </para>
+    </note>
    </refsect1>
 
    <refsect1 role="parameters">
@@ -38,7 +43,9 @@
        <term><parameter>column</parameter></term>
         <listitem>
          <para>
-          Numéro de la colonne (en commençant à 1) dans le jeu de résultats.
+          Numéro de la colonne (en commençant à 1) ou nom de la colonne dans le jeu de résultats.
+          Si vous utilisez les noms de colonnes, assurez-vous que le nom corresponde à la casse
+          de la colonne, comme retourné par le driver.
          </para>
         </listitem>
        </varlistentry>
@@ -55,22 +62,6 @@
         <listitem>
          <para>
           Type du paramètre, spécifié par les constantes PDO_PARAM_*.
-         </para>
-        </listitem>
-       </varlistentry>
-      <varlistentry>
-       <term><parameter>maxlen</parameter></term>
-        <listitem>
-         <para>
-          Longeur maximale du paramètre.
-         </para>
-        </listitem>
-       </varlistentry>
-      <varlistentry>
-       <term><parameter>driver_options</parameter></term>
-        <listitem>
-         <para>
-          
          </para>
         </listitem>
        </varlistentry>
@@ -99,14 +90,12 @@ function readData($dbh) {
     $stmt = $dbh->prepare($sql);
     $stmt->execute();
 
-    /* Lie par les numéros de colonnes avec un type et une longueur spécifique */
-    $stmt->bindColumn(1, $nom, PDO_PARAM_STR, 64);
+    /* Lie par les numéros de colonnes */
+    $stmt->bindColumn(1, $nom);
+    $stmt->bindColumn(2, $couleur);
 
-    /* Lie par les numéros de colonnes avec un type et une longueur par défaut */
-    $stmt->bindColumn(2, $couloeur);
-
-    /* Lie par les noms de colonnes avec un type et une longueur par défaut */
-    $stmt->bindColumn('CALORIES', $cals);
+    /* Lie par les noms de colonnes */
+    $stmt->bindColumn('calories', $cals);
 
     while ($row = $stmt->fetch(PDO_FETCH_BOUND)) {
       $data = $nom . "\t" . $couleur . "\t" . $cals . "\n";

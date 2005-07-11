@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
 <refentry id="function.PDOStatement-closeCursor">
  <refnamediv>
   <refname>PDOStatement::closeCursor</refname>
@@ -19,15 +19,21 @@
 
   <para>
    <function>PDOStatement::closeCursor</function> libère la connexion
-   du serveur, permettant ainsi à d'autres requêtes d'être exécutées, mais
+   du serveur, permettant ainsi à d'autres requêtes SQL d'être exécutées, mais
    quitte la requête, permettant ainsi qu'elle soit de nouveau exécutée.
   </para>
   <para>
-   Ceci est implémenté soit en tant que méthode d'un driver spécifique optionnel
-   (autorisé pour une efficacité optimale), ou en tant que fallback générique PDO
-   si aucun driver spécifique n'est installé.
+   Cette méthode est utile pour les drivers de base de données qui ne supportent
+   pas l'exécution d'objet PDOStatement lorsqu'un objet PDOStatement exécuté
+   précédemment a encore des lignes non récupérées. Si votre driver de base de
+   données souffre de cette limitation, le problème se manifestera de lui-même
+   dans une erreur en dehors de la séquence.
   </para>
   <para>
+   <function>PDOStatement::closeCursor</function> est implémenté soit
+   en tant que méthode optionnelle spécifique au driver (autorisant un maximum
+   d'efficacité), ou en tant que fallback PDO générique si aucune fonction
+   spécifique au driver n'est installée.
    Le fallback générique PDO est sémantiquement la même chose que
    d'écrire le code suivant dans votre script &php; :
    <programlisting role="php">
@@ -80,37 +86,47 @@ do {
  -->
 
 
- <!-- Use when examples exist
  <refsect1 role="examples">
   &reftitle.examples;
   <para>
    <example>
-    <title>A <function>PDOStatement::closeCursor</function> example</title>
+    <title>Exemple avec <function>PDOStatement::closeCursor</function></title>
     <para>
-     Any text that describes the purpose of the example, or
-     what goes on in the example should go here (inside the
-     <example> tag, not out
+     Dans l'exemple suivant, l'objet PDOStatement <varname>$stmt</varname>
+     retourne de multiples lignes mais l'application récupère uniquement
+     la première ligne, laissant l'objet PDOStatement dans l'état où il lui reste
+     des lignes non récupérées. Pour vous assurez que l'application fonctionnera
+     avec tous les drivers de base de données, l'auteur insère un appel à la fonction
+     <function>PDOStatement::closeCursor</function> sur
+     <varname>$stmt</varname> avant l'exécution d'objet PDOStatement
+     <varname>$otherStmt</varname>.
     </para>
     <programlisting role="php">
 <![CDATA[
 <?php
-if ($anexample === true) {
-    echo 'Use the PEAR Coding Standards';
-}
+// Création d'un objet PDOStatement
+$stmt = $dbh->prepare('SELECT foo FROM bar');
+
+// Création d'un second objet PDOStatement
+$stmt = $dbh->prepare('SELECT foobaz FROM foobar');
+
+// Exécute la première requête
+$stmt->execute();
+
+// Récupération de la première ligne uniquement depuis le résultat
+$stmt->fetch();
+
+// L'appel suivant à closeCursor() peut être requis par quelques drivers
+$stmt->closeCursor();
+
+// Maintenant, nous pouvons exécuter la deuxième requête
+$otherStmt->execute();
 ?>
 ]]>
     </programlisting>
-    &example.outputs;
-    <screen>
-<![CDATA[
-Use the PEAR Coding Standards
-]]>
-    </screen>
    </example>
   </para>
  </refsect1>
- -->
-
 
  <refsect1 role="seealso">
   &reftitle.seealso;
