@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.10 $ -->
-<!-- EN-Revision: 1.10 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.11 $ -->
+<!-- EN-Revision: 1.11 Maintainer: yannick Status: ready -->
  <sect1 id="language.oop5.overloading">
   <title>Surcharge</title>
 
@@ -13,6 +13,11 @@
    Toutes les méthodes surchargées doivent être définies en 
    tant que <link linkend="language.oop5.visibility">public</link>.
   </para>
+  <para>
+   Depuis &php; 5.1.0, il est également possible de surcharger les fonctions
+   <function>isset</function> et <function>unset</function> via, respectivement,
+   les méthodes __isset et __unset.
+  </para>
 
   <sect2 id="language.oop5.overloading.members">
    <title>Surcharge de membre</title>
@@ -24,6 +29,14 @@
    </methodsynopsis>
    <methodsynopsis>
     <type>mixed</type><methodname>__get</methodname>
+    <methodparam><type>string</type><parameter>name</parameter></methodparam>
+   </methodsynopsis>
+   <methodsynopsis>
+    <type>bool</type><methodname>__isset</methodname>
+    <methodparam><type>string</type><parameter>name</parameter></methodparam>
+   </methodsynopsis>
+   <methodsynopsis>
+    <type>void</type><methodname>__unset</methodname>
     <methodparam><type>string</type><parameter>name</parameter></methodparam>
    </methodsynopsis>
 
@@ -39,7 +52,7 @@
    </para>
 
    <example>
-    <title>Exemple de surcharge avec __get et __set</title>
+    <title>Exemple de surcharge avec  __get, __set, __isset et __unset</title>
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -48,9 +61,9 @@ class Setter
   public $n;
   private $x = array("a" => 1, "b" => 2, "c" => 3);
 
-  public function __get($nm) 
+  private function __get($nm) 
   {
-    print "Récupération de [$nm]\n";
+    echo "Récupération de [$nm]\n";
 
     if (isset($this->x[$nm])) {
       $r = $this->x[$nm];
@@ -61,9 +74,9 @@ class Setter
     }
   }
 
-  public function __set($nm, $val) 
+  private function __set($nm, $val) 
   {
-    print "Définition de [$nm] à $val\n";
+    echo "Définition de [$nm] à $val\n";
 
     if (isset($this->x[$nm])) {
       $this->x[$nm] = $val;
@@ -71,6 +84,20 @@ class Setter
     } else {
       echo "Pas OK!\n";
     }
+   }
+
+  private function __isset($nm)
+  {
+    echo "Vérifie si $nm est défini\n";
+
+    return isset($this->x[$nm]);
+  }
+
+  private function __unset($nm)
+  {
+    echo "Libération de $nm\n";
+
+    unset($this->x[$nm]);
   }
 }
 
@@ -79,6 +106,16 @@ $foo->n = 1;
 $foo->a = 100;
 $foo->a++;
 $foo->z++;
+var_dump($foo);
+
+var_dump(isset($foo->a)); //true
+unset($foo->a);
+var_dump(isset($foo->a)); //false
+
+// ceci ne passera pas via la méthode __isset()
+// parceque 'n' est une propriété publique
+var_dump(isset($foo->n));
+
 var_dump($foo);
 ?>
 ]]>
@@ -96,13 +133,19 @@ Récupération de [z]
 Rien!
 Définition de [z] à 1
 Pas OK!
+
+Vérifie si a est défini
+bool(true)
+Libération de a
+Vérifie si a est défini
+bool(false)
+bool(true)
+
 object(Setter)#1 (2) {
   ["n"]=>
   int(1)
   ["x:private"]=>
-  array(3) {
-    ["a"]=>
-    int(101)
+  array(2) {
     ["b"]=>
     int(2)
     ["c"]=>
