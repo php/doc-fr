@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.3 $ -->
-<!-- EN-Revision: 1.3 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.4 $ -->
+<!-- EN-Revision: 1.6 Maintainer: yannick Status: ready -->
 <refentry id="function.debug-zval-dump">
  <refnamediv>
   <refname>debug_zval_dump</refname>
@@ -52,18 +52,105 @@ $var2 = '';
 
 $var2 =& $var1;
 
-debug_zval_dump($var1);
+debug_zval_dump(&$var1);
 ?>
 ]]>
     </programlisting>
     &example.outputs;
     <screen>
 <![CDATA[
-string(11) "Bonjour le monde !" refcount(1)
+string(18) "Bonjour le monde !" refcount(3)
 ]]>
     </screen>
    </example>
   </para>
+  <note>
+   <title>Faîte attention avec <literal>refcount</literal></title>
+   <para>
+    La valeur <literal>refcount</literal> retournée par cette fonction n'est pas
+    significative dans certaines circonstances. Par exemple, un développeur
+    peut s'attendre avec l'exemple ci-dessus d'avoir un <literal>refcount</literal>
+    de <literal>2</literal>. La troisième référence est créée lors de l'appel à la
+    fonction <function>debug_zval_dump</function>.
+   </para>
+   <para>
+    Ce comportement est encore plus fin lorsqu'une variable n'est pas passée
+    par référence à la fonction <function>debug_zval_dump</function>. Pour illustrer
+    ceci, voici une version modifiée de l'exemple ci-dessus :
+   </para>
+   <para>
+    <example>
+     <title/>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$var1 = 'Bonjour le monde !';
+$var2 = '';
+
+$var2 =& $var1;
+
+debug_zval_dump($var1); // non passé par référence, cette fois-ci
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+string(18) "Bonjour le monde !" refcount(1)
+]]>
+     </screen>
+    </example>
+   </para>
+   <para>
+    Pourquoi <literal>refcount(1)</literal> ? Parcequ'une copie de <literal>$var1</literal> a
+    été faite, lors de l'appel de la fonction.
+   </para>
+   <para>
+    Cette fonction devient encore <emphasis>plus</emphasis> confuse lorsqu'une
+    variable avec un <literal>refcount</literal> de <literal>1</literal> est
+    passée (par copie/valeur) :
+   </para>
+   <para>
+    <example>
+     <title/>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$var1 = 'Bonjour le monde !';
+
+debug_zval_dump($var1);
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+string(18) "Bonjour le monde !" refcount(2)
+]]>
+     </screen>
+    </example>
+   </para>
+   <para>
+    Un <literal>refcount</literal> de <literal>2</literal>, ici, est vraiment
+    innatendu. Tout spécialement si on considère les exemples ci-dessus. Donc, que
+    se passe-t-il ?
+   </para>
+   <para>
+    Lorsqu'une variable a une seule référence ( faire <literal>$var1</literal>
+    avant qu'elle ne soit utilisé en tant qu'argument à la fonction
+    <function>debug_zval_dump</function>), le moteur &php; optimise
+    la façon dont elle est passée à la fonction. En interne, &php; traite
+    <literal>$var1</literal> comme une référence (et donc, le <literal>refcount</literal>
+    est incrémenté), et avec le cas où le passage par référence intervient, une copie est alors
+    faite, mais uniquement au moment de l'écriture. Ceci est connu comme "la copie à l'écriture".
+   </para>
+   <para>
+    Donc, si <function>debug_zval_dump</function> intervient pour écrire son unique paramètre
+    (et il ne le fait pas), alors une copie est faite. Jusque là, le paramètre demeure
+    une référence, faisant que le <literal>refcount</literal> est incrémenté
+    à <literal>2</literal> pour l'appel à la fonction.
+   </para>
+  </note>
  </refsect1>
  <refsect1 role="seealso">
   &reftitle.seealso;
@@ -72,6 +159,7 @@ string(11) "Bonjour le monde !" refcount(1)
     <member><function>var_dump</function></member>
     <member><function>debug_backtrace</function></member>
     <member><link linkend="language.references">Explication sur les références</link></member>
+    <member><ulink url="&url.zend.references;">Comptage des références et des alias (par Andi Gutmans)</ulink></member>
    </simplelist>
   </para>
  </refsect1>

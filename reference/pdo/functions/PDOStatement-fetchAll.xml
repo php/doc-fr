@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='iso-8859-1'?>
-<!-- $Revision: 1.5 $ -->
-<!-- EN-Revision: 1.6 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.6 $ -->
+<!-- EN-Revision: 1.7 Maintainer: yannick Status: ready -->
   <refentry id="function.PDOStatement-fetchAll">
    <refnamediv>
     <refname>PDOStatement::fetchAll</refname>
@@ -13,6 +13,7 @@
     <methodsynopsis>
      <type>array</type><methodname>PDOStatement::fetchAll</methodname>
      <methodparam choice="opt"><type>int</type><parameter>fetch_style</parameter></methodparam>
+     <methodparam choice="opt"><type>int</type><parameter>column_index</parameter></methodparam>
     </methodsynopsis>
 
     &warn.experimental.func;
@@ -29,6 +30,30 @@
          Contrôle le contenu du tableau retourné comme documenté dans la fonction
          <function>PDOStatement::fetch</function>. Vaut par défaut
          <literal>PDO_FETCH_BOTH</literal>.
+        </para>
+        <para>
+         Pour retourner un tableau contenant toutes les valeurs d'une seule colonne
+         depuis le jeu de résultats, spécifiez <literal>PDO_FETCH_COLUMN</literal>.
+        </para>
+        <para>
+         Pour récupérer uniquement les valeurs uniques d'une seule colonne depuis
+         le jeu de résultats, utilisez <literal>PDO_FETCH_COLUMN</literal> avec
+         <literal>PDO_FETCH_UNIQUE</literal>.
+        </para>
+        <para>
+         Pour retourner un tableau associatif groupé par les valeurs d'une
+         colonne spécifique, utilisez <literal>PDO_FETCH_COLUMN</literal> avec
+         <literal>PDO_FETCH_GROUP</literal>.
+        </para>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term><parameter>column_index</parameter></term>
+       <listitem>
+        <para>
+         Retourne la colonne indiquée où la valeur de
+         <parameter>fetch_style</parameter> est
+         <literal>PDO_FETCH_COLUMN</literal>. Vaut par défaut <literal>0</literal>.
         </para>
        </listitem>
       </varlistentry>
@@ -96,6 +121,94 @@ Array
         )
 
 )
+]]>
+      </screen>
+     </example>
+     <example>
+      <title>Récupération de toutes les valeurs d'une seule colonne depuis un jeu de résultats</title>
+      <para>
+       L'exemple suivant montre comment retourner toutes les valeurs
+       d'une seule colonne depuis un jeu de résultats, même si la requête SQL
+       retourne plusieurs colonnes par lignes.
+      </para>
+      <programlisting role="php">
+<![CDATA[
+<?php
+$sth = $dbh->prepare("SELECT name, colour FROM fruit");
+$sth->execute();
+
+/* Récupération de toutes les valeurs de la première colonne */
+$result = $sth->fetchAll(PDO_FETCH_COLUMN, 0);
+var_dump($result);
+?>
+]]>
+      </programlisting>
+      &example.outputs;
+      <screen>
+<![CDATA[
+Array(3)
+(
+    [0] =>
+    string(5) => apple
+    [1] =>
+    string(4) => pear
+    [2] =>
+    string(10) => watermelon
+)
+]]>
+      </screen>
+     </example>
+     <example>
+      <title>Grouper toutes les valeurs d'une seule colonne</title>
+      <para>
+       L'exemple suivant montre comment retourner un tableau associatif
+       groupé par les valeurs de la colonne spécifiée d'un jeu de résultats.
+       Le tableau contient trois clés : les valeurs <literal>apple</literal>
+       et <literal>pear</literal> sont retournées sous la forme de tableaux
+       qui contiennent deux couleurs différentes, tandis que
+       <literal>watermelon</literal> est retourné sous la forme d'un tableau
+       qui contient uniquement une seule couleur.
+      </para>
+      <programlisting role="php">
+<![CDATA[
+<?php
+$insert = $dbh->prepare("INSERT INTO fruit(name, colour) VALUES (?, ?)");
+$insert->execute('apple', 'green');
+$insert->execute('pear', 'yellow');
+
+$sth = $dbh->prepare("SELECT name, colour FROM fruit");
+$sth->execute();
+
+/* Grouper les valeurs de la première colonne */
+var_dump($sth->fetchAll(PDO_FETCH_COLUMN|PDO_FETCH_GROUP));
+?>
+]]>
+      </programlisting>
+      &example.outputs;
+      <screen>
+<![CDATA[
+array(3) {
+  ["apple"]=>
+    array(2) {
+      [0]=>
+        string(5) "green"
+      [1]=>
+        string(3) "red"
+    }
+  ["pear"]=>
+    array(2) {
+      [0]=>
+        string(5) "green"
+      [1]=>
+        string(6) "yellow"
+    }
+  ["watermelon"]=>
+    array(1) {
+      [0]=>
+        string(5) "green"
+    }
+}
+
 ]]>
       </screen>
      </example>
