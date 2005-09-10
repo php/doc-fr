@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.9 $ -->
-<!-- EN-Revision: 1.6 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.10 $ -->
+<!-- EN-Revision: 1.8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
   <refentry id="function.oci-connect">
    <refnamediv>
@@ -9,12 +9,13 @@
    </refnamediv>
    <refsect1>
     &reftitle.description;
-     <methodsynopsis>
-      <type>resource</type><methodname>oci_connect</methodname>
-      <methodparam><type>string</type><parameter>username</parameter></methodparam>
-      <methodparam><type>string</type><parameter>password</parameter></methodparam>
-      <methodparam choice="opt"><type>string</type><parameter>db</parameter></methodparam>
-      <methodparam choice="opt"><type>string</type><parameter>charset</parameter></methodparam>
+    <methodsynopsis>
+     <type>resource</type><methodname>oci_connect</methodname>
+     <methodparam><type>string</type><parameter>username</parameter></methodparam>
+     <methodparam><type>string</type><parameter>password</parameter></methodparam>
+     <methodparam choice="opt"><type>string</type><parameter>db</parameter></methodparam>
+     <methodparam choice="opt"><type>string</type><parameter>charset</parameter></methodparam>
+     <methodparam choice="opt"><type>int</type><parameter>session_mode</parameter></methodparam>
      </methodsynopsis>
     <para>
      <function>oci_connect</function> retourne une ressource de
@@ -31,15 +32,38 @@
      <constant>TWO_TASK</constant> (<filename>tnsnames.ora</filename>) 
      pour déterminer la base à laquelle se connecter.
     </para>
+    <para>
+     Le paramètre <parameter>session_mode</parameter> est disponible depuis
+     la version 1.1 et accepte les valeurs suivantes : <constant>OCI_DEFAULT</constant>,
+     <constant>OCI_SYSOPER</constant> et <constant>OCI_SYSDBA</constant>.
+     Si <constant>OCI_SYSOPER</constant> ou
+     <constant>OCI_SYSDBA</constant> est spécifié
+     <function>oci_connect</function> tentera d'établir une connexion privilégiée
+     en utilisant des crédances externes. Les connexions privilégiées sont désactivées
+     par défaut. Pour les activer, vous devez définir <link
+     linkend="ini.oci8.privileged_connect">oci8.privileged_connect</link> à On.
+    </para>
     <note>
      <simpara>
-      <function>oci_connect</function> <emphasis>ne crée pas</emphasis> de
-      nouvelle connexion si une connexion avec les mêmes paramètres a 
-      été établie auparavant. Dans ce cas, <function>oci_connect</function> 
-      va retourner la ressource déjà générée. Cela signifie que vous ne pouvez
-      pas utiliser cette fonction pour mener 2 transactions parallèles. 
-      Pour établir une connexion distincte, vous devez utiliser la fonction
-      <function>oci_new_connect</function>.
+      Si vous utilisez &php; avec le client Instant Oracle, vous pouvez utiliser
+      la méthode de nommage facile de connexion tel que décrit ici :
+      <ulink url="&url.oracle.oic.connect;">&url.oracle.oic.connect;</ulink>.
+      Basiquement, cela signifie que vous pouvez spécifier "//db_host[:port]/database_name"
+      en tant que nom de base de données. ais, si vous voulez utiliser l'ancienne méthode
+      de nommage, vous <emphasis>devez</emphasis> définir soit
+      <constant>ORACLE_HOME</constant>, soit <constant>TNS_ADMIN</constant>.
+     </simpara>
+    </note>
+    <note>
+     <simpara>
+      Le second appel ainsi que les suivants à la fonction <function>oci_connect</function>
+      avec les mêmes paramètres retournera le gestionnaire de connexion retourné
+      lors du premier appel. Cela signifie que les requêtes envoyées sur un gestionnaire
+      seront également envoyées aux autres gestionnaires, car c'est le
+      <emphasis>même</emphasis> gestionnaire. Ce comportement est
+      démontré dans l'exemple 1 ci-dessous. Si vous avez besoin de deux
+      gestionnaires isolés transactionnellement, vous devez utiliser la fonction
+      <function>oci_new_connect</function> à la place.
      </simpara>
     </note>
     &oci.charset;
@@ -151,11 +175,12 @@ echo '</pre>';
       la compatibilité ascendante. Toutefois, il est recommandé de ne
       plus l'utiliser.
      </para>
-    </note>    
+    </note>
     <simpara>
      Voir aussi
-     <function>oci_pconnect</function> et
-     <function>oci_new_connect</function>.
+     <function>oci_pconnect</function>,
+     <function>oci_new_connect</function> et
+     <function>oci_close</function>.
     </simpara>
    </refsect1>
   </refentry>
