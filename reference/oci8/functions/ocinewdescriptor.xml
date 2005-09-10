@@ -1,148 +1,21 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.14 $ -->
-<!-- EN-Revision: 1.14 Maintainer: dams Status: ready -->
+<!-- $Revision: 1.15 $ -->
+<!-- EN-Revision: 1.16 Maintainer: dams Status: ready -->
 <!-- Reviewed: yes -->
-  <refentry id="function.ocinewdescriptor">
-   <refnamediv>
-    <refname>ocinewdescriptor</refname>
-    <refpurpose>Initialise un nouveau pointeur de LOB/FILE Oracle</refpurpose>
-   </refnamediv>
-   <refsect1>
-    &reftitle.description;
-     <methodsynopsis>
-      <type>OCI-Lob</type><methodname>ocinewdescriptor</methodname>
-      <methodparam><type>resource</type><parameter>connection</parameter></methodparam>
-      <methodparam choice="opt"><type>int</type><parameter>type</parameter></methodparam>
-     </methodsynopsis>
-    <para>
-     <function>ocinewdescriptor</function> alloue l'espace
-     nécessaire pour stocker un descripteur, ou un pointeur
-     de LOB sur la connexion <parameter>connection</parameter>. 
-     Les valeurs acceptées pour <parameter>type</parameter> sont
-     <constant>OCI_D_FILE</constant>, <constant>OCI_D_LOB</constant> et <constant>OCI_D_ROWID</constant>. 
-     Pour les pointeurs de LOB, les méthodes <function>lob->load()</function>, 
-     <function>lob->save()</function> et <function>lob->savefile()</function> sont
-     associées avec le pointeur. Pour les pointeurs de type BFILE,
-     seule la méthode <function>lob->save()</function> existe. 
-     Voyez le second exemple pour une illustration.
-      </para>
-     <example>
-      <title>Exemple avec <function>ocinewdescriptor</function></title>
-      <programlisting role="php">
-<![CDATA[
-<?php   
-    /* Ce script est fait pour être appelé dans un formulaire HTML
-     * Il attend les variables $user, $password, $table, $where, et $commitsize
-     * Le script efface alors les lignes sélectionnées avec ROWID et valide
-     * l'effacement après chaque groupe de $commitsize lignes.
-     * (Utilisez avec prudence, car il n'y a pas d'annulation possible).
-     */
-    $conn = OCILogon($user, $password);
-    $stmt = OCIParse($conn,"select rowid from $table $where");
-    $rowid = OCINewDescriptor($conn,OCI_D_ROWID);
-    OCIDefineByName($stmt,"ROWID",&$rowid);   
-    OCIExecute($stmt);
-    while ( OCIFetch($stmt) ) {      
-       $nrows = OCIRowCount($stmt);
-       $delete = OCIParse($conn,"delete from $table where ROWID = :rid");
-       OCIBindByName($delete,":rid",&$rowid,-1,OCI_B_ROWID);
-       OCIExecute($delete);      
-       print "$nrows\n";
-       if ( ($nrows % $commitsize) == 0 ) {
-           OCICommit($conn);      
-       }   
-    }
-    $nrows = OCIRowCount($stmt);   
-    print "$nrows deleted...\n";
-    OCIFreeStatement($stmt);  
-    OCILogoff($conn);
-?>  
-]]>
-   </programlisting>
-   <programlisting role="php">
-<![CDATA[
-<?php
-    /* Ce script est fait pour être appelé depuis un formulaire HTML.
-     * Il attend les variables $user, $password, $table, $where, et $commitsize,
-     * données par le formulaire. Le script efface
-     * les lignes sélectionnées avec ROWID est valide les transactions
-     * à chaque jeu de $commitsize lignes. (Attention : il n'y plus d'annulation) */
-  if(!isset($lob_upload) || $lob_upload == 'none'){
-?>
-<form action="upload.php" method="post" enctype="multipart/form-data">
-Fichier à télécharger : <input type="file" name="lob_upload"><br />
-<input type="submit" value="Envoyer"> - <input type="reset">
-</form>
-<?php
-  } else {
+<refentry id="function.ocinewscriptor">
+ <refnamediv>
+  <refname>ocinewscriptor</refname>
+  <refpurpose>&Alias; <function>oci_new_descriptor</function></refpurpose>
+ </refnamediv>
 
-     // $lob_upload contient le nom temporaire du fichier téléchargé
-
-     // voir aussi la section fonctionnalités sur les téléchargements de
-     // fichiers si vous voulez utiliser des téléchargements sécurisés
-     
-     $conn = OCILogon($user, $password);
-     $lob = OCINewDescriptor($conn, OCI_D_LOB);
-     $stmt = OCIParse($conn,"insert into $table (id, the_blob) 
-               values(my_seq.NEXTVAL, EMPTY_BLOB()) returning the_blob into :the_blob");
-     OCIBindByName($stmt, ':the_blob', &$lob, -1, OCI_B_BLOB);
-     OCIExecute($stmt, OCI_DEFAULT);
-     if($lob->savefile($lob_upload)){
-        OCICommit($conn);
-        echo 'Blob bien téléchargé'."\n";
-     }else{
-        echo 'Impossible de télécharger le Blob'."\n";
-     }
-     OCIFreeDesc($lob);
-     OCIFreeStatement($stmt);
-     OCILogoff($conn);
-  }
-?>
-]]>
-     </programlisting>
-    </example>
-    <example>
-     <title>Exemple avec <function>ocinewdescriptor</function></title>
-     <programlisting>
-<![CDATA[
-<?php   
-    /* Appel d'une procédure PL/SQL stockée qui prend un clobs
-     * en entrée (PHP 4 >= 4.0.6). 
-     * Exemple de signature de procédure stockée PL/SQL :
-     *
-     * PROCEDURE save_data
-     *   Nom de l'argument              Type                    In/Out Default?
-     *   ------------------------------ ----------------------- ------ --------
-     *   KEY                            NUMBER(38)              IN
-     *   DATA                           CLOB                    IN
-     *
-     */
-
-    $conn = OCILogon($user, $password);
-    $stmt = OCIParse($conn, "begin save_data(:key, :data); end;");
-    $clob = OCINewDescriptor($conn, OCI_D_LOB);
-    OCIBindByName($stmt, ':key', $key);
-    OCIBindByName($stmt, ':data', $clob, -1, OCI_B_CLOB);
-    $clob->WriteTemporary($data);
-    OCIExecute($stmt, OCI_DEFAULT);
-    OCICommit($conn);
-    $clob->close();
-    $clob->free();
-    OCIFreeStatement($stmt);
-?>
-]]>
-     </programlisting>
-    </example>
-    <note>
-     <para>
-      Cette fonction a été renommée en <function>oci_new_descriptor</function> 
-      pour &php; version 5.0.0 et plus récent. Pour la compatibilité
-      ascendante, <function>ocinewdescriptor</function> peut toujours être utilisée.
-      Toutefois, elle est obsolète.
-     </para>
-    </note>
-   </refsect1>
-  </refentry>
+ <refsect1 role="description">
+  &reftitle.description;
+  <simpara>
+   &info.function.alias;
+   <function>oci_new_descriptor</function>.
+  </simpara>
+ </refsect1>
+</refentry>
 
 <!-- Keep this comment at the end of the file
 Local variables:
