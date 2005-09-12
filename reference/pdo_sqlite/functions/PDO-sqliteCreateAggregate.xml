@@ -1,0 +1,212 @@
+<?xml version='1.0' encoding='iso-8859-1'?>
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.4 Maintainer: jsgoupil Status: ready -->
+<!-- Reviewed: no -->
+<refentry id="function.PDO-sqliteCreateAggregate">
+ <refnamediv>
+  <refname>PDO::sqliteCreateAggregate</refname>
+  <refpurpose>
+   Référence une fonction définie par l'utilisateur agrégative pour utilisation dans les requêtes SQL
+  </refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>bool</type><methodname>PDO::sqliteCreateAggregate</methodname>
+   <methodparam><type>string</type><parameter>function_name</parameter></methodparam>
+   <methodparam><type>callback</type><parameter>step_func</parameter></methodparam>
+   <methodparam><type>callback</type><parameter>finalize_func</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>num_args</parameter></methodparam>
+  </methodsynopsis>
+  &warn.experimental.func;
+  <para>
+   <function>PDO::sqliteCreateAggregate</function> est similaire à
+   <function>PDO::sqliteCreateFunction</function> à l'exception que cela
+   référence les fonctions qui peuvent être utilisés pour calculer un résultat
+   agrégé à travers toutes les lignes d'une requête.
+  </para>
+  <para>
+   La différence entre cette fonction et
+   <function>PDO::sqliteCreateFunction</function> est que deux fonctions sont
+   requises pour gérer les agrégation; <parameter>step_func</parameter> est
+   appelée pour chaque ligne dans le jeu de résultats. Votre fonction &php;
+   devrait accumuler les résultats et les enregistrer dans un contexte
+   agrégatif. Une fois que toutes les lignes ont été traitées,
+   <parameter>finalize_func</parameter> sera appelée et elle devrait alors
+   prendre les données du contexte agrégatif et retourner le résultat. Les
+   fonctions de rappel devraient retourner un type connu par SQLite
+   (c'est-à-dire <link linkend="language.types.intro">type scalaire</link>).
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>function_name</parameter></term>
+     <listitem>
+      <para>
+       Le nom de la fonction utilisé dans les requêtes SQL.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>step_func</parameter></term>
+     <listitem>
+      <para>
+       Fonction de rappel appelée pour chaque ligne dans le jeu de résultats.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>finalize_func</parameter></term>
+     <listitem>
+      <para>
+       Fonction de rappel pour agréger les "étapes" de données de chaque ligne.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>num_args</parameter></term>
+     <listitem>
+      <para>
+       Conseil à l'analyseur SQLite si la fonction de rappel accepte un nombre
+       prédéterminé d'arguments.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple d'agrégation avec une fonction max_length</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$data = array(
+   'un',
+   'deux',
+   'trois',
+   'quatre',
+   'cinq',
+   'six',
+   'sept',
+   'huit',
+   'neuf',
+   'dix',
+   );
+$db = new PDO('sqlite::memory:');
+$db->exec("CREATE TABLE strings(a)");
+$insert = $db->prepare('INSERT INTO strings VALUES (?)');
+foreach ($data as $str) {
+    $insert->execute(array($str));
+}
+$insert = null;
+
+function max_len_step(&$context, $string) 
+{
+    if (strlen($string) > $context) {
+        $context = strlen($string);
+    }
+}
+
+function max_len_finalize(&$context) 
+{
+    return $context;
+}
+
+$db->sqliteCreateAggregate('max_len', 'max_len_step', 'max_len_finalize');
+
+var_dump($db->query('SELECT max_len(a) from strings')->fetchAll());
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Dans cet exemple, on crée une fonction agrégative qui va calculer la
+   longueur de la plus grande chaîne de caractères dans une des colonnes de la
+   table. Pour chaque ligne, la fonction <literal>max_len_step</literal> est
+   appelée et le paramètre <parameter>context</parameter> est passé. Le
+   paramètre de contexte est comme n'importe quelle autre variable &php; et
+   doit être fixé pour contenir un tableau ou même un objet. Dans cet exemple,
+   nous l'utilisons pour contenir la taille maximale que nous avons vu jusqu'à
+   présent; si le paramètre <parameter>string</parameter> a une grandeur plus
+   grande que celle courante, on met à jour le contexte pour contenir cette
+   nouvelle taille maximale.
+  </para>
+  <para>
+   Une fois que toutes les lignes ont été traitées, SQLite appelle la fonction
+   <literal>max_len_finalize</literal> pour déterminer le résultat agrégatif.
+   Ici, nous pourrions effectuer des calculs basé sur les données trouvées
+   dans <parameter>context</parameter>. Dans notre exemple simple, nous avons
+   calculer le résultat comme si la requête progressait, alors nous avons
+   simplement besoin de retourner la valeur de contexte.
+  </para>
+  <tip>
+   <para>
+    Ce n'est PAS recommandé pour vous d'enregistrer une copie des valeurs dans
+    le contexte et ensuite de les traiter à la fin, puisque vous devriez
+    causer à SQLite d'utiliser énormément de mémoire pour traiter la requête -
+    pensez seulement combien de mémoire serait nécessaire si un million de
+    lignes étaient enregistrées en mémoire, chaque ligne contenant une chaîne
+    de caractères contenant 32 octets en longueur.
+   </para>
+  </tip>
+  <tip>
+   <para>
+    Vous pouvez utiliser <function>PDO::sqliteCreateFunction</function> et
+    <function>PDO::sqliteCreateAggregate</function> pour surcharger les
+    fonctions natives de SQLite.
+   </para>
+  </tip>
+  <note>
+   <para>
+    Cette méthode n'est pas disponible avec les pilotes de SQLite2.
+    Utilisez l'ancien style de l'API sqlite pour cela à la place.
+   </para>
+  </note>
+
+ </refsect1>
+
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>PDO::sqliteCreateFunction</function></member>
+    <member><function>sqlite_create_function</function></member>
+    <member><function>sqlite_create_aggregate</function></member>
+   </simplelist>
+  </para>
+ </refsect1>
+
+</refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
