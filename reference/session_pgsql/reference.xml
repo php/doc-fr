@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.2 $ -->
+<!-- $Revision: 1.3 $ -->
+<!-- EN-Revision: 1.2 Maintainer: jsgoupil Status: ready -->
 <!-- Purpose: basic.session -->
 <!-- Membership: pecl, external -->
-<!-- State: experimental-->
 <!-- Author: Yasuo Ohgaki <yohgaki@php.net> -->
-<!-- EN-Revision: 1.1 Maintainer: jsgoupil Status: ready -->
 <reference id="ref.session-pgsql">
  <title>Sauvegarde d'Identifiant de session PostgreSQL</title>
  <titleabbrev>Session PgSQL</titleabbrev>
@@ -12,32 +11,43 @@
   <partintro>
    <section id="session-pgsql.intro">
     &reftitle.intro;
-    &warn.experimental;
     &note.no-windows.extension;
     <para>
      Ce module vous fournit un moyen additionnel pour sauvegarder vos
      identifiants de session pour les modules de session utilisant PostgreSQL
-     en tant que sauvegarde. La sauvegarde d'identifiant de session
-     <literal>user</literal> devrait être utilisée, mais ce module est écrit en
+     <link linkend="ref.session">session</link> utilisant <ulink
+     url="&url.pgsql;">PostgreSQL</ulink> en tant que sauvegarde du système.
+     La sauvegarde d'identifiant de session
+     <literal>user</literal> peut être utilisée, mais ce module est écrit en
      C. Par conséquent, ce module est largement 2 fois plus rapide que la
-     sauvegarde d'identifiant écrit en script &php;.
+     sauvegarde d'identifiant écrit en &php;.
     </para>
     <para>
-     Le basculement et le chargement de balance est prévu à être créé, mais
-     ils ne sont pas disponibles maintenant.
+     Session PgSQL est conçu pour fonctionner avec n'importe quel sorte de
+     sites web et offre certaines fonctionnalités avancées :
+     <simplelist>
+      <member>tables de session sont créées automatiquement</member>
+      <member>vidage de table de session automatique</member>
+      <member>meilleure récupération de place</member>
+      <member>support de multiples serveurs PostgreSQL</member>
+      <member>basculement de serveur de base de données automatique (changement)</member>
+      <member>
+       chargement balancé de serveur de base de données automatique s'il y a
+       multiples serveurs PostgreSQL.
+      </member>
+      <member>court-circuit de UPDATE</member>
+     </simplelist> 
     </para>
-    <note>
-     <simpara>
-      Il y aura des fonctions pour ce module, mais elles ne sont pas
-      disponibles pour le moment.
-     </simpara>
-    </note>
    </section>
 
    <section id="session-pgsql.requirements">
     &reftitle.required;
     <para>
-     Vous devez posséder au moins &php; 4.1, PostgreSQL 7.1 et MM 1.1.3
+     Vous devez posséder au moins &php; &gt;= 4.3.0, PostgreSQL &gt;= 7.2.0
+     comme serveur de base de données. <literal>libpq</literal> qui vient avec
+     PostgreSQL 7.2.0 ou supérieur (et les fichiers d'entête pour
+     construction) et <ulink url="&url.mm;">libmm</ulink> (et les fichiers
+     d'entête).
     </para>
    </section>
 
@@ -45,6 +55,59 @@
 
    &reference.session-pgsql.ini;
 
+   <section id="session-pgsql.tables">
+    <title>Définitions de Table</title>
+    <para>Définition de table de session
+     <programlisting role="sql">
+<![CDATA[
+CREATE TABLE php_session (
+  sess_id            text,
+  sess_name          text,
+  sess_data          text,
+  sess_created       integer,
+  sess_modified      integer,
+  sess_expire        integer,
+  sess_addr_created  text,
+  sess_addr_modified text,
+  sess_counter       integer,
+  sess_error         integer,
+  sess_warning       integer,
+  sess_notice        integer,
+  sess_err_message   text,
+  sess_custom        text
+);
+
+CREATE INDEX php_session_idx ON php_session USING BTREE (sess_id);
+]]>
+     </programlisting>
+    </para>
+    <warning>
+     <para>
+      Si vous utilisez <literal>HASH</literal> pour <literal>INDEX</literal>,
+      vous aurez des problèmes d'arrêt forcé lorsque le chargement du serveur
+      est <emphasis>très</emphasis> élevé. Même si peu probable d'avoir un
+      arrêt forcé sous des opérations normales, cela peut se produire.
+      <emphasis>N'utilisez pas <literal>HASH</literal> pour
+      <literal>INDEX</literal></emphasis>.
+     </para>
+    </warning>
+    <para>
+     Vous pouvez changer la table de session tant que tous les champs sont
+     définis.
+    </para>
+    <para>
+     Définition de table de variables d'application
+     <programlisting role="sql">
+<![CDATA[
+CREATE TABLE php_app_vars (
+  app_modified       integer,
+  app_name           text,
+  app_vars           text
+);
+]]>
+     </programlisting>
+    </para>
+   </section>
 
    <section id="session-pgsql.contact">
     <title>Information Contact</title>
