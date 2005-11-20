@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.15 $ -->
-<!-- EN-Revision: 1.10 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.16 $ -->
+<!-- EN-Revision: 1.11 Maintainer: yannick Status: ready -->
 <!-- Purpose: remote.other -->
 <!-- Membership: pecl, external -->
 <!-- Reviewed: yes -->
@@ -78,185 +78,185 @@
      pour autant. Vous pouvez même ajouter un lien à un document sans
      le modifier.
     </para>
-  <para>
-   Dire que <function>hw_pipedocument</function> et <function>hw_gettext</function>
-   font l'insertion automatiquement n'est pas aussi simple qu'il y paraît.
-   L'insertion implique une certaine hiérarchie de documents. Sur un serveur
-   web, la hiérarchie est fournie par le système de fichiers, mais
-   Hyperwave dispose de sa propre hiérarchie et les noms de fichiers ne
-   reflètent pas la position d'un objet dans cette hiérarchie.
-   Ainsi, la création de liens requiert en premier lieu
-   la construction de la hiérarchie et de l'espace des noms dans
-   une hiérarchie web et un espace de nom web. La différence
-   fondamentale entre Hyperwave et le web est qu'il y a une distinction claire
-   entre les noms et la hiérarchie dans Hyperwave. Le nom ne contient aucune
-   information à propos de la position de l'objet dans la hiérarchie.
-   Sur le web, le nom contient les informations de localisation dans la
-   hiérarchie. Cela conduit à deux méthodes d'accès :
-   soit la hiérarchie Hyperwave et le nom de l'objet sont inscrits dans
-   l'URL. Pour simplifier les choses, une deuxième approche est
-   pratiquée. L'objet Hyperwave de nom 'mon_objet' correspond à
-   l'URL 'http://hote/mon_objet', peu importe alors où il est rangé
-   dans la hiérarchie. Un objet dont le nom est 'parent/mon_objet' peut
-   être le fils de l'objet 'mon_objet' dans la hiérarchie Hyperwave,
-   bien que ce soit le contraire en convention web, et cela risque de perturber
-   l'utilisateur.
-  </para>
-  <para>
-   Ayant pris cette décision, un deuxième problème surgit :
-   comment faire l'interface avec &php; ? L'URL http://hote/mon_objet n'appellera
-   aucun script &php; à moins que vous ne demandiez à votre serveur
-   web de le remplacer par autre chose, comme :
-   'http://host/php3_script/mon_objet' et le script 'php3_script' utilise la
-   variable $PATH_INFO pour rechercher l'objet 'mon_objet' sur le serveur Hyperwave.
-   Il y a juste un petit inconvénient, qui peut facilement être
-   corrigé. Réécrire une URL ne vous permettra aucun
-   accès aux autres documents du serveur web. Un script de recherche
-   dans le serveur Hyperwave serait impossible. Il vous faudra donc au moins
-   une autre règle pour exclure certaines URL, comme celles
-   qui commencent par http://host/Hyperwave. Voici, de manière simple,
-   comment partager un espace de nom entre un serveur web et un
-   serveur Hyperwave serveur.
-  </para>
-  <para>
-   Basé sur le mécanisme précédent, on trouve
-   l'insertion dans les documents.
-  </para>
-  <para>
-   Il est plus compliqué d'avoir &php; ne fonctionnant pas comme un module
-   de serveur, ou un script CGI, mais comme une application indépendante.
-   Dans ce cas, il est utile d'inscrire la hiérarchie et le nom de fichier
-   Hyperwave dans le système de fichier. Mais comme cela risque d'entrer
-   en conflit avec le séparateur de dossier ('/'), il faut le remplacer
-   par un autre caractère,. '_'.
-  </para>
-  <para>
-   Le protocole réseau pour communiquer avec un serveur Hyperwave est
-   appelé <ulink url="&spec.hyperwave;">HG-CSP</ulink>
-   (Hyper-G Client/Server Protocol). Il est basé sur des messages qui
-   initient des actions, comme lire l'en-tête de fichier. Dans
-   les premières versions de Hyperwave Server, deux clients natifs
-   (Harmony, Amadeus) étaient fournis pour permettre la communication
-   avec le serveur. Ils ont disparu lors de la commercialisation de Hyperwave.
-   En tant qu'ersatz, un client appelé wavemaster est désormais
-   fourni. wavemaster est un espèce de convertisseur de protocole de
-   <abbrev>HTTP</abbrev> en <abbrev>HG-CSP</abbrev>. L'idée est de faire
-   toute l'administration de la base et la visualisation des documents par une
-   interface web. Le wavemaster implémente un jeu d'emplacement pour
-   certaines actions de personnalisation de l'interface. Ce jeu est appelé
-   <abbrev>PLACE</abbrev> language. <abbrev>PLACE</abbrev> pêche encore par
-   le manque de nombreuses fonctions de programmation et le manque
-   d'évolutivité. Cela a conduit à l'utilisation de
-   JavaScript ce qui ne rend pas la vie facile.
-  </para>
-  <para>
-   Que &php; supporte Hyperwave permet de combler ces manques. &php; implémente
-   tous les messages définis par <abbrev>HG-CSP</abbrev> mais fourni
-   d'autres commandes puissantes, comme celle de lire des documents
-   complets.
-  </para>
-  <para>
-   Hyperwave dispose de sa propre terminologie pour localiser certaines
-   informations. Cette terminologie a été largement étendue.
-   Presque toutes les fonctions utilisent l'un des types de données
-   suivants :
-   <itemizedlist>
-    <listitem>
-     <simpara>
-      object ID : un entier unique pour chaque objet sur le serveur Hyperwave. C'est
-      aussi un des attributs de l'enregistrement de l'objet (ObjectID). Les object ids
-      sont souvent utilisés comme paramètre d'entrée pour
-      spécifier un objet.
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      object record : une chaîne contenant des paires clé=valeur. Les
-      paires sont séparées par un retour à la ligne. Un
-      enregistrement d'objet peut facilement être converti en tableau, avec
-      la fonction <function>hw_objrec2array</function>. De nombreuses fonctions
-      retournent un objet record. Ces fonctions ont leur nom qui finit par obj.
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      object array : un tableau associatif qui contient tous les attributs d'un objet.
-      La clé est l'attribut. Si un attribut apparaît plusieurs fois, il
-      sera représenté sous la forme d'un tableau associatif ou
-      indexé. Les attributs qui dépendent des langues (comme title,
-      keyword ou description) seront représentés sous la forme d'un
-      tableau associatif dont les clés seront les abréviations de
-      langues. Tous les autres attributs à valeur multiple prendront la
-      forme d'un tableau indexé.
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      hw_document : ce type est un nouveau type de données, qui contient le
-      document lui-même, comme HTML, PDF etc. Il est
-      optimisé pour les documents HTML mais peut s'utiliser avec n'importe
-      quel format.
-     </simpara>
-    </listitem>
-   </itemizedlist>
-  </para>
-  <para>
-   De nombreuses fonctions qui retournent un tableau d'enregistrements, retournent
-   aussi un tableau associé, avec des informations statistiques. Ce tableau
-   est le dernier élément du tableau d'enregistrements. Les
-   statistiques contiennent les entrées suivantes :
-   <variablelist>
-   <varlistentry>
-   <term>Hidden</term>
-   <listitem>
-    <simpara>
-     Nombre d'objets dont l'attribut PresentationHints est Hidden.
-    </simpara>
-   </listitem>
-   </varlistentry>
-   <varlistentry>
-   <term>CollectionHead</term>
-   <listitem>
-    <simpara>
-     Nombre d'objets dont l'attribut PresentationHints est CollectionHead.
-    </simpara>
-   </listitem>
-   </varlistentry>
-   <varlistentry>
-   <term>FullCollectionHead</term>
-   <listitem>
-    <simpara>
-     Nombre d'objets dont l'attribut PresentationHints est FullCollectionHead.
-    </simpara>
-   </listitem>
-   </varlistentry>
-   <varlistentry>
-   <term>CollectionHeadNr</term>
-   <listitem>
-    <simpara>
-     Index du premier objet du tableau d'enregistrement avec l'attribut
-     PresentationHints à CollectionHead.
-    </simpara></listitem>
-    </varlistentry>
-    <varlistentry>
-    <term>FullCollectionHeadNr</term>
-    <listitem>
-     <simpara>
-      Index du premier objet du tableau d'enregistrement avec l'attribut
-      PresentationHints est FullCollectionHead.
-     </simpara>
-    </listitem>
-    </varlistentry>
-    <varlistentry>
-    <term>Total</term>
-    <listitem>
-     <simpara>
-      Total : nombre d'enregistrements.
-     </simpara>
-    </listitem>
-    </varlistentry>
-    </variablelist>
-   </para>
+    <para>
+     Dire que <function>hw_pipedocument</function> et <function>hw_gettext</function>
+     font l'insertion automatiquement n'est pas aussi simple qu'il y paraît.
+     L'insertion implique une certaine hiérarchie de documents. Sur un serveur
+     web, la hiérarchie est fournie par le système de fichiers, mais
+     Hyperwave dispose de sa propre hiérarchie et les noms de fichiers ne
+     reflètent pas la position d'un objet dans cette hiérarchie.
+     Ainsi, la création de liens requiert en premier lieu
+     la construction de la hiérarchie et de l'espace des noms dans
+     une hiérarchie web et un espace de nom web. La différence
+     fondamentale entre Hyperwave et le web est qu'il y a une distinction claire
+     entre les noms et la hiérarchie dans Hyperwave. Le nom ne contient aucune
+     information à propos de la position de l'objet dans la hiérarchie.
+     Sur le web, le nom contient les informations de localisation dans la
+     hiérarchie. Cela conduit à deux méthodes d'accès :
+     soit la hiérarchie Hyperwave et le nom de l'objet sont inscrits dans
+     l'URL. Pour simplifier les choses, une deuxième approche est
+     pratiquée. L'objet Hyperwave de nom 'mon_objet' correspond à
+     l'URL 'http://hote/mon_objet', peu importe alors où il est rangé
+     dans la hiérarchie. Un objet dont le nom est 'parent/mon_objet' peut
+     être le fils de l'objet 'mon_objet' dans la hiérarchie Hyperwave,
+     bien que ce soit le contraire en convention web, et cela risque de perturber
+     l'utilisateur.
+    </para>
+    <para>
+     Ayant pris cette décision, un deuxième problème surgit :
+     comment faire l'interface avec &php; ? L'URL http://hote/mon_objet n'appellera
+     aucun script &php; à moins que vous ne demandiez à votre serveur
+     web de le remplacer par autre chose, comme :
+     'http://host/php3_script/mon_objet' et le script 'php3_script' utilise la
+     variable $PATH_INFO pour rechercher l'objet 'mon_objet' sur le serveur Hyperwave.
+     Il y a juste un petit inconvénient, qui peut facilement être
+     corrigé. Réécrire une URL ne vous permettra aucun
+     accès aux autres documents du serveur web. Un script de recherche
+     dans le serveur Hyperwave serait impossible. Il vous faudra donc au moins
+     une autre règle pour exclure certaines URL, comme celles
+     qui commencent par http://host/Hyperwave. Voici, de manière simple,
+     comment partager un espace de nom entre un serveur web et un
+     serveur Hyperwave serveur.
+    </para>
+    <para>
+     Basé sur le mécanisme précédent, on trouve
+     l'insertion dans les documents.
+    </para>
+    <para>
+     Il est plus compliqué d'avoir &php; ne fonctionnant pas comme un module
+     de serveur, ou un script CGI, mais comme une application indépendante.
+     Dans ce cas, il est utile d'inscrire la hiérarchie et le nom de fichier
+     Hyperwave dans le système de fichier. Mais comme cela risque d'entrer
+     en conflit avec le séparateur de dossier ('/'), il faut le remplacer
+     par un autre caractère,. '_'.
+    </para>
+    <para>
+     Le protocole réseau pour communiquer avec un serveur Hyperwave est
+     appelé <ulink url="&spec.hyperwave;">HG-CSP</ulink>
+     (Hyper-G Client/Server Protocol). Il est basé sur des messages qui
+     initient des actions, comme lire l'en-tête de fichier. Dans
+     les premières versions de Hyperwave Server, deux clients natifs
+     (Harmony, Amadeus) étaient fournis pour permettre la communication
+     avec le serveur. Ils ont disparu lors de la commercialisation de Hyperwave.
+     En tant qu'ersatz, un client appelé wavemaster est désormais
+     fourni. wavemaster est un espèce de convertisseur de protocole de
+     <abbrev>HTTP</abbrev> en <abbrev>HG-CSP</abbrev>. L'idée est de faire
+     toute l'administration de la base et la visualisation des documents par une
+     interface web. Le wavemaster implémente un jeu d'emplacement pour
+     certaines actions de personnalisation de l'interface. Ce jeu est appelé
+     <abbrev>PLACE</abbrev> language. <abbrev>PLACE</abbrev> pêche encore par
+     le manque de nombreuses fonctions de programmation et le manque
+     d'évolutivité. Cela a conduit à l'utilisation de
+     JavaScript ce qui ne rend pas la vie facile.
+    </para>
+    <para>
+     Que &php; supporte Hyperwave permet de combler ces manques. &php; implémente
+     tous les messages définis par <abbrev>HG-CSP</abbrev> mais fourni
+     d'autres commandes puissantes, comme celle de lire des documents
+     complets.
+    </para>
+    <para>
+     Hyperwave dispose de sa propre terminologie pour localiser certaines
+     informations. Cette terminologie a été largement étendue.
+     Presque toutes les fonctions utilisent l'un des types de données
+     suivants :
+     <itemizedlist>
+      <listitem>
+       <simpara>
+        object ID : un entier unique pour chaque objet sur le serveur Hyperwave. C'est
+        aussi un des attributs de l'enregistrement de l'objet (ObjectID). Les object ids
+        sont souvent utilisés comme paramètre d'entrée pour
+        spécifier un objet.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        object record : une chaîne contenant des paires clé=valeur. Les
+        paires sont séparées par un retour à la ligne. Un
+        enregistrement d'objet peut facilement être converti en tableau, avec
+        la fonction <function>hw_objrec2array</function>. De nombreuses fonctions
+        retournent un objet record. Ces fonctions ont leur nom qui finit par obj.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        object array : un tableau associatif qui contient tous les attributs d'un objet.
+        La clé est l'attribut. Si un attribut apparaît plusieurs fois, il
+        sera représenté sous la forme d'un tableau associatif ou
+        indexé. Les attributs qui dépendent des langues (comme title,
+        keyword ou description) seront représentés sous la forme d'un
+        tableau associatif dont les clés seront les abréviations de
+        langues. Tous les autres attributs à valeur multiple prendront la
+        forme d'un tableau indexé.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        hw_document : ce type est un nouveau type de données, qui contient le
+        document lui-même, comme HTML, PDF etc. Il est
+        optimisé pour les documents HTML mais peut s'utiliser avec n'importe
+        quel format.
+       </simpara>
+      </listitem>
+     </itemizedlist>
+    </para>
+    <para>
+     De nombreuses fonctions qui retournent un tableau d'enregistrements, retournent
+     aussi un tableau associé, avec des informations statistiques. Ce tableau
+     est le dernier élément du tableau d'enregistrements. Les
+     statistiques contiennent les entrées suivantes :
+     <variablelist>
+      <varlistentry>
+       <term>Hidden</term>
+       <listitem>
+        <simpara>
+         Nombre d'objets dont l'attribut PresentationHints est Hidden.
+        </simpara>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+      <term>CollectionHead</term>
+      <listitem>
+       <simpara>
+        Nombre d'objets dont l'attribut PresentationHints est CollectionHead.
+       </simpara>
+      </listitem>
+      </varlistentry>
+      <varlistentry>
+      <term>FullCollectionHead</term>
+      <listitem>
+       <simpara>
+        Nombre d'objets dont l'attribut PresentationHints est FullCollectionHead.
+       </simpara>
+      </listitem>
+      </varlistentry>
+      <varlistentry>
+      <term>CollectionHeadNr</term>
+      <listitem>
+       <simpara>
+        Index du premier objet du tableau d'enregistrement avec l'attribut
+        PresentationHints à CollectionHead.
+       </simpara></listitem>
+       </varlistentry>
+       <varlistentry>
+       <term>FullCollectionHeadNr</term>
+       <listitem>
+        <simpara>
+         Index du premier objet du tableau d'enregistrement avec l'attribut
+         PresentationHints est FullCollectionHead.
+        </simpara>
+       </listitem>
+       </varlistentry>
+       <varlistentry>
+       <term>Total</term>
+       <listitem>
+        <simpara>
+         Total : nombre d'enregistrements.
+        </simpara>
+       </listitem>
+      </varlistentry>
+     </variablelist>
+    </para>
    </section>
 
   <section id="hw.requirements">
@@ -366,14 +366,14 @@ RewriteEngine on
     </itemizedlist>
    </para>
    <para>
-     Une alternative pour le moteur de réécriture est l'utilisation de 
+     Une alternative pour le moteur de réécriture est l'utilisation de
      la directive Apache <literal>ErrorDocument</literal>, mais sachez alors
      que <literal>ErrorDocument</literal> n'effectue pas les redirections de
      méthodes POST.
     </para>
 
    </section>
-   
+
     &reference.hw.ini;
 
    <section id="hw.resources">
@@ -382,7 +382,7 @@ RewriteEngine on
    </section>
 
    &reference.hw.constants;
-   
+
    <section id="hw.todo">
    <title>A faire</title>
    <para>
@@ -439,4 +439,3 @@ indent-tabs-mode:nil
  sgml-local-ecat-files:nil
  End:
  -->
-

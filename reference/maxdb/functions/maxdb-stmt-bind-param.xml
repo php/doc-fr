@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.4 $ -->
-<!-- EN-Revision: 1.4 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.5 $ -->
+<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
   <refentry id="function.maxdb-stmt-bind-param">
    <refnamediv>
     <refname>maxdb_stmt_bind_param</refname>
@@ -23,9 +23,26 @@
      <methodsynopsis>
       <type>bool</type>
       <methodname>bind_param</methodname>
-      <methodparam><type>array</type><parameter>types</parameter></methodparam>
+      <methodparam><type>string</type><parameter>types</parameter></methodparam>
       <methodparam><type>mixed</type><parameter role="reference">var1</parameter></methodparam>
       <methodparam choice="opt"><type>mixed</type><parameter role="reference">...</parameter></methodparam>
+     </methodsynopsis>
+    </classsynopsis>
+    <para>Style procédural (synthaxe étendue) :</para>
+    <methodsynopsis>
+     <type>bool</type><methodname>maxdb_stmt_bind_param</methodname>
+     <methodparam><type>resource</type><parameter>stmt</parameter></methodparam>
+     <methodparam><type>string</type><parameter>types</parameter></methodparam>
+     <methodparam><type>array</type><parameter role="reference">var</parameter></methodparam>
+    </methodsynopsis>
+    <para>Style orienté objet (méthode) (synthaxe étendue):</para>
+    <classsynopsis>
+     <ooclass><classname>stmt</classname></ooclass>
+     <methodsynopsis>
+      <type>bool</type>
+      <methodname>bind_param</methodname>
+      <methodparam><type>string</type><parameter>types</parameter></methodparam>
+      <methodparam><type>array</type><parameter role="reference">var</parameter></methodparam>
      </methodsynopsis>
     </classsynopsis>
     <para>
@@ -34,6 +51,14 @@
      <function>maxdb_prepare</function>. 
      La chaîne <parameter>types</parameter> contient un ou plusieurs caractères
      qui spécifient le(s) type(s) correspondant aux variables liées.
+    </para>
+    <para>
+     La synthaxe étendue de <function>maxdb_stmt_bind_param</function> permet de passer
+     les paramètres en tant que tableaux plutôt qu'en tant que listes de variables &php; à la fonction.
+     Si le tableau de variables n'a pas été utilisé avant l'appel à la fonction
+     <function>maxdb_stmt_bind_param</function>, il doit être initialisé en tant que tableau vide.
+     Voir les exemples sur l'utilisation de la fonction <function>maxdb_stmt_bind_param</function>
+     avec la synthaxe étendue.
     </para>
     <para>
      Les variables pour les requêtes <literal>SELECT INTO SQL</literal> peuvent également
@@ -136,7 +161,7 @@ printf("%d ligne effacée.\n", $maxdb->affected_rows);
 $maxdb->close();
 ?>
 ]]>
-        </programlisting>
+     </programlisting>
     </example>
     <example>
      <title>Style procédural</title>
@@ -265,6 +290,77 @@ maxdb_stmt_close ($stmt);
     <screen>
 <![CDATA[
 a
+]]>
+    </screen>
+    <example>
+     <title>Style orienté objet (synthaxe étendue)</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$maxdb = new maxdb('localhost', 'MONA', 'RED', 'DEMODB');
+
+/* Vérification de la connexion */
+if (maxdb_connect_errno()) {
+printf("Connect failed: %s\n", maxdb_connect_error());
+exit();
+}
+
+$maxdb->query ("CREATE TABLE temp.mycity LIKE hotel.city");
+$maxdb->query ("INSERT INTO temp.mycity SELECT * FROM hotel.city");
+
+$stmt = $maxdb->prepare("INSERT INTO temp.mycity VALUES (?, ?, ?)");
+
+$arr = array();
+
+$stmt->bind_param('iss', $arr);
+
+$arr[0] = 11111;
+$arr[1] = 'Georgetown';
+$arr[2] = 'NY';
+
+/* Exécution de la requête préparée */
+$stmt->execute();
+
+printf("%d ligne insérée.\n", maxdb_stmt_affected_rows($stmt));
+
+$arr[0] = 22222;
+$arr[1] = 'New Orleans';
+$arr[2] = 'LA';
+
+/* Exécution de la requête préparée */
+$stmt->execute();
+
+printf("%d ligne insérée.\n", $stmt->affected_rows);
+
+/* Fermeture de la requête et de la connexion */
+$stmt->close();
+
+$result = $maxdb->query("SELECT * from temp.mycity WHERE zip = '11111' OR zip = '22222'");
+if ($result) {
+  while ($row = $result->fetch_row()) {
+    printf ("%s %s %s\n", $row[0], $row[1], $row[2]);
+  }
+}
+
+/* Nettoyage de la table CountryLanguage */
+$maxdb->query("DELETE FROM temp.mycity WHERE name='Georgetown'");
+$maxdb->query("DELETE FROM temp.mycity WHERE name='New Orleans'");
+printf("%d lignes effacées.\n", $maxdb->affected_rows);
+
+/* Fermeture de la connexion */
+$maxdb->close();
+?>
+]]>
+     </programlisting>
+    </example>
+    &example.outputs;
+    <screen>
+<![CDATA[
+1 ligne insérée.
+1 ligne insérée.
+11111 Georgetown NY
+22222 New Orleans LA
+2 lignes effacées.
 ]]>
     </screen>
    </refsect1>
