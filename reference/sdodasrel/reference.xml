@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='iso-8859-1'?>
-<!-- $Revision: 1.2 $ -->
-<!-- EN-Revision: 1.17 Maintainer: jsgoupil Status: ready -->
+<!-- $Revision: 1.3 $ -->
+<!-- EN-Revision: 1.18 Maintainer: jsgoupil Status: ready -->
 <!-- Purpose: database.abstract -->
 <!-- Membership: pecl -->
 <!-- State: experimental -->
@@ -39,7 +39,7 @@
     entités de base de données
     - tables, colonnes, clés primaires et clés étrangères -
     et les éléments de modèle SDO
-    - types, propriétés, propriétés de retenue et ainsi de suite.
+    - types, propriétés, relations de retenue et ainsi de suite.
     Vous spécifiez ces informations comme des méta-données lorsque vous
     construisez le DAS Relationnel.
    </para>
@@ -77,7 +77,7 @@
       est un graphique de données normalisé contenant toutes les données du
       jeu de résultats. Pour une requête qui retourne les données obtenues à
       partir de plusieurs tables, ce graphique contiendra plusieurs objets
-      de données, liés avec les références SDO contenues. Il pourrait aussi
+      de données, liés avec les relations SDO contenues. Il pourrait aussi
       y avoir des données de références qui ne sont pas de contenues à
       l'intérieur des données.
      </para>
@@ -253,13 +253,13 @@ require_once 'SDO/DAS/Relational.php';
       <para>
        Seulement deux types de relation SDO. Les méta-données décrient plus bas
        permettent le DAS Relationnel de modéliser seulement deux types de
-       relation SDO : propriétés contenues de valeurs multiples et les
-       propriétés contenues de valeurs simples. Dans SDO, si une
-       propriété est simple ou de valeurs multiples, et si c'est contenu ou
-       non contenu, elle est indépendante. La plage complète des possibilités
-       que SDO autorise ne peut être défini au complet. Il peut y avoir des
-       relations qui peuvent être utiles pour modéliser mais que
-       l'implémentation courante ne peut gérer.
+       relation SDO : relations contenues de valeurs multiples et les
+       références contenues de valeurs simples. Dans SDO, si une
+       propriété décrit une relation simple ou de valeurs multiples, et si
+       c'est contenu ou non contenu, elle est indépendante. La plage complète
+       des possibilités que SDO autorise ne peut être défini au complet. Il
+       peut y avoir des relations qui peuvent être utiles pour modéliser mais
+       que l'implémentation courante ne peut gérer.
        Un exemple est de relation de simples valeurs contenues.
       </para>
      </listitem>
@@ -641,8 +641,8 @@ create table employe ( \
        dépendamment des méta-données contenues dans le troisième argument du
        constructeur qui définissent les relations de SDO contenues.
        Une discussion de cela est donc reportée dans la section
-       <link linkend="sdo.das.rel.metadata.crefs">
-        références SDO contenues
+       <link linkend="sdo.das.rel.metadata.crels">
+        relations SDO contenues
        </link>
        ci-dessous.
       </para>
@@ -663,8 +663,8 @@ create table employe ( \
      </para>
     </section>
 
-    <section id='sdo.das.rel.metadata.crefs'>
-     <title>Spécification des références SDO contenues</title>
+    <section id='sdo.das.rel.metadata.crels'>
+     <title>Spécification des relations SDO contenues</title>
 
      <para>
       Le troisième argument du constructeur définit comment les types dans le
@@ -679,45 +679,47 @@ create table employe ( \
       associatifs, chacun d'eux identifie un parent et un enfant. L'exemple
       ci-dessous montre une relation parent-enfant de compagnie au département
       et un autre du département aux employés. Chacune d'elles deviendra un
-      propriété de valeur multiples contenue dans un modèle SDO.
+      propriété définissant une relation de valeur multiples contenue dans un
+      modèle SDO.
      </para>
      <programlisting role="php">
 <![CDATA[
 <?php
-$department_reference = array( 'parent' => 'compagnie', 'child' => 'department');
-$employe_reference = array( 'parent' => 'department', 'child' => 'employe');
+$department_containment = array( 'parent' => 'compagnie', 'child' => 'department');
+$employee_containment = array( 'parent' => 'department', 'child' => 'employe');
 
-$SDO_reference_metadata = array($department_reference, $employe_reference);           
+$SDO_containment_metadata = array($department_containment, $employee_containment);           
 ?>
 ]]>
      </programlisting>
 
      <para>
       Les clés étrangères dans les méta-données de base de données sont
-      interprétées soit comme des propriétés de valeurs multiples contenues
-      ou des propriétés de simples valeurs non contenues, dépendamment si
-      elles ont une référence SDO contenue correspondante spécifiée dans les
-      méta-données. Dans cet exemple ici, les clés étrangères du département à
-      la compagnie (la colonne
+      interprétées comme des propriétés avec soit des relations de valeurs
+      multiples contenues ou des références de simples valeurs non contenues,
+      dépendamment si elles ont une relation SDO contenue correspondante
+      spécifiée dans les méta-données. Dans cet exemple ici, les clés
+      étrangères du département à la compagnie (la colonne
       <varname>co_id</varname>
       dans la table de departement)
       et de l'employé au département (la colonne
       <varname>dept_id</varname>
-      dans la table employe) sont interprétées comme supportant les références
+      dans la table employe) sont interprétées comme supportant les relations
       SDO contenues.
-      Chaque référence contenue mentionnée dans les méta-données de références
+      Chaque référence contenue mentionnée dans les méta-données de relations
       contenue de SDO doit avoir une clé correspondante présente dans la base
-      de données et définie dans les méta-données de base de données. La
-      valeur des colonnes de la clé étrangère pour les références contenue
-      n'apparaît pas dans les objets de données; à la place, elles sont
-      représentées par une référence contenue du parent à l'enfant. Alors la
-      colonne <varname>co_id</varname> dans la ligne de département de la base
-      de données, par exemple, n'apparaît pas en tant que propriété du type de
-      département, mais apparaît à la place comme une relation contenue
-      appelée <varname>departname</varname> sur le type de compagnie.
-      Notez que la clé étrangère et la relation parent-enfant semble avoir un
-      sens opposé : la clé étrangère pointe du département à la compagnie,
-      mais la relation parent-enfant pointe de la compagnie au département.
+      de données et définie dans les méta-données de base de données. Les
+      valeurs des colonnes de la clé étrangère pour les relations contenues
+      n'apparaissent pas dans les objets de données; à la place, chacune
+      d'entre elles est représentée par une relation contenue du parent à
+      l'enfant. Alors la colonne <varname>co_id</varname> dans la ligne de
+      département de la base de données, par exemple, n'apparaît pas en tant
+      que propriété du type de département, mais apparaît à la place comme
+      une relation contenue appelée <varname>departname</varname> sur le
+      type de compagnie. Notez que la clé étrangère et la relation
+      parent-enfant semble avoir un sens opposé : la clé étrangère pointe du
+      département à la compagnie, mais la relation parent-enfant pointe de
+      la compagnie au département.
      </para>
 
      <para>
@@ -725,14 +727,14 @@ $SDO_reference_metadata = array($department_reference, $employe_reference);
       <varname>employe_du_mois</varname>
       ,
       est gérée différemment.
-      Elle n'est pas mentionnée dans les méta-données de références SDO
+      Elle n'est pas mentionnée dans les méta-données de relations SDO
       contenues. Ceci a pour conséquence d'être interprété de la seconde manière :
       elle devient une référence de valeur simple non contenue sur l'objet
       compagnie, sur lequel vous pouvez assigner des références au type
       d'employé d'objets de données SDO. Elle apparaît comme une propriété du
       type de compagnie. Le moyen pour lui assigner une valeur dans le
       graphique de données est d'avoir un graphique qui contient un objet
-      employé avec les références contenues et d'assigner l'objet à celui-ci.
+      employé avec les relations contenues et d'assigner l'objet à celui-ci.
       Ceci est montré dans les exemples plus loin.
      </para>
     </section>
@@ -804,7 +806,7 @@ require_once 'company_metadata.inc.php';
 /**************************************************************
  * Construit le DAS avec les méta-données
  ***************************************************************/
-$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_reference_metadata);
+$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_containment_metadata);
 
 /**************************************************************
  * Obtient l'objet racine et crée un objet compagnie dessous.
@@ -858,7 +860,7 @@ require_once 'company_metadata.inc.php';
 /**************************************************************
  * Construit le DAS avec les méta-données
  ***************************************************************/
-$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_reference_metadata);
+$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_containment_metadata);
 
 /**************************************************************
  * Récupère la connexion à la base de données
@@ -920,7 +922,7 @@ require_once 'company_metadata.inc.php';
 /**************************************************************
  * Construit le DAS avec les méta-données
  ***************************************************************/
-$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_reference_metadata);
+$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_containment_metadata);
 
 /**************************************************************
  * Récupère la connexion à la base de données
@@ -962,8 +964,8 @@ $das->applyChanges($dbh,$root);
 
       <para>
        Dans l'exemple, elles sont toutes supprimées en un seul coup en
-       supprimant la référence contenue. Il est aussi possible de les
-       supprimer individuellement.
+       supprimant la propriété contenue (la propriété définissant la relation
+       contenue). Il est aussi possible de les supprimer individuellement.
       </para>
       <programlisting role="php" id="sdo.das.rel.examples.1c-RD">
 <![CDATA[
@@ -974,7 +976,7 @@ require_once 'company_metadata.inc.php';
 /**************************************************************
  * Construit le DAS avec les méta-données
  ***************************************************************/
-$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_reference_metadata);
+$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_containment_metadata);
 
 /**************************************************************
  * Récupère la connexion à la base de données
@@ -1078,7 +1080,7 @@ $rows_affected = $pdo_stmt->execute();
 * Crée une compagnie avec le nom Acme et un département, département de Chaussure
 ***************************************************************/
 $dbh = new PDO(PDO_DSN,DATABASE_USER,DATABASE_PASSWORD);
-$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_reference_metadata);
+$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_containment_metadata);
 
 $root = $das -> createRootDataObject();
 
@@ -1157,7 +1159,7 @@ require_once 'company_metadata.inc.php';
  * supprime Chaussure et ajoute IT
  ***************************************************************/
 $dbh = new PDO(PDO_DSN,DATABASE_USER,DATABASE_PASSWORD);
-$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_reference_metadata);
+$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_containment_metadata);
 
 $root = $das->executeQuery($dbh,
 'select c.id, c.nom, d.id, d.nom from compagnie «c, departement d where d.co_id = c.id',
@@ -1191,7 +1193,7 @@ $das -> applyChanges($dbh, $root);
       <para>
        Notez le moyen de l'objet compagnie est actuellement supprimé en
        utilisant l'appel unset de &php;. La suppression doit être effectuée
-       sur les référence qui est dans ce cas la référence de compagnie sur
+       sur la propriété qui est dans ce cas la propriété de compagnie sur
        l'objet racine spécial. Vous devez utiliser :
        <programlisting role="php" id="sdo.das.rel.examples.1cd-CRUD.good-delete">
 <![CDATA[
@@ -1225,7 +1227,7 @@ require_once 'company_metadata.inc.php';
  * compagnie entière
  ***************************************************************/
 $dbh = new PDO(PDO_DSN,DATABASE_USER,DATABASE_PASSWORD);
-$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_reference_metadata);
+$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_containment_metadata);
 
 $root = $das->executeQuery($dbh,
 'select c.id, c.nom, d.id, d.nom from compagnie c, departement d where d.co_id = c.id',
@@ -1284,7 +1286,7 @@ $das -> applyChanges($dbh, $root);
        .
        Cette règle des graphiques de données SDO requière que tous les objets
        pointé par une référence qui n'est pas contenue doit être aussi
-       accessible par des références contenues.
+       accessible par des relations contenues.
       </para>
       <para>
        Lorsque vient le moment d'insérer le graphique dans la base de données,
@@ -1293,7 +1295,7 @@ $das -> applyChanges($dbh, $root);
        <varname>employe_du_mois</varname>
        introduit une plus grande complexité.
        Le DAS Relationnel doit insérer les objets en descendant l'arbre formée
-       des références contenues, donc la compagnie, ensuite le département et
+       des relations contenues, donc la compagnie, ensuite le département et
        ensuite l'employée. Ceci est nécessaire puisqu'il y a toujours une clé
        primaire générée automatiquement du parent pour l'inclure dans une ligne
        du fils. Mais lorsque la compagnie est insérée, l'employée qui est
@@ -1326,7 +1328,7 @@ $rows_affected = $pdo_stmt->execute();
 * Il y a une employé, Bob.
 * L'employé du mois est Bob.
 *************************************************************************************/
-$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_reference_metadata);
+$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_containment_metadata);
 $dbh = new PDO(PDO_DSN,DATABASE_USER,DATABASE_PASSWORD);
 
 $root 			         = $das  -> createRootDataObject();
@@ -1376,7 +1378,7 @@ require_once 'company_metadata.inc.php';
  * Ajoute un second département et un nouvel employé.
  * Change l'employé du mois
  *************************************************************************************/
-$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_reference_metadata);
+$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_containment_metadata);
 $dbh = new PDO(PDO_DSN,DATABASE_USER,DATABASE_PASSWORD);
 
 $root = $das->executeQuery($dbh,
@@ -1439,7 +1441,7 @@ require_once 'company_metadata.inc.php';
  * qui est l'employé du mois sans le réassigner. Pour plus de précaution ici,
  * nous supprimons la compagnie en entier d'un seul coup.
  *************************************************************************************/
-$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_reference_metadata);
+$das = new SDO_DAS_Relational ($database_metadata,'compagnie',$SDO_containment_metadata);
 $dbh = new PDO(PDO_DSN,DATABASE_USER,DATABASE_PASSWORD);
 
 $root = $das->executeQuery($dbh,
