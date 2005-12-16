@@ -1,0 +1,1693 @@
+<?xml version='1.0' encoding='iso-8859-1'?>
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.19 Maintainer: jsgoupil Status: ready -->
+<!-- Purpose: database.abstract -->
+<!-- Membership: pecl -->
+<!-- State: experimental -->
+<!-- Reviewed: no -->
+
+<reference id="ref.sdo">
+ <title>Fonctions SDO</title>
+ <titleabbrev>SDO</titleabbrev>
+
+ <partintro>
+  <section id="sdo.intro">
+   &reftitle.intro;
+   <para>
+    <!-- This warns that the extension is experimental -->
+    &warn.experimental;
+   </para>
+   
+   <para>
+    Les Objets de Service de Données (<literal>Service Data Objects
+    (SDOs)</literal>) permet les applications &php; de travailler
+    avec des données provenant de différentes sources (comme une requête de
+    base de données, un fichier XML et une feuille de tableau) en utilisant
+    une simple interface.
+   </para>
+   <para>
+    Chaque différente sorte de source de données requiert un Service d'Accès
+    de Données (<literal>Data Access Service (DAS)</literal>) pour fournir
+    un accès aux données dans la source de données.
+    Dans votre application &php;, vous utilisez un DAS pour créer une instance
+    SDO qui représente des données dans la source de données. Vous pouvez
+    alors fixer et récupérer des valeurs dans l'instance SDO en utilisant
+    l'interface SDO standard. Finalement, vous pouvez utiliser un DAS pour
+    écrire les données modifiées à une source de données (normalement la
+    même).
+   </para>
+   <para>
+    Voyez la
+    <link linkend="sdo.das.table">liste des Services d'Accès de Données</link>
+    pour des détails sur ceux présentement disponibles. En plus des DASs
+    fournis, SDO fournit aussi des interfaces pour permettre les autres à être
+    implémentés (voyez la section sur <link
+    linkend="sdo.class.sdo-das-spis">Interface SDO Service d'Accès de
+    Données</link> pour plus de détails).
+   </para>
+   <para>
+    Cette extension est dérivée des concepts pris des <ulink
+    url="&url.ibm.sdo;">Spécification d'Objets de Service de Données</ulink>
+   </para>
+
+   <section id="sdo.intro.structure">
+    <title>La Structure d'un Objet de Service de Données</title>
+    <para>
+     Une instance d'Objet de Service de Données est fait d'un arbre d'objets
+     de données. L'arbre est défini par des relations contenues entre les
+     objets de données. Par exemple, une objet de données Compagnie peut
+     consister en un nombre d'objets de données Département et donc la
+     Compagnie devrait avoir une relation contenue avec les Départements.
+     La suppression d'un objet de données qui contient une relation contenue à
+     un autre objet de données supprimera aussi l'objet de données contenu.
+     Par exemple, la suppression de l'objet de données Compagnie supprimera
+     aussi les Départements.
+    </para>
+    <para>
+     Un SDO peut aussi avoir des références non contenues entre les objets de
+     données dans l'arbre. Par exemple, un objet de données Employé peut faire
+     référence à un autre Employé pour identifier son mentor. La suppression
+     d'un objet de données qui possède une référence non contenue d'un autre
+     objet de données ne supprimera pas l'objet de données référencé.
+    </para>
+    <para>
+     Les données peuvent se référencer entre eux, mais peuvent aussi avoir des
+     propriétés primitives. Par exemple, l'objet de données Compagnie pourrait
+     avoir une propriété appelée "nom" de type &string; pour contenir le nom
+     de la compagnie (par exemple, "Acme").
+    </para>
+   </section>
+  </section>
+
+  <section id="sdo.requirements">
+   &reftitle.required;
+   <para>
+    L'extension SDO requiert &php; 5.1 ou supérieur.
+   </para>
+   <para>
+    SDO <link linkend="ref.sdo-das-xml">Service d'Accès de Données XML</link>,
+    qui est construit en part entière avec cette extension requiert libxml2
+    (Testé avec libxml2 2.6.19) qui peut être téléchargé sur
+    <ulink url='&url.libxml;'>&url.libxml;</ulink>.
+   </para>
+  </section>
+
+  <section id="sdo.installation">
+   &reftitle.install;
+   <para>
+    Il y a plusieurs options, selon vous installez sur Windows ou Linux, et
+    selon vous installez avec une version de mise à jour (un fichier .tgz
+    provenant du site PECL) ou de la dernière mise à jour provenant de CVS.
+    Le DAS Relationnel nécessite aussi une attention spéciale puisqu'il est
+    écrit en &php;.
+   </para>
+   <para>
+    Les instructions sont susceptibles de changer puisque les progrès &php;
+    5.1 changent son statut de version bêta à version stable. Les instructions
+    suivantes étaient correctes le 6 octobre 2005, lorsque &php; 5.1.0RC1 était
+    la dernière version d'évaluation pour &php; et que 0.5.2 était la dernière
+    version bêta de SDO.
+   </para>
+   <para>
+    Les options sont résumées dans la table suivante :
+    <informaltable>
+     <tgroup cols='3'>
+      <thead>
+       <row>
+        <entry>Dernière version/Version</entry>
+        <entry>Windows</entry>
+        <entry>Linux</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry>
+         Dernière version CVS
+        </entry>
+        <entry>
+         <itemizedlist>
+          <listitem>
+           <para>
+            Les derniers DLLs pour le noyau de SDO et le XML DAS peuvent être
+            téléchargés respectivement sur
+           <ulink url='&url.pecl.win.ext;php_sdo.dll'>php_sdo</ulink> et 
+           <ulink url='&url.pecl.win.ext;php_sdo_das_xml.dll'>php_sdo_das_xml</ulink>.
+           </para>
+          </listitem>
+          <listitem>
+           <para>
+            Téléchargez la dernière version de DAS Relationnel sur CVS vers un
+            chemin &php; pointé par
+            <link linkend="ini.include-path">include_path</link>.
+           </para>
+          </listitem>
+         </itemizedlist>
+        </entry>
+        <entry>
+         <itemizedlist>
+          <listitem>
+           <para>
+            Téléchargez la dernière version du noyau SDO et de XML DAS sur CVS
+            et construisez les en fonctions des instructions ci-dessous pour
+            construire sur Linux.
+           </para>
+          </listitem>
+          <listitem>
+           <para>
+            Téléchargez la dernière version de DAS Relationnel sur CVS vers un
+            chemin &php; pointé par
+            <link linkend="ini.include-path">include_path</link>.
+           </para>
+          </listitem>
+         </itemizedlist>
+        </entry>
+       </row>
+       <row>
+        <entry>
+         Version
+        </entry>
+        <entry>
+         <itemizedlist>
+          <listitem>
+           <para>
+            Il n'y a présentement aucun moyen de fourni pour construire la
+            version du noyau SDO et XML DAS sur une machine de l'utilisateur.
+            Vous serez seulement capable de récupérer les derniers DLLs du
+            site de copie (voyez la ligne précédente de cette table).
+           </para>
+          </listitem>
+          <listitem>
+           <para>
+            Le DAS Relationnel peut être téléchargé et installé avec la
+            commande :
+           </para>
+           <para>
+            <command>
+            pear install -B &lt;nom du package et version&gt;
+            </command>
+           </para>
+           <para> 
+            Substituez le nom du package désiré et sa version, par exemple
+            <varname>sdo-0.5.2</varname>, dans la commande ci-dessus.
+           </para>
+          </listitem>
+         </itemizedlist>
+        </entry>
+        <entry>
+         <itemizedlist>
+          <listitem>
+           <para>
+            Vous pouvez télécharger ces trois composants SDO - le noyau SDO,
+            le XML DAS et le DAS Relationnel - avec la commande :
+           </para>
+           <para>
+            <command>
+             pear install &lt;nom du package et version&gt;
+            </command>
+           </para>
+           <para>
+            Substituez le nom du package désiré et sa version, par exemple
+            <varname>sdo-0.5.2</varname>, dans la commande ci-dessus.
+           </para>
+           <para> 
+            Cette commande construira les bibliothèques partagées SDO et XML
+            et installera aussi les fichiers &php; pour utiliser le DAS
+            Relationnel.
+           </para>
+          </listitem>
+         </itemizedlist>
+        </entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </informaltable>
+   </para>
+   <para>
+    Sans se soucier sur quelle plateforme ou avec quelle version de code vous
+    avez installée, vous devrez ajouter les deux bibliothèques d'extension à
+    votre fichier &php.ini;.
+    Sur Windows, ajoutez :
+    <programlisting role="php" id="sdo.installation.ini.windows">
+<![CDATA[
+extension=php_sdo.dll
+extension=php_sdo_das_xml.dll
+]]> 
+    </programlisting>
+    Sur Linux, ajoutez :
+    <programlisting role="php" id="sdo.installation.ini.linux">
+<![CDATA[
+extension=sdo.so
+extension=sdo_das_xml.so
+]]>
+    </programlisting>
+    Vous aurez aussi besoin de mettre à jour votre
+    <link linkend="ini.extension-dir">extension_dir</link>
+    dans &php.ini; pour pointer vers un chemin de ces bibliothèques.
+   </para>
+   
+   <para>
+    Le DAS Relationnel est écrit en &php;. Vous devrez mettre à jour votre
+    <link linkend="ini.include-path">include_path</link>
+    dans &php.ini; pour pointer vers un répertoire qui contient
+    <filename>sdo/DAS/Relational</filename>.
+   </para>
+   <procedure id='sdo.build.linux.steps'>
+    <title>Construire SDO sur Linux</title>
+    <para>
+     Cette section décrit comment construire le noyau SDO et le XML DAS sur
+     Linux. Présentement, vous devriez avoir besoin seulement de savoir
+     comment faire cela seulement si vous souhaitez construire une version
+     récente que vous auriez téléchargée de CVS.
+    </para>
+    <step>
+     <para>
+      Changez le dossier principal d'extension :
+      <command>cd &lt; où se trouve le code sdo &gt;</command>
+     </para>
+    </step>
+    <step>
+     <para>
+      Exécutez <command>phpize</command>, qui fixera l'environnement pour
+      compiler le SDO et le Service de d'Accès de Données XML.
+     </para>
+    </step>
+    <step>
+     <para>
+      Ensuite, exécutez <command>./configure; make; make install</command>.
+      Veuillez noter, vous devriez avoir besoin de vous identifier en tant que
+      root pour installer cette extension.
+     </para>
+    </step>
+    <step>
+     <para>
+      Vérifiez que ces modules sont chargés par &php;, en ajoutant
+      <command>extension=sdo.so</command> et
+      <command>extension=sdo_das_xml.so</command> dans votre fichier &php.ini;
+      dans cet ordre.
+     </para>
+    </step>
+   </procedure>
+  </section>
+
+  <section id="sdo.das.table">
+   <title>Services d'Accès de Données</title>
+   <para>
+    La table ci-dessous liste les Services d'Accès de Données SDO présentement
+    fournis :
+    <informaltable>
+     <tgroup cols='2'>
+      <thead>
+       <row>
+        <entry>Nom DAS</entry>
+        <entry>Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry>
+         <link linkend="ref.sdo-das-xml">SDO_DAS_XML</link>
+        </entry>
+        <entry>
+         Un Service d'Accès de Données XML supportant la lecture/écriture SDOs
+         comme documents XML ou via une adresse Web qui supporte ce genre de
+         choses comme les champs RSS.
+        </entry>
+       </row>
+       <row>
+        <entry>
+         <link linkend="ref.sdo.das.rel">SDO_DAS_Relational</link>
+        </entry>
+        <entry>
+         Un Service d'Accès de Données basé sur PDO supportant la
+         lecture/écriture SDO aux sources de données relationnelles.
+         Implémente une politique optimiste de mises à jour concourante.
+        </entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </informaltable>
+   </para>
+  </section>
+
+  <section id='sdo.limitations'>
+   <title>Limitations</title>
+   <procedure id='sdo.limitations.implementation'>
+    <title>Limitations d'Implémentation</title>
+    <para>
+     La liste suivante contient les limitations dans l'implémentation
+     courante de SDO :
+    </para>
+    <step>
+     <para>
+      Il n'y a pas de support pour le jeu de caractère multi-byte.
+     </para>
+    </step>
+   </procedure>
+   <procedure id='sdo.limitations.sdo'>
+    <title>Limitations SDO</title>
+    <para>
+     Les concepts suivants de SDO 2.0 ne sont pas supportés dans
+     l'implémentation courante de &php;.
+     Ce n'est pas nécessairement le cas que ceux-ci seront ajoutés avec le
+     temps. Leur inclusion dépendra des besoins de la communauté.
+    </para>
+    <step>
+     <para>
+      Types abstraits et type dérivé.
+     </para>
+    </step>
+    <step>
+     <para>
+      Types ouverts.
+     </para>
+    </step>
+    <step>
+     <para>
+      Relations bidirectionnelles.
+     </para>
+    </step>
+    <step>
+     <para>
+      Type et propriété alias noms.
+     </para>
+    </step>
+    <step>
+     <para>
+      Propriétés en lecture seule.
+     </para>
+    </step>
+    <step>
+     <para>
+      XMLHelper/XSDHelper (le XML DAS fournit une multitude de cette
+      fonctionnalité)
+     </para>
+    </step>
+    <step>
+     <para>
+      TypeHelper (le SDO_DAS_DataFactory fournit cette fonctionnalité)
+     </para>
+    </step>
+   </procedure>
+  </section>
+
+  <section id='sdo.examples'>
+   &reftitle.examples;
+   <para>
+    Les exemples ci-dessous assument qu'un SDO est créé avec le schéma et
+    l'information de l'instance montrée ci-dessous, en utilisant le Service
+    d'Accès de Données.
+   </para>
+   <para>
+    Le schéma décrit un objet de données compagnie.
+    La compagnie contient un objet de données département et chaque
+    département contient des objets de données employe.
+    Chaque objet de données a un certain nombre de propriétés primitives pour
+    décrire les choses comme le nom, le numéro de série, etc.
+    Finalement, l'objet de données compagnie a aussi une référence non
+    contenue d'un des objets de données employe pour identifier l'un d'entre
+    eux en tant qu'employé du mois (employe_du_mois).
+   </para>
+   <para>
+    <programlisting role="xml">
+<![CDATA[
+<xsd:schema  
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:sdo="commonj.sdo"
+  xmlns:sdoxml="commonj.sdo/xml"
+  xmlns:compagnie="compagnieNS"
+  targetNamespace="compagnieNS">
+  <xsd:element name="compagnie" type="compagnie:CompagnieType"/>
+  <xsd:complexType name="CompagnieType">
+    <xsd:sequence>
+      <xsd:element name="departements" type="compagnie:DepartementType" 
+       maxOccurs="unbounded"/>
+    </xsd:sequence>
+    <xsd:attribute name="nom" type="xsd:string"/>
+    <xsd:attribute name="employe_du_mois" type="xsd:IDREF" 
+sdoxml:propertyType="compagnie:EmployeType"/> </xsd:complexType>
+  <xsd:complexType name="DepartementType">
+    <xsd:sequence>
+      <xsd:element name="employes" type="compagnie:EmployeType"  
+       maxOccurs="unbounded"/>
+    </xsd:sequence>
+    <xsd:attribute name="nom" type="xsd:string"/>
+    <xsd:attribute name="endroit" type="xsd:string"/>
+    <xsd:attribute name="numero" type="xsd:int"/>
+  </xsd:complexType>
+  <xsd:complexType name="EmployeType">
+    <xsd:attribute name="nombre" type="xsd:string"/>
+    <xsd:attribute name="NS" type="xsd:ID"/>
+    <xsd:attribute name="directeur" type="xsd:boolean"/>
+  </xsd:complexType>
+</xsd:schema>
+]]>
+    </programlisting>
+   </para>
+
+   <para>
+    Le document ci-dessous décrit une seule compagnie, appelée 'MegaCorp', qui
+    contient un seul département, appelé 'Advanced Technologies'. Le
+    département Advanced Technologies contient trois employés. La compagnie
+    employe_du_mois référence le deuxième employé, 'Jane Doe'.
+   </para>
+
+   <para>
+    <programlisting role="xml">
+<![CDATA[
+<?xml version="1.0" encoding="UTF-8" ?> 
+<compagnie xmlns="compagnieNS" nom="MegaCorp" 
+ employe_du_mois="#/departements.0/employes.1">
+  <departements nom="Advanced Technologies" endroit="NY" numero="123">
+    <employes nom="John Jones" NS="E0001"/>
+    <employes nom="Jane Doe" NS="E0003"/>
+    <employes nom="Al Smith" NS="E0004" directeur="true"/>
+  </departements>
+</compagnie>
+]]>
+    </programlisting>
+   </para>
+
+  </section>
+
+  <section id="sdo.sample.getset">
+   <title>Fixe et Récupère les Valeurs des Propriétés</title>
+   <para>
+    Les exemples suivants assument <command>$compagnie</command> est un objet
+    de données créé provenant du schéma et du document montré ci-dessus.
+   </para>
+   <para>
+    <example>
+     <title>Accès via les noms de Propriété</title>
+     <para>
+      Les propriétés des objets de données peuvent être accéder en utilisant
+      la syntaxe d'accès de propriété d'objet. L'exemple suivant récupère la
+      liste des départements (contenant un seul département) et fixe le nom de
+      compagnie à 'Acme'.
+     </para>
+     <programlisting role="php" id="sdo.examples.propname">
+<![CDATA[
+<?php
+  $departements = $compagnie->departements;
+  $compagnie->nom = 'Acme';
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Accès via l'index</title>
+     <para>
+      Les propriétés des objets de données peuvent être accéder en utilisant
+      leur index en utilisant la syntaxe de tableau. L'index est
+      la position où se trouve la définition des propriétés dans le model
+      (dans ce cas, le schéma xml).
+      Nous pouvons voir que le schéma ci-dessus que l'élément departements est
+      la première propriété compagnie définie et l'attribut du nom de la
+      compagnie est la seconde propriété de la compagnie (l'interface SDO ne
+      fait aucune distinction entre les attributs XML et ses éléments).
+      L'exemple suivant récupère la liste des départements (contenant un seul
+      département) et fixe le nom de la compagnie à 'Acme'.
+     </para>
+     <programlisting role="php" id="sdo.examples.propindex">
+<![CDATA[
+<?php
+  $departements = $compagnie[0];
+  $compagnie[1] = 'Acme';
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Itération d'Objet de Données</title>
+     <para>
+      Nous pouvons effectuer une itération sur les propriétés d'un objet de
+      données en utilisant un foreach. L'exemple suivant itère sur les
+      propriétés de la compagnie; nom, departements et employe_du_mois.
+     </para>
+     <programlisting role="php" id="sdo.examples.doiter">
+<![CDATA[
+<?php
+  foreach ($compagnie as $nom => $valeur) {
+    // ...
+  }
+?>
+]]>
+     </programlisting>
+     <para>
+      Pour la première itération, $nom sera 'nom' et $valeur sera 'Acme'. Pour
+      la seconde itération, $nom sera 'departements' et $value sera un
+      SDO_List (parce que departements est une propriété qui contient
+      plusieurs valeurs (dont l'état est
+      <command>maxOccurs="unbounded"</command> dans ce schéma)) contenant un
+      seul objet de données de type DepartementType. Pour la troisième
+      itération, $nom sera 'employe_du_mois' et $valeur sera un objet de
+      données de type EmployeType.
+     </para>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Itération de Propriété de plusieurs valeurs</title>
+     <para>
+      Les Propriétés de plusieurs valeurs peuvent utiliser une itération avec
+      un foreach. L'exemple suivant itère sur les départements des compagnies.
+     </para>
+     <programlisting role="php" id="sdo.examples.mvpiter">
+<![CDATA[
+<?php
+  foreach ($compagnie->departements as $departement) {
+    // ...
+  }
+?>
+]]>
+     </programlisting>
+     <para>
+      Chaque itération assignera le prochain département dans la liste de
+      variable <command>$departement</command>.
+     </para>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Accès à un Élément de plusieurs valeurs</title>
+     <para>
+      Nous pouvons accéder à un élément individuel des propriétés de plusieurs
+      valeurs en utilisant une syntaxe de tableau. L'exemple suivant accède le
+      premier département dans la compagnie.
+     </para>
+     <programlisting role="php" id="sdo.examples.mvaccess">
+<![CDATA[
+<?php
+  $ad_tech_dept = $compagnie->departements[0];
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Accès aux Propriétés Imbriquées</title>
+     <para>
+      Nous pouvons accéder à une propriété imbriquée pour naviguer dans la
+      structure d'objet de données. L'exemple suivant récupère et fixe le nom
+      du premier département.
+     </para>
+     <programlisting role="php" id="sdo.examples.nestedprop">
+<![CDATA[
+<?php
+  $dept_nom = $compagnie->departements[0]->nom;
+  $compagnie->departements[0]->nom = 'Emerging Technologies';
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Support Simple XPath</title>
+     <para>
+      Nous pouvons accéder aux propriétés en utilisant des epxressions simili XPath (un
+      sous-ensemble augmenté de XPath), la plus simple forme sur
+      le nom de la propriété.
+      L'exemple suivant fixe le nom de la compagnie et récupère
+      l'employe_du_mois.
+     </para>
+     <programlisting role="php" id="sdo.examples.simplexpath">
+<![CDATA[
+<?php
+  $compagnie['nom'] = 'UltraCorp';
+  $edm = $compagnie['employe_du_mois'];
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Support Simple XPath</title>
+     <para>
+      Nous pouvons utiliser l'accès aux tableaux chaînés pour naviguer parmi
+      la structure de l'objet de données. L'exemple suivant récupère et fixe
+      le nom du premier département.
+     </para>
+     <programlisting role="php" id="sdo.examples.chainarray">
+<![CDATA[
+<?php
+  $dept_nom = $compagnie['departements'][0]['nom'];
+  $compagnie['departements'][0]['nom'] = 'Emerging Technologies';
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Navigation XPath</title>
+     <para>
+      Nous pouvons utiliser des expressions XPath pour naviguer parmi la
+      structure de l'objet de données. Deux formes d'indexation dans les
+      propriétés à plusieurs valeurs sont supportées.
+      La première est la syntaxe standard de tableau XPath avec l'indexation
+      démarrant à un, la seconde est une extension SDO à XPath avec un index
+      démarrant à zéro. Les deux exemples suivants récupèrent le second
+      employé de la première liste de département.
+     </para>
+     <programlisting role="php" id="sdo.examples.xpathnav">
+<![CDATA[
+<?php
+  $jane_doe = $compagnie["departements[1]/employes[2]"];
+  $jane_doe = $compagnie["departements.0/employes.1"];
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Requête XPath</title>
+     <para>
+      Nous pouvons utiliser XPath pour effectuer une requête et identifier des
+      parties d'un objet de données basé sur une instance de données.
+      L'exemple suivant récupère le directeur du département 'Advanced
+      Technologies'.
+     </para>
+     <programlisting role="php" id="sdo.examples.xpathquery">
+<![CDATA[
+<?php
+ $ad_tech_dir = 
+  $compagnie["departements[nom=\"Advanced Technologies\"]/employes[directeur=\"true\"]"];
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Création d'objet de données enfant</title>
+     <para>
+      Un objet de données peut être une classe d'objet pour ses objets de
+      données d'enfant. Un objet de données enfant est automatiquement une
+      partie d'un graphique de données. L'exemple suivant ajoute un nouvel
+      employé au département 'Advanced Technologies'.
+     </para>
+     <programlisting role="php" id="sdo.examples.create">
+<![CDATA[
+<?php
+  $ad_tech_dept = $compagnie["departements[nom=\"Advanced Technologoies\"]"];
+  $new_empl = $ad_tech_dept->createDataObject('employes');
+  $new_empl->nom = 'John Johnson';
+  $new_empl->NS = 'E0005';
+  $new_empl->directeur = false;
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Détruire un objet de données référencé</title>
+     <para>
+      Nous pouvons utiliser les fonctions <function>isset</function> et
+      <function>unset</function> pour vérifier et supprimer les items de
+      l'objet de données.
+     </para>
+     <para>
+      L'exemple suivant supprime l'"employe_du_mois" de la compagnie. Si cela
+      était une relation contenue alors l'employé serait supprimé de la
+      compagnie (ce n'est probablement pas une bonne idée de mettre à la porte
+      votre meilleur employé chaque mois !), mais puisque c'est une référence
+      non contenue, l'employé qui est référencé restera dans le département de
+      la compagnie, mais ne sera plus accessible à partir de la propriété
+      employe_du_mois.
+     </para>
+     <programlisting role="php" id="sdo.examples.unsetrefdo">
+<![CDATA[ 
+<?php
+  if (isset($compagnie->employe_du_mois)) {
+    unset($compagnie->employe_du_mois);
+  }
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </section>
+
+  <section id="sdo.sample.sequence">
+   <title>Travailler avec des Objets de Données en Séquence</title>
+   <para>
+    Des objets de données en Séquence sont des SDOs peuvent tracer l'ordre des
+    propriétés à travers les propriétés des objets de données. Ils peuvent
+    aussi contenir des éléments de texte non structuré (element de texte qui
+    n'appartient à aucune des propriétés SDO). Des objets de données en Séquence
+    sont utiles pour travailler avec des documents XML qui permettent du texte
+    non structuré (c'est-à-dire mixed=true) ou si les éléments peuvent être
+    intercalée (<![CDATA[<A/><B/><A/>]]>). Ceci peut se produire par exemple
+    lorsque le schéma définit maxOccurs>1 sur un élément qui est un
+    complexType avec un choix de l'ordre.
+   </para>
+   <para>
+    Les exemples ci-dessous assument qu'un SDO est créé avec le schéma et
+    l'information de l'instance montrée ci-dessous, en utilisant le Service
+    d'Accès de Données.
+   </para>
+   <para>
+    Le schéma ci-dessous décrit le format d'une lettre. La lettre peut
+    optionnellement contenir trois propriétés; date, prenom et nomFamille. Le
+    schéma indique <command>mixed="true"</command> qui signifie que le texte
+    non structuré peut être entremêlé entre les trois propriétés.
+   </para>
+   <para>
+    <programlisting role="xml">
+<![CDATA[
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:lettre="http://lettreSchema"
+  targetNamespace="http://lettreSchema">
+  <xsd:element name="lettres" type="lettre:FormLettre"/>
+  <xsd:complexType name="FormLettre" mixed="true">
+    <xsd:sequence>
+      <xsd:element name="date" minOccurs="0" type="xsd:string"/>
+      <xsd:element name="prenom" minOccurs="0" type="xsd:string"/>
+      <xsd:element name="nomFamille" minOccurs="0" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+</xsd:schema>
+          ]]>
+    </programlisting>
+   </para>
+
+   <para>
+    L'exemple suivant est une instance du document lettre. Il contient les
+    trois propriétés de la lettre; date, prenom et nomFamille, et a des
+    éléments de texte non structuré pour l'adresse et le corps de la lettre.
+   </para>
+   <para>
+    <programlisting role="xml">
+<![CDATA[
+<lettre:lettres xmlns:lettre="http://lettreSchema">
+  <date>1er Mars 2005</date>
+  Mutual of Omaha
+  Wild Kingdom, USA
+  Chère
+  <prenom>Casy</prenom>
+  <nomFamille>Crocodile</nomFamille>
+  S'il vous plaît, achetez plus de requin imperméable.
+  Votre prime est passée date.
+</lettre:lettres>
+          ]]>
+    </programlisting>
+   </para>
+   <para>
+    Lorsque chargé, l'objet de données de lettre aura la séquence et les
+    indices montrés dans la table ci-dessous :
+    <informaltable>
+     <tgroup cols='3'>
+      <thead>
+       <row>
+        <entry>Index de Séquence</entry>
+        <entry>Index:Nom</entry>
+        <entry>Valeur</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry>0</entry>
+        <entry>0:date</entry>
+        <entry>1er Mars 2005</entry>
+       </row>
+       <row>
+        <entry>1</entry>
+        <entry>-</entry>
+        <entry>Mutual of Omaha</entry>
+       </row>
+       <row>
+        <entry>2</entry>
+        <entry>-</entry>
+        <entry>Wild Kingdom, USA</entry>
+       </row>
+       <row>
+        <entry>3</entry>
+        <entry>-</entry>
+        <entry>Chère</entry>
+       </row>
+       <row>
+        <entry>4</entry>
+        <entry>1:prenom</entry>
+        <entry>Casy</entry>
+       </row>
+       <row>
+        <entry>5</entry>
+        <entry>2:nomFamille</entry>
+        <entry>Crocodile</entry>
+       </row>
+       <row>
+        <entry>6</entry>
+        <entry>-</entry>
+        <entry>S'il vous plaît, achetez plus de requin imperméable.</entry>
+       </row>
+       <row>
+        <entry>7</entry>
+        <entry>-</entry>
+        <entry>Votre prime est passée date.</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </informaltable>
+   </para>
+
+   <para>
+    Pour s'assurer que la séquence des indices soit maintenue, les objets de
+    données en séquence devraient être manipulés à travers de l'interface
+    SDO_Sequence. Ceci permet à l'instance de l'objet de données à être
+    manipulée en tant qu'index de séquence plutôt qu'avec un index de propriété
+    (montré dans la table ci-dessus).
+    Les exemples suivants assument que l'instance de la lettre a été chargée
+    dans l'objet de données référencé par la variable
+    <command>$lettre</command>.
+    <example>
+     <title>Récupération de l'interface SDO_Sequence</title>
+     <para>
+      Nous obtenons la séquence de l'objet de données en utilisant la méthode
+      <function>getSequence</function>. La suite récupère la séquence pour
+      l'objet de données de la lettre.
+     </para>
+     <programlisting role="php" id="sdo.examples.seqinterface">
+<![CDATA[ 
+<?php
+  $lettre_seq = $lettre->getSequence();
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+   <para>
+    Tous les exemples suivants assument que la variable
+    <command>$lettre_seq</command> a été assigné de la séquence pour l'objet
+    de données de la lettre.
+   </para>
+
+   <para>
+    <example>
+     <title>Récupère/Fixe des valeurs de séquence</title>
+     <para>
+      Nous pouvons récupérer et fixer des valeurs individuelles (en incluant
+      le texte non structuré) en utilisant les index de séquence. L'exemple
+      suivant fixe le prenom à 'Snappy' et récupère la dernière valeur de
+      séquence (le texte non structuré, 'Votre prime est passée date.').
+     </para>
+     <programlisting role="php" id="sdo.examples.getsetseq">
+<![CDATA[ 
+<?php
+  $lettre_seq[4] = 'Snappy';
+  $texte = $lettre_seq[count($lettre_seq) - 1];
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Itération de Séquence</title>
+     <para>
+      Nous pouvons itérer à travers des valeurs de séquence individuellement
+      en utilisant foreach. L'exemple suivant passe au travers des valeurs
+      individuelles dans l'ordre séquentiel.
+     </para>
+     <programlisting role="php" id="sdo.examples.seqiter">
+<![CDATA[ 
+<?php
+  foreach ($lettre->getSequence() as $valeur) {
+    // ...
+  }
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Séquence versus Objet de Données</title>
+     <para>
+      Fixer des valeurs à travers l'interface d'objet de données peut amener à
+      ce que les valeurs ne fassent pas partie de la séquence. Une valeur
+      fixée avec un objet de données sera seulement accessible avec la
+      séquence si la propriété était déjà une partie de la séquence. L'exemple
+      suivant fixe le nomFamille à travers de l'objet de données et le
+      récupère par la séquence. Ceci est correct puisque nomFamille existe
+      déjà dans la séquence. S'il n'avait pas été fixé, alors nomFamille
+      devrait être fixé à 'Smith', mais ne devrait pas faire partie de la
+      séquence.
+     </para>
+     <programlisting role="php" id="sdo.examples.seqvsdo">
+<![CDATA[ 
+<?php
+  $lettre[2] = 'Smith';
+  $nom_famille = $lettre_seq[5];
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Ajout à une séquence</title>
+     <para>
+      Nous pouvons ajouter de nouvelles valeurs à une séquence en utilisant la
+      méthode
+      <link linkend='function.SDO-Sequence-insert'><function>SDO_Sequence::insert</function></link>.
+      Les exemples suivants assument que les propriétés 'prenom' et
+      'nomFamille' sont non fixées.
+     </para>
+     <programlisting role="php" id="sdo.examples.seqadd">
+<![CDATA[ 
+<?php
+  // Ajoute une valeur prenom à la séquence
+  // valeur : 'Smith'
+  // index séquence : NULL (ajout)
+  // identifiant de propriété : 1 (index propriété prenom)
+  $lettres_seq->insert('Smith', NULL, 1);
+
+  // Ajoute une valeur nomFamille à la séquence
+  // valeur : 'Jones'
+  // index séquence : NULL (ajout)
+  // identifiant de propriété : 'nomFamille' (nom propriété nomFamille)
+  $lettres_seq->insert('Jones', NULL, 'nomFamille');
+
+  // Ajoute du texte non structuré
+  // valeur : 'Annule Inscription.'
+  // index séquence : absent (ajout)
+  // identifiant de propriété : absent (texte non structuré)
+  $lettres_seq->insert('Annule Inscription.');
+
+  // Ajoute du nouveau texte non structuré. Les séquence valeurs suivantes
+  // d'ordre sont décalées vers le haut
+  // valeur : 'À l'attention de :'
+  // index séquence : 1 (insert comme second élément)
+  // identifiant de propriété : absent (texte non structuré)
+  $lettres_seq->insert('À l'attention de :', 1);
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Suppression d'une séquence</title>
+     <para>
+      Nous pouvons utiliser les fonctions <function>isset</function> et
+      <function>unset</function> pour tester et supprimer des items de la
+      séquence (Note : <function>unset</function> laisse présentement les
+      valeurs dans l'objet de données, mais ce comportement est devrait
+      changer et supprimer les données de l'objet de données).
+      Une séquence se comporte comme une liste contiguë; donc, la suppression
+      d'un item au milieu de la liste décalera les entrées d'un indice plus
+      haut vers le bas. L'exemple suivant teste pour vérifier si la première
+      séquence d'élément est fixé et la détruit si elle l'est.
+     </para>
+     <programlisting role="php" id="sdo.examples.seqremove">
+<![CDATA[ 
+<?php
+  if (isset($lettre_seq[0])) {
+    unset($lettre_seq[0]);
+  }
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+  </section>
+
+
+  <section id="sdo.sample.reflection">
+   <title>Réflexion sur des Objets de Service de Données</title>
+   <para>
+    Les SDOs ont une connaissance de la structure qu'ils ont créée pour la
+    représentation (le modèle). Par exemple, une Compagnie SDO créée utilisant
+    <link linkend="sdo.examples">le schéma de Compagnie XML</link> ci-dessus
+    devrait seulement être permis de contenir des objets de données
+    DepartementType qui à leur tour devrait contenir seulement des objets de
+    données EmployeType.
+   </para>
+   <para>
+    Parfois, il est utile d'être capable d'accéder ces informations de modèle à
+    l'exécution. Par exemple, cela pourrait être utilisé pour générer
+    automatiquement une interface d'usager pour remplir un objet de données.
+    Les informations de modèle sont accédées en utilisant la réflexion.
+   </para>
+
+   <para>
+    <example>
+     <title>Réflexion sur les Objets de Données</title>
+     <para>
+      L'exemple suivant montre comment nous pouvons utiliser la réflexion sur
+      un objet de données vide Employe.
+     </para>
+     <programlisting role="php" id="sdo.examples.reflection">
+<![CDATA[ 
+<?php
+  // Crée l'objet de données employe (par exemple, à partir de Service d'Accès
+  // de données XML)
+  $employe = ...;
+  $reflexion = new SDO_Model_ReflectionDataObject($employe);
+  print($reflexion);
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+
+     <screen>
+<![CDATA[
+object(SDO_Model_ReflectionDataObject)#4 { - ROOT OBJECT - Type { 
+compagnieNS:EmployeType[3] { commonj.sdo:String $nom; 
+commonj.sdo:String $NS; commonj.sdo:Boolean $directeur; } }
+]]>
+     </screen>
+     <para>
+      L'utilisation de print sur SDO_Model_ReflectionDataObject écrit à
+      l'écran les données du modèle de l'objet. Nous pouvons voir à la sortie
+      que le type compagnieNS:EmployeType a trois propriétés et nous pouvons
+      voir le noms de ces propriétés avec leur type. Notez, les types
+      primitifs sont listés en tant que types SDO (par exemple, commonj.sdo
+      namespace, String type). Cela vaut la peine de noter que c'est le modèle
+      SDO et lorsqu'ils sont utilisés dans l'application, ils peuvent être
+      traités comme des types équivalent &php; (par exemple, &string; et
+      &boolean;).
+     </para>
+    </example>
+   </para>
+
+   <para>
+    <example>
+     <title>Accès d'informations de type</title>
+     <para>
+      Nous pouvons effectuer une requête de type d'informations sur un objet
+      de données en utilisant la réflexion. L'exemple suivant vérifie que le
+      type corresponde à l'objet de données plutôt qu'à une primitive et alors
+      itère à travers des propriétés de type, en affichant le nom de chaque
+      propriété ($type et $property sont respectivement des objets
+      SDO_Model_Type et SDO_Model_Property).
+     </para>
+     <programlisting role="php" id="sdo.examples.reflection.type">
+<![CDATA[ 
+<?php
+    // Crée l'objet de données employe (par exemple, à partir de Service d'Accès
+    // de données XML)
+    $employe = ...;
+    $reflexion = new SDO_Model_ReflectionDataObject($employe);
+    $type = $reflexion->getType();
+    if (! $type->isDataType()) {
+        foreach ($type->getProperties() as $property) {
+            print $property->getName() . "\n";
+        }
+    }
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+nom
+NS
+directeur
+]]>
+     </screen>
+    </example>
+   </para>
+
+  </section>
+
+
+
+
+
+  <!-- class definition section -->
+  <section id='sdo.classes'>
+   &reftitle.classes;
+   <para>
+    SDO consiste en trois blocs d'interface. Le premier bloc couvre les
+    interfaces pour utiliser avec les applications typiques SDO. Celles-ci
+    sont identifiées par le préfixe de package 'SDO_'. Le deuxième bloc est
+    celui qui utilise les interfaces qui sont utilisées pour la réflexion, et
+    travaille avec le modèle d'objet de données. Ces interfaces sont
+    identifiées par le préfixe de package 'SDO_Model_'. Finalement, le
+    troisième bloc est celui qui utilise les interfaces qui sont utilisées par
+    les implémentations de Service d'Accès de Données et sont identifiées par
+    le préfixe de package 'SDO_DAS_'. La majorité des utilisateurs SDO
+    n'auront pas besoin d'utiliser ou de comprendre les interfaces
+    'SDO_Model_' et 'SDO_DAS_'.
+   </para>
+
+   <section id='sdo.class.sdo-apis'>
+    <title>Interface Application pour programmer SDO</title>
+
+    <section id='sdo.class.sdo-dataobject'>
+     <title>
+      <classname>SDO_DataObject</classname>
+     </title>
+     <para>
+      L'interface principale dans laquelle les objets de données sont
+      manipulés. En plus des méthode ci-dessous, SDO_DataObjet étend les
+      interfaces ArrayAccess, SDO_PropertyAccess (définit les méthodes
+      <function>__get</function> / <function>__set</function> pour surcharger
+      l'accès aux propriétés), Iterator et Countable.
+     </para>
+     <section id='sdo.class.SDO_DataObject.methods'> &reftitle.methods;
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DataObject-getSequence'>getSequence</link>
+         - récupère la séquence pour l'objet de données
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DataObject-createDataObject'>createDataObject</link>
+         - crée un objet de données enfant
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DataObject-clear'>clear</link>
+         - détruit les propriétés d'un objet de données
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DataObject-getContainer'>getContainer</link>
+         - récupère le conteneur (aussi connu en tant que 'parent') de l'objet de données
+        </para>
+       </listitem>
+      </itemizedlist>
+     </section>
+    </section>
+
+    <section id='sdo.class.sdo-sequence'>
+     <title>
+      <classname>SDO_Sequence</classname>
+     </title>
+     <para>
+      L'interface dans lequel les objets de données en séquence peuvent être
+      accédés pour préserver l'ordre parmi les propriétés de l'objet de
+      données et pour permettre le texte non structuré.
+      SDO_Sequence préserve les indices contigus et donc l'insertion ou la
+      suppression d'éléments peut entraîner un décalage des autres éléments
+      vers le haut ou vers le bas. En plus des méthodes ci-dessous,
+      SDO_Sequence étend les interfaces ArrayAccess, Interator et Countable.
+     </para>
+     <section id='sdo.class.SDO_Sequence.methods'>
+      &reftitle.methods;
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Sequence-getPropertyIndex'>getPropertyIndex</link> 
+         - récupère l'index pour un index de séquence donné
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Sequence-getPropertyName'>getPropertyName</link> 
+         - récupère le nom pour un index de séquence donné
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Sequence-move'>move</link>
+         - déplace un élément d'un index vers un autre
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Sequence-insert'>insert</link>
+         - insère une nouvelle valeur dans la séquence
+        </para>
+       </listitem>
+      </itemizedlist>
+     </section>
+    </section>
+
+    <section id='sdo.class.sdo-list'>
+     <title>
+      <classname>SDO_List</classname>
+     </title>
+     <para>
+      L'interface dans lequel les propriétés de plusieurs valeurs sont
+      manipulées. En plus des méthodes définies ci-dessous, SDO_List étend
+      ArrayAcces, Iterator et Countable. SDO_List préserve les indices
+      contigus et donc l'insertion ou la suppression des éléments peut décaler
+      les autres éléments vers le haut ou vers le bas.
+     </para>
+     <section id='sdo.class.SDO-List.methods'>
+      &reftitle.methods;
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-List-insert'>insert</link> 
+         - insertion d'une nouvelle valeur dans la liste
+        </para>
+       </listitem>
+      </itemizedlist>
+     </section>
+    </section>
+
+    <section id='sdo.class.sdo-datafactory'>
+     <title>
+      <classname>SDO_DataFactory</classname>
+     </title>
+     <para>
+      L'interface dans lequel les objets de données peuvent être créés.
+      Un Service d'Accès de Données est responsable de remplir le modèle
+      (c'est-à-dire, la configuration des classe de données avec le type et
+      les informations de structure pour les objets de données qu'elle peut
+      créer.) pour les classes et peut alors optionnellement retourner une
+      instance ou une implémentation de l'interface de SDO_DataFactory.
+     </para>
+     <section id='sdo.class.SDO-DataFactory.methods'>
+      &reftitle.methods;
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DataFactory-create'>create</link> 
+         - crée un nouvel objet de données
+        </para>
+       </listitem>
+      </itemizedlist>
+     </section>
+    </section>
+   </section>
+
+
+
+   <section id='sdo.class.sdo-model-apis'>
+    <title>Interfaces de réflexion d'application pour programmer SDO</title>
+
+    <section id='sdo.class.sdo-reflectiondataobject'>
+     <title>
+      <classname>SDO_Model_ReflectionDataObject</classname>
+     </title>
+     <para>
+      L'interface principale est utilisée pour la réflexion d'une instance
+      d'objet de données pour obtenir son type de modèle et les informations
+      de propriété. Elle est désignée pour suivre le motif de réflexion
+      introduit dans &php; 5.
+     </para>
+     <section id='sdo.class.SDO_Model_ReflectionDataObject.methods'> 
+       &reftitle.methods;
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Model-ReflectionDataObject-construct'>__construct</link>
+         - construit un nouvel SDO_Model_ReflectionDataObject.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Model-ReflectionDataObject-getType'>getType</link>
+         - récupère le SDO_Model_Type pour l'objet de données.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend=
+          'function.SDO-Model-ReflectionDataObject-getInstanceProperties'>getInstanceProperties</link>
+         - récupère les propriétés de l'instance de l'objet de données.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend=
+          'function.SDO-Model-ReflectionDataObject-getContainmentProperty'>getContainmentProperty</link>
+         - récupère le SDO_Model_Property du parent qui définit la relation
+           contenue de l'objet de données réfléchi
+        </para>
+       </listitem>
+      </itemizedlist>
+     </section>
+    </section>
+
+    <section id='sdo.class.sdo-type'>
+     <title>
+      <classname>SDO_Model_Type</classname>
+     </title>
+     <para>
+      L'interface dans lequel les informations de type de l'objet de données
+      peuvent être récupérées. Cette interface peut être utilisée pour trouver
+      le nom de type et l'espace de nom URI du type, si le type autorise
+      l'ouverture du contenu, et ainsi de suite.
+     </para>
+     <section id='sdo.class.SDO_Model_Type.methods'> &reftitle.methods;
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Model-Type-getName'>getName</link>
+          - récupère le nom du type.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Model-Type-getNamespaceURI'>getNamespaceURI</link>
+         - récupère l'espace de nom URI du type.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Model-Type-isInstance'>isInstance</link>
+         - vérifie pour un objet de données s'il est une instance du type.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Model-Type-getProperties'>getProperties</link>
+         - récupère les propriétés du type.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Model-Type-getProperty'>getProperty</link>
+         - récupère une propriété de type.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Model-Type-isDataType'>isDataType</link>
+         - vérifie pour voir si le type est une primitive de type scalaire.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Model-Type-isSequencedType'>isSequencedType</link>
+         - vérifie pour voir s'il s'agit d'un type de séquence.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Model-Type-isOpenType'>isOpenType</link>
+         - vérifie pour voir s'il s'agit d'un type ouvert.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-Model-Type-getBaseType'>getBaseType</link>
+         - récupère le type de base de ce type (si un existe).
+        </para>
+       </listitem>
+      </itemizedlist>
+     </section>
+    </section>
+
+    <section id='sdo.class.sdo-property'>
+     <title>
+      <classname>SDO_Model_Property</classname>
+     </title>
+     <para>
+      L'interface dans lequel les informations de propriété d'objet peuvent
+      être récupérées. Cette interface peut être utilisée pour trouver le type
+      d'une propriété, si une propriété a une valeur par défaut, si une
+      propriété est contenue ou référencée par son parent, sa cardinalité, et
+      ainsi de suite.
+     </para>
+     <section id='sdo.class.SDO_Model_Property.methods'> &reftitle.methods;
+      <itemizedlist>
+        <listitem>
+         <para>
+          <link linkend='function.SDO-Model-Property-getName'>getName</link>
+          - récupère le nom de la propriété.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <link linkend='function.SDO-Model-Property-getType'>getType</link>
+          - récupère le type de la propriété.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <link linkend='function.SDO-Model-Property-isMany'>isMany</link>
+          - vérifie pour voir si la propriété est de valeurs multiples.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <link linkend='function.SDO-Model-Property-isContainment'>isContainment</link>
+          - vérifie pour voir si la propriété décrit une relation contenue.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <link linkend='function.SDO-Model-Property-getContainingType'>getContainingType</link>
+          - récupère le type qui contient cette propriété.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <link linkend='function.SDO-Model-Property-getDefault'>getDefault</link>
+          - récupère la valeur par défaut pour une propriété.
+         </para>
+        </listitem>
+      </itemizedlist>
+     </section>
+    </section>
+
+
+
+   </section>
+
+   <section id='sdo.class.sdo-das-spis'>
+    <title>
+     Interfaces de développeur Service d'Accès de Données SDO
+    </title>
+
+    <section id='sdo.class.sdodas-dataobject'>
+     <title>
+      <classname>SDO_DAS_DataObject</classname>
+     </title>
+     <para>
+      L'interface dans lequel un Service d'Accès de Données peut accéder à 
+      <link
+      linkend='sdo.class.sdodas-changesummary'>SDO_DAS_ChangeSummary</link> de
+      l'objet de données. Le résumé de changement est utilisé par le Service
+      d'Accès de Données pour vérifier les conflits lors des applications des
+      changements à une source de données.
+     </para>
+     <section id='sdo.class.SDO_DAS_DataObject.methods'> &reftitle.methods;
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-DataObject-getChangeSummary'>getChangeSummary</link> 
+         - récupère le résumé de changement pour un objet de données
+        </para>
+       </listitem>
+
+      </itemizedlist>
+     </section>
+    </section>
+
+    <section id='sdo.class.sdodas-changesummary'>
+     <title>
+      <classname>SDO_DAS_ChangeSummary</classname>
+     </title>
+     <para>
+      L'interface dans lequel l'historique de changement d'un objet de données
+      est accédé. Le résumé de changement contient des informations pour
+      n'importe quelles modifications sur un objet de données qui s'est
+      produites lorsque la journalisation a débuté. Dans le cas de suppression
+      ou de modification, les dernières valeurs sont aussi gardées dans le
+      résumé de changement.
+     </para>
+     <para>
+      Si la journalisation n'est plus active, alors le résumé de changement
+      contient seulement les changements faits jusqu'au point où la
+      journalisation fut désactivée. La réactivation de la journalisation
+      supprime le résumé de changement. Cela peut être utile lorsqu'un
+      certain nombre de changements ont été écris par un DAS et un objet de
+      données qui est réutilisé.
+     </para>
+     <section id='sdo.class.SDO_DAS_ChangeSummary.methods'>
+      &reftitle.methods;
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-ChangeSummary-beginLogging'>beginLogging</link> 
+         - démarre la journalisation des changements faits à l'objet de données
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-ChangeSummary-endLogging'>endLogging</link> 
+         - termine la journalisation des changements faits à l'objet de données
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-ChangeSummary-isLogging'>isLogging</link> 
+         - vérifie pour voir si la journalisation des changements est activée
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-ChangeSummary-getChangedDataObjects'>getChangedDataObjects</link> 
+         - récupère une liste de d'objets de données qui ont été changés
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-ChangeSummary-getChangeType'>getChangeType</link> 
+         - récupère le type de changement qui a été fait à l'objet de données
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-ChangeSummary-getOldValues'>getOldValues</link> 
+         - récupère une liste des anciennes valeurs pour un objet de données
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-ChangeSummary-getOldContainer'>getOldContainer</link> 
+         - récupère un ancien conteneur d'objet de données pour un objet de données supprimé
+        </para>
+       </listitem>
+      </itemizedlist>
+     </section>
+    </section>
+
+    <section id='sdo.class.sdodas-setting'>
+     <title>
+      <classname>SDO_DAS_Setting</classname>
+     </title>
+     <para>
+      L'interface dans lequel l'ancienne valeur pour une propriété est
+      accédée. Une liste des configurations est retournée par le résumé de
+      changement dont la méthode est
+      <link linkend='function.SDO-DAS-ChangeSummary-getOldValues'><function>getOldValues</function></link>.
+     </para>
+     <section id='sdo.class.SDO_DAS_Setting.methods'>
+      &reftitle.methods;
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-Setting-getPropertyIndex'>getPropertyIndex</link> 
+         - récupère l'index pour la propriété changée
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-Setting-getPropertyName'>getPropertyName</link> 
+         - récupère le nom pour la propriété changée
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-Setting-getValue'>getValue</link> 
+         - récupère l'ancienne valeur pour la propriété changée
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-Setting-getListIndex'>getListIndex</link> 
+         - récupère la liste des index pour l'ancienne valeur si elle faisait
+           partie d'une propriété à valeurs multiples
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-Setting-isSet'>isSet</link>
+         - vérifie pour voir si la propriété était fixée avant d'être modifiée
+         </para>
+       </listitem>
+      </itemizedlist>
+     </section>
+    </section>
+
+    <section id='sdo.class.sdodas-datafactory'>
+     <title>
+      <classname>SDO_DAS_DataFactory</classname>
+     </title>
+     <para>
+      L'interface pour construire le modèle pour un SDO_DataObjet. Le
+      SDO_DAS_DataFactory est une classe abstraite fournissant une méthode
+      statique qui retourne une classe d'implémentation de données concrète.
+      L'implémentation est utilisée par les Services d'Accès de Données pour
+      créer un modèle SDO à partir de leur modèle.
+      Par exemple, un Service d'Accès de Données Relationnel peut créer et
+      remplir un modèle SDO_DAS_DataFactory basé sur un schéma pour une base
+      de données relationnelle.
+     </para>
+     <section id='sdo.class.SDO_DAS_DataFactory.methods'>
+      &reftitle.methods;
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-DataFactory-getDataFactory'>getDataFactory</link> 
+         - méthodes statiques pour obtenir une instance de classe concrète de
+           données
+        </para>
+       </listitem>
+      </itemizedlist>
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-DataFactory-addType'>addType</link> 
+         - ajoute un nouveau type au modèle SDO
+        </para>
+       </listitem>
+      </itemizedlist>
+      <itemizedlist>
+       <listitem>
+        <para>
+         <link linkend='function.SDO-DAS-DataFactory-addPropertyToType'>addPropertyToType</link> 
+         - ajoute une nouvelle propriété à une définition de type dans le
+           modèle SDO
+        </para>
+       </listitem>
+      </itemizedlist>
+     </section>
+    </section>
+   </section>
+  </section>
+
+  &reference.sdo.constants;
+
+ </partintro>
+
+ &reference.sdo.functions;
+
+</reference>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
