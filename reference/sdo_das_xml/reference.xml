@@ -1,0 +1,718 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.14 Maintainer: jsgoupil Status: ready -->
+<!-- Purpose: xml -->
+<!-- Membership: pecl -->
+<!-- State: experimental -->
+<!-- Reviewed: no -->
+
+<reference id="ref.sdo-das-xml">
+ <title>Fonctions de Service d'Accès de Données SDO XML</title>
+ <titleabbrev>SDO DAS XML</titleabbrev>
+
+ <partintro>
+  <section id="sdo-das-xml.intro">
+   &reftitle.intro;
+   <para>
+    <!-- This warns that the extension is experimental -->
+    &warn.experimental;
+   </para>
+   <para>
+    Afin d'utiliser le Service d'Accès de Données XML pour les Objets de
+    Service de Données, vous aurez besoin de comprendre certains concepts
+    derrière le SDO : les graphiques de données, les objets de données, XPath
+    et ses expressions, et ainsi de suite.
+    Si vous n'êtes pas familier avec ces idées, vous devriez jeter un oeil sur
+    <link linkend='ref.sdo'>la section sur SDO</link>.
+   </para>
+   <para>
+    Le travail de XML DAS est de déplacer les données entre l'application et
+    un fichier source XML, qui peut être soit un fichier ou une adresse URL.
+    Afin de faire cela, l'emplacement du schéma XML doit être spécifié, qui
+    est passé par un paramètre de la méthode de création du XML DAS. Le schéma
+    est utilisé pour assuré les conformités du fichier XML qui sera écrit et
+    aussi pour s'assurer que les modifications faites à un SDO provenant d'un
+    XML suivent le modèle décrit par le schéma XML.
+   </para>
+  </section>
+
+  <section id="sdo-das-xml.requirements">
+   &reftitle.required;
+   <para>
+    Le Service d'Accès de Données requiert &php; 5.1 ou supérieur. Il est
+    fonctionnel avec l'extension SDO et requiert que SDO soit installée. Voyez
+    les
+    <link linkend="sdo.installation">instructions d'installation SDO</link>
+    pour plus de détails sur comment faire cela.
+   </para>
+  </section>
+
+  <section id="sdo-das-xml.installation">
+   &reftitle.install;
+   <para>
+    Le Service d'Accès de Données et empaqueté et installé avec
+    l'<link linkend='ref.sdo'>extension SDO</link>. Référez-vous à
+    <link linkend="sdo.installation">instructions d'installation SDO</link>.
+   </para>
+  </section>
+ 
+
+  <section id='sdo-das-xml.limitations'>
+   <title>Limitations</title>
+   <para>
+    Les
+    <ulink url='&url.ibm.sdo;'>spécifications SDO 2.0</ulink> définissent la
+    concordance entre les types XML et les types SDO. Avec Java SDO, la
+    concordance est implémentée par le XMLHelper. Avec SDO pour &php;, cette
+    concordance est implémentée par les Services d'Accès de Données XML. Le
+    XML DAS implémente la concordance décrite dans les spécifications SDO 2.0
+    avec les restrictions suivantes :
+   </para>
+
+   <procedure id='sdo-das-xml.limitations.simpletypes'>
+    <title>Types Simples XML</title>
+    <step>
+     <para>
+      Type Simple avec abstract="true"
+      - aucun support &php; pour ces types abstraits SDO.
+     </para>
+    </step>
+    <step>
+     <para>
+      Type Simple avec sdoJava:instanceClass
+      - aucun équivalent &php; n'est fourni.
+     </para>
+    </step>
+    <step>
+     <para>
+      Type Simple avec sdoJava:extendedInstanceClass
+      - aucun équivalent &php; n'est fourni.
+     </para>
+    </step>
+    <step>
+     <para>
+      Type Simple avec une liste de itemType.
+     </para>
+    </step>
+    <step>
+     <para>
+      Type Simple avec union.
+     </para>
+    </step>
+   </procedure>
+
+   <procedure id='sdo-das-xml.limitations.complextypes'>
+    <title>Types Complex XML</title>
+    <step>
+     <para>
+      Type Complex avec abstract="true"
+      - aucun support &php; pour ces types abstraits SDO.
+     </para>
+    </step>
+    <step>
+     <para>
+      Type Complex avec sdo:aliasName
+      - aucun support &php; pour ces types d'alias SDO.
+     </para>
+    </step>
+    <step>
+     <para>
+      Type Complex avec contenu ouvert
+      - aucun support &php; pour ces types ouverts SDO.
+     </para>
+    </step>
+    <step>
+     <para>
+      Type Complex avec attribut ouvert
+      - aucun support &php; pour ces types ouverts SDO.
+     </para>
+    </step>
+   </procedure>
+
+   <procedure id='sdo-das-xml.limitations.attribute'>
+    <title>Attribut XSD</title>
+    <step>
+     <para>
+      Attribut avec sdo:aliasName
+      - aucun support &php; pour ces propriétés d'alias SDO.
+     </para>
+    </step>
+    <step>
+     <para>
+      Attribut avec valeur par défaut
+      - aucun support &php; pour ces propriétés de valeurs par défaut SDO.
+     </para>
+    </step>
+    <step>
+     <para>
+      Attribut avec valeur fixe
+      - aucun support &php; pour ces propriétés à lecture seule ou valeurs par défaut.
+     </para>
+    </step>
+    <step>
+     <para>
+      Référence Attribut.
+     </para>
+    </step>
+    <step>
+     <para>
+      Attribut avec sdo:string
+      - aucun support pour sdo:string="true".
+     </para>
+    </step>
+    <step>
+     <para>
+      Attribut référençant un DataObject avec sdo:propertyType
+      - aucune support pour sdo:propertyType="...".
+     </para>
+    </step>
+    <step>
+     <para>
+      Attribut avec une propriété bidirectionnelle à un DataObject avec
+      sdo:oppositeProperty et sdo:propertyType
+      - aucun support &php; pour opposé SDO.
+     </para>
+    </step>
+   </procedure>
+
+   <procedure id='sdo-das-xml.limitations.elements'>
+    <title>Éléments XSD</title>
+    <step>
+     <para>
+      Élément avec sdo:aliasName
+      - aucune support &php; pour cette propriété d'alias.
+     </para>
+    </step>
+    <step>
+     <para>
+      Référence d'élément.
+     </para>
+    </step>
+    <step>
+     <para>
+      Élément avec nillable.
+     </para>
+    </step>
+    <step>
+     <para>
+      Élément avec groupe de substitution.
+     </para>
+    </step>
+   </procedure>
+
+   <procedure id='sdo-das-xml.limitations.elementsimpletype'>
+    <title>Éléments XSD avec Type Simple</title>
+    <step>
+     <para>
+      Élément de type SimpleType avec valeur par défaut
+      - aucun support &php; pour les valeurs par défaut SDO.
+     </para>
+    </step>
+    <step>
+     <para>
+      Élément de type SimpleType avec valeur fixe
+      - aucun support &php; pour les propriétés à lecture seule et valeur par défaut.
+     </para>
+    </step>
+    <step>
+     <para>
+      Élément de type SimpleType avec sdo:string
+      - aucun support pour sdo:string="true".
+     </para>
+    </step>
+    <step>
+     <para>
+      Élément référançant un DataObject avec sdo:propertyType
+      - aucun support pour sdo:propertyType="..."
+     </para>
+    </step>
+    <step>
+     <para>
+      Élément avec référence bidirectionnelle à un DataObject avec
+      sdo:oppositeProperty et sdo:propertyType
+      - aucun support &php; pour opposé SDO.
+     </para>
+    </step>
+   </procedure>
+  </section>
+
+
+  <section id='sdo-das-xml.examples'>
+   &reftitle.examples;
+   <para>
+    Les exemples suivant sont basés sur l'<link
+    linkend="sdo.sample.sequence">exemple de la lettre</link> décrite dans la
+    <link linkend="ref.sdo">documentation SDO</link>. Les exemples assument
+    que le Schéma XML pour la lettre est contenu dans un fichier
+    <filename>lettre.xsd</filename> et que l'instance de la lettre est dans le
+    fichier <filename>lettre.xml</filename>. Ces deux fichiers sont reproduits
+    ici :
+   </para>
+   <para>
+    <programlisting role="xml">
+<![CDATA[
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:lettre="http://lettreSchema"
+  targetNamespace="http://lettreSchema">
+  <xsd:element name="lettres" type="lettre:FormLettre"/>
+  <xsd:complexType name="FormLettre" mixed="true">
+    <xsd:sequence>
+      <xsd:element name="date" minOccurs="0" type="xsd:string"/>
+      <xsd:element name="prenom" minOccurs="0" type="xsd:string"/>
+      <xsd:element name="nomFamille" minOccurs="0" type="xsd:string"/>
+    </xsd:sequence>
+  </xsd:complexType>
+</xsd:schema>
+]]>
+    </programlisting>
+   </para>
+
+   <para>
+    <programlisting role="xml">
+<![CDATA[
+<lettre:lettres xmlns:lettre="http://lettreSchema">
+  <date>1er Mars 2005</date>
+  Mutual of Omaha
+  Wild Kingdom, USA
+  Chère
+  <prenom>Casy</prenom>
+  <nomFamille>Crocodile</nomFamille>
+  S'il vous plaît, achetez plus de requin imperméable.
+  Votre prime est passée date.
+</lettre:lettres>
+]]>
+    </programlisting>
+   </para>
+    
+   <example>
+    <title>Chargement, modification et sauvegarde d'un document XML</title>
+    <para>
+     L'exemple suivant montre comment un document XML peut être chargé
+     provenant d'un fichier, altéré et récrit.
+    </para>
+    <programlisting role="php" id="sdo-das-xml.examples.loadfromfile">
+     <![CDATA[
+<?php
+try {
+    $xmldas = SDO_DAS_XML::create("lettre.xsd");
+    $xdoc = $xmldas->loadFromFile("lettre.xml");
+    $do = $xdoc->getRootDataObject();
+    $do->date = "3 Septembre 2004";
+    $do->prenom = "Anantoju";
+    $do->nomFamille = "Madhu";
+    $xmldas->saveDocumentToFile($xdoc, "lettre-out.xml");
+} catch (SDO_TypeNotFoundException $e) {
+    print("Le Type n'est pas défini dans le fichier xsd");
+} catch (SDO_DAS_XML_ParserException $e) {
+    print("Problème lors de l'analyse");
+}
+?>
+]]>
+    </programlisting>
+    <para>
+     Une instance du XML DAS est la première obtenue de la méthode
+     <function>SDO_DAS_XML::create</function> qui est une méthode statique de
+     la classe <classname>SDO_DAS_XML</classname>.
+     L'emplacement du xsd est passé en paramètre.
+     Une fois que nous avons une instance de XML DAS initialisée avec un
+     schéma donné, nous pouvons l'utiliser pour charger l'instance du document
+     en utilisant la méthode <function>loadFromFile</function>.
+     Il y a aussi la méthode <function>loadFromString</function> si vous
+     voulez charger une instance de document XML provenant d'une chaîne de
+     caractères.
+     Si l'instance du document se charge correctement, un objet de type
+     <classname>SDO_DAS_XML_Document</classname> sera retourné sur lequel vous
+     pourrez appeler la méthode <function>getRootDataObject</function> pour
+     obtenir l'objet de données SDO qui est la racine de votre graphique de
+     données SDO. Vous pouvez alors utiliser les opérations SDO pour changer
+     le graphique SDO. Dans cet exemple, nous modifions les propriétés
+     <varname>date</varname>, <varname>prenom</varname> et
+     <varname>nomFamille</varname>.
+     Ensuite, nous utilisons la méthode
+     <function>saveDocumentToFile</function> pour écrire les changements dans
+     un fichier système.
+    </para>
+    <para>
+     Ceci écriera le texte suivant dans <filename>lettre-out.xml</filename>.
+    </para>
+    <programlisting role="xml" id="sdo-das-xml.examples.loadfromfile.output">
+     <![CDATA[
+<?xml version="1.0" encoding="UTF-8"?>
+<FormLettre xmlns="http://lettreSchema" xsi:type="FormLettre" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <date>3 Septembre 2004</date>
+  Mutual of Omaha
+  Wild Kingdom, USA
+  Chère
+  <prenom>Anantoju</prenom>
+  <nomFamille>Madhu</nomFamille>
+  S'il vous plaît, achetez plus de requin imperméable.
+  Votre prime est passée date.
+</FormLettre>     
+]]>
+     <![CDATA[
+<?php 
+try {
+    $xmldas = SDO_DAS_XML::create("lettre.xsd");
+    try {
+        $lettre = $xmldas->createDataObject("http://lettreSchema", "FormLettre");
+        $lettre_seq = $lettre->getSequence();
+        $lettre_seq->insert("9 Avril 2005", NULL, 'date');
+        $lettre_seq->insert("Acme Inc. ", NULL, NULL);
+        $lettre_seq->insert("United Kingdom. ");
+        $lettre_seq->insert("Chère", NULL, NULL);
+        $lettre_seq->insert("Tarun", NULL, "prenom");
+        $lettre_seq->insert("Nayaraaa", NULL, "nomFamille");
+        $lettre->nomFamille = "Nayar";
+        $lettre_seq->insert("Veuillez noter que votre numéro de commande ");
+        $lettre_seq->insert(12345);
+        $lettre_seq->insert(" a été assigné aujourd'hui. Merci de faire affaire avec nous.");
+        print($xmldas->saveDataObjectToString($lettre, "http://lettreSchema", "FormLettre"));
+    } catch (SDO_Exception $e) {
+        print($e);
+    }
+} catch (SDO_TypeNotFoundException $e) {
+    print("Le Type n'est pas défini dans le fichier xsd");
+} catch (SDO_DAS_XML_ParserException $e) {
+    print("Problème lors de l'analyse");
+}
+?>
+]]>
+    </programlisting>
+   </example>
+   <para>
+    Ceci émettra l'affichage suivant (des sauts de lignes ont été insérés pour
+    une meilleure lisibilité) :
+   </para>
+   <programlisting role="xml" id="sdo-das-xml.examples.create.output">
+     <![CDATA[
+<?xml version="1.0" encoding="UTF-8"?>
+<FormLettre xmlns="http://lettreSchema" xsi:type="FormLettre" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<date>9 Avril 2005</date>
+Acme Inc. United Kingdom. 
+Chère
+<prenom>Tarun</prenom>
+<nomFamille>Nayar</nomFamille>
+Veuillez noter que votre numéro de commande 12345 a été
+assigné aujourd'hui. Merci de faire affaire avec nous.
+</FormLettre>
+]]>
+   </programlisting>
+   <example>
+    <title>Fixer les propriétés d'un document XML</title>
+    <para>
+     Ce troisième exemple vous montre comment utiliser la classe
+     SDO_DAS_XML_Document.
+     La classe SDO_DAS_XML_Document est fourni pour obtenir et fixer des
+     propriétés de la déclaration XML comme la version, l'emplacement du
+     schéma, l'encodage et ainsi de suite.
+    </para>
+    <programlisting role="php" id="sdo-das-xml.examples.sdo_das_xml_document">
+     <![CDATA[
+<?php
+try {
+    $xmldas = SDO_DAS_XML::create("lettre.xsd");
+    $xdoc = $xmldas->loadFromFile("lettre.xml");
+    print("L'encodage est : " . $xdoc->getEncoding() . "\n");
+    print("Version XML : " . $xdoc->getXMLVersion() . "\n");
+    $xdoc->setXMLVersion("1.1");
+    print($xmldas->saveDocumentToString($xdoc));
+} catch (SDO_TypeNotFoundException $e) {
+    print("Le Type n'est pas défini dans le fichier xsd");
+} catch (SDO_DAS_XML_ParserException $e) {
+    print("Problème lors de l'analyse");
+}
+?>
+]]>
+    </programlisting>
+   <para>
+    Les trois premières lignes d'affichage affiche comment l'encodage et la
+    version XML ont été obtenus du document, et comment la version XML a été
+    fixée dans l'en-tête XML.
+   </para>
+   <programlisting role="xml" id="sdo-das-xml.examples.sdo_das_xml_document.output">
+<![CDATA[
+L'encodage est : UTF-8
+Version XML : 1.0
+<?xml version="1.1" encoding="UTF-8"?>
+...
+]]>
+   </programlisting>
+    
+   </example>
+  </section>
+
+
+  <!-- class definition section -->
+  <section id='sdo-das-xml.classes'>
+  &reftitle.classes;
+   <para>
+    Le XML DAS fournit trois classes.
+    Le SDO_DAS_XML qui est la classe principale utilisée pour récupérer les
+    données de la source XML et aussi utilisée pour récrire les données.
+    La classe suivante est SDO_DAS_XML_Document, elle est vraiment utile pour
+    récupérer/écrire les déclarations XML comme l'encodage, version, etc.
+    La dernière classe est SDO_DAS_XML_ParserException qui sera émise pour
+    n'importe quelle exception d'analyse lors du chargement du fichier
+    xsd/xml.
+   </para>
+
+   <section id='sdo-das-xml.class.sdo_das_xml'>
+    <title>
+     <classname>SDO_DAS_XML</classname>
+    </title>
+    <para>
+     Ceci est la classe principale de XML DAS qui est utilisée pour récupérer
+     les données de la source XML et aussi utilisée pour récrire les données.
+     Autres que les méthodes de chargement et de sauvegarde des fichiers XML,
+     il y a aussi une méthode appelée createDataObject qui peut être utilisée
+     pour créer un DataObject vide d'un type donné. 
+    </para>
+    <section id='sdo-das-xml.class.SDO_DAS_XML.methods'>
+     &reftitle.methods;
+     <itemizedlist>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-create'>create</link>
+        Ceci est la seule méthode statique disponible dans la classe
+        SDO_DAS_XML. Utilisée pour construire un objet SDO_DAS_XML.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-createDataObject'>createDataObject</link>
+        Peut être utilisée pour créer le DataObject d'un type donné.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-loadFromFile'>loadFromFile</link>
+        Charge l'instance de document xml d'un fichier.
+        Ce fichier peut être un fichier local ou il peut être sur un hôte
+        distant.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-loadFromString'>loadFromString</link>
+        Similaire à la méthode ci-dessus.
+        Charge l'instance xml qui est disponible en tant qu'une chaîne de
+        caractères.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-saveDataObjectToFile'>saveDataObjectToFile</link>
+        Sauvegarde un SDO_DataObject vers un fichier.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-saveDataObjectToString'>saveDataObjectToString</link>
+        Sauvegarder un SDO_DataObject vers une chaîne de caractères.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-saveDocumentToFile'>saveDocumentToFile</link>
+        Sauvegarder un SDO_DAS_XML_Document vers un fichier xml.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-saveDocumentToString'>saveDocumentToString</link>
+        Sauvegarder un SDO_DAS_XML_Document vers une chaîne de caractères.
+       </para>
+      </listitem>
+
+     </itemizedlist>
+    </section>
+   </section>
+
+
+   <section id='sdo-das-xml.class.sdo_das_xml_document'>
+    <title>
+     <classname>SDO_DAS_XML_Document</classname>
+    </title>
+    <para>
+     Cette classe peut être utilisée pour récupérer/fixer des déclarations XML
+     comme l'encodage, l'emplacement du schéma, etc.
+    </para>
+    <section id='sdo-das-xml.class.SDO_DAS_XML_Document.methods'>
+     &reftitle.methods;
+     <itemizedlist>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-getEncoding'>getEncoding</link>
+        Récupère l'encodage.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-getNoNamespaceSchemaLocation'>getNoNamespaceSchemaLocation</link>
+        Récupère l'emplacement du schéma de l'espace de nom no.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-getRootDataObject'>getRootDataObject</link>
+        Récupère le DataObject racine.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-getRootElementName'>getRootElementName</link>
+        Récupère le nom du DataObject racine.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-getRootElementURI'>getRootElementURI</link>
+        Récupère le URI du DataObject racine.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-getSchemaLocation'>getSchemaLocation</link>
+        Récupère l'emplacement du schéma.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-getXMLDeclaration'>getXMLDeclaration</link>
+        Récupère si la déclaration xml est fixée ou non.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-getXMLVersion'>getXMLVersion</link>
+        Récupère la version xml.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-setEncoding'>setEncoding</link>
+        Fixe l'encodage avec la valeur donnée.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-setNoNamespaceSchemaLocation'>setNoNamespaceSchemaLocation</link>
+        Fixe l'emplacement du schéma de l'espace de nom no avec la valeur donnée.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-setSchemaLocation'>setSchemaLocation</link>
+        Fixe l'emplacement du schéma avec la valeur donnée.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-setXMLDeclaration'>setXMLDeclaraion</link>
+        Pour fixer/détruire la déclaration xml.
+       </para>
+      </listitem>
+ 
+
+
+      <listitem>
+       <para>
+        <link linkend='function.SDO-DAS-XML-Document-setXMLVersion'>setXMLVersion</link>
+        Fixe la version xml avec la valeur donnée.
+       </para>
+      </listitem>
+     </itemizedlist>
+    </section>
+   </section>
+
+   <section id='sdo-das-xml.class.sdo_das_xml_parserexception'>
+    <title>
+     <classname>SDO_DAS_XML_ParserException</classname>
+    </title>
+    <para>
+     Est une sous-classe de
+     <classname>SDO_Exception</classname>.
+     Émis pour n'importe quelle erreur d'analyse lors du chargement du fichier
+     xsd/xml.
+    </para>
+   </section>
+  </section>
+
+ </partintro>
+ &reference.sdo-das-xml.functions;
+</reference>
+
+<!--
+     Please note that this example uses a company schema((
+     <link linkend="sdo.examples">company.xsd</link>
+     )) as defined in SDO samples section.
+    </para>
+    <programlisting role="php" id="sdo-das-xml.examples.createDataObject">
+     <![CDATA[
+<?php
+$xmldas = SDO_DAS_XML::create("company.xsd");
+$do = $xmldas->createDataObject("companyNS", "CompanyType");
+$do->name = "Acme Inc";
+$dept1 = $do->createDataObject("departments");
+$dept1->name = "sales";
+$emp1 = $dept1->createDataObject("employees");
+$emp1->name = "Fred";
+$emp1->manager = FALSE;
+$dept2 = $do->createDataObject("departments");
+$emp2 = $dept2->createDataObject("employees");
+$emp2->name = "Neil";
+$emp2->manager = TRUE;
+$emp2->manager = TRUE;
+print($xmldas->saveDataObjectToString($do, "companyNS", "CompanyType"));
+var_dump($do);
+?>
+]]>
+    </programlisting>
+   </example>
+
+   <example>
+    <title>Working with the SDO_DAS_XML Class</title>
+$emp2->manager = TRUE;
+print($xmldas->saveDataObjectToString($do, "companyNS", "CompanyType"));
+var_dump($do);
+?>
+]]>
+    </programlisting>
+   </example>
+
+   <example>
+    <title>Working with the SDO_DAS_XML Class</title>
+    <para>
+     This example shows you how to create the DataObject and use
+
+-->
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
