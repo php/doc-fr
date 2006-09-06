@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.19 $ -->
-<!-- EN-Revision: 1.13 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.20 $ -->
+<!-- EN-Revision: 1.14 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
   <refentry id="function.session-set-save-handler">
@@ -73,59 +73,63 @@
       <programlisting role="php">
 <![CDATA[
 <?php
-function open ($save_path, $session_name) {
-  global $sess_save_path, $sess_session_name;
+function open($save_path, $session_name) 
+{
+    global $sess_save_path;
 
-  $sess_save_path = $save_path;
-  $sess_session_name = $session_name;
-  return(true);
+    $sess_save_path = $save_path;
+    return(true);
 }
 
-function close() {
-  return(true);
+function close() 
+{
+    return(true);
 }
 
-function read ($id) {
-  global $sess_save_path, $sess_session_name;
+function read($id) 
+{
+    global $sess_save_path;
 
-  $sess_file = "$sess_save_path/sess_$id";
-  if ($fp = @fopen($sess_file, "r")) {
-    $sess_data = fread($fp, filesize($sess_file));
-    return($sess_data);
-  } else {
-    return(""); // Doit retourner "" ici.
-  }
+    $sess_file = "$sess_save_path/sess_$id";
+    return (string) @file_get_contents($sess_file);
+}
+
+function write($id, $sess_data) 
+{
+    global $sess_save_path;
+
+    $sess_file = "$sess_save_path/sess_$id";
+    if ($fp = @fopen($sess_file, "w")) {
+        $return = fwrite($fp, $sess_data);
+        fclose($fp);
+        return $return;
+    } else {
+        return(false);
+    }
 
 }
 
-function write ($id, $sess_data) {
-  global $sess_save_path, $sess_session_name;
+function destroy($id) 
+{
+    global $sess_save_path;
 
-  $sess_file = "$sess_save_path/sess_$id";
-  if ($fp = @fopen($sess_file, "w")) {
-    return(fwrite($fp, $sess_data));
-  } else {
-    return(false);
-  }
-
+    $sess_file = "$sess_save_path/sess_$id";
+    return(@unlink($sess_file));
 }
 
-function destroy ($id) {
-  global $sess_save_path, $sess_session_name;
+function gc($maxlifetime) 
+{
+    global $sess_save_path;
 
-  $sess_file = "$sess_save_path/sess_$id";
-  return(@unlink($sess_file));
+    foreach (glob("$sess_save_path/sess_*") as $filename) {
+        if (filemtime($filename) + $maxlifetime < time()) {
+            @unlink($filename);
+        }
+    }
+return true;
 }
 
-/*******************************************************
- * ATTENTION - Vous devrez implémenter un                               *
- * collecteur de données obosolètes ici.                                       *
- *******************************************************/
-function gc ($maxlifetime) {
-  return true;
-}
-
-session_set_save_handler ("open", "close", "read", "write", "destroy", "gc");
+session_set_save_handler("open", "close", "read", "write", "destroy", "gc");
 
 session_start();
 
