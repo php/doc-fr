@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.36 $ -->
-<!-- EN-Revision: 1.62 Maintainer: dams Status: ready -->
-<!-- Reviewed: yes -->
+<!-- $Revision: 1.37 $ -->
+<!-- EN-Revision: 1.65 Maintainer: dams Status: ready -->
+<!-- Reviewed: no -->
 
 <appendix id="wrappers">
  <title>Liste des protocoles supportés</title>
@@ -625,17 +625,15 @@ X-MyCustomHeader: Foo
 
  <section id="wrappers.php">
   <title>Flux d'entrée/sortie</title>
-  <simpara>
-   &php; 3.0.13 et plus récent, <filename>php://output</filename>
-   et <filename>php://input</filename> depuis &php; 4.3
-  </simpara>
 
   <itemizedlist>
-   <listitem><simpara><filename>php://stdin</filename></simpara></listitem>
-   <listitem><simpara><filename>php://stdout</filename></simpara></listitem>
-   <listitem><simpara><filename>php://stderr</filename></simpara></listitem>
-   <listitem><simpara><filename>php://output</filename></simpara></listitem>
-   <listitem><simpara><filename>php://input</filename></simpara></listitem>
+   <listitem><simpara><filename>/path/to/file.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>relative/path/to/file.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>fileInCwd.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>C:/path/to/winfile.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>C:\path\to\winfile.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>\\smbserver\share\path\to\winfile.ext</filename></simpara></listitem>
+   <listitem><simpara><filename>file:///path/to/file.ext</filename></simpara></listitem>
   </itemizedlist>
 
   <simpara>
@@ -751,6 +749,43 @@ file_put_contents("php://filter/write=string.rot13/resource=exemple.txt","Bonjou
     </simpara>
    </listitem>
   </itemizedlist>
+
+  <simpara>
+   Le gestionnaire <filename>php://memory</filename> stocke les données en
+   mémoire. <filename>php://temp</filename> fonctionne de la même façon,
+   mais utilise des fichiers temporaires pour stocker les données lorsqu'une certaine
+   limite mémoire est atteinte (par défaut, 2 Mo).
+  </simpara>
+  <simpara>
+   Le gestionnaire <filename>php://temp</filename> prend les paramètres suivants,
+   qui sont les parties du chemin :
+  </simpara>
+  <itemizedlist>
+   <listitem>
+    <para>
+     <literal>/maxmemory:&lt;nombre d'octets&gt;</literal>
+     (<emphasis>optionnel</emphasis>). Ce paramètre permet de changer la valeur
+     de la limite mémoire (lorsque les données sont déplacées vers un fichier temporaire).
+     <informalexample>
+      <programlisting role="php">
+<![CDATA[
+<?php
+$fiveMBs = 5 * 1024 * 1024;
+$fp = fopen("php://temp/maxmemory:$fiveMBs", 'r+');
+
+fputs($fp, "Bonjour\n");
+
+// lecture de ce que nous avons écrit
+rewind($fp);
+echo stream_get_contents($fp);
+?>
+]]>
+      </programlisting>
+     </informalexample>
+    </para>
+   </listitem>
+  </itemizedlist>
+
   <para>
    <table>
     <title>
@@ -772,34 +807,46 @@ file_put_contents("php://filter/write=string.rot13/resource=exemple.txt","Bonjou
       <row>
        <entry>Autorisé en lecture</entry>
        <entry>
-        <literal>php://stdin</literal> et
-        <literal>php://input</literal> uniquement.
+        <literal>php://stdin</literal>,
+        <literal>php://input</literal>,
+        <literal>php://memory</literal> et
+        <literal>php://temp</literal> uniquement.
        </entry>
       </row>
       <row>
        <entry>Autorisé en écriture</entry>
        <entry>
         <literal>php://stdout</literal>,
-        <literal>php://stderr</literal> et
-        <literal>php://output</literal> uniquement.
+        <literal>php://stderr</literal>,
+        <literal>php://output</literal>,
+        <literal>php://memory</literal> et
+        <literal>php://temp</literal> uniquement.
        </entry>
       </row>
       <row>
        <entry>Autorisé en ajout</entry>
        <entry>
         <literal>php://stdout</literal>,
-        <literal>php://stderr</literal> et
-        <literal>php://output</literal> uniquement.
+        <literal>php://stderr</literal>,
+        <literal>php://output</literal>,
+        <literal>php://memory</literal> et
+        <literal>php://temp</literal> uniquement.
         (Equivalent à écrire)
        </entry>
       </row>
       <row>
        <entry>Autorisé en lecture et écriture</entry>
-       <entry>Non. Ces gestionnaires sont unidirectionnels.</entry>
+       <entry>
+        <literal>php://memory</literal> et
+        <literal>php://temp</literal> uniquement.
+       </entry>
       </row>
       <row>
        <entry>Supporte <function>stat</function></entry>
-       <entry>Non</entry>
+       <entry>
+        <literal>php://memory</literal> et
+        <literal>php://temp</literal> uniquement.
+       </entry>
       </row>
       <row>
        <entry>Supporte <function>unlink</function></entry>
@@ -912,7 +959,97 @@ file_put_contents("php://filter/write=string.rot13/resource=exemple.txt","Bonjou
     </tgroup>
    </table>
   </para>
-</section>
+ </section>
+
+ <section id="wrappers.data">
+  <title>Données (RFC 2397)</title>
+  <simpara>
+   Le gestionnaire de flux <filename>data:</filename> (<ulink url="&url.rfc;2397">RFC
+    2397</ulink>) est disponible depuis &php; 5.2.0.
+  </simpara>
+
+  <example>
+   <title>Affichage du contenu de data://</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+// Affiche "I love PHP"
+echo file_get_contents('data://text/plain;base64,SSBsb3ZlIFBIUAo=');
+?>
+]]>
+   </programlisting>
+  </example>
+
+  <example>
+   <title>Récupération du type de média</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$fp   = fopen('data://text/plain;base64,', 'r');
+$meta = stream_get_meta_data($fp);
+
+// Affiche "text/plain"
+echo $meta['mediatype'];
+?>
+]]>
+   </programlisting>
+  </example>
+  <para>
+   <table>
+    <title>Résumé du gestionnaire</title>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>Attribut</entry>
+       <entry>Supporté</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>Restreint par <link linkend="ini.allow-url-fopen">allow_url_fopen</link></entry>
+       <entry>Non</entry>
+      </row>
+      <row>
+       <entry>Autorisé en lecture</entry>
+       <entry>Oui</entry>
+      </row>
+      <row>
+       <entry>Autorisé en écriture</entry>
+       <entry>Non</entry>
+      </row>
+      <row>
+       <entry>Autorisé en ajout</entry>
+       <entry>Non</entry>
+      </row>
+      <row>
+       <entry>Autorisé en lecture et en écriture simutané</entry>
+       <entry>Non</entry>
+      </row>
+      <row>
+       <entry>Supporte <function>stat</function></entry>
+       <entry>Non</entry>
+      </row>
+      <row>
+       <entry>Supporte <function>unlink</function></entry>
+       <entry>Non</entry>
+      </row>
+      <row>
+       <entry>Supporte <function>rename</function></entry>
+       <entry>Non</entry>
+      </row>
+      <row>
+       <entry>Supporte <function>mkdir</function></entry>
+       <entry>Non</entry>
+      </row>
+      <row>
+       <entry>Supporte <function>rmdir</function></entry>
+       <entry>Non</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+ </section>
 
  <section id="wrappers.ssh2">
   <title>Shell sécurisé 2</title>
