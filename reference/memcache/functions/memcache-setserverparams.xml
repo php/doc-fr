@@ -1,22 +1,20 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.3 $ -->
-<!-- EN-Revision: 1.6 Maintainer: jsgoupil Status: ready -->
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.1 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
-<refentry id="function.Memcache-addServer">
+<refentry id="function.Memcache-setServerParams">
  <refnamediv>
-  <refname>Memcache::addServer</refname>
-  <refpurpose>Ajoute un serveur <literal>memcache</literal> à la liste de connexion</refpurpose>
+  <refname>Memcache::setServerParams</refname>
+  <refpurpose>Modifit les paramètres et les statuts du serveur pendant l'exécution</refpurpose>
  </refnamediv>
  
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <type>bool</type><methodname>Memcache::addServer</methodname>
+   <type>bool</type><methodname>Memcache::setServerParams</methodname>
    <methodparam><type>string</type><parameter>host</parameter></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>port</parameter></methodparam>
-   <methodparam choice="opt"><type>bool</type><parameter>persistent</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>weight</parameter></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>timeout</parameter></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>retry_interval</parameter></methodparam>
    <methodparam choice="opt"><type>bool</type><parameter>status</parameter></methodparam>
@@ -24,27 +22,13 @@
   </methodsynopsis>
 
   <para>
-   <function>Memcache::addServer</function> ajoute un serveur à la liste de
-   connexion. La connexion actuelle est établie à la première utilisation. La
-   connexion, qui a été ouverte en utilisant
-   <function>Memcache::addServer</function> sera automatiquement fermée à la
-   fin de l'exécution du script. De plus, vous pouvez la fermer avec la
-   fonction <function>Memcache::close</function>.
-   Vous pouvez également utiliser la fonction <function>memcache_add_server</function>.
+   <function>Memcache::setServerParams</function> modifit les paramètres du
+   serveur durant l'exécution. Vous pouvez également utiliser la fonction
+   <function>memcache_set_server_params</function>.
   </para>
-
-  <para>
-   Le basculement peut se produire à n'importe quel moment avec n'importe
-   quelle méthode tant que les autres serveurs sont disponibles, la requête
-   n'émettra pas d'erreur. N'importe quel interface de connexion ou niveau
-   d'erreurs de serveur Memcache (à l'exception du manque de mémoire) peut
-   lancer le basculement. Des erreurs normales de client comme l'ajout d'une
-   clé existante ne lancera pas un basculement.
-  </para>
-
   <note>
    <para>
-    Cette fonction a été ajoutée à la version de Memcache 2.0.0.
+    Cette fonction a été ajoutée en Memcache version 2.1.0.
    </para>
   </note>
 
@@ -72,25 +56,6 @@
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>persistent</parameter></term>
-     <listitem>
-      <para>
-       Contrôle l'utilisation d'une connexion persistante. La valeur par
-       défaut est &true;.
-      </para>
-     </listitem>
-    </varlistentry>
-    <varlistentry>
-     <term><parameter>weight</parameter></term>
-     <listitem>
-      <para>
-       Nombre d'entrées à créer pour ce serveur qui en retour contrôle sa
-       probabilité d'être choisi. La probabilité est relative au poids total
-       de tous les serveurs.
-      </para>
-     </listitem>
-    </varlistentry>
-    <varlistentry>
      <term><parameter>timeout</parameter></term>
      <listitem>
       <para>
@@ -110,16 +75,6 @@
        tentative ne sera effectuée. Ni ce paramètre, ni le paramètre
        <parameter>persistent</parameter> n'ont d'effet lorsque cette extension
        est chargée dynamiquement via la fonction <function>dl</function>.
-      </para>
-      <para>
-       Chaque structure de connexion échouée a son propre dépassement de temps
-       et avant que celui-ci expire, il sera sauté lors de la sélection du
-       processus pour servir une requête. Une fois expiré, la connexion sera
-       correctement reconnectée ou marquée comme échouée pour un autre
-       interval de <parameter>retry_interval</parameter> secondes. L'effet
-       typique est que chaque enfant de serveur Web essaiera la connexion
-       chaque <parameter>retry_interval</parameter> secondes lorsqu'il sert
-       une page.
       </para>
      </listitem>
     </varlistentry>
@@ -164,21 +119,29 @@
   &reftitle.examples;
   <para>
    <example>
-    <title>Exemple avec <function>Memcache::addServer</function></title>
+    <title>Exemple avec <function>Memcache::setServerParams</function></title>
     <programlisting role="php">
 <![CDATA[
 <?php
 
+function _callback_memcache_failure($host, $port) {
+    print "memcache '$host:$port' failed";
+}
+
 /* API orientée objet */
 
 $memcache = new Memcache;
-$memcache->addServer('memcache_host', 11211);
-$memcache->addServer('memcache_host2', 11211);
+
+// Ajoute le serveur en mode hors ligne
+$memcache->addServer('memcache_host', 11211, false, 1, 1, -1, false);
+
+// Replace le serveur en ligne
+$memcache->setServerParams('memcache_host', 11211, 1, 15, true, '_callback_memcache_failure');
 
 /* API procédurale */
 
 $memcache_obj = memcache_connect('memcache_host', 11211);
-memcache_add_server($memcache_obj, 'memcache_host2', 11211);
+memcache_set_server_params($memcache_obj, 'memcache_host', 11211, 1, 15, true, '_callback_memcache_failure');
 
 ?>
 ]]>
@@ -191,10 +154,7 @@ memcache_add_server($memcache_obj, 'memcache_host2', 11211);
   &reftitle.seealso;
   <para>
    <simplelist>
-    <member><function>Memcache::connect</function></member>
-    <member><function>Memcache::pconnect</function></member>
-    <member><function>Memcache::close</function></member>
-    <member><function>Memcache::setServerParams</function></member>
+    <member><function>Memcache::addServer</function></member>
     <member><function>Memcache::getServerStatus</function></member>
    </simplelist>
   </para>
