@@ -1,0 +1,703 @@
+<?xml version='1.0' encoding='iso-8859-1'?>
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.3 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<reference id="ref.sam">
+ <title>SAM - Messagerie asynchrone</title>
+ <titleabbrev>SAM</titleabbrev>
+
+ <partintro>
+  <section id="sam.intro">
+   &reftitle.intro;
+   <para>
+    &warn.experimental;
+   </para>
+   <para>
+    Cette extension fournit un accès aux fonctionnalités des systèmes de messageries et de mise
+    en file d'attente, comme les produits de la famille IBM WebSphere MQSeries, depuis des scripts
+    &php;. L'interface a été conçue pour rendre simple les tâches les plus communes comme délivrer
+    des messages simples à la file d'attente, mais permet aussi aux utilisateurs plus expérimentés
+    d'effectuer des opérations plus complexes. Pour la plupart des utilisateurs, les configurations
+    des options complexes peuvent être tout simplement ignorées.
+   </para>
+  </section>
+
+  <section id='sam.installation'>
+   &reftitle.install;
+   <section id='sam.installation.prerequisites'>
+    <title>Prérequis</title>
+    <para>
+     L'extension SAM interface la messagerie IBM ainsi que les produits de mise en file d'attente en
+     utilisant un jeu de bibliothèqies et du code côté client. Ce paquet est disponible en téléchargement
+     gratuit dans le guide du support IBM pack IA94. Il y a une description de ce paquet ainsi que des
+     liens de téléchargements dans l'article "<ulink url="&url.ibm.ia94;">Introduction à XMS - L'API IBM
+      Message Service</ulink>".
+    </para>
+    <para>
+     Si vous voulez utiliser SAM pour accéder à l'infrastructure de messagerie et de mise en file d'attente
+     dans un WebSphere MQ, alors vous devriez également installer un gestionnaire local de mise en
+     file d'attente MQ ou installer la paquet client WebSphere MQ. Le paquet client est disponible librement
+     en tant qu'un pack support (<ulink url="&url.ibm.mqc6;">MQC6</ulink>).
+    </para>
+    <para>
+     Si vous voulez juste tester l'envoi de message depuis et vers une application WebSphere en utilisant
+     le protocole WebSphere Platform Messaging (WPM), alors, vous n'avez pas besoin d'installer le paquet
+     MQC6.
+    </para>
+    <para>
+     Après avoir installés ces paquets, vous devez vous assurer que le binaire XMS, si vous l'utilisez,
+     et que le client MQ sont accessibles via la variable d'environnement PATH afin qu'Apache et &php;
+     puissent trouver les bibliothèques nécessaires.
+    </para>
+   </section>
+   <section id='sam.installation.linux'>
+    <title>Étapes d'installation sous Linux</title>
+    <para>
+     L'extension SAM est fournie en tant que module PECL. Vous devriez donc
+     pouvoir la télécharger et l'installer en une seule étape, comme ceci :
+     <screen>
+<![CDATA[
+pear install sam
+]]>
+     </screen>
+     (Suivant votre environnement &php;, vous devrez probablement être "root" pour faire ceci.)
+    </para>
+    <para>
+     Assurez-vous que le module a été chargé par &php;, en ajoutant la ligne suivante à votre
+     &php.ini; :
+     <screen>
+<![CDATA[
+extension=sam.so
+]]>
+     </screen>
+    </para>
+    <para>
+     Si vous ne pouvez pas utiliser l'installeur PEAR, vous pouvez télécharger l'extension et
+     la construire manuellement :
+     <screen>
+<![CDATA[
+pear download sam          #téléchargement de sam-<version>.tgz
+tar -xzf sam-<version>.tgz
+cd sam-<version>
+phpize
+./configure
+make
+make install               #vous devriez devoir être root pour cette étape
+]]>
+     </screen>
+    </para>
+    <para>
+     Pour avoir la toute dernière source, vous devriez extraire les sources depuis cvs
+     et la construire en utilisant les instructions qui se trouvent dans ce manuel.
+    </para>
+   </section>
+   <section id='sam.installation.windows'>
+    <title>Étapes d'installation sous Windows</title>
+    <para>
+     Actuellement, vous devez construire l'extension SAM pour Windows car il
+     n'existe pas de binaire pré-construit. L'extension peut être construite
+     en utilisant les procédures standarts de construction des extensions Windows.
+    </para>
+    <para>
+     Vous devez avoir les sources de &php; pour lesquelles l'extension SAM doit
+     être utilisée. Les sources doivent être décompressées dans le répertoire
+     de votre choix.
+    </para>
+    <para>
+     Vous devez également avoir les bibliothèques et en-têtes utilisés par les extensions
+     &php;, disponibles sur http://www.php.net/extra/win32build.zip et doivent être décompressés
+     dans le même dossier de travail.
+    </para>
+    <para>
+     Vous devriez obtenir quelque chose comme :
+     <screen>
+<![CDATA[
+c:\php-build\-
+|
+|---php-5.0.5--|---build
+|              |---ext
+|              |--- ...
+|
+|---win32build--|---bin
+|---include
+|---lib
+]]>
+     </screen>
+    </para>
+    <para>
+     Vous devez avoir également un compilateur, par exemple, la version gratuite
+     de Visual Studio C++ Express que vous trouverez sur le site web de Microsoft.
+     Vous devez aussi avoir le SDK Microsoft Windows Platform qui est également
+     disponible sur le site web de Microsoft.
+    </para>
+    <para>
+     Téléchargez les sources de l'extension SAM (pear download sam) ou en utilisant
+     CVS et copiez les fichiers dans un nouveau dossier "sam" du dossier "ext"
+     des sources &php;.
+    </para>
+    <para>
+     Pour construire l'extension, ouvrez un environnement de construction Windows
+     via mnu->Tous les programmes->microsoft platform SDK for windows->
+       open build environment window->windows 200 build environment->
+      set windows 2000 build environment (retail)
+     </para>
+     <para>
+      Ceci devrait ouvrir une fenêtre de commande avec toutes les variables d'environnements
+      définies afin d'accéder à la plateforme SDK, etc. Vous devez ensuite définir les
+      variables d'environnements pour Visual Studio en lançant la commande
+      "vcvars32.bat" dans la fenêtre.
+     </para>
+     <para>
+      Déplacez-vous dans votre dossier de travail, e.g. cd c:\php-build. Ensuite,
+      assurez-vous que les utilitaires win32build soient accessibles en ajoutant la
+      variable d'environnement suivante :
+      <screen>
+<![CDATA[
+set PATH=..\win32build\bin;%PATH%
+]]>
+      </screen>
+     </para>
+     <para>
+      Exécutez la commande buildconf.bat. Ceci devrait reconstruire le fichier configure.js.
+     </para>
+     <para>
+      Exécutez la commande cscript :
+      <screen>
+<![CDATA[
+cscript /nologo configure.js --with-sam="c:\program files\ibm\xms"
+]]>
+      </screen>
+     </para>
+     <para>
+      Le paramètre additionnel passé à SAM est le chemin d'installation vers
+      les bibliothèques XMS et d'exécution qui ont été installées comme décrit
+      en début de ce manuel.
+     </para>
+     <para>
+      Vous pouvez spécifier d'autres paramètres cscript dont vous avez besoin
+      pour inclure et excluse des éléments de votre construction de &php; ou
+      des options sélectionnées.
+     </para>
+     <para>
+      En supposant que tout est Ok jusqu'ici pour vous, vous pouvez maintenant lancer
+      la construction !
+      <screen>
+<![CDATA[
+nmake php_sam.dll
+]]>
+      </screen>
+     </para>
+    </section>
+    <section id='sam.installation.VS2005'>
+     <title>Étapes additionnelles pour Visual Studio 2005</title>
+     <para>
+      Si vous contruisez l'extension SAM avec le compilateur et les outils Microsoft Visual
+      Studio 2005, vous devez effectuer une étape supplémentaire dans le processus de
+      compilation afin de vous assurer que la bibliothèque php_sam.dll soit capable de
+      se lier aux bibliothèques C durant l'exécution. Cette étape ajoute la dépendance
+      directement dans la DLL. Déplacez-vous dans le répertoire où la bibliothèque php_sam.dll
+      a été générée (habituellement le dossier Release_TS ou Debug_TS du dossier des sources
+      &php;) et exécutez l'incantation magique suivante :
+      <screen>
+<![CDATA[
+mt.exe -manifest php_sam.dll.manifest -outputresource:php_sam.dll;2
+]]>
+      </screen>
+     </para>
+     <para>
+      Si vous construisez l'extension SAM en utilisant le compilateur et les bibliothèques
+      Microsoft Visual Studio 2005, vous devriez aussi vous assurer que les composants
+      d'exécution sont présents sur le système sur lequel vous voulez utiliser SAM. Ceci peut
+      être fait en installation Visual Studio 2005 ou en utilisant le <ulink url="&url.ms.crt;">paquet
+       d'exécution</ulink> librement distribuable.
+     </para>
+    </section>
+   </section>
+
+   <section id='sam.usage'>
+    <title>Utilisation de l'API</title>
+
+    <section id='sam.connections'>
+     <title>Connexions</title>
+     <para>
+      Afin d'exécuter des fonctions de messageries et de mise en file d'attente, une connexion
+      doit être éablie avec un serveur de messagerie en créant un objet SAMConnection et en
+      appelant sa méthode "connect", avec quelques propriétés de connexion, afin de connecter
+      le script &php; au serveur de messagerie. Pendant le temps où l'objet SAMConnection n'est
+      pas détruit, la connexion sera maintenue et disponible. Tous les objets SAMConnection seront
+      détruis lorsque le script &php; se terminera.
+     </para>
+     <para>
+      Quelques propriétés par défaut peuvent être utilisées pour la connexion au serveur de
+      messagerie mais le script &php; doit spécifier au minimum le protocole à utiliser.
+     </para>
+     <para>
+      <example>
+       <title>Création d'une connexion et connexion à un serveur de messagerie distant WebSphere MQSeries</title>
+       <programlisting role='php'>
+<![CDATA[
+<?php
+$conn = new SAMConnection();
+$conn->connect(SAM_WMQ, array(SAM_HOST => monhote.macompanie.com,
+    SAM_PORT => 1506,
+    SAM_BROKER => mybroker));
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      <example>
+       <title>Création d'une connexion et connexion à un serveur distant WebSphere Application</title>
+       <programlisting role='php'>
+<![CDATA[
+<?php
+$conn = new SAMConnection();
+$conn->connect(SAM_WMQ, array(SAM_ENDPOINTS => 'localhost:7278:BootstrapBasicMessaging',
+    SAM_BUS => 'Bus1',
+    SAM_TARGETCHAIN => 'InboundBasicMessaging'));
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+    </section>
+
+    <section id='sam.messages'>
+     <title>Messages</title>
+     <para>
+      Les messages envoyés et reçus depuis les files d'attente sont représentés par l'objet
+      SAMMessage. L'objet SAMMessage contient le corps du message (s'il existe) ainsi que
+      les propriétés des en-têtes associés au message. L'objet SAMMessage est soit fourni
+      en tant que paramètre d'une opération sur un message, ou retourné comme résultat.
+     </para>
+     <para>
+      <example>
+       <title>Création d'un message avec un coprs texte simple</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+$msg = new SAMMessage('This is a simple text message');
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      Les messages doivent avoir des propriétés d'en-têtes associés, qui permettent le contrôle
+      du transport du message ou fournissent des informations futures sur l'application réceptrice.
+      Par défaut, les propriétés des messages sont délivrées au système de messagerie sous la
+      forme de chaînes de caractères et dans ce cas, peuvent être définies comme ceci :
+     </para>
+     <para>
+      <example>
+       <title>Définission d'une propriété de formatage de texte en utilisant la synthaxe par défaut</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+$msg->header->myPropertyName = 'textData';
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      Si vous voulez passer des informations sur le type, une syntahxe alternative peut être
+      utilisée où la valeur et le type sont passés dans un tableau associatif :
+     </para>
+     <para>
+      <example>
+       <title>Définission d'une propriété en spécifiant le type</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+$msg->header->myPropertyName = array(3.14159, SAM_FLOAT);
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      Les propriétés peuvent également être extraites depuis l'en-tête d'un message.
+     </para>
+     <para>
+      <example>
+       <title>Récupération d'une propriété depuis l'en-tête d'un message</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+$myProperty = $msg->header->myPropertyName;
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+    </section>
+
+    <section id='sam.operations'>
+     <title>Opérations de messagerie</title>
+     <para>
+      Toutes les opérations de messagerie sont exécutées via des appels aux méthodes sur l'objet
+      de connexion. Pour ajouter un message à la file d'attente, la méthode "send" est utilisée,
+      tandis que pour obtenir un message depuis la file d'attente, la méthode "receive" est utilisée.
+      D'autres méthodes offrent d'autres fonctionnalités comme la publication, la souscription ou
+      encore le contrôle sur les transactions.
+     </para>
+     <para>
+      <example>
+       <title>Ajout d'un message à la file d'attente et réception de la réponse</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+$msg = new SAMMessage('Ceci est un message texte simple');
+$msg->header->SAM_REPLY_TO = 'queue://receive/test';
+$correlid = $conn->send('queue://send/test', $msg);
+
+if (!$correlid) {
+// L'envoi a échoué !
+echo "Échec de l'envoi : ($conn->errno) $conn->error";
+} else {
+$resp = $conn->receive('queue://receive/test', array(SAM_CORRELID => $correlid));
+}
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+    </section>
+    <section id='sam.pubsub'>
+     <title>Publication/Souscription à un sujet</title>
+     <para>
+      SAM permet d'envoyer des messages soit à la file d'attente, ou, pour WebSphere MQ et WPM, de publier/souscrire
+      à des sujets. L'envoi à un sujet est spécifié à SAM de la façon habituelle, i.e. sous la forme 'topic://fred', plutôt que
+      sous la forme 'queue://AQUEUE', utilisée pour une opération de point à point. Pour publier/souscrire, il est tout simplement
+      nécessaire de spécifier le correct du courtier lors de l'appel à la méthode "connect" de l'objet SAMConnect et le sujet désiré
+      dans l'argument de destination des appels aux méthodes "send" et "receive" de l'objet SAMConnect. L'interface &php;
+      est cependant identique au model point à point.
+     </para>
+     <para>
+      Par défaut, SAM crée des souscriptions non durables lors de l'utilisation des fonctionnalités de publication/souscription. Cela
+      signifie que si l'application cliente est inactive lorsque les messages sont publiés sur un sujet, alors il ne les recevra pas lorsqu'il
+      redemarrera. SAM permet également des souscriptions durables à un sujet lors de l'utilisation de WPM ou WebSphere.
+      Le but de ces souscriptions est de permettre aux données d'être reçues par une application cliente même si le client n'est
+      plus actif au moment où les données sont publiées.
+     </para>
+     <para>
+      Les souscriptions durables sont spécifiées en utilisant l'appel à la méthode "suscribe" de l'objet SAMConnect. Cette méthode
+      prend le sujet destinataire en tant qu'argument d'entrée et retourne l'identifiant de souscription qui pourra être utilisé
+      lors des prochains appels à la méthode "receive". Lorsque la souscription n'est plus nécessaire, la méthode "unsubscribe" de
+      l'objet SAMConnection dot être utilisée pour effacer la souscription.
+     </para>
+     <para>
+      <example>
+       <title>Création d'une souscription durable à un sujet</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+
+$subName = $conn->subscribe('topic://A');
+
+if (!$subName) {
+    echo "Échec de la souscription";
+} else {
+    # Souscription Ok
+    ...
+}
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      <example>
+       <title>Souscription à un sujet en utilisant un serveur WebSphere Platform Messaging (WPM)</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+$conn = new SAMConnection();
+// Note: Pour une publication/souscription sur un WPM, lors de la connexion, le nom du moteur de messagerie
+// qui gère la souscription durable (SAM_WPM_DUR_SUB_HOME) doit être spécifié.
+$conn->connect(SAM_WMQ, array(SAM_ENDPOINTS => 'localhost:7278:BootstrapBasicMessaging',
+SAM_BUS => 'Bus1',
+SAM_TARGETCHAIN => 'InboundBasicMessaging'
+SAM_WPM_DUR_SUB_HOME => 'MyMachineNode01.server1-Bus1'));
+
+$subName = $conn->subscribe('topic://A');
+
+if (!$subName) {
+    echo "Échec de la souscription";
+} else {
+    # Souscription Ok
+    ...
+}
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      <example>
+       <title>Réception des données publiées en utilisant une souscription durable</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+
+$msg = $conn->receive($subName);
+if ($msg) {
+    echo "Réception d'un message Ok";
+} else {
+    echo "Échec de la réception";
+}
+
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      <example>
+       <title>Effacement d'une souscription durable à un sujet</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+
+if (!$conn->unsubscribe($subName)) {
+    echo "Échec lors de l'effacement de la souscription";
+}
+
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+    </section>
+    <section id='sam.errors'>
+     <title>Gestion des erreurs</title>
+     <para>
+      Toutes les méthodes SAMConnection qui fournissent un accès aux opérations de messagerie retourne &false;
+      si une erreur survient durant le processus. En plus de cela, l'objet SAMConnection a deux propriétés,
+      "errno" et "error", qui fournissent respectivement le numéro et la description de la dernière erreur survenue
+      sur la connexion.
+     </para>
+     <para>
+      <example>
+       <title>Gestion d'une erreur depuis une méthode qui ne retourne aucun résultat</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+if (!$conn->commit()) {
+    // Le commit a échoué !
+    echo "Le commit a échoué : ($conn->errno) $conn->error";
+}
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+      <example>
+       <title>Gestion d'une erreur depuis une méthode qui retourne un résultat</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+$correlid = $conn->send('queue://send/test', $msg);
+
+if (!$correlid) {
+    // L'envoi a échoué !
+    echo "L'envoi a échoué : ($conn->errno) $conn->error";
+} else {
+    ...
+}
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+    </section>
+   </section>
+
+   <section id='sam.classes'>
+    &reftitle.classes;
+
+    <section id='sam.class.Connection'>
+     <title><classname>SAMConnection</classname></title>
+     <para>
+      Objet représentant une connexion à un serveur de messagerie
+     </para>
+
+     <section id='sam.class.Connection.constructor'>
+      &reftitle.constructor;
+      <itemizedlist>
+       <listitem>
+        <para>
+        <link linkend='function.SAM-Connection-constructor'>new SAMConnection</link> - construit un nouvel objet de connexion permettant une
+        connexion à une infrastructure de messagerie.
+       </para>
+      </listitem>
+     </itemizedlist>
+    </section>
+
+    <section id='sam.class.Connection.methods'>
+     &reftitle.methods;
+     <itemizedlist>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-commit'>commit</link>
+        - une méthode qui valide un travail.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-connect'>connect</link>
+        - une méthode qui connecte un script &php; à un serveur de messagerie.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-disconnect'>disconnect</link>
+        - une méthode qui déconnecte un script &php; d'un serveur de messagerie.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-isConnected'>isConnected</link>
+        - une méthode qui vérifie si un script &php; est connecté à un serveur de messagerie.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-peek'>peek</link>
+        - une méthode qui reçoit un message depuis la file d'attente sans pour autant l'effacer de la file d'attente.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-peekAll'>peekAll</link>
+        - une méthode qui reçoit un ou plusieurs messages depuis la file d'attente sans pour autant les effacer de la file d'attente.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-receive'>receive</link>
+        - une méthode qui reçoit un message depuis la file d'attente ou depuis une souscription.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-remove'>remove</link>
+        - une méthode qui efface un message depuis la file d'attente.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-rollback'>rollback</link>
+        - une méthode qui annule un travail.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-send'>send</link>
+        - une méthode qui envoie un message à une file d'attente ou sur un sujet.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-subscribe'>subscribe</link>
+        - une méthode qui crée une souscription à un ou plusieurs sujets.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-unsubscribe'>unsubscribe</link>
+        - une méthode qui détruit une suscription à un ou plusieurs sujets.
+       </para>
+      </listitem>
+     </itemizedlist>
+    </section>
+
+    <section id='sam.class.Connection.properties'>
+     &reftitle.properties;
+     <itemizedlist>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-errno'>errno</link> - le numéro de la dernière
+        erreur survenue sur la connexion. Cette propriété est définie à 0 si la dernière opération
+        a réussi.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Connection-error'>error</link> - la description
+        de la dernière erreur survenue sur la connexion.
+       </para>
+      </listitem>
+     </itemizedlist>
+    </section>
+   </section>
+
+   <section id='sam.class.Message'>
+    <title><classname>SAMMessage</classname></title>
+    <para>
+     Objet représentant un message à envoyer ou à recevoir.
+    </para>
+
+    <section id='sam.class.Message.constructor'>
+     &reftitle.constructor;
+     <itemizedlist>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Message-constructor'>new SAMMessage</link> - construit un
+        nouveau message.
+       </para>
+      </listitem>
+     </itemizedlist>
+    </section>
+
+    <section id='sam.class.Message.properties'>
+     &reftitle.properties;
+     <itemizedlist>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Message-body'>body</link> - le corps du message.
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.SAM-Message-header'>header</link> - les propriétés d'en-tête du message.
+       </para>
+      </listitem>
+     </itemizedlist>
+    </section>
+   </section>
+
+  </section>
+
+  &reference.sam.constants;
+
+ </partintro>
+
+ &reference.sam.functions;
+
+</reference>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
