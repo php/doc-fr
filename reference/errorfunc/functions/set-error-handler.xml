@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.29 $ -->
-<!-- EN-Revision: 1.34 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.30 $ -->
+<!-- EN-Revision: 1.35 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry id="function.set-error-handler">
@@ -230,48 +230,54 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-// Configure le niveau de rapport d'erreur pour ce script
-error_reporting(E_USER_ERROR | E_USER_WARNING | E_USER_NOTICE);
-
 // Gestionnaire d'erreurs
 function myErrorHandler($errno, $errstr, $errfile, $errline)
 {
-  switch ($errno) {
-  case E_USER_ERROR:
-    echo "<b>Mon ERREUR</b> [$errno] $errstr<br />\n";
-    echo "  Erreur fatale à la ligne $errline dans le fichier $errfile";
-    echo ", PHP " . PHP_VERSION . " (" . PHP_OS . ")<br />\n";
-    echo "Abandon...<br />\n";
-    exit(1);
-    break;
-  case E_USER_WARNING:
-    echo "<b>Mon ALERTE</b> [$errno] $errstr<br />\n";
-    break;
-  case E_USER_NOTICE:
-    echo "<b>Ma NOTICE</b> [$errno] $errstr<br />\n";
-    break;
-  default:
-    echo "Type d'erreur inconnu : [$errno] $errstr<br />\n";
-    break;
-  }
+    switch ($errno) {
+    case E_USER_ERROR:
+        echo "<b>Mon ERREUR</b> [$errno] $errstr<br />\n";
+        echo "  Erreur fatale sur la ligne $errline dans le fichier $errfile";
+        echo ", PHP " . PHP_VERSION . " (" . PHP_OS . ")<br />\n";
+        echo "Arrêt...<br />\n";
+        exit(1);
+        break;
+
+    case E_USER_WARNING:
+        echo "<b>Mon ALERTE</b> [$errno] $errstr<br />\n";
+        break;
+
+    case E_USER_NOTICE:
+        echo "<b>Mon AVERTISSEMENT</b> [$errno] $errstr<br />\n";
+        break;
+
+    default:
+        echo "Type d'erreur inconnu : [$errno] $errstr<br />\n";
+        break;
+    }
+
+    /* Ne pas exécuter le gestionnaire interne de PHP */
+    return true;
 }
 
 // Fonction pour tester la gestion d'erreur
 function scale_by_log($vect, $scale)
 {
-  if (!is_numeric($scale) || $scale <= 0) {
-    trigger_error("log(x) for x <= 0 est indéfini, vous utilisez : scale = $scale", E_USER_ERROR);
-  }
+    if (!is_numeric($scale) || $scale <= 0) {
+        trigger_error("log(x) for x <= 0 is undefined, you used: scale = $scale", E_USER_ERROR);
+    }
 
-  if (!is_array($vect)) {
-    trigger_error("Entrée incorrect, tableau de valeurs attendu", E_USER_WARNING);
-    return null;
-  }
+    if (!is_array($vect)) {
+        trigger_error("Type d'entrée incorrect, tableau de valeurs attendu", E_USER_WARNING);
+        return null;
+    }
 
-  for ($i=0; $i<count($vect); $i++) {
-    if (!is_numeric($vect[$i]))
-      trigger_error("La valeur à la position $i n'est pas un nombre, utilisation de 0 (zéro)", E_USER_NOTICE);
-      $temp[$i] = log($scale) * $vect[$i];
+    $temp = array();
+    foreach($vect as $pos => $value) {
+        if (!is_numeric($value)) {
+            trigger_error("La valeur à la position $pos n'est pas un nombre, utilisation 0 (zéro)", E_USER_NOTICE);
+            $value = 0;
+        }
+        $temp[$pos] = log($scale) * $value;
     }
     return $temp;
   }
@@ -281,23 +287,26 @@ $old_error_handler = set_error_handler("myErrorHandler");
 
 // Génération de quelques erreurs. Commençons par créer un tableau
 echo "vector a\n";
-$a = array(2,3, "foo", 5.5, 43.3, 21.11);
+$a = array(2, 3, "foo", 5.5, 43.3, 21.11);
 print_r($a);
 
-// Générons maintenant un autre tableau, avec des alertes
-echo "----\nvector b - a warning (b = log(PI) * a)\n";
+// Générons maintenant un second tableau
+echo "----\nvector b - a notice (b = log(PI) * a)\n";
+/* Valeur à la position $pos n'est pas un nombre, utilisation de 0 (zéro) */
 $b = scale_by_log($a, M_PI);
 print_r($b);
 
 // Ceci est un problème, nous avons utilisé une chaîne au lieu d'un tableau
-echo "----\nvector c - an error\n";
-$c = scale_by_log("not array", 2.3);
-var_dump($c);
+echo "----\nvector c - a warning\n";
+/* Type d'entrée incorrect, tableau de valeurs attendu */
+$c = scale_by_log("non un tablau", 2.3);
+var_dump($c); // NULL
 
 // Ceci est une erreur critique : le logarithme de zéro ou d'un nombre négatif est indéfini
 echo "----\nvector d - fatal error\n";
+/* log(x) pour x <= 0 est indéfini, vous utilisez : scale = $scale" */
 $d = scale_by_log($a, -2.5);
-
+var_dump($d); // Jamais atteint
 ?>
 ]]>
     </programlisting>
@@ -315,8 +324,8 @@ Array
     [5] => 21.11
 )
 ----
-vector b - a warning (b = log(PI) * a)
-<b>Mon ALERTE</b> [1024] La valeur à la position 2 n'est pas un nombre, utilisation de 0 (zéro)<br />
+vector b - a notice (b = log(PI) * a)
+<b>Mon AVERTISSEMENT</b> [1024] La valeur à la position 2 n'est pas un nombre, utilisation de 0 (zéro)<br />
 Array
 (
     [0] => 2.2894597716988
@@ -327,13 +336,13 @@ Array
     [5] => 24.165247890281
 )
 ----
-vector c - an error
-<b>Mon ERREUR</b> [512] Entrée incorrect, tableau de valeurs attendu<br />
+vector c - an warning
+<b>Mon ALERTE</b> [512] Entrée incorrect, tableau de valeurs attendu<br />
 NULL
 ----
 vector d - fatal error
-<b>Mon ERREUR FATALE</b> [256] log(x) for x <= 0 est indéfini, vous utilisez : scale = -2.5<br />
-Erreur fatale à la ligne 36 dans le fichier trigger_error.php, PHP 4.0.2 (Linux)<br />
+<b>Mon ERREUR</b> [256] log(x) for x <= 0 est indéfini, vous utilisez : scale = -2.5<br />
+Erreur fatale sur la ligne 36 dans le fichier trigger_error.php, PHP 4.0.2 (Linux)<br />
 Abandon...<br />
 ]]>
     </screen>
