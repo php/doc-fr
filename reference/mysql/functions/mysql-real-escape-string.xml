@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.22 $ -->
-<!-- EN-Revision: 1.26 Maintainer: dams Status: ready -->
+<!-- $Revision: 1.23 $ -->
+<!-- EN-Revision: 1.27 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
+
 <refentry id="function.mysql-real-escape-string">
  <refnamediv>
   <refname>mysql_real_escape_string</refname>
@@ -126,30 +127,42 @@ SELECT * FROM users WHERE user='aidan' AND password='' OR ''=''
     <programlisting role="php">
 <![CDATA[
 <?php
-// Protège la variable
-function quote_smart($value)
-{
-   // Stripslashes
-   if (get_magic_quotes_gpc()) {
-      $value = stripslashes($value);
-   }
-   // Protection si ce n'est pas une valeur numérique ou une chaîne numérique
-   if (!is_numeric($value)) {
-      $value = "'" . mysql_real_escape_string($value) . "'";
-   }
-   return $value;
+
+if (isset($_POST['product_name']) && isset($_POST['product_description']) && isset($_POST['user_id'])) {
+    // Connect
+
+    $link = mysql_connect('mysql_host', 'mysql_user', 'mysql_password');
+
+    if(!is_resource($link)) {
+
+        echo "Échec de la connexion au serveur\n";
+        // ... historisation de l'erreur
+
+    } else {
+
+        if(get_magic_quotes_gpc()) {
+            $product_name        = stripslashes($_POST['product_name']);
+            $product_description = stripslashes($_POST['product_description']);
+        } else {
+            $product_name        = $_POST['product_name'];
+            $product_description = $_POST['product_description'];
+        }
+
+        // Faire une requête sécurisée
+        $query = sprintf("INSERT INTO products (`name`, `description`, `user_id`) VALUES ('%s', '%s', '%d')",
+                    mysql_real_escape_string($product_name, $link),
+                    mysql_real_escape_string($product_description, $link),
+                    $_POST['user_id']);
+
+        mysql_query($query, $link);
+
+        if (mysql_affected_rows($link) > 0) {
+            echo "Produit inséré\n";
+        }
+    }
+} else {
+    echo "Remplissez le formulaire proprement\n";
 }
-
-// Connexion
-$link = mysql_connect('mysql_host', 'mysql_user', 'mysql_password')
-OR die(mysql_error());
-
-// Fabrication d'une requête sécurisée
-$query = sprintf("SELECT * FROM users WHERE user=%s AND password=%s",
-quote_smart($_POST['username']),
-quote_smart($_POST['password']));
-
-mysql_query($query);
 ?>
 ]]>
     </programlisting>
