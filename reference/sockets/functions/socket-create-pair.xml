@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- $Revision: 1.9 $ -->
-<!-- EN-Revision: 1.12 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 1.13 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
+
   <refentry id="function.socket-create-pair">
    <refnamediv>
     <refname>socket_create_pair</refname>
@@ -174,15 +175,15 @@
 <?php
 $sockets = array();
 /* Création de la paire de sockets */
-if (!socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $sockets)) {
-    echo socket_strerror(socket_last_error());
+if (socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $sockets) === false) {
+   echo "socket_create_pair a échoué. Raison : ".socket_strerror(socket_last_error());
 }
 /* Envoi et réception de données */
-if (!socket_write($sockets[0], "ABCdef123\n", strlen("ABCdef123\n"))) {
-    echo socket_strerror(socket_last_error());
+if (socket_write($sockets[0], "ABCdef123\n", strlen("ABCdef123\n")) === false) {
+    echo "socket_write() a échoué. Raison : ".socket_strerror(socket_last_error($sockets[0]));
 }
-if (!$data = socket_read($sockets[1], strlen("ABCdef123\n"), PHP_BINARY_READ)) {
-    echo socket_strerror(socket_last_error());
+if (($data = socket_read($sockets[1], strlen("ABCdef123\n"), PHP_BINARY_READ) === false) {
+    echo "socket_read() a échoué. Raison : ".socket_strerror(socket_last_error($sockets[1]));
 }
 var_dump($data);
 
@@ -203,8 +204,8 @@ socket_close($sockets[1]);
 $ary = array();
 $strone = 'Message From Parent.';
 $strtwo = 'Message From Child.';
-if (!socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $ary)) {
-    echo socket_strerror(socket_last_error());
+if (socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $ary) === false) {
+    echo "socket_create_pair() a échoué. Raison : ".socket_strerror(socket_last_error());
 }
 $pid = pcntl_fork();
 if ($pid == -1) {
@@ -212,8 +213,8 @@ if ($pid == -1) {
 } elseif ($pid) {
     /* parent */
     socket_close($ary[0]);
-    if (!socket_write($ary[1], $strone, strlen($strone))) {
-        echo socket_strerror(socket_last_error());
+    if (socket_write($ary[1], $strone, strlen($strone)) === false) {
+        echo "socket_write() a échoué. Raison : ".socket_strerror(socket_last_error($ary[1]));
     }
     if (socket_read($ary[1], strlen($strtwo), PHP_BINARY_READ) == $strtwo) {
        echo "Réception de $strtwo\n";
@@ -222,8 +223,8 @@ if ($pid == -1) {
 } else {
     /* fils */
     socket_close($ary[1]);
-    if (!socket_write($ary[0], $strtwo, strlen($strtwo))) {
-       echo socket_strerror(socket_last_error());
+    if (socket_write($ary[0], $strtwo, strlen($strtwo)) === false) {
+        echo "socket_write() a échoué. Raison : ".socket_strerror(socket_last_error($ary[0]));
     }
     if (socket_read($ary[0], strlen($strone), PHP_BINARY_READ) == $strone) {
        echo "Réception de $strone\n";
