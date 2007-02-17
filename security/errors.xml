@@ -1,133 +1,134 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.12 $ -->
-<!-- EN-Revision: 1.7 Maintainer: dams Status: ready -->
+<!-- $Revision: 1.13 $ -->
+<!-- EN-Revision: 1.8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
-  <chapter id="security.errors">
-   <title>Rapport d'erreurs</title>
-   <para>
-     En termes de sécurité, il y a deux conséquences au rapport d'erreur.
-     D'un coté, cela améliore la sécurité, 
-     mais d'un autre, cela la réduit aussi.
-   </para>
-   <para>
-    Une tactique d'attaque standard consiste à faire faire des erreurs
-    au système, et lire les variables d'environnement et de contexte qui
-    sont retournées. Cela permet au pirate de lire de nombreuses
-    informations sur le serveur, et de détecter des faiblesses du serveur.
-    Par exemple, si un intrus a glané des informations sur votre page, avec
-    une première utilisation de votre site, il peut essayer de remplacer les
-    variables par ses propres valeurs :
-    <example> 
-     <title>Attaque de site avec une page HTML personnalisée</title>
-     <programlisting role="php"> 
+
+<chapter id="security.errors">
+ <title>Rapport d'erreurs</title>
+ <para>
+  En termes de sécurité, il y a deux conséquences au rapport d'erreur.
+  D'un coté, cela améliore la sécurité, 
+  mais d'un autre, cela la réduit aussi.
+ </para>
+ <para>
+  Une tactique d'attaque standard consiste à faire faire des erreurs
+  au système, et lire les variables d'environnement et de contexte qui
+  sont retournées. Cela permet au pirate de lire de nombreuses
+  informations sur le serveur, et de détecter des faiblesses du serveur.
+  Par exemple, si un intrus a glané des informations sur votre page, avec
+  une première utilisation de votre site, il peut essayer de remplacer les
+  variables par ses propres valeurs :
+  <example>
+   <title>Attaque de site avec une page HTML personnalisée</title>
+   <programlisting role="php"> 
 <![CDATA[
 <form method="post" action="http://www.site.cible.com/?username=badfoo&password=badfoo">
-<input type="hidden" name="username" value="badfoo">
-<input type="hidden" name="password" value="badfoo">
+ <input type="hidden" name="username" value="badfoo">
+ <input type="hidden" name="password" value="badfoo">
 </form>
 ]]>
-     </programlisting>
-    </example>
-   </para>
-   <para>
-    Les erreurs &php; qui sont normalement retournées peuvent être
-    très pratiques pour un développeur qui essaie de déboger un
-    script, car elles donnent de précieux renseignements tels que                                                                                                  
-    quelle fonction a échoué, quel fichier n'a pas été
-    trouvé, quel script &php; a bogé, et quelle ligne est en faute. Toutes
-    ces informations sont exploitables. Il est commun aux développeurs &php;
-    d'utiliser les fonctions <function>show_source</function>,
-    <function>highlight_string</function>, ou 
-    <function>highlight_file</function> comme outils de débogage, mais sur un
-    site en production, cela expose des variables cachées, des syntaxes non
-    vérifiées ou d'autres informations critiques. Il est particulièrement
-    dangeureux d'exécuter du code de sources connues, avec les gestionnaires de
-    débogage. Si l'intrus peut comprendre votre technique habituelle
-    d'utilisation, il peut tenter une attaque frontale sur une page, en
-    envoyant des chaînes de débogage :
-    <example>
-     <title>Exploiter des variables classiques de débogage</title>
-     <programlisting role="php">
+   </programlisting>
+  </example>
+ </para>
+ <para>
+  Les erreurs &php; qui sont normalement retournées peuvent être
+  très pratiques pour un développeur qui essaie de déboger un
+  script, car elles donnent de précieux renseignements tels que
+  quelle fonction a échoué, quel fichier n'a pas été
+  trouvé, quel script &php; a bogé, et quelle ligne est en faute. Toutes
+  ces informations sont exploitables. Il est commun aux développeurs &php;
+  d'utiliser les fonctions <function>show_source</function>,
+  <function>highlight_string</function>, ou 
+  <function>highlight_file</function> comme outils de débogage, mais sur un
+  site en production, cela expose des variables cachées, des syntaxes non
+  vérifiées ou d'autres informations critiques. Il est particulièrement
+  dangeureux d'exécuter du code de sources connues, avec les gestionnaires de
+  débogage. Si l'intrus peut comprendre votre technique habituelle
+  d'utilisation, il peut tenter une attaque frontale sur une page, en
+  envoyant des chaînes de débogage :
+  <example>
+   <title>Exploiter des variables classiques de débogage</title>
+   <programlisting role="php">
 <![CDATA[
 <form method="post" action="http://www.site.cible.com/?errors=Y&showerrors=1"&debug=1">
-<input type="hidden" name="errors" value="Y">
-<input type="hidden" name="showerrors" value="1">
-<input type="hidden" name="debug" value="1">
+ <input type="hidden" name="errors" value="Y">
+ <input type="hidden" name="showerrors" value="1">
+ <input type="hidden" name="debug" value="1">
 </form>
 ]]>
-     </programlisting>
-    </example>
-   </para>
-   <para>
-    Indépendamment de la gestion des erreurs, la possibilité de tester
-    la gestion des erreurs d'un système conduit à un trou de sécurité,
-    et la diffusion de plus d'informations sur votre système.
-   </para>
-   <para>
-    Si un pirate affiche une page <acronym>html</acronym>, et essaye de la
-    tester (pour rechercher des faiblesses du système), il peut déterminer sur
-    quel système &php; a été compilé.
-   </para>
-   <para>
-    Une erreur de fonction indique si un système supporte une base de
-    données spécifique, ou bien indique comment la page a
-    été générée. Cela peut orienter l'intrus
-    vers les ports de cette base de données ou bien vers une attaque
-    liée à cette application. En envoyant des données
-    erronées, par exemple, un pirate peut déterminer l'ordre
-    d'identification dans un script, à partir des lignes d'erreurs,
-    et essayer de les exploiter ailleurs, dans le script.
-   </para>
-   <para>
-    Une erreur de fichier, ou une erreur générale &php; peut indiquer
-    quelles sont les permissions du serveur web, ainsi que la structure
-    et l'organisation des fichiers. Les gestionnaires d'erreurs utilisateurs
-    peuvent aussi aggraver ce problème, en permettant l'exploitation facile
-    d'informations préalablement cachées.
-   </para>
-   <para>
-    Il y a trois solutions majeures à ces problèmes : la première
-    est de scruter toutes les fonctions, et d'essayer de traiter toutes les
-    erreurs. La deuxième est de désactiver le rapport d'erreur, dès
-    que le script est en production. La troisième est d'utiliser les
-    fonctions de gestion des erreurs. Suivant votre politique de
-    sécurité, vous pouvez utiliser un panachage savant des
-    trois méthodes.
-   </para>
-   <para>
-    Une méthode pour gagner du temps est d'utiliser la fonction
-    <function>error_reporting</function>, pour vous aider à
-    sécuriser le code, et détecter les utilisations dangeureuses de variables.
-    Vous testez votre code en béta-test avec la valeur 
-    <constant>E_ALL</constant>, et vous pouvez rapidement repérer les variables
-    qui ne sont pas protégées. Une fois que le code est prêt à être déployé,
-    vous devez soit désactiver complètement le repport d'erreur en affectant 0 à
-    la fonction <function>error_reporting</function>, soit en désactivant
-    l'affichage des erreurs en utilisant l'option de configuration
-    <literal>display_errors</literal> du &php.ini;. Si vous choisissez la
-    dernière solution, vous devez également définir le chemin de votre fichier
-    de log en utilisant la directive de configuration
-    <literal>error_log</literal>, et en activant la directive
-    <literal>log_errors</literal>.
-    <example>
-     <title>Détecter des variables non protégées avec E_ALL</title>
-     <programlisting role="php">
+   </programlisting>
+  </example>
+ </para>
+ <para>
+  Indépendamment de la gestion des erreurs, la possibilité de tester
+  la gestion des erreurs d'un système conduit à un trou de sécurité,
+  et la diffusion de plus d'informations sur votre système.
+ </para>
+ <para>
+  Si un pirate affiche une page <acronym>html</acronym>, et essaye de la
+  tester (pour rechercher des faiblesses du système), il peut déterminer sur
+  quel système &php; a été compilé.
+ </para>
+ <para>
+  Une erreur de fonction indique si un système supporte une base de
+  données spécifique, ou bien indique comment la page a
+  été générée. Cela peut orienter l'intrus
+  vers les ports de cette base de données ou bien vers une attaque
+  liée à cette application. En envoyant des données
+  erronées, par exemple, un pirate peut déterminer l'ordre
+  d'identification dans un script, à partir des lignes d'erreurs,
+  et essayer de les exploiter ailleurs, dans le script.
+ </para>
+ <para>
+  Une erreur de fichier, ou une erreur générale &php; peut indiquer
+  quelles sont les permissions du serveur web, ainsi que la structure
+  et l'organisation des fichiers. Les gestionnaires d'erreurs utilisateurs
+  peuvent aussi aggraver ce problème, en permettant l'exploitation facile
+  d'informations préalablement cachées.
+ </para>
+ <para>
+  Il y a trois solutions majeures à ces problèmes : la première
+  est de scruter toutes les fonctions, et d'essayer de traiter toutes les
+  erreurs. La deuxième est de désactiver le rapport d'erreur, dès
+  que le script est en production. La troisième est d'utiliser les
+  fonctions de gestion des erreurs. Suivant votre politique de
+  sécurité, vous pouvez utiliser un panachage savant des
+  trois méthodes.
+ </para>
+ <para>
+  Une méthode pour gagner du temps est d'utiliser la fonction
+  <function>error_reporting</function>, pour vous aider à
+  sécuriser le code, et détecter les utilisations dangeureuses de variables.
+  Vous testez votre code en béta-test avec la valeur 
+  <constant>E_ALL</constant>, et vous pouvez rapidement repérer les variables
+  qui ne sont pas protégées. Une fois que le code est prêt à être déployé,
+  vous devez soit désactiver complètement le repport d'erreur en affectant 0 à
+  la fonction <function>error_reporting</function>, soit en désactivant
+  l'affichage des erreurs en utilisant l'option de configuration
+  <literal>display_errors</literal> du &php.ini;. Si vous choisissez la
+  dernière solution, vous devez également définir le chemin de votre fichier
+  de log en utilisant la directive de configuration
+  <literal>error_log</literal>, et en activant la directive
+  <literal>log_errors</literal>.
+  <example>
+   <title>Détecter des variables non protégées avec E_ALL</title>
+   <programlisting role="php">
 <![CDATA[
 <?php
-  if ($username) {
-// Non initialisée, ou vérifée avant utilisation
-    $good_login = 1;
-  }
-  if ($good_login == 1) {
-// Si le test ci-dessus échoue, les valeurs n'ont pas été testées
-    fpassthru ("/données/très/très/sensibles/index.html");
-  }
+if ($username) {
+  // Non initialisée, ou vérifée avant utilisation
+  $good_login = 1;
+}
+if ($good_login == 1) {
+  // Si le test ci-dessus échoue, les valeurs n'ont pas été testées
+  fpassthru ("/données/très/très/sensibles/index.html");
+}
 ?>
 ]]>
-     </programlisting>
-    </example>
-   </para>
-  </chapter>
+   </programlisting>
+  </example>
+ </para>
+</chapter>
 
 <!-- Keep this comment at the end of the file
 Local variables:
