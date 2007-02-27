@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.88 $ -->
-<!-- EN-Revision: 1.110 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- $Revision: 1.89 $ -->
+<!-- EN-Revision: 1.111 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
  <chapter id="language.operators">
   <title>Les opérateurs</title>
@@ -1207,44 +1207,161 @@ var_dump($a === $b); // bool(false)
   </sect1>
 
   <sect1 id="language.operators.type">
-   <title>Opérateur de type</title>
+   <title>Opérateurs de types</title>
    <para>
-    &php; a un seul opérateur de type : <literal>instanceof</literal>
-    est utilisé pour déterminer si oui ou non un objet donné, son parent ou ses
-    <link linkend="language.oop5.interfaces">interfaces</link> implémentées
-    sont d'une <link linkend="language.oop5.basic.class">classe objet</link>
-    spécifique.
-   </para>
-   <simpara>
-    L'opérateur <literal>instanceof</literal> a été introduit en &php; 5.
-    Avant cela, <function>is_a</function> été utilisé mais il est désormais déconseillé
-    de l'employer, en faveur de <literal>instanceof</literal>.
-   </simpara>
-   <example>
-   <title>Opérateur de type : <literal>instanceof</literal></title>
-    <programlisting role="php">
+    <literal>instanceof</literal> est utilisé pour déterminr si une variable &php;
+    est un objet instancié d'une certaine
+    <link linkend="language.oop5.basic.class">classe</link> :
+    <example>
+     <title>Using instanceof with classes</title>
+     <programlisting role="php">
 <![CDATA[
 <?php
-class A { }
-class B { }
-
-$thing = new A;
-
-if ($thing instanceof A) {
-    echo 'A';
+class MyClass
+{
 }
-if ($thing instanceof B) {
-    echo 'B';
+class NotMyClass
+{
 }
+$a = new MyClass;
+
+var_dump($a instanceof MyClass);
+var_dump($a instanceof NotMyClass);
 ?>
 ]]>
     </programlisting>
-    <simpara>
-     Comme <varname>$thing</varname> est un &object; de type A, mais
-     pas B, seul le premier bloc de commande sera exécuté.
-    </simpara>
-    <screen>A</screen>
-   </example>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+bool(false)
+]]>
+     </screen>
+    </example>
+    <literal>instanceof</literal> peut également être utilisé pour déterminer
+    si une variable est un objet instancié d'une classe qui hérite d'une classe parente :
+    <example>
+     <title>Utilisation de <literal>instanceof</literal> avec des classes héritées</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+class ParentClass
+{
+}
+class MyClass extends ParentClass
+{
+}
+$a = new MyClass;
+
+var_dump($a instanceof MyClass);
+var_dump($a instanceof ParentClass);
+?>
+     ]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+bool(true)
+]]>
+     </screen>
+    </example>
+    Et finalement, <literal>instanceof</literal> peut être utilisé pour déterminer
+    si une variable est un objet instancié d'une classe qui implémente une
+    <link linkend="language.oop5.interfaces">interface</link> :
+    <example>
+     <title>Utilisation de <literal>instanceof</literal> pour une classe</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+interface MyInterface
+{
+}
+class MyClass implements MyInterface
+{
+}
+$a = new MyClass;
+
+var_dump($a instanceof MyClass);
+var_dump($a instanceof MyInterface);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+bool(true)
+]]>
+     </screen>
+    </example>
+   </para>
+   <para>
+    Bien que <literal>instanceof</literal> soit habituellement utilisé avec un nom
+    de classe litéral, il peut également être utilisé avec un autre objet ou une chaîne
+    représentant une variable :
+    <example>
+     <title>Utilisation de <literal>instanceof</literal> avec d'autres variables</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+interface MyInterface
+{
+}
+class MyClass implements MyInterface
+{
+}
+$a = new MyClass;
+$b = new MyClass;
+$c = 'MyClass';
+$d = 'NotMyClass';
+var_dump($a instanceof $b); // $b est un objet de la classe MyClass
+var_dump($a instanceof $c); // $c est une chaîne 'MyClass'
+var_dump($a instanceof $d); // $d est une chaîne 'NotMyClass'
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+bool(true)
+bool(false)
+]]>
+     </screen>
+    </example>
+   </para>
+   <para>
+    Il y a quelque piège à éviter. Avant &php; version 5.1.0,
+    <literal>instanceof</literal> appelera <link linkend="language.oop5.autoload">__autoload()</link>
+    si le nom de la classe n'existe pas. De plus, si la classe n'a pas été chargée,
+    une erreur fatale sera émise. Ceci peut fonctionner en utilisant une référence
+    de classe dynamique, ou une chaîne représentant une variable contenant le nom
+    de la classe :
+    <example>
+     <title>Pas de recherche sur le nom de la classe et une erreur fatale avec <LITERAL>instanceof</LITERAL> en &PHP; 5.0</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$d = 'NotMyClass';
+var_dump($a instanceof $d); // no fatal error here
+?>
+     ]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(false)
+]]>
+     </screen>
+    </example>
+   </para>
+   <simpara>
+    L'opérateur <literal>instanceof</literal> a été introduit en &php; 5.
+    Avant cette version, <function>is_a</function> était utilisé mais
+    <function>is_a</function> est depuis devenu obsolète, en faveur de
+    <literal>instanceof</literal>.
+   </simpara>
    <para>
     Voir aussi
     <function>get_class</function> et
@@ -1252,6 +1369,7 @@ if ($thing instanceof B) {
    </para>
   </sect1>
  </chapter>
+
  <!-- Keep this comment at the end of the file
  Local variables:
  mode: sgml
