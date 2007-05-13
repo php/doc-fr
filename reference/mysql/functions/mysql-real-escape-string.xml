@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.23 $ -->
-<!-- EN-Revision: 1.27 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.24 $ -->
+<!-- EN-Revision: 1.28 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry id="function.mysql-real-escape-string">
@@ -140,16 +140,23 @@ if (isset($_POST['product_name']) && isset($_POST['product_description']) && iss
 
     } else {
 
+        // Annule les effets magic_quotes_gpc/magic_quotes_sybase sur ces variables si ON.
+
         if(get_magic_quotes_gpc()) {
-            $product_name        = stripslashes($_POST['product_name']);
-            $product_description = stripslashes($_POST['product_description']);
+            if(ini_get('magic_quotes_sybase')) {
+                $product_name        = str_replace("''", "'", $_POST['product_name']);
+                $product_description = str_replace("''", "'", $_POST['product_description']);
+            } else {
+                $product_name        = stripslashes($_POST['product_name']);
+                $product_description = stripslashes($_POST['product_description']);
+            }
         } else {
             $product_name        = $_POST['product_name'];
             $product_description = $_POST['product_description'];
         }
 
         // Faire une requête sécurisée
-        $query = sprintf("INSERT INTO products (`name`, `description`, `user_id`) VALUES ('%s', '%s', '%d')",
+        $query = sprintf("INSERT INTO products (`name`, `description`, `user_id`) VALUES ('%s', '%s', %d)",
                     mysql_real_escape_string($product_name, $link),
                     mysql_real_escape_string($product_description, $link),
                     $_POST['user_id']);
