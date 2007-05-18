@@ -1,141 +1,210 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.12 $ -->
-<!-- EN-Revision: 1.3 Maintainer: dams Status: ready -->
+<!-- $Revision: 1.13 $ -->
+<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
-  <chapter id="security.filesystem">
-   <title>Sécurité des fichiers</title>
-   <simpara>
-    &php; est soumis aux règles de sécurité
-    intrinsèques de la plupart des systèmes serveurs :
-    il respecte notamment les droits des fichiers et des dossiers.
-    Une attention particulière doit être portée aux
-    fichiers ou dossiers qui sont accessibles à tout le monde, afin de
-    s'assurer qu'ils ne divulguent pas d'informations critiques.
-   </simpara>
-   <simpara>
-    Puisque &php; a été fait pour permettre aux utilisateurs
-    d'accéder aux fichiers, il est possible de créer un
-    script qui vous permet de lire des fichiers tels que /etc/password,
-    de modifier les connexions ethernet, lancer des impressions de documents,
-    etc. Cela implique notamment que vous devez vous assurer que les fichiers
-    accédés par les scripts sont bien ceux qu'il faut.
-   </simpara>
-   <simpara>
-    Considérez le script suivant, où l'utilisateur indique
-    qu'il souhaite effacer un fichier dans son dossier racine. Nous
-    supposons que &php; est utilisé comme interface web pour
-    gérer les fichiers, et que l'utilisateur Apache est
-    autorisé à effacer les fichiers dans le dossier racine des
-    utilisateurs.
-   </simpara>
-   <para>
-    <example>
-     <title>Une erreur de vérification de variable conduit à ...</title>
-     <programlisting role="php">
+
+<chapter id="security.filesystem">
+ <title>Sécurité des fichiers</title>
+ <simpara>
+  &php; est soumis aux règles de sécurité
+  intrinsèques de la plupart des systèmes serveurs :
+  il respecte notamment les droits des fichiers et des dossiers.
+  Une attention particulière doit être portée aux
+  fichiers ou dossiers qui sont accessibles à tout le monde, afin de
+  s'assurer qu'ils ne divulguent pas d'informations critiques.
+ </simpara>
+ <simpara>
+  Puisque &php; a été fait pour permettre aux utilisateurs
+  d'accéder aux fichiers, il est possible de créer un
+  script qui vous permet de lire des fichiers tels que /etc/password,
+  de modifier les connexions ethernet, lancer des impressions de documents,
+  etc. Cela implique notamment que vous devez vous assurer que les fichiers
+  accédés par les scripts sont bien ceux qu'il faut.
+ </simpara>
+ <simpara>
+  Considérez le script suivant, où l'utilisateur indique
+  qu'il souhaite effacer un fichier dans son dossier racine. Nous
+  supposons que &php; est utilisé comme interface web pour
+  gérer les fichiers, et que l'utilisateur Apache est
+  autorisé à effacer les fichiers dans le dossier racine des
+  utilisateurs.
+ </simpara>
+ <para>
+  <example>
+   <title>Une erreur de vérification de variable conduit à ...</title>
+   <programlisting role="php">
 <![CDATA[
 <?php
 // Efface un fichier dans un dossier racine
 $username = $_POST['user_submitted_name'];
-$homedir = "/home/$username";
-$file_to_delete = "$userfile";
-unlink ($homedir/$userfile);
-echo "$file_to_delete a été effacé!";
+$userfile = $_POST['user_submitted_filename'];
+$homedir  = "/home/$username";
+
+unlink("$homedir/$userfile");
+
+echo "Ce fichier a été effacé !";
 ?>
 ]]>
-     </programlisting>
-    </example>
-    Étant donné que le nom de l'utilisateur est à fournir, des intrus peuvent
-    envoyer un nom d'utilisateur autre que le leur, et effacer des
-    documents dans les comptes des autres utilisateurs.
-    Dans ce cas, vous souhaiterez utiliser une autre forme d'identification.
-    Considérez ce qui pourrait se passer si les utilisateurs passent
-    <literal>../etc/</literal> et <literal>passwd</literal> comme arguments! 
-    Le code serait exécuté tel que :
-    <example>
-     <title>Une attaque du système de fichiers!</title>
-     <programlisting role="php">
+   </programlisting>
+  </example>
+  Étant donné que le nom de l'utilisateur et le nom du fichier sont fournis, des intrus peuvent
+  envoyer un nom d'utilisateur et un nom de fichier autres que les leurs, et effacer des
+  documents dans les comptes des autres utilisateurs.
+  Dans ce cas, vous souhaiterez utiliser une autre forme d'identification.
+  Considérez ce qui pourrait se passer si les utilisateurs passent
+  <literal>../etc/</literal> et <literal>passwd</literal> comme arguments! 
+  Le code serait exécuté tel que :
+  <example>
+   <title>Une attaque du système de fichiers!</title>
+   <programlisting role="php">
 <![CDATA[
 <?php
 // efface un fichier n'importe où sur le disque dur,
 // où l'utilisateur PHP a accès. Si PHP a un accès root :
-$username = "../etc/";
-$homedir = "/home/../etc/";
-$file_to_delete = "passwd";
-unlink ("/home/../etc/passwd");
-echo "/home/../etc/passwd a été effacé!";
+$username = $_POST['user_submitted_name']; // "../etc"
+$userfile = $_POST['user_submitted_filename']; // "passwd"
+$homedir  = "/home/$username"; // "/home/../etc"
+
+unlink("$homedir/$userfile"); // "/home/../etc/passwd"
+
+echo "Ce fichier a été effacé !";
 ?>
 ]]>
-     </programlisting>
-    </example>
-    Il y a deux mesures primordiales à prendre pour éviter
-    ces manoeuvres :
-    <itemizedlist>
-     <listitem>
-      <simpara>
-       Limiter les permissions de l'utilisateur web &php;.
-      </simpara>
-     </listitem>
-     <listitem>
-      <simpara>
-       Vérifier toutes les variables liées aux chemins et aux fichiers
-       qui sont fournis.
-      </simpara>
-     </listitem>
-    </itemizedlist>
-    Voici un script renforcé :
-    <example>
-     <title>Une vérification renforcée</title>
-     <programlisting role="php">
+   </programlisting>
+  </example>
+  Il y a deux mesures primordiales à prendre pour éviter
+  ces manoeuvres :
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     Limiter les permissions de l'utilisateur web &php;.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Vérifier toutes les variables liées aux chemins et aux fichiers
+     qui sont fournis.
+    </simpara>
+   </listitem>
+  </itemizedlist>
+  Voici un script renforcé :
+  <example>
+   <title>Une vérification renforcée</title>
+   <programlisting role="php">
 <![CDATA[
 <?php
-// Efface un fichier sur le disque où l'utilisateur à le droit d'aller
-  $username = $_SERVER['REMOTE_USER'];
-// utilise un mécanisme d'authentification
-  $homedir = "/home/$username";
-  $file_to_delete = basename("$userfile");
-// supprime le chemin excédentaire
-  unlink ($homedir/$file_to_delete);
-  $fp = fopen("/home/logging/filedelete.log","+a"); //note l'effacement
-  $logstring = "$username $homedir $file_to_delete";
-  fputs ($fp, $logstring);
-  fclose($fp);
-  echo "$file_to_delete a été éffacé!";
+// Efface un fichier sur le disque où l'utilisateur a le droit d'aller
+$username = $_SERVER['REMOTE_USER']; // utilisation d'un méchanisme d'identification
+$userfile = basename($_POST['user_submitted_filename']);
+$homedir  = "/home/$username";
+
+$filepath = "$homedir/$userfile";
+
+if (file_exists($filepath) && unlink($filepath)) {
+   $logstring = "$filepath effacé\n";
+} else {
+   $logstring = "Échec lors de l'effacement de $filepath\n";
+}
+$fp = fopen("/home/logging/filedelete.log", "a");
+fwrite($fp, $lo gstring);
+fclose($fp);
+
+echo htmlentities($logstring, ENT_QUOTES);
 ?>
 ]]>
-     </programlisting>
-    </example>
-    Cependant, même cette technique n'est pas sans faille.
-    Si votre système d'identification permet aux utilisateurs
-    de créer leur propre login, et qu'un utilisateur choisi
-    le login <literal>../etc/</literal>, le système est de nouveau exposé. Pour
-    cette raison, vous pouvez essayez d'écrire un script renforcé :
-    <example>
-     <title>Vérification renforcée de noms de fichiers</title>
-     <programlisting role="php">
+   </programlisting>
+  </example>
+  Cependant, même cette technique n'est pas sans faille.
+  Si votre système d'identification permet aux utilisateurs
+  de créer leur propre login, et qu'un utilisateur choisi
+  le login <literal>../etc/</literal>, le système est de nouveau exposé. Pour
+  cette raison, vous pouvez essayez d'écrire un script renforcé :
+  <example>
+   <title>Vérification renforcée de noms de fichiers</title>
+   <programlisting role="php">
 <![CDATA[
 <?php
-  $username = $_SERVER['REMOTE_USER'];;
-  $homedir = "/home/$username";
-  if (!ereg('^[^./][^/]*$', $username))
-    die('Erreur de nom de fichier');
-    //meurt, ne SURTOUT pas traiter!
-// etc.
+$username     = $_SERVER['REMOTE_USER']; // utilisation d'un méchanisme d'identification
+$userfile     = $_POST['user_submitted_filename'];
+$homedir      = "/home/$username";
+
+$filepath     = "$homedir/$userfile";
+
+if (!ctype_alnum($username) || !preg_match('/^(?:[a-z0-9_-]|\.(?!\.))+$/iD', $userfile)) {
+   die("Mauvais utilisateur/nom de fichier");
+}
+
+//etc...
 ?>
 ]]>
-     </programlisting>
-    </example>
-   </para>
-   <para>
-    Suivant votre système d'exploitation, vous devrez protéger
-    un grand nombre de fichiers, notamment les entrées de périphériques,
-    (<literal>/dev/</literal> ou <literal>COM1</literal>), les fichiers de
-    configuration (fichiers <literal>/etc/</literal> et
-    <literal>.ini</literal>), les lieux de stockage d'informations
-    (<literal>/home/</literal>, <literal>My Documents</literal>), etc.
-    Pour cette raison, il est généralement plus sûr d'établir une
-    politique qui interdit TOUT sauf ce que vous autorisez.
-   </para>
-  </chapter>
+   </programlisting>
+  </example>
+ </para>
+ <para>
+  Suivant votre système d'exploitation, vous devrez protéger
+  un grand nombre de fichiers, notamment les entrées de périphériques,
+  (<literal>/dev/</literal> ou <literal>COM1</literal>), les fichiers de
+  configuration (fichiers <literal>/etc/</literal> et
+  <literal>.ini</literal>), les lieux de stockage d'informations
+  (<literal>/home/</literal>, <literal>My Documents</literal>), etc.
+  Pour cette raison, il est généralement plus sûr d'établir une
+  politique qui interdit TOUT sauf ce que vous autorisez.
+ </para>
+ <sect1 id="security.filesystem.nullbytes">
+  <title>Issue lors de l'utilisation des octets nuls</title>
+  <simpara>
+   Sachant que &php; utilise des fonctions C pour les opérations
+   en rapport avec le système de fichiers, il peut gérer les octets nuls
+   d'une façon inattendue. Sachant que les octets nuls dénotent la
+   fin d'une chaîne en C, les chaînes contenant ces caractères ne seront
+   pas considérées entièrement mais plus uniquement jusqu'à ce qu'un de
+   ces caractères sont rencontrés.
+
+   L'exemple suivant montre un code vulnérable qui démontre ce problème :
+  </simpara>
+  <example>
+   <title>Script vulnérable aux octets nuls</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$file = $_GET['file']; // "../../etc/passwd\0"
+if (file_exists('/home/wwwrun/'.$file.'.php')) {
+   // file_exists retournera true sachant que le fichier /home/wwwrun/../../etc/passwd existe
+   include '/home/wwwrun/'.$file.'.php';
+   // le fichier /etc/passwd sera inclu
+}
+?>
+]]>
+ </programlisting>
+</example>
+<para>
+ Ainsi, toute chaîne utilisée dans des opérations sur le système de fichiers
+ doit toujours être validée proprement. Voici une meilleure solution de
+ l'exemple précédent :
+</para>
+<example>
+ <title>Validation correcte de l'entrée</title>
+ <programlisting role="php">
+<![CDATA[
+<?php
+$file = $_GET['file'];
+
+// Whitelisting possible values
+switch ($file) {
+   case 'main':
+   case 'foo':
+   case 'bar':
+   include '/home/wwwrun/include/'.$file.'.php';
+   break;
+   default:
+   include '/home/wwwrun/include/main.php';
+}
+?>
+]]>
+   </programlisting>
+  </example>
+ </sect1>
+</chapter>
 
 <!-- Keep this comment at the end of the file
 Local variables:
