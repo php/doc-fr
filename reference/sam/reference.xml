@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='iso-8859-1'?>
-<!-- $Revision: 1.4 $ -->
-<!-- EN-Revision: 1.4 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.5 $ -->
+<!-- EN-Revision: 1.7 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <reference id="ref.sam">
@@ -18,10 +18,34 @@
     d'effectuer des opérations plus complexes. Pour la plupart des utilisateurs, les configurations
     des options complexes peuvent être tout simplement ignorées.
    </para>
+   <para>
+    L'extension SAM est un framework qui fournit une API simple qui peut être utilisée
+    our accéder à plusieurs systèmes de messagerie. Actuellement, le paquet inclut
+    un support interne pour le protocole de messagerie MQTT (MQ Telemetry Transport) ains
+    que pour les produits de messagerie IBM et Queuing middleware. SAM a été conçu pour
+    être extensible à d'autres systèmes de messagerie et ainsi, des extensions peuvent
+    être écrites en C ou en &php;.
+   </para>
   </section>
 
   <section id='sam.installation'>
    &reftitle.install;
+   <para>
+    Le framework SAM et le support MQTT peuvent être construits et utilisés sans aucun
+    élément supplémentaire. Le support pour les protocoles autres que MQTT est fourni via
+    un jeu de bibliothèques et du code côté client, comme XMS.
+   </para>
+   <para>
+    Si vous ne souhaitez utiliser que le support interne MQTT, alors, vous pouvez construire
+    et configurer SAM en tant qu'extension ou simplement vous référer à "php_sam.php" grâce à
+    une clause "requires" ou "requires_once" dans votre script &php;. Dans ce cas, vous devez
+    uniquement installer le code, sans construire l'extension via l'installeur pear :
+    <screen>
+<![CDATA[
+pecl install -B SAM
+]]>
+    </screen>
+   </para>
    <section id='sam.installation.prerequisites'>
     <title>Prérequis</title>
     <para>
@@ -92,7 +116,7 @@ make install               #vous devriez devoir être root pour cette étape
    <section id='sam.installation.windows'>
     <title>Étapes d'installation sous Windows</title>
     <para>
-     Actuellement, vous devez construire l'extension SAM pour Windows car il
+     Vous devez construire l'extension SAM pour Windows car il
      n'existe pas de binaire pré-construit. L'extension peut être construite
      en utilisant les procédures standards de construction des extensions Windows.
     </para>
@@ -159,10 +183,17 @@ set PATH=..\win32build\bin;%PATH%
       Exécutez la commande buildconf.bat. Ceci devrait reconstruire le fichier configure.js.
      </para>
      <para>
-      Exécutez la commande cscript :
+      Exécutez la commande cscript avec les options appropriées. Pour uniquement construire
+      l'extension SAM et le support MQTT, utilisez :
       <screen>
 <![CDATA[
-cscript /nologo configure.js --with-sam="c:\program files\ibm\xms"
+cscript /nologo configure.js --with-sam
+]]>
+      </screen>
+      Pour construire le framework SAM et le support XMS, utilisez :
+      <screen>
+<![CDATA[
+cscript /nologo configure.js --with-sam --with-sam_xms="c:\program files\ibm\xms"
 ]]>
       </screen>
      </para>
@@ -184,6 +215,35 @@ cscript /nologo configure.js --with-sam="c:\program files\ibm\xms"
 nmake php_sam.dll
 ]]>
       </screen>
+Also if you are using the XMS support you must make the sam_xms extensions:
+      <screen>
+       <![CDATA[
+nmake php_sam_xms.dll
+]]>
+      </screen>
+      </para>
+      <para>
+       Si vous avez utiliser Visual Studio 2005 pour construire les bibliothèques DLLs,
+       alors lisez ce qui suit pour les étapes additionnelles que vous devez effectuer
+       avant d'aller plus loin.
+      </para>
+      <para>
+       Les bibliothèques DLLs créées (php_sam.dll, et, optionnellent php_sam_xms.dll)
+       peuvent maintenant être copiées dans le sous répertoire approprié de votre
+       installation de &php;. Assurez-vous que le(s) module(s) est(sont) chargé(s) par &php;,
+       en ajoutant la ligne suivante à votre &php.ini; :
+      <screen>
+       <![CDATA[
+extension=php_sam.dll
+]]>
+      </screen>
+      Si vous voulez utiliser le support XMS pour accéder à IBM Messgaing and Queuing family,
+      vous devez également activer l'extension SAM XMS.
+      <screen>
+       <![CDATA[
+extension=php_sam_xms.dll
+]]>
+      </screen>
      </para>
     </section>
     <section id='sam.installation.VS2005'>
@@ -191,14 +251,21 @@ nmake php_sam.dll
      <para>
       Si vous contruisez l'extension SAM avec le compilateur et les outils Microsoft Visual
       Studio 2005, vous devez effectuer une étape supplémentaire dans le processus de
-      compilation afin de vous assurer que la bibliothèque php_sam.dll soit capable de
-      se lier aux bibliothèques C durant l'exécution. Cette étape ajoute la dépendance
-      directement dans la DLL. Déplacez-vous dans le répertoire où la bibliothèque php_sam.dll
-      a été générée (habituellement le dossier Release_TS ou Debug_TS du dossier des sources
-      &php;) et exécutez l'incantation magique suivante :
+      compilation afin de vous assurer que la bibliothèque <filename>php_sam.dll</filename>
+      soit capable de se lier aux bibliothèques C durant l'exécution. Cette étape ajoute
+      la dépendance directement dans la DLL. Déplacez-vous dans le répertoire où la bibliothèqu
+      e <filename>php_sam.dll</filename> a été générée (habituellement le dossier Release_TS
+      ou Debug_TS du dossier des sources &php;) et exécutez l'incantation magique suivante :
       <screen>
 <![CDATA[
 mt.exe -manifest php_sam.dll.manifest -outputresource:php_sam.dll;2
+]]>
+      </screen>
+      Si vous utilisez les capacités XMS, vous devez effectuer la même chose
+      avec la bibliothèque SAM XMS :
+      <screen>
+<![CDATA[
+mt.exe -manifest php_sam_xms.dll.manifest -outputresource:php_sam_xms.dll;2
 ]]>
       </screen>
      </para>
@@ -211,6 +278,47 @@ mt.exe -manifest php_sam.dll.manifest -outputresource:php_sam.dll;2
      </para>
     </section>
    </section>
+
+   <section id='sam.installation.configutaion'>
+    <title>Support des protocoles et liage</title>
+    <para>
+     Le framework SAM peut être étendu pour supporter d'autres protocoles de messagerie et d'autre
+     méchanismes de connexion. Pour ajouter le support d'un nouveau protocole ou connexion, une
+     classe doit etre définie, soit sous la forme d'une extension C, soit sous la forme d'un script &php;,
+     et un script "usine" doit être créé. La classe doit implémenter toutes les méthodes de la classe
+     SAMConnection car elle n'hérite pas de la classe SAMConnection. Le script d'usine doit être appelé
+     par le framework SAM pour créer une instance de la classe implémentée. La façon dont SAM
+     choisit quel utilitaire à appeler, est basée sur le protocole spécifié en tant que premier
+     paramètre de l'appel à "connect".
+    </para>
+    <para>
+     Par défaut, le support interne MQTT sera utilisé si une connexion est spécifiée à un protocole
+     SAM_MQTT ("mqtt") ; pour les autres protocoles, SAM tente d'utiliser l'extension XMS. Pour
+     ajouter le support de protocoles supplémentaires ou pour modifier le comportement par défaut,
+     des entrées doivent être ajoutées dans le &php.ini; dans la section [sam]. Le liage par défaut
+     est équivalent aux entrées suivantes :
+     <screen>
+<![CDATA[
+[sam]
+sam.factory.mqtt=mqtt
+sam.factory.wmq=xms
+sam.factory.wmq:client=xms
+sam.factory.wmq:bindings=xms
+sam.factory.wpm=xms
+sam.factory.rtt=xms
+]]>
+     </screen>
+     Comme nous pouvons le voir dans ces exemples, les entrées prennent la forme de
+     "sam.factory.pppp=xxx" où pppp est le protocole spécifié lors de l'appel à la connexion
+     et xxx est le suffixe d'usine. Note : SAM définit des constantes pour ces protocoles, comme
+     SAM_WMQ=wmq, SAM_WPM=wpm, SAM_RTT=rtt, SAM_MQTT=mqtt, etc.
+     </para>
+     <para>
+      Lors de l'identification du code support à utiliser lors d'un appel à connexion, SAM cherche
+      le nom du protocole dans les entrées du &php.ini;, puis, invoque un script d'usine nommé
+      sam_factory_xxx.php. Si aucune entrée n'est trouvée, le support par défaut utilisé sera XMS.
+     </para>
+    </section>
 
    <section id='sam.usage'>
     <title>Utilisation de l'API</title>
@@ -254,6 +362,20 @@ $conn = new SAMConnection();
 $conn->connect(SAM_WMQ, array(SAM_ENDPOINTS => 'localhost:7278:BootstrapBasicMessaging',
     SAM_BUS => 'Bus1',
     SAM_TARGETCHAIN => 'InboundBasicMessaging'));
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+     <para>
+     <example>
+      <title>Création d'un connexion et connexion à un serveur MQTT</title>
+      <programlisting role='php'>
+<![CDATA[
+<?php
+$conn = new SAMConnection();
+$conn->connect(SAM_MQTT, array(SAM_HOST => 'myhost.mycompany.com',
+     SAM_PORT => 1883));
 ?>
 ]]>
        </programlisting>
@@ -352,10 +474,10 @@ $msg->header->SAM_REPLY_TO = 'queue://receive/test';
 $correlid = $conn->send('queue://send/test', $msg);
 
 if (!$correlid) {
-// L'envoi a échoué !
-echo "Échec de l'envoi : ($conn->errno) $conn->error";
+   // L'envoi a échoué !
+   echo "Échec de l'envoi : ($conn->errno) $conn->error";
 } else {
-$resp = $conn->receive('queue://receive/test', array(SAM_CORRELID => $correlid));
+   $resp = $conn->receive('queue://receive/test', array(SAM_CORRELID => $correlid));
 }
 ?>
 ]]>
@@ -366,25 +488,32 @@ $resp = $conn->receive('queue://receive/test', array(SAM_CORRELID => $correlid))
     <section id='sam.pubsub'>
      <title>Publication/Souscription à un sujet</title>
      <para>
-      SAM permet d'envoyer des messages soit à la file d'attente, ou, pour WebSphere MQ et WPM, de publier/souscrire
-      à des sujets. L'envoi à un sujet est spécifié à SAM de la façon habituelle, i.e. sous la forme 'topic://fred', plutôt que
-      sous la forme 'queue://AQUEUE', utilisée pour une opération de point à point. Pour publier/souscrire, il est tout simplement
-      nécessaire de spécifier le correct du courtier lors de l'appel à la méthode "connect" de l'objet SAMConnect et le sujet désiré
-      dans l'argument de destination des appels aux méthodes "send" et "receive" de l'objet SAMConnect. L'interface &php;
-      est cependant identique au model point à point.
+      SAM permet d'envoyer des messages soit à la file d'attente, ou, pour WebSphere
+      MQ et WPM, de publier/souscrire à des sujets. L'envoi à un sujet est spécifié
+      à SAM de la façon habituelle, i.e. sous la forme 'topic://fred', plutôt que
+      sous la forme 'queue://AQUEUE', utilisée pour une opération de point à point.
+      Pour publier/souscrire, il est tout simplement nécessaire de spécifier le correct
+      du courtier lors de l'appel à la méthode "connect" de l'objet SAMConnect et le
+      sujet désiré dans l'argument de destination des appels aux méthodes "send" et
+      "receive" de l'objet SAMConnect. L'interface &php; est cependant identique au
+      model point à point.
      </para>
      <para>
-      Par défaut, SAM crée des souscriptions non durables lors de l'utilisation des fonctionnalités de publication/souscription. Cela
-      signifie que si l'application cliente est inactive lorsque les messages sont publiés sur un sujet, alors il ne les recevra pas lorsqu'il
-      redemarrera. SAM permet également des souscriptions durables à un sujet lors de l'utilisation de WPM ou WebSphere.
-      Le but de ces souscriptions est de permettre aux données d'être reçues par une application cliente même si le client n'est
-      plus actif au moment où les données sont publiées.
+      Par défaut, SAM crée des souscriptions non durables lors de l'utilisation des
+      fonctionnalités de publication/souscription. Cela signifie que si l'application
+      cliente est inactive lorsque les messages sont publiés sur un sujet, alors il
+      ne les recevra pas lorsqu'il redemarrera. SAM permet également des souscriptions
+      durables à un sujet lors de l'utilisation de WPM ou WebSphere. Le but de ces
+      souscriptions est de permettre aux données d'être reçues par une application
+      cliente même si le client n'est plus actif au moment où les données sont publiées.
      </para>
      <para>
-      Les souscriptions durables sont spécifiées en utilisant l'appel à la méthode "suscribe" de l'objet SAMConnect. Cette méthode
-      prend le sujet destinataire en tant qu'argument d'entrée et retourne l'identifiant de souscription qui pourra être utilisé
-      lors des prochains appels à la méthode "receive". Lorsque la souscription n'est plus nécessaire, la méthode "unsubscribe" de
-      l'objet SAMConnection dot être utilisée pour effacer la souscription.
+      Les souscriptions durables sont spécifiées en utilisant l'appel à la méthode
+      "suscribe" de l'objet SAMConnect. Cette méthode prend le sujet destinataire en
+      tant qu'argument d'entrée et retourne l'identifiant de souscription qui pourra
+      être utilisé lors des prochains appels à la méthode "receive". Lorsque la
+      souscription n'est plus nécessaire, la méthode "unsubscribe" de l'objet
+      SAMConnection dot être utilisée pour effacer la souscription.
      </para>
      <para>
       <example>
@@ -472,10 +601,11 @@ if (!$conn->unsubscribe($subName)) {
     <section id='sam.errors'>
      <title>Gestion des erreurs</title>
      <para>
-      Toutes les méthodes SAMConnection qui fournissent un accès aux opérations de messagerie retourne &false;
-      si une erreur survient durant le processus. En plus de cela, l'objet SAMConnection a deux propriétés,
-      "errno" et "error", qui fournissent respectivement le numéro et la description de la dernière erreur survenue
-      sur la connexion.
+      Toutes les méthodes SAMConnection qui fournissent un accès aux opérations
+      de messagerie retourne &false; si une erreur survient durant le processus.
+      En plus de cela, l'objet SAMConnection a deux propriétés, "errno" et "error",
+      qui fournissent respectivement le numéro et la description de la dernière
+      erreur survenue sur la connexion.
      </para>
      <para>
       <example>
@@ -528,7 +658,7 @@ if (!$correlid) {
       <itemizedlist>
        <listitem>
         <para>
-        <link linkend='function.SAM-Connection-constructor'>new SAMConnection</link> - construit un nouvel objet de connexion permettant une
+        <link linkend='function.samconnection-constructor'>new SAMConnection</link> - construit un nouvel objet de connexion permettant une
         connexion à une infrastructure de messagerie.
        </para>
       </listitem>
@@ -540,73 +670,79 @@ if (!$correlid) {
      <itemizedlist>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-commit'>commit</link>
+        <link linkend='function.samconnection-commit'>commit</link>
         - une méthode qui valide un travail.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-connect'>connect</link>
+        <link linkend='function.samconnection-connect'>connect</link>
         - une méthode qui connecte un script &php; à un serveur de messagerie.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-disconnect'>disconnect</link>
+        <link linkend='function.samconnection-disconnect'>disconnect</link>
         - une méthode qui déconnecte un script &php; d'un serveur de messagerie.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-isConnected'>isConnected</link>
+        <link linkend='function.samconnection-isConnected'>isConnected</link>
         - une méthode qui vérifie si un script &php; est connecté à un serveur de messagerie.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-peek'>peek</link>
+        <link linkend='function.samconnection-peek'>peek</link>
         - une méthode qui reçoit un message depuis la file d'attente sans pour autant l'effacer de la file d'attente.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-peekAll'>peekAll</link>
+        <link linkend='function.samconnection-peekAll'>peekAll</link>
         - une méthode qui reçoit un ou plusieurs messages depuis la file d'attente sans pour autant les effacer de la file d'attente.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-receive'>receive</link>
+        <link linkend='function.samconnection-receive'>receive</link>
         - une méthode qui reçoit un message depuis la file d'attente ou depuis une souscription.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-remove'>remove</link>
+        <link linkend='function.samconnection-remove'>remove</link>
         - une méthode qui efface un message depuis la file d'attente.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-rollback'>rollback</link>
+        <link linkend='function.samconnection-rollback'>rollback</link>
         - une méthode qui annule un travail.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-send'>send</link>
+        <link linkend='function.samconnection-send'>send</link>
         - une méthode qui envoie un message à une file d'attente ou sur un sujet.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-subscribe'>subscribe</link>
+        <link linkend='function.samconnection-setDebug'>setDebug</link>
+        - une méthode qui active ou non l'affichage des informations de déboggage
+       </para>
+      </listitem>
+      <listitem>
+       <para>
+        <link linkend='function.samconnection-subscribe'>subscribe</link>
         - une méthode qui crée une souscription à un ou plusieurs sujets.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-unsubscribe'>unsubscribe</link>
+        <link linkend='function.samconnection-unsubscribe'>unsubscribe</link>
         - une méthode qui détruit une suscription à un ou plusieurs sujets.
        </para>
       </listitem>
@@ -618,14 +754,14 @@ if (!$correlid) {
      <itemizedlist>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-errno'>errno</link> - le numéro de la dernière
+        <link linkend='function.samconnection-errno'>errno</link> - le numéro de la dernière
         erreur survenue sur la connexion. Cette propriété est définie à 0 si la dernière opération
         a réussi.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Connection-error'>error</link> - la description
+        <link linkend='function.samconnection-error'>error</link> - la description
         de la dernière erreur survenue sur la connexion.
        </para>
       </listitem>
@@ -644,7 +780,7 @@ if (!$correlid) {
      <itemizedlist>
       <listitem>
        <para>
-        <link linkend='function.SAM-Message-constructor'>new SAMMessage</link> - construit un
+        <link linkend='function.sammessage-constructor'>new SAMMessage</link> - construit un
         nouveau message.
        </para>
       </listitem>
@@ -656,12 +792,12 @@ if (!$correlid) {
      <itemizedlist>
       <listitem>
        <para>
-        <link linkend='function.SAM-Message-body'>body</link> - le corps du message.
+        <link linkend='function.sammessage-body'>body</link> - le corps du message.
        </para>
       </listitem>
       <listitem>
        <para>
-        <link linkend='function.SAM-Message-header'>header</link> - les propriétés d'en-tête du message.
+        <link linkend='function.sammessage-header'>header</link> - les propriétés d'en-tête du message.
        </para>
       </listitem>
      </itemizedlist>
