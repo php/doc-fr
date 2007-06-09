@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.9 $ -->
-<!-- EN-Revision: 1.5 Maintainer: didou Status: ready -->
+<!-- $Revision: 1.10 $ -->
+<!-- EN-Revision: 1.8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry id="function.curl-multi-exec">
@@ -16,9 +16,10 @@
    <methodparam><type>resource</type><parameter>mh</parameter></methodparam>
    <methodparam><type>int</type><parameter role="reference">still_running</parameter></methodparam>
   </methodsynopsis>
-
-  &warn.undocumented.func;
-
+  <para>
+   Exécute chaque gestionnaire de la pile. Cette méthode peut être appelée
+   même si un gestionnaire à besoin de lire ou d'écrire des données.
+  </para> 
  </refsect1>
 
  <refsect1 role="parameters">
@@ -30,10 +31,72 @@
      <term><parameter>still_running</parameter></term>
      <listitem>
       <para>
+       Une référence à un drapeau, qui annonce si les opérations sont toujours en cours.
       </para>
      </listitem>
     </varlistentry>
    </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Un code cURL, défini dans les <link linkend="curl.constants">constantes prédéfinies</link>
+   cURL.
+  </para>
+  <note>
+   <para>
+    Cette fonction retourne que des erreurs au regard de la pile. Des problèmes
+    suiviennent toujours sur des transferts individuels même lorsque cette fonction
+    retourne <constant>CURLM_OK</constant>.
+   </para>
+  </note>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>curl_multi_exec</function></title>
+    <para>
+     Cet exemple crée deux gestionnaires cURL, les ajoute à un gestionnaire
+     multiple, et les exécute en parallèle.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Création des ressources cURL
+$ch1 = curl_init();
+$ch2 = curl_init();
+
+// Définit l'URL ainsi que d'autres options
+curl_setopt($ch1, CURLOPT_URL, "http://www.example.com/");
+curl_setopt($ch1, CURLOPT_HEADER, 0);
+curl_setopt($ch2, CURLOPT_URL, "http://www.php.net/");
+curl_setopt($ch2, CURLOPT_HEADER, 0);
+
+// Création du gestionnaire multiple
+$mh = curl_multi_init();
+
+// Ajoute les deux gestionnaires
+curl_multi_add_handle($mh,$ch1);
+curl_multi_add_handle($mh,$ch2);
+
+$running=null;
+// Exécute le gestionnaire
+do {
+    curl_multi_exec($mh,$running);
+} while ($running > 0);
+// Ferme les gestionnaires
+curl_multi_remove_handle($ch1);
+curl_multi_remove_handle($ch2);
+curl_multi_close($mh);
+
+?>
+]]>
+    </programlisting>
+   </example>
   </para>
  </refsect1>
 
