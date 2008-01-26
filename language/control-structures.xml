@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.93 $ -->
-<!-- EN-Revision: 1.143 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.94 $ -->
+<!-- EN-Revision: 1.158 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
  <chapter xml:id="language.control-structures" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
   <title>Les structures de contrôle</title>
+
+  <sect1 xml:id="control-structures.intro">
+   <title>Introduction</title>
 
   <simpara>
    Tous les scripts &php; sont une suite d'instructions. Une instruction
@@ -14,9 +17,10 @@
    ("<literal>;</literal>"). De plus, plusieurs instructions peuvent être
    regroupées en bloc, délimité par des
    accolades ("<literal>{}</literal>"). Un bloc est considéré
-   comme une instruction. Les différents types d'instruction sont
+   comme une instruction. Les différents types d'instructions sont
    décrits dans ce chapitre.
   </simpara>
+  </sect1>
 
   <sect1 xml:id="control-structures.if">
    <title><literal>if</literal></title>
@@ -41,7 +45,7 @@ if (expression)
     <link linkend="language.expressions">expressions</link>,
     <replaceable>expression</replaceable> est convertie en sa valeur
     booléenne. Si l'<replaceable>expression</replaceable> vaut
-    &true;, &php; exécutera l'<replaceable>instruction</replaceable> et 
+    &true;, &php; exécutera l'<replaceable>instruction</replaceable> et
     si elle vaut &false;, l'instruction sera ignorée. Plus de détails sur les valeurs
     qui valent &false; sont disponibles dans la section
     <link linkend="language.types.boolean.casting">Conversion en booléen</link>.
@@ -446,10 +450,9 @@ for (expr1; expr2; expr3)
    <simpara>
     Les expressions peuvent éventuellement être
     laissées vides ou peuvent contenir plusieurs expressions séparées par des virgules.
-    Les expressions séparées par une virgule dans <varname>expr2</varname>
-    sont traitées de la même façon que si elles avaient été séparées par <link
-    linkend="language.operators.logical">l'opérateur ||</link> mais avec une
-    priorité moins élevées. Si l'expression <varname>expr2</varname>
+    Dans <varname>expr2</varname>, toutes les expressions séparées par une virgule
+    sont évaluées mais le résultat est obtenu depuis la dernière partie.
+    Si l'expression <varname>expr2</varname>
     est laissée vide, cela signifie que c'est une boucle infinie
     (&php; considère implicitement qu'elle vaut &true;,
     comme en C). Cela n'est pas vraiment très utile, à moins que vous
@@ -572,26 +575,19 @@ foreach(array_expression as $key => $value)
    <para>
     <note>
      <para>
-      Bien que le tableau soit <link linkend="language.references">référencé</link>,
-      <literal>foreach</literal> travaille sur une copie
-      du tableau spécifié, et pas sur le tableau lui-même.
-      Par conséquent,
-      le pointeur de tableau n'est pas modifié, comme il le serait
-      avec le fonction <function>each</function>, et les modifications
-      faites dans le tableau ne seront pas prises en compte dans le
-      tableau original. Cependant, le pointeur interne du tableau original
-      <emphasis>est</emphasis> avancé avec le traitement du tableau.
-      En supposant sur la boucle foreach effectue tout le traitement, le pointeur
-      interne du tableau sera à la fin du tableau.
+      A moins que le tableau soit une <link linkend="language.references">référence</link>,
+      <literal>foreach</literal> opère sur une copie du tableau spécifié et non sur le tableau
+      lui-même. <literal>foreach</literal> affecte le pointeur interne du tableau. Ne l'utilisez
+      pas sans le remettre à zéro avant.
      </para>
-     <para>
-      Depuis &php; 5, vous pouvez facilement modifier les éléments d'un tableau
-      en faisant précéder la valeur <literal>$value</literal> avec &amp;.
-      Ceci aura pour effet d'assigner par
-      <link linkend="language.references">référence</link> au lieu de copier
-      la valeur.
-      <informalexample>
-       <programlisting role="php">
+    </note>
+   </para>
+   <para>
+    Depuis &php; 5, vous pouvez modifier facilement les éléments d'un tableau en
+    précédent <literal>$value</literal> d'un &amp;. Ceci assignera une
+    <link linkend="language.references">référence</link> au lieu de copier la valeur.
+    <informalexample>
+     <programlisting role="php">
 <![CDATA[
 <?php
 $arr = array(1, 2, 3, 4);
@@ -599,14 +595,20 @@ foreach ($arr as &$value) {
     $value = $value * 2;
 }
 // $arr vaut maintenant array(2, 4, 6, 8)
+unset($value); // Stop la référence sur le dernier élément
 ?>
 ]]>
        </programlisting>
       </informalexample>
-      Ceci n'est possible que si le tableau itéré peut être réféencé (i.e. est une variable).
+      Ceci n'est possible que si le tableau itéré peut être référencé (i.e. est une variable).
      </para>
-    </note>
-   </para>
+   <warning>
+    <para>
+     La référence de <literal>$value</literal> et le dernier élément du tableau
+     sont conservés après l'exécution de la boucle <literal>foreach</literal>.
+     Il est recommandé de les détruire en utilisant la fonction <function>unset</function>.
+    </para>
+   </warning>
    <para>
     <note>
      <para>
@@ -890,6 +892,12 @@ for ($i = 0; $i < 5; ++$i) {
      souhaitez continuer jusqu'à la prochaine itération de la boucle
      extérieure, vous vous devez utiliser <literal>continue 2</literal>.
     </simpara>
+   </note>
+   <note>
+    <para>
+     Notez que switch/case provoque une
+     <link linkend="types.comparisions-loose">perte de comparaison</link>.
+    </para>
    </note>
    <para>
     Les deux exemples suivants sont deux manières
@@ -1361,10 +1369,10 @@ require ('un_fichier.txt');
     il le peut.
    </simpara>
    <simpara>
-    Les fichiers à inclure sont d'abord recherchés dans le dossier
-    désigné par <option>include_path</option>, relativement au dossier
-    courant, puis dans <option>include_path</option>, relativement au dossier
-    de travail du script. Par exemple, si <option>include_path</option>
+    Les fichiers à inclure sont d'abord recherchés dans chaque dossier de
+    <option>include_path</option>, relativement au dossier
+    courant, puis dans le dossier de travail du script. Par exemple, si
+    <option>include_path</option>
     est <literal>.</literal>, que le dossier de travail est
     <filename class="directory">/www/</filename>, et que vous incluez le fichier
     <filename>include/a.php</filename> et qu'il y a une instruction
@@ -1373,8 +1381,7 @@ require ('un_fichier.txt');
     <filename class="directory">/www/libraries/</filename>, puis dans
     <filename class="directory">/www/include/</filename>.
     Si le nom du fichier commence par <literal>./</literal> ou <literal>../</literal>,
-    il est cherché uniquement dans l'<option>include_path</option> relatif au dossier
-    courant d'exécution.
+    il est cherché uniquement dans le dossier courant d'exécution.
    </simpara>
    <simpara>
     Lorsqu'un fichier est inclus, le code le composant hérite de la
@@ -1416,6 +1423,9 @@ echo "Une $couleur $fruit"; // Une verte pomme
     Si l'inclusion intervient à l'intérieure d'une fonction,
     le code inclus sera alors considéré comme faisant partie de la
     fonction. Cela modifie donc le contexte de variables accessibles.
+    Une exception à cette règle : les <link
+    linkend="language.constants.predefined">constantes magiques</link> sont analysées
+    par l'analyseur avant que l'inclusion n'intervienne.
    </simpara>
    <para>
     <example>
@@ -1615,14 +1625,14 @@ echo $bar; // affiche 1
     S'il y a des fonctions de définies dans le fichier inclus, elles peuvent être
     utilisées dans le fichier principal si elles sont avant le <function>return</function>
     ou après. Si le fichier est inclus deux fois, &php; 5 enverra une erreur fatale car
-    les fonctions seront déjà déclarées, tandis que &php; 4 ne se plaindra pas 
+    les fonctions seront déjà déclarées, tandis que &php; 4 ne se plaindra pas
     des fonctions définies après <function>return</function>.
     Il est recommandé d'utiliser <function>include_once</function> au lieu de vérifier
     si le fichier a déjà été inclus et donc de retourner conditonnellement l'inclusion du fichier.
    </para>
    <simpara>
     Une autre façon d'inclure un fichier &php; dans une variable est de capturer
-    la sortie en utilisant les fonctions de <link linkend="ref.outcontrol">contrôle de sortie 
+    la sortie en utilisant les fonctions de <link linkend="ref.outcontrol">contrôle de sortie
     </link> avec <function>include</function>. Par exemple :
    </simpara>
    <para>
@@ -1651,7 +1661,7 @@ function get_include_contents($filename) {
    </para>
    <para>
     Pour automatiquement inclure des fichiers dans vos scripts, voyez également
-    les options de configuration 
+    les options de configuration
     <link linkend="ini.auto-prepend-file">auto_prepend_file</link> et
     <link linkend="ini.auto-append-file">auto_append_file</link>
     du &php.ini;.
@@ -1717,8 +1727,8 @@ function get_include_contents($filename) {
        <title><function>require_once</function> est insensible à la casse sur Windows</title>
        <programlisting role="php">
 <![CDATA[
-require_once("a.php"); // ceci inclut le fichier a.php
-require_once("A.php"); // ceci inclut encore le fichier a.php sous Windows! (uniquement en PHP 4)
+require_once "a.php"; // ceci inclut le fichier a.php
+require_once "A.php"; // ceci inclut encore le fichier a.php sous Windows! (uniquement en PHP 4)
 ]]>
        </programlisting>
       </example>
@@ -1791,8 +1801,8 @@ require_once("A.php"); // ceci inclut encore le fichier a.php sous Windows! (uni
        <programlisting role="php">
 <![CDATA[
 <?php
-include_once("a.php"); // ceci inclut le fichier a.php
-include_once("A.php"); // ceci inclut encore le fichier a.php sous Windows! (uniquement en PHP 4)
+include_once "a.php"; // ceci inclut le fichier a.php
+include_once "A.php"; // ceci inclut encore le fichier a.php sous Windows! (uniquement en PHP 4)
 ?>
 ]]>
        </programlisting>
