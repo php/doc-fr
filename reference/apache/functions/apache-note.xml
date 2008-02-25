@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.14 $ -->
-<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.15 $ -->
+<!-- EN-Revision: 1.7 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.apache-note" xmlns="http://docbook.org/ns/docbook">
@@ -17,10 +17,13 @@
    <methodparam choice="opt"><type>string</type><parameter>note_value</parameter></methodparam>
   </methodsynopsis>
   <para>
-   <function>apache_note</function> est une fonction
-   spécifique au serveur Apache. Cette fonction affecte ou renvoie
-   la valeur de la variable contenue dans la table <literal>notes</literal>
-   d'Apache.
+   Cette fonction est une abstraction des commandes <literal>table_get</literal> et
+   <literal>table_set</literal> d'Apache. Elle édite la table des notes qui existe lors d'une
+   demande. Le but de cette table est de permettre aux modules Apache de communiquer.
+  </para>
+  <para>
+   L'utilité de la fonction <function>apache_note</function> est de passer des informations
+   d'un module vers un autre, durant la même demande.
   </para>
  </refsect1>
 
@@ -58,6 +61,70 @@
    la valeur <parameter>note_value</parameter> et <function>apache_note</function>
    retournera la valeur précédente de la variable <parameter>note_name</parameter>.
    Si la note ne peut être récupérée, &false; est retourné.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Passage d'informations entre &php; et Perl</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+apache_note('name', 'Fredrik Ekengren');
+
+// Appel du script Perl
+virtual("/perl/some_script.pl");
+
+$result = apache_note("resultdata");
+?>
+]]>
+    </programlisting>
+    <programlisting role="perl">
+<![CDATA[
+# Récupération de l'objet de demande Apache
+my $r = Apache->request()->main();
+
+# Récupération des données passées
+my $name = $r->notes('name');
+
+# Des traitements
+
+# Envoi du résultat vers PHP
+$r->notes('resultdata', $result);
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Valeurs d'identification dans le fichier access.log</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+apache_note('sessionID', session_id());
+
+?>
+]]>
+    </programlisting>
+    <programlisting role="apache">
+<![CDATA[
+# "%{sessionID}n" peut être utilisé dans la directive LogFormat
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>virtual</function></member>
+   </simplelist>
   </para>
  </refsect1>
 </refentry>
