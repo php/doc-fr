@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.24 $ -->
-<!-- EN-Revision: 1.21 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.25 $ -->
+<!-- EN-Revision: 1.25 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
  <sect1 xml:id="language.oop5.overloading" xmlns="http://docbook.org/ns/docbook">
@@ -11,8 +11,6 @@
    et <function>__set</function>. Ces méthodes ne seront
    déclenchées que si votre objet, hérité ou non, ne contient pas
    le membre <modifier>public</modifier> ou la méthode auquel vous tentez d'accéder.
-   Toutes les méthodes surchargées ne doivent pas être définies en
-   tant que <link linkend="language.oop5.static">static</link>.
    Toutes les méthodes surchargées doivent être définies en tant que
    <link linkend="language.oop5.visibility">public</link>.
   </para>
@@ -21,6 +19,10 @@
    <function>isset</function> et <function>unset</function> via, respectivement,
    les méthodes __isset et __unset.
    La méthode __isset est également appelée avec la fonction <function>empty</function>.
+  </para>
+  <para>
+   &php; 5.3.0 ajoute la possibilité de surcharger les méthodes
+   <link linkend="language.oop5.static">statiques</link> via __callStatic.
   </para>
 
   <sect2 xml:id="language.oop5.overloading.members">
@@ -176,17 +178,22 @@ object(Setter)#1 (2) {
     <methodparam><type>string</type><parameter>name</parameter></methodparam>
     <methodparam><type>array</type><parameter>arguments</parameter></methodparam>
    </methodsynopsis>
+   <methodsynopsis>
+    <type>mixed</type><methodname>__callStatic</methodname>
+    <methodparam><type>string</type><parameter>name</parameter></methodparam>
+    <methodparam><type>array</type><parameter>arguments</parameter></methodparam>
+   </methodsynopsis>
 
    <para>
-    La méthode magique <function>__call</function> permet la capture
-    des appels à des méthodes inexistantes. De cette façon,
-    <function>__call</function> peut être utilisée pour implémenter
-    un gestionnaire de méthodes défini par l'utilisateur qui dépend du nom de
+    Les méthodes magiques <function>__call</function> et <function>__callStatic</function>
+    permet la capture des appels à des méthodes inexistantes. De cette façon,
+    ces méthodes peuvent être utilisées pour implémenter un gestionnaire de
+    méthodes défini par l'utilisateur qui dépend du nom de
     la méthode réellement appelée. Ceci est particulièrement pratique
     pour implémenter une classe proxy, par exemple. Les arguments qui sont passés
     à la fonction devront être définis dans un tableau via le paramètre
-    <varname>$arguments</varname>. La valeur retournée par la méthode
-    <function>__call</function> sera retournée à la méthode appelante.
+    <varname>$arguments</varname>. La valeur retournée par ces méthodes
+    sera retournée à la méthode appelante.
    </para>
 
    <example>
@@ -196,18 +203,18 @@ object(Setter)#1 (2) {
 <?php
 class Caller
 {
-  private $x = array(1, 2, 3);
+  private $x = array(10, 20);
 
   public function __call($m, $a)
   {
-    print "Méthode $m appelée :\n";
+    print "Méthode instanciée $m appelée :\n";
     var_dump($a);
     return $this->x;
   }
 }
 
 $foo = new Caller();
-$a = $foo->test(1, "2", 3.4, true);
+$a = $foo->test('a','b');
 var_dump($a);
 ?>
 ]]>
@@ -216,24 +223,61 @@ var_dump($a);
     <screen role="php">
 <![CDATA[
 
-Méthode test appelée :
-array(4) {
+Méthode instanciée test appelée :
+array(2) {
   [0]=>
-  int(1)
+  string(1) "a"
   [1]=>
-  string(1) "2"
-  [2]=>
-  float(3.4)
-  [3]=>
-  bool(true)
+  string(1) "b"
 }
-array(3) {
+array(2) {
   [0]=>
-  int(1)
+  int(10)
   [1]=>
-  int(2)
-  [2]=>
-  int(3)
+  int(20)
+}
+]]>
+    </screen>
+   </example>
+
+   <example>
+    <title>Exemple de méthodes instanciées et surchargées avec __call</title>
+    <programlisting role="php">
+  <![CDATA[
+<?php
+class Caller
+{
+    private static $x = array(10, 20);
+
+    public static function __callStatic($m, $a)
+    {
+        print "Méthode statique '$m' appelée :\n";
+        var_dump($a);
+        return self::$x;
+    }
+}
+
+$a = Caller::test('a', 'b');
+var_dump($a);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen role="php">
+<![CDATA[
+
+Méthode statique 'test' appelée :
+array(2) {
+  [0]=>
+  string(1) "a"
+  [1]=>
+  string(1) "b"
+}
+array(2) {
+  [0]=>
+  int(10)
+  [1]=>
+  int(20)
 }
 ]]>
     </screen>
