@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.16 $ -->
-<!-- EN-Revision: 1.15 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.17 $ -->
+<!-- EN-Revision: 1.20 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.getopt" xmlns="http://docbook.org/ns/docbook">
@@ -14,11 +14,10 @@
   <methodsynopsis>
    <type>array</type><methodname>getopt</methodname>
    <methodparam><type>string</type><parameter>options</parameter></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>longopts</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Retourne un tableau associatif avec la liste des paires option/valeur, lues
-   dans la ligne de commande, et basée sur le format d'option
-   <parameter>options</parameter> ou bien &false; si une erreur survient.
+   Lit les options passées dans la ligne de commande.
   </para>
  </refsect1>
 
@@ -29,49 +28,232 @@
     <varlistentry>
      <term><parameter>options</parameter></term>
      <listitem>
-      <para>
-       Le paramètre <parameter>options</parameter> peut contenir les éléments
-       suivants : caractères ou caractères suivis d'un signe deux-points pour
-       indiquer un élément optionnel. Par exemple, une option appelée
-       <literal>x</literal> correspond à une option <literal>-x</literal>,
-       et une chaîne <literal>x:</literal> correspond à une option de type
-       <literal>-x argument</literal>. Cela importe peut si un argument a des
-       espaces auparavant.
-      </para>
+      <simpara>
+       Chaque caractère dans cette chaîne sera utilisé en tant que caractères
+       optionnels et devra correspondre aux options passées, commençant
+       par un tiret simple (<literal>-</literal>).
+      </simpara>
+      <simpara>
+       Par exemple, une chaîne optionnelle <literal>"x"</literal> correspondra
+       à l'option <literal>-x</literal>.
+      </simpara>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>longopts</parameter></term>
+     <listitem>
+      <simpara>
+       Un tableau d'options. Chaque élément de ce tableau sera utilisé comme
+       option et devra correspondre aux options passées, commençant par un
+       tiret double (<literal>--</literal>).
+      </simpara>
+      <simpara>
+       Par exemple, un élément longopts <literal>"opt"</literal> correspondra
+       à l'option <literal>--opt</literal>.
+      </simpara>
+      <note>
+       <simpara>
+        Avant &php; 5.3.0, ce paramètre n'était disponible que sous peu de systèmes.
+       </simpara>
+      </note>
      </listitem>
     </varlistentry>
    </variablelist>
   </para>
+  <para>
+   Le paramètre <parameter>options</parameter> peut contenir les éléments suivants :
+   <simplelist>
+    <member>Caractères individuels (n'accepte pas de valeur)</member>
+    <member>Caractères suivis par un double-points (le paramètre nécessite une valeur)</member>
+    <member>Caractères suivis par deux double-points (valeur optionnelle)</member>
+   </simplelist>
+   Les valeurs optionnelles sont les premiers arguments après la chaîne. Peut importe
+   que la valeur soit suivie d'un espace ou non.
+   <note>
+    <simpara>
+     Les valeurs optionnelles n'acceptent pas l'espace comme séparateur.
+    </simpara>
+   </note>
+  </para>
+  <note>
+   <para>
+    Le format des paramètres <parameter>options</parameter> et
+    <parameter>longopts</parameter> est identique ; la seule différence est
+    que <parameter>longopts</parameter> prend un tableau en option (où chaque élément
+    est une option) alors que <parameter>options</parameter> prend une chaîne
+    (où chaque caractère est une option).
+   </para>
+  </note>
  </refsect1>
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne un tableau de paire option / argument. Si une option n'a
-   pas d'argument, la valeur sera définie à &false;.
+   Cette fonction retourne un tableau d'options/arguments, ou &false;
+   si une erreur survient.
+  </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>5.3.0</entry>
+       <entry>
+        Ajout du support de "=" comme séparateur argument/valeur.
+       </entry>
+      </row>
+      <row>
+       <entry>5.3.0</entry>
+       <entry>
+        Ajout du support des valeurs optionnelles (spécifié par "::").
+       </entry>
+      </row>
+      <row>
+       <entry>5.3.0</entry>
+       <entry>
+        Cette fonction n'est plus dépendante du système et fonctionne maintenant
+        également sous Windows.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
   </para>
  </refsect1>
 
  <refsect1 role="examples">
   &reftitle.examples;
   <para>
-   <example>
+   <example xml:id="getopt.examples-1">
     <title>Exemple avec <function>getopt</function></title>
     <programlisting role="php">
 <![CDATA[
 <?php
-// Analyse la ligne de commande (i.e. $GLOBALS['argv'])
 $options = getopt("f:hp:");
+var_dump($options);
 ?>
 ]]>
     </programlisting>
+    <para>
+     L'exécution du script ci-dessus avec la commande
+     <literal>php script.php -fvalue -h</literal> affichera :
+    </para>
+    <screen>
+<![CDATA[
+array(2) {
+  ["f"]=>
+  string(5) "value"
+  ["h"]=>
+  bool(false)
+}
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   <example xml:id="getopt.examples-2">
+    <title>Second exemple avec <function>getopt</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$shortopts  = "";
+$shortopts .= "f:";  // Valeur requise
+$shortopts .= "v::"; // Valeur optionnelle
+$shortopts .= "abc"; // Ces options n'acceptent pas de valeur
+
+$longopts  = array(
+    "required:",     // Valeur requise
+    "optional::",    // Valeur optionnelle
+    "option",        // Aucune valeur
+    "opt",           // Aucune valeur
+);
+$options = getopt($shortopts, $longopts);
+var_dump($options);
+?>
+]]>
+    </programlisting>
+    <para>
+     L'exécution du script ci-dessus avec la commande
+     <literal>php script.php -f "value for f" -v
+     -a --required value --optional="optional value" --option</literal>
+     affichera :
+    </para>
+    <screen>
+<![CDATA[
+array(6) {
+  ["f"]=>
+  string(11) "value for f"
+  ["v"]=>
+  bool(false)
+  ["a"]=>
+  bool(false)
+  ["required"]=>
+  string(5) "value"
+  ["optional"]=>
+  string(14) "optional value"
+  ["option"]=>
+  bool(false)
+}
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   <example xml:id="getopt.examples-3">
+    <title>Troisième exemple avec <function>getopt</function></title>
+    <para>Passage de plusieurs options</para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$options = getopt("abc");
+var_dump($options);
+?>
+]]>
+    </programlisting>
+    <para>
+     L'exécution du script ci-dessus avec la commande
+     <literal>php script.php -aaac</literal>
+     affichera :
+    </para>
+    <screen>
+<![CDATA[
+array(2) {
+  ["a"]=>
+  array(3) {
+    [0]=>
+    bool(false)
+    [1]=>
+    bool(false)
+    [2]=>
+    bool(false)
+  }
+  ["c"]=>
+  bool(false)
+}
+]]>
+    </screen>
    </example>
   </para>
  </refsect1>
 
  <refsect1 role="notes">
   &reftitle.notes;
-  &note.no-windows;
+  <note>
+   <para>
+    L'option <link linkend="ini.register-argc-argv">register_argc_argv</link>
+    doit être activé pour que cette fonction soit disponible.
+   </para>
+  </note>
  </refsect1>
 
 </refentry>
