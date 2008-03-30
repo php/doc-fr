@@ -1,10 +1,10 @@
 <?xml version='1.0' encoding='iso-8859-1'?>
-<!-- $Revision: 1.3 $ -->
-<!-- EN-Revision: 1.4 Maintainer: jsgoupil Status: ready -->
+<!-- $Revision: 1.4 $ -->
+<!-- EN-Revision: 1.8 Maintainer: jsgoupil Status: ready -->
 <!-- Reviewed: no -->
 <refentry xml:id="function.PDO-sqliteCreateAggregate" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
-  <refname>PDO::sqliteCreateAggregate</refname>
+  <refname>PDO->sqliteCreateAggregate()</refname>
   <refpurpose>
    Référence une fonction définie par l'utilisateur agrégative pour une utilisation dans les requêtes SQL
   </refpurpose>
@@ -12,31 +12,26 @@
 
  <refsect1 role="description">
   &reftitle.description;
-  <methodsynopsis>
-   <type>bool</type><methodname>PDO::sqliteCreateAggregate</methodname>
-   <methodparam><type>string</type><parameter>function_name</parameter></methodparam>
-   <methodparam><type>callback</type><parameter>step_func</parameter></methodparam>
-   <methodparam><type>callback</type><parameter>finalize_func</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>num_args</parameter></methodparam>
-  </methodsynopsis>
+  <classsynopsis>
+   <ooclass><classname>PDO</classname></ooclass>
+   <methodsynopsis>
+    <type>bool</type><methodname>sqliteCreateAggregate</methodname>
+    <methodparam><type>string</type><parameter>function_name</parameter></methodparam>
+    <methodparam><type>callback</type><parameter>step_func</parameter></methodparam>
+    <methodparam><type>callback</type><parameter>finalize_func</parameter></methodparam>
+    <methodparam choice="opt"><type>int</type><parameter>num_args</parameter></methodparam>
+   </methodsynopsis>
+  </classsynopsis>
   &warn.experimental.func;
   <para>
-   <function>PDO::sqliteCreateAggregate</function> est similaire à
-   <function>PDO::sqliteCreateFunction</function> à l'exception qu'elle
-   référence les fonctions qui peuvent être utilisés pour calculer un résultat
-   agrégé à travers toutes les lignes d'une requête.
+   Cette méthode est similaire à <xref linkend="function.PDO-sqliteCreateFunction"
+   /> à l'exception qu'elle référence les fonctions qui peuvent être utilisées pour calculer un 
+   résultat agrégé à travers toutes les lignes d'une requête.
   </para>
   <para>
-   La différence entre cette fonction et
-   <function>PDO::sqliteCreateFunction</function> est que deux fonctions sont
-   requises pour gérer les agrégation ; <parameter>step_func</parameter> est
-   appelée pour chaque ligne du jeu de résultats. Votre fonction &php;
-   devrait accumuler les résultats et les enregistrer dans un contexte
-   agrégatif. Une fois que toutes les lignes ont été traitées,
-   <parameter>finalize_func</parameter> sera appelée et elle devrait alors
-   prendre les données du contexte agrégatif et retourner le résultat. Les
-   fonctions de rappel devraient retourner un type connu par SQLite
-   (c'est-à-dire <link linkend="language.types.intro">type scalaire</link>).
+   La différence entre cette méthode  et <xref
+   linkend="function.PDO-sqliteCreateFunction" /> est que deux fonctions sont
+   requises pour gérer les agrégation.
   </para>
  </refsect1>
 
@@ -48,7 +43,7 @@
      <term><parameter>function_name</parameter></term>
      <listitem>
       <para>
-       Le nom de la fonction utilisé dans les requêtes SQL.
+       Le nom de la fonction utilisée dans les requêtes SQL.
       </para>
      </listitem>
     </varlistentry>
@@ -56,7 +51,29 @@
      <term><parameter>step_func</parameter></term>
      <listitem>
       <para>
-       Fonction de rappel appelée pour chaque ligne dans le jeu de résultats.
+       Fonction de rappel appelée pour chaque ligne dans le jeu de résultats. Votre
+       fonction &php; devrait accumuler le résultat et stocker son contexte d'agrégation.
+       context.
+      </para>
+      <para>
+       Cette fonction doit être définie comme :
+       <methodsynopsis>
+        <methodname><replaceable>step</replaceable></methodname>
+        <methodparam><type>mixed</type><parameter>context</parameter></methodparam>
+        <methodparam><type>int</type><parameter>rownumber</parameter></methodparam>
+        <methodparam><type>mixed</type><parameter>value1</parameter></methodparam>
+        <methodparam choice="opt"><type>mixed</type><parameter>value2</parameter></methodparam>
+        <methodparam choice="opt"><type>mixed</type><parameter>..</parameter></methodparam>
+       </methodsynopsis>
+      </para>
+      <para>
+       <varname>context</varname> vaudra &null; pour la première ligne; pour les lignes suivantes,
+       il vaudra la même valeur que celle  précédemment retournée par la fonction step; vous devriez
+       l'utiliser pour maintenir l'état d'agrégation.
+       state.
+      </para>
+      <para>
+       <varname>rownumber</varname> contiendra le nombre de lignes.
       </para>
      </listitem>
     </varlistentry>
@@ -65,6 +82,31 @@
      <listitem>
       <para>
        Fonction de rappel pour agréger les "étapes" de données de chaque ligne.
+       Une fois que toutes les lignes ont été traitées, la fonction sera appelée,
+       prendra les données du contexte d'agrégation et retournera le résultat. La fonction de
+       rappel retournera une type  compris 
+       par SQLite (càd <link 
+       linkend="language.types.intro"> un type scalaire</link>).
+      </para>
+      <para>
+       Cette fonction doit être définie comme :
+       <methodsynopsis>
+        <methodname><replaceable>fini</replaceable></methodname>
+        <methodparam><type>mixed</type><parameter>context</parameter></methodparam>
+        <methodparam><type>int</type><parameter>rownumber</parameter></methodparam>
+       </methodsynopsis>
+      </para>
+      <para>
+       <varname>context</varname> contiendra la valeur de retour du tout dernier appel à
+       la fonction step.
+      </para>
+      <para>
+       <varname>rownumber</varname> contiendra le nombre de lignes sur lesquelles l'agrégation a
+       eu lieu.
+      </para>
+      <para>
+       La valeur de retour de cette fonction sera utilisée comme valeur de retour pour
+       l'agrégation.
       </para>
      </listitem>
     </varlistentry>
@@ -78,6 +120,13 @@
      </listitem>
     </varlistentry>
    </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   &return.success;
   </para>
  </refsect1>
 
@@ -109,14 +158,14 @@ foreach ($data as $str) {
 }
 $insert = null;
 
-function max_len_step(&$context, $string) 
+function max_len_step(&$context, $rownumber, $string) 
 {
     if (strlen($string) > $context) {
         $context = strlen($string);
     }
 }
 
-function max_len_finalize(&$context) 
+function max_len_finalize(&$context, $rownumber) 
 {
     return $context;
 }
@@ -161,8 +210,8 @@ var_dump($db->query('SELECT max_len(a) from strings')->fetchAll());
   </tip>
   <tip>
    <para>
-    Vous pouvez utiliser <function>PDO::sqliteCreateFunction</function> et
-    <function>PDO::sqliteCreateAggregate</function> pour surcharger les
+    Vous pouvez utiliser <xref linkend="function.PDO-sqliteCreateFunction" /> et
+    <xref linkend="function.PDO-sqliteCreateAggregate" /> pour surcharger les
     fonctions natives de SQLite.
    </para>
   </tip>
@@ -180,7 +229,7 @@ var_dump($db->query('SELECT max_len(a) from strings')->fetchAll());
   &reftitle.seealso;
   <para>
    <simplelist>
-    <member><function>PDO::sqliteCreateFunction</function></member>
+    <member><xref linkend="function.PDO-sqliteCreateFunction" /></member>
     <member><function>sqlite_create_function</function></member>
     <member><function>sqlite_create_aggregate</function></member>
    </simplelist>
