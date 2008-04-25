@@ -1,120 +1,188 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.14 $ -->
-<!-- EN-Revision: 1.8 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.15 $ -->
+<!-- EN-Revision: 1.11 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
-  <refentry xml:id="function.msg-receive" xmlns="http://docbook.org/ns/docbook">
-   <refnamediv>
-    <refname>msg_receive</refname>
-    <refpurpose>
-     Reçoit un message depuis une file de messages
-    </refpurpose>
-   </refnamediv>
-   <refsect1>
-    &reftitle.description;
-    <methodsynopsis>
-     <type>bool</type><methodname>msg_receive</methodname>
-     <methodparam><type>resource</type><parameter>queue</parameter></methodparam>
-     <methodparam><type>int</type><parameter>desiredmsgtype</parameter></methodparam>
-     <methodparam><type>int</type><parameter role="reference">msgtype</parameter></methodparam>
-     <methodparam><type>int</type><parameter>maxsize</parameter></methodparam>
-     <methodparam><type>mixed</type><parameter role="reference">message</parameter></methodparam>
-     <methodparam choice="opt"><type>bool</type><parameter>unserialize</parameter></methodparam>
-     <methodparam choice="opt"><type>int</type><parameter>flags</parameter></methodparam>
-     <methodparam choice="opt"><type>int</type><parameter role="reference">errorcode</parameter></methodparam>
-    </methodsynopsis>
-    <para>
-     <function>msg_receive</function> reçoit le premier message de la
-     file <parameter>queue</parameter>, type spécifié par
-     <parameter>desiredmsgtype</parameter>.
-     Le type de message qui a été reçu sera stocké dans le paramètre
-     <parameter>msgtype</parameter>.
-     La taille maximale de message est fixée par 
-     <parameter>maxsize</parameter> ; si le message de la file est plus grand
-     que cette taille, la fonction échouera (à moins que vous
-     n'utilisiez une option <parameter>flags</parameter>, décrite ci-dessous).
-     Le message reçu sera stocké dans le paramètre <parameter>message</parameter>,
-     à moins qu'il n'y ait eu des erreurs de réception du message, auquel cas le paramètre
-     optionnel <parameter>errorcode</parameter> se verra assigner le numéro
-     d'erreur.
-    </para>
-    <para>
-     Si <parameter>desiredmsgtype</parameter> vaut 0, le premier message
-     de la file est retourné. Si <parameter>desiredmsgtype</parameter> vaut
-     plus que 0, alors le premier message de ce type sera retourné.
-     Si <parameter>desiredmsgtype</parameter> vaut moins que 0, le premier
-     message de la file ayant un type inférieur ou égaql à la valeur absolue
-     de <parameter>desiredmsgtype</parameter> sera retourné. Si aucun message
-     ne correspond aux critères, votre script attendra la venue d'un tel
-     message dans la file. Vous pouvez éviter ce bloquage en précisant l'option
-     <constant>MSG_IPC_NOWAIT</constant> dans le paramètre
-     <parameter>flags</parameter>.
-    </para>
-    <para>
-     <parameter>unserialize</parameter> vaut par défaut &true; ; quand c'est
-     le cas, le message est traité comme s'il avait été linéarisé avec le
-     même mécanisme que le module de session. Le message sera alors
-     délinéarisé, puis retourné au script. Cela vous permettra de recevoir
-     facilement des tableaux ou des objets complexes dans votre script, émis
-     par d'autres scripts &php;. Si <parameter>unserialize</parameter> vaut &false;, 
-     le message sera retourné intact, et sans modifier les valeurs binaires.
-    </para>
-    <para>
-     Le paramètre <parameter>flags</parameter> permet de passer des options
-     pour configurer les appels msgrcv. Par défaut, il vaut 0, mais vous pouvez
-     spécifier une ou plusieurs options en les combinant avec l'opérateur OR).
-     <table>
-      <title>Iptions de la fonction <function>msg_receive</function></title>
-      <tgroup cols="2">
-       <tbody>
-        <row>
-         <entry><constant>MSG_IPC_NOWAIT</constant></entry> 
-         <entry>S'il n'y a pas de message du type
-          <parameter>desiredmsgtype</parameter>, retourne immédiatement,
-          et n'attend pas. La fonction échouera et retournera un entier
-          correspondant à <constant>MSG_ENOMSG</constant>.
-         </entry>
-        </row>
-        <row>
-         <entry><constant>MSG_EXCEPT</constant></entry>
-         <entry>En utilisant cette option en combinaison avec
-         un type <parameter>desiredmsgtype</parameter> supérieur à 0, la 
-         fonction va lire le premier message qui n'est pas
-         du type demandé par <parameter>desiredmsgtype</parameter>.
-        </entry>
-        </row>
-        <row>
-         <entry><constant>MSG_NOERROR</constant></entry> 
-         <entry>
-          Si le message est plus grand que <parameter>maxsize</parameter>,
-          cette option va tronquer le message à la taille de
-          <parameter>maxsize</parameter> et ne signalera pas d'erreur.
-         </entry>
-        </row>
-       </tbody>
-      </tgroup>
-     </table>
-    </para>
-    <para>
-     Lors de la réception réussie d'un message, la file est mise à jour 
-     comme ceci : <literal>msg_lrpid</literal> prend la valeur de l'identifiant 
-     de processus du processus appelant, <literal>msg_qnum</literal> est décrementé de 
-     1 et <literal>msg_rtime</literal> prend la date et l'heure courante.
-    </para>
-    <para>
-     <function>msg_receive</function> retourne &true; en cas de succès et &false; 
-     en cas d'échec. Si la fonction échoue, le paramètre optionnel 
-     <parameter>errorcode</parameter> contiendra le numéro d'erreur rencontré.
-    </para>
-    <para>
-     Voir aussi
-     <function>msg_remove_queue</function>,
-     <function>msg_send</function>,
-     <function>msg_stat_queue</function> et
-     <function>msg_set_queue</function>.
-    </para>
-   </refsect1>
-  </refentry>
+<refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.msg-receive">
+ <refnamediv>
+  <refname>msg_receive</refname>
+  <refpurpose>Reçoit un message depuis une file de messages</refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>bool</type><methodname>msg_receive</methodname>
+   <methodparam><type>resource</type><parameter>queue</parameter></methodparam>
+   <methodparam><type>int</type><parameter>desiredmsgtype</parameter></methodparam>
+   <methodparam><type>int</type><parameter role="reference">msgtype</parameter></methodparam>
+   <methodparam><type>int</type><parameter>maxsize</parameter></methodparam>
+   <methodparam><type>mixed</type><parameter role="reference">message</parameter></methodparam>
+   <methodparam choice="opt"><type>bool</type><parameter>unserialize</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>flags</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter role="reference">errorcode</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   <function>msg_receive</function> reçoit le premier message de la
+   file <parameter>queue</parameter>, type spécifié par
+   <parameter>desiredmsgtype</parameter>.
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>queue</parameter></term>
+     <listitem>
+      <para>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>desiredmsgtype</parameter></term>
+     <listitem>
+      <para>
+       Si <parameter>desiredmsgtype</parameter> vaut 0, le premier message
+       de la file est retourné. Si <parameter>desiredmsgtype</parameter> vaut
+       plus que 0, alors le premier message de ce type sera retourné.
+       Si <parameter>desiredmsgtype</parameter> vaut moins que 0, le premier
+       message de la file ayant un type inférieur ou égaql à la valeur absolue
+       de <parameter>desiredmsgtype</parameter> sera retourné. Si aucun message
+       ne correspond aux critères, votre script attendra la venue d'un tel
+       message dans la file. Vous pouvez éviter ce bloquage en précisant l'option
+       <constant>MSG_IPC_NOWAIT</constant> dans le paramètre
+       <parameter>flags</parameter>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>msgtype</parameter></term>
+     <listitem>
+      <para>
+       Le type de message qui a été reçu sera stocké dans ce paramètre.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>maxsize</parameter></term>
+     <listitem>
+      <para>
+       La taille maximale de message est fixée par
+       <parameter>maxsize</parameter> ; si le message de la file est plus grand
+       que cette taille, la fonction échouera (à moins que vous
+       n'utilisiez une option <parameter>flags</parameter>, décrite ci-dessous).
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>message</parameter></term>
+     <listitem>
+      <para>
+       Le message reçu sera stocké dans le paramètre <parameter>message</parameter>,
+       à moins qu'il n'y ait eu des erreurs de réception du message.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>unserialize</parameter></term>
+     <listitem>
+      <para>
+       <parameter>unserialize</parameter> vaut par défaut &true; ; quand c'est
+       le cas, le message est traité comme s'il avait été linéarisé avec le
+       même mécanisme que le module de session. Le message sera alors
+       délinéarisé, puis retourné au script. Cela vous permettra de recevoir
+       facilement des tableaux ou des objets complexes dans votre script, émis
+       par d'autres scripts &php;, ou, si vous utilisez WDDX, depuis n'importe
+       quelle source compatible WDDX.
+      </para>
+      <para>
+       Si <parameter>unserialize</parameter> vaut &false;,
+       le message sera retourné intact, et sans modifier les valeurs binaires.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>flags</parameter></term>
+     <listitem>
+      <para>
+       Le paramètre <parameter>flags</parameter> permet de passer des options
+       pour configurer les appels msgrcv. Par défaut, il vaut 0, mais vous pouvez
+       spécifier une ou plusieurs options en les combinant avec l'opérateur OR).
+       <table>
+        <title>Options de la fonction <function>msg_receive</function></title>
+        <tgroup cols="2">
+         <tbody>
+          <row>
+           <entry><constant>MSG_IPC_NOWAIT</constant></entry>
+           <entry>S'il n'y a pas de message du type
+            <parameter>desiredmsgtype</parameter>, retourne immédiatement,
+            et n'attend pas. La fonction échouera et retournera un entier
+            correspondant à <constant>MSG_ENOMSG</constant>.
+           </entry>
+          </row>
+          <row>
+           <entry><constant>MSG_EXCEPT</constant></entry>
+           <entry>En utilisant cette option en combinaison avec
+           un type <parameter>desiredmsgtype</parameter> supérieur à 0, la 
+           fonction va lire le premier message qui n'est pas
+           du type demandé par <parameter>desiredmsgtype</parameter>.</entry>
+          </row>
+          <row>
+           <entry><constant>MSG_NOERROR</constant></entry>
+           <entry>
+            Si le message est plus grand que <parameter>maxsize</parameter>,
+            cette option va tronquer le message à la taille de
+            <parameter>maxsize</parameter> et ne signalera pas d'erreur.
+           </entry>
+          </row>
+         </tbody>
+        </tgroup>
+       </table>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>errorcode</parameter></term>
+     <listitem>
+      <para>
+       Si la fonction échoue, le paramètre optionnel
+       <parameter>errorcode</parameter> sera définit à la valeur
+       de la variable système errno.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   &return.success;
+  </para>
+  <para>
+   Lors de la réception réussie d'un message, la file est mise à jour
+   comme ceci : <literal>msg_lrpid</literal> prend la valeur de l'identifiant
+   de processus du processus appelant, <literal>msg_qnum</literal> est décrementé de
+   1 et <literal>msg_rtime</literal> prend la date et l'heure courante.
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>msg_remove_queue</function></member>
+    <member><function>msg_send</function></member>
+    <member><function>msg_stat_queue</function></member>
+    <member><function>msg_set_queue</function></member>
+   </simplelist>
+  </para>
+ </refsect1>
+
+</refentry>
 
 <!-- Keep this comment at the end of the file
 Local variables:
