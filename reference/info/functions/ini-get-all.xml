@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.13 $ -->
-<!-- EN-Revision: 1.11 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.14 $ -->
+<!-- EN-Revision: 1.12 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.ini-get-all" xmlns="http://docbook.org/ns/docbook">
@@ -14,6 +14,7 @@
   <methodsynopsis>
    <type>array</type><methodname>ini_get_all</methodname>
    <methodparam choice="opt"><type>string</type><parameter>extension</parameter></methodparam>
+   <methodparam choice="opt"><type>bool</type><parameter>details</parameter></methodparam>
   </methodsynopsis>
   <para>
    Lit toutes les valeurs de configuration.
@@ -33,6 +34,15 @@
       </para>
      </listitem>
     </varlistentry>
+    <varlistentry>
+     <term><parameter>details</parameter></term>
+     <listitem>
+      <para>
+       Récupère les détails, ou uniquement la valeur courante de chaque
+       configuration. Par défaut, vaut &true; (récupère les détails).
+      </para>
+     </listitem>
+    </varlistentry>
    </variablelist>
   </para>
  </refsect1>
@@ -40,19 +50,54 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne un tableau associatif en utilisant les noms des directives comme index,
-   et <literal>global_value</literal> (configuré dans &php.ini;), <literal>local_value</literal>
-   (configuré via <function>ini_set</function> ou &htaccess;), et
-   <literal>access</literal> (le niveau d'accès) comme valeurs. Voyez le manuel sur les
-   <link linkend="configuration.changes">changements de configuration</link>
-   pour plus d'informations sur les niveaux d'accès.
+   Retourne un tableau associatif dont les clés sont les noms des
+   directives.
+  </para>
+  <para>
+   Lorsque le paramètre <parameter>details</parameter> vaut &true; (défaut),
+   le tableau contiendra les valeurs <literal>global_value</literal> (définies dans
+   le fichier &php.ini;), <literal>local_value</literal> (définie éventuellement
+   avec la fonction <function>ini_set</function> ou via un &htaccess;), et
+   <literal>access</literal> (le degré d'accès).
+  </para>
+  <para>
+   Lorsque le paramètre <parameter>details</parameter> vaut &false;, la valeur
+   sera la valeur courant de l'option.
+  </para>
+  <para>
+   Voir le manuel pour plus d'informations sur la signification du degré d'accès.
   </para>
   <note>
    <para>
-    Il est possible pour une directive d'avoir plusieurs niveaux d'accès,
-    ce qui est indiqué dans le champ de bits <literal>access</literal>.
+    Il est possible pour une directive d'avoir plusieurs degrés d'accès, et
+    c'est la raison pour laquelle <literal>access</literal> montre les valeurs
+    du masque appopriées.
    </para>
   </note>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>5.3.0</entry>
+       <entry>
+        Ajout du paramètre <parameter>details</parameter>.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
  </refsect1>
 
  <refsect1 role="examples">
@@ -63,10 +108,8 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-$inis = ini_get_all();
-
-print_r($inis);
-
+print_r(ini_get_all("pcre"));
+print_r(ini_get_all());
 ?>
 ]]>
     </programlisting>
@@ -75,21 +118,66 @@ print_r($inis);
 <![CDATA[
 Array
 (
+    [pcre.backtrack_limit] => Array
+        (
+            [global_value] => 100000
+            [local_value] => 100000
+            [access] => 7
+        )
+
+    [pcre.recursion_limit] => Array
+        (
+            [global_value] => 100000
+            [local_value] => 100000
+            [access] => 7
+        )
+
+)
+Array
+(
     [allow_call_time_pass_reference] => Array
-    (
-        [global_value] => 1
-        [local_value] => 1
-        [access] => 6
-    )
+        (
+            [global_value] => 0
+            [local_value] => 0
+            [access] => 6
+        )
+
     [allow_url_fopen] => Array
-    (
-        [global_value] => 1
-        [local_value] => 1
-        [access] => 7
-    )
+        (
+            [global_value] => 1
+            [local_value] => 1
+            [access] => 4
+        )
 
     ...
 
+)
+]]>
+    </screen>
+   </example>
+   <example>
+    <title>Désactive le paramètre <parameter>details</parameter></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+print_r(ini_get_all("pcre", false)); // Ajouté en PHP 5.3.0
+print_r(ini_get_all(null, false)); // Ajouté en PHP 5.3.0
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+Array
+(
+    [pcre.backtrack_limit] => 100000
+    [pcre.recursion_limit] => 100000
+)
+Array
+(
+    [allow_call_time_pass_reference] => 0
+    [allow_url_fopen] => 1
+    ...
 )
 ]]>
     </screen>
@@ -101,6 +189,7 @@ Array
   &reftitle.seealso;
   <para>
    <simplelist>
+    <member><xref linkend="configuration.changes" /></member>
     <member><function>ini_get</function></member>
     <member><function>ini_restore</function></member>
     <member><function>ini_set</function></member>
