@@ -1,168 +1,229 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.27 $ -->
-<!-- EN-Revision: 1.21 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.28 $ -->
+<!-- EN-Revision: 1.25 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
-  <refentry xml:id="function.ob-start" xmlns="http://docbook.org/ns/docbook">
-   <refnamediv>
-    <refname>ob_start</refname>
-    <refpurpose>Enclenche la tamporisation de sortie</refpurpose>
-   </refnamediv>
-   <refsect1>
-    &reftitle.description;
-    <methodsynopsis>
-      <type>bool</type><methodname>ob_start</methodname>
-      <methodparam choice="opt"><type>callback</type><parameter>output_callback</parameter></methodparam>
-      <methodparam choice="opt"><type>int</type><parameter>chunk_size</parameter></methodparam>
-      <methodparam choice="opt"><type>bool</type><parameter>erase</parameter></methodparam>
-     </methodsynopsis>
-    <para>
-     Cette fonction démarre la tamporisation de sortie.
-     Tant qu'elle est enclenchée, aucune donnée, hormis
-     les en-têtes, n'est envoyée au navigateur, mais
-     temporairement mise en tampon.
-    </para>
-    <para>
-     Le contenu de ce tampon peut être copié dans une chaîne
-     avec la fonction <function>ob_get_contents</function>. Pour afficher le
-     contenu de ce tampon, utilisez <function>ob_end_flush</function>. Au
-     contraire, <function>ob_end_clean</function> effacera le contenu de ce
-     tampon.
-    </para>
-    <para>
-     Une fonction optionnelle de callback peut être spécifiée
-     en troisième argument. <function>ob_start</function> prend une
-     chaîne comme paramètre, et retourne une chaîne.
-     Elle sera appelée par <function>ob_end_flush</function> ou
-     lorsque le tampon sera envoyé au navigateur à la fin du script et
-     recevra le contenu du tampon de sortie. Lorsque la fonction
-     <parameter>output_callback</parameter> est appelée,
-     elle doit retourner un nouveau contenu pour le tampon de sortie :
-     celui-ci sera envoyé au navigateur. Si 
-     <parameter>output_callback</parameter>
-     n'est pas une fonction accessible, la fonction retournera &false;.
-     Si la fonction de callback a deux paramètres, le second est composé
-     du champ bits constitué par 
-     <constant>PHP_OUTPUT_HANDLER_START</constant>,
-     <constant>PHP_OUTPUT_HANDLER_CONT</constant> et
-     <constant>PHP_OUTPUT_HANDLER_END</constant>.
-     Si <parameter>output_callback</parameter> retourne &false;,
-     l'entrée originale est envoyée au navigateur.
-    </para>
-    <note>
-     <para>
-      En &php; 4.0.4, <function>ob_gzhandler</function> a été
-      introduite pour faciliter l'envoi de fichiers compressés
-      avec gz aux navigateurs web qui supportent les pages
-      compressées. <function>ob_gzhandler</function>
-      détermine le type d'encodage accepté par un navigateur,
-      et retourne le contenu le plus adéquat.
-     </para>
-    </note>
-    <note>
-     <para>
-      Avant &php; 4.3.2, cette fonction ne retournait pas &false; 
-      dans le cas où
-      <parameter>output_callback</parameter> ne pouvait être exécutée.
-     </para>
-    </note>
-    <warning>
-     <para>
-      Quelques serveurs web (par exemple Apache) modifient le dossier de travail d'un script
-      lorsqu'il appelle une fonction de callback. Vous pouvez revenir à un comportement
-      normal en ajoutant 
-      <literal>chdir(dirname($_SERVER['SCRIPT_FILENAME']))</literal> 
-      dans votre fonction de callback.
-     </para>
-    </warning>
-    <para>
-     Si le paramètre optionnel <parameter>chunk_size</parameter> est passé,
-     la fonction de callback est appelée à chaque nouvelle ligne après 
-     <parameter>chunk_size</parameter> octets d'affichage.
-     Le paramètre <parameter>output_callback</parameter>
-     peut être outrepassé en lui affectant la valeur &null;.
-    </para>
-    <para>
-     Si le paramètre optionnel <parameter>erase</parameter> est défini à
-     &false;, le tampon ne sera pas effacé tant que le script ne sera pas terminé
-     (depuis &php; 4.3.0).
-    </para>
-    <para>
-     Les tampons de sortie sont gérés par pile,
-     c'est-à-dire que vous pouvez appeler plusieurs fois
-     <function>ob_start</function> simultanément.
-     Assurez-vous que vous appelez <function>ob_end_flush</function>
-     suffisamment souvent. Si plusieurs fonctions de callback
-     sont actives, les contenus seront filtrés
-     séquentiellement, dans l'ordre d'emboîtement.
-    </para>
-    <para>
-     <function>ob_end_clean</function>,
-     <function>ob_end_flush</function>, <function>ob_clean</function>,
-     <function>ob_flush</function> et <function>ob_start</function>
-     ne doivent pas être appelés depuis une fonction de callback.
-     Si vous les appelez depuis une fonction de callback, le comportement
-     ne sera pas défini. Si vous voulez effacer le contenu du tampon, retournez ""
-     (une chaîne vide) comme fonction de callback.
-     Vous ne pourrez jamais appeler les fonctions utilisant la fonction de
-     tamporisation de sortie
-     comme <literal>print_r($expression, true)</literal> ou 
-     <literal>highlight_file($filename, true)</literal> depuis une fonction de
-     callback.
-    </para>
-    <example>
-     <title>Exemple de gestion de sortie avec fonction utilisateur</title>
-     <programlisting role="php">
+<refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.ob-start">
+ <refnamediv>
+  <refname>ob_start</refname>
+  <refpurpose>Enclenche la tamporisation de sortie</refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>bool</type><methodname>ob_start</methodname>
+   <methodparam choice="opt"><type>callback</type><parameter>output_callback</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>chunk_size</parameter></methodparam>
+   <methodparam choice="opt"><type>bool</type><parameter>erase</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   Cette fonction démarre la tamporisation de sortie. Tant qu'elle est
+   enclenchée, aucune donnée, hormis les en-têtes, n'est envoyée au
+   navigateur, mais temporairement mise en tampon.
+  </para>
+  <para>
+   Le contenu de ce tampon peut être copié dans une chaîne
+   avec la fonction <function>ob_get_contents</function>. Pour afficher le
+   contenu de ce tampon, utilisez <function>ob_end_flush</function>. Au
+   contraire, <function>ob_end_clean</function> effacera le contenu de ce
+   tampon.
+  </para>
+  <warning>
+   <para>
+    Quelques serveurs web (par exemple Apache) modifient le dossier de
+    travail d'un script lorsqu'il appelle une fonction de callback.
+    Vous pouvez revenir à un comportement normal en ajoutant
+    <literal>chdir(dirname($_SERVER['SCRIPT_FILENAME']))</literal>
+    dans votre fonction de callback.
+   </para>
+  </warning>
+  <para>
+   Les tampons de sortie sont gérés par pile, c'est-à-dire que vous pouvez
+   appeler plusieurs fois <function>ob_start</function> simultanément.
+   Assurez-vous que vous appelez <function>ob_end_flush</function>
+   suffisamment souvent. Si plusieurs fonctions de callback sont actives,
+   les contenus seront filtrés séquentiellement, dans l'ordre d'emboîtement.
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>output_callback</parameter></term>
+     <listitem>
+      <para>
+       Une fonction optionnelle de callback peut être spécifiée.
+       <function>ob_start</function> prend une chaîne comme paramètre, et
+       retourne une chaîne. Elle sera appelée par
+       <function>ob_end_flush</function> ou lorsque le tampon sera envoyé
+       au navigateur à la fin du script et recevra le contenu du tampon de
+       sortie. Lorsque la fonction <parameter>output_callback</parameter> est
+       appelée, elle doit retourner un nouveau contenu pour le tampon de sortie :
+       celui-ci sera envoyé au navigateur. Si <parameter>output_callback</parameter>
+       n'est pas une fonction accessible, la fonction retournera &false;.
+      </para>
+      <para>
+       Si la fonction de callback a deux paramètres, le second est composé
+       du champ bits constitué par
+       <constant>PHP_OUTPUT_HANDLER_START</constant>,
+       <constant>PHP_OUTPUT_HANDLER_CONT</constant> et
+       <constant>PHP_OUTPUT_HANDLER_END</constant>.
+      </para>
+      <para>
+       Si <parameter>output_callback</parameter> retourne &false;,
+       l'entrée originale est envoyée au navigateur.
+      </para>
+      <para>
+       Le paramètre <parameter>output_callback</parameter> peut être annulé
+       en y passant la valeur &null;.
+      </para>
+      <para>
+       <function>ob_end_clean</function>, <function>ob_end_flush</function>,
+       <function>ob_clean</function>, <function>ob_flush</function> et
+       <function>ob_start</function> ne doivent pas être appelés depuis une
+       fonction de callback. Si vous les appelez depuis une fonction de
+       callback, le comportement ne sera pas défini. Si vous voulez effacer
+       le contenu du tampon, retournez "" (une chaîne vide) comme fonction
+       de callback. Vous ne pourrez jamais appeler les fonctions utilisant
+       la fonction de tamporisation de sortie comme
+       <literal>print_r($expression, true)</literal> ou
+       <literal>highlight_file($filename, true)</literal> depuis une fonction de
+       rappel.
+      </para>
+      <note>
+       <para>
+        En PHP 4.0.4, <function>ob_gzhandler</function> a été
+        introduite pour faciliter l'envoi de fichiers compressés
+        avec gz aux navigateurs web qui supportent les pages
+        compressées. <function>ob_gzhandler</function>
+        détermine le type d'encodage accepté par un navigateur,
+        et retourne le contenu le plus adéquat.
+       </para>
+      </note>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>chunk_size</parameter></term>
+     <listitem>
+      <para>
+       Si le paramètre optionnel <parameter>chunk_size</parameter> est passé,
+       la fonction de callback est appelée à chaque nouvelle ligne après 
+       <parameter>chunk_size</parameter> octets d'affichage. La valeur
+       par défaut (zéro) signifie que la fonction est appelée uniquement
+       à la fin, et si la valeur est 1, <parameter>chunk_size</parameter> vaudra 4096.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>erase</parameter></term>
+     <listitem>
+      <para>
+       Si le paramètre optionnel <parameter>erase</parameter> est défini à
+       &false;, le tampon ne sera pas effacé tant que le script ne sera pas terminé
+       (depuis PHP 4.3.0).
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   &return.success;
+  </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>4.3.2</entry>
+       <entry>
+        Cette fonction a été modifiée pour retourner &false; dans le cas
+        où <parameter>output_callback</parameter> ne peut être exécuté.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple de gestion de sortie avec fonction utilisateur</title>
+    <programlisting role="php">
 <![CDATA[
 <?php
 
 function callback($buffer)
 {
-    // remplace toutes les pommes par des carottes
-    return (ereg_replace("pommes de terre", "carottes", $buffer));
+  // remplace toutes les pommes par des carottes
+  return (ereg_replace("pommes de terre", "carottes", $buffer));
 }
 
 ob_start("callback");
 
 ?>
-
 <html>
- <body>
- <p>C'est comme comparer des carottes et des pommes de terre.</p>
- </body>
+<body>
+<p>C'est comme comparer des carottes et des pommes de terre.</p>
+</body>
 </html>
-
 <?php
 
 ob_end_flush();
 
 ?>
 ]]>
-     </programlisting>
-     &example.outputs;
-      <programlisting role="php">
+    </programlisting>
+    &example.outputs;
+    <screen>
 <![CDATA[
 <html>
- <body>
-  <p>C'est comme comparer des carottes et des carottes.</p>
- </body>
+<body>
+<p>C'est comme comparer des carottes et des carottes.</p>
+</body>
 </html>
 ]]>
-     </programlisting>
-    </example>
-    <para>
-     Voir aussi
-     <function>ob_get_contents</function>,
-     <function>ob_end_flush</function>,
-     <function>ob_end_clean</function>,
-     <function>ob_implicit_flush</function>,
-     <function>ob_gzhandler</function>,
-     <function>ob_iconv_handler</function>,
-     <function>mb_output_handler</function> et
-     <function>ob_tidyhandler</function>.
-    </para>
-   </refsect1>
-  </refentry>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>ob_get_contents</function></member>
+    <member><function>ob_end_clean</function></member>
+    <member><function>ob_end_flush</function></member>
+    <member><function>ob_implicit_flush</function></member>
+    <member><function>ob_gzhandler</function></member>
+    <member><function>ob_iconv_handler</function></member>
+    <member><function>mb_output_handler</function></member>
+    <member><function>ob_tidyhandler</function></member>
+   </simplelist>
+  </para>
+ </refsect1>
+
+</refentry>
 
 <!-- Keep this comment at the end of the file
 Local variables:
