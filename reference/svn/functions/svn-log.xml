@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<refentry xml:id="function.svn-log" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <refnamediv>
+  <refname>svn_log</refname>
+  <refpurpose>Récupère le message d'historisation d'une URL du dépôt</refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>array</type><methodname>svn_log</methodname>
+   <methodparam><type>string</type><parameter>repos_url</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>revision_no</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   <function>svn_log</function> récupère l'historique complète d'un élément à l'URL
+   <parameter>repos_url</parameter>, ou l'historique d'une version spécifique
+   si <parameter>revision_no</parameter> est défini. Cette fonction est équivalent
+   à la commande <userinput>svn log --verbose -r $revision_no $repos_url</userinput>.
+  </para>
+  <warning>
+   <para>
+    Pour les dépôts dont l'historique est important, la sortie peut
+    être énorme (un tableau dont chaque élément représente une version).
+    Cette fonction ne supporte pas le drapeau
+    <userinput>--limit NUM</userinput>, ni un intervalle de versions
+    (<userinput>revision_no</userinput> doit être un entier).
+   </para>
+  </warning>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>repos_url</parameter></term>
+     <listitem>
+      <para>
+       URL du dépôt de l'élément dont on doit récupérer l'historique.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>revision_no</parameter></term>
+     <listitem>
+      <para>
+       Numéro de version de l'historisation à récupérer. Utilisez
+       la constante <constant>SVN_REVISON_HEAD</constant> pour récupérer
+       l'historisation de la version la plus récente.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+
+ </refsect1>
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   En cas de succès, cette fonction retourne un tableau de fichiers
+   au format :
+   <screen>
+<![CDATA[
+[0] => Tableau, ordonné du numéro de version le plus grand, au plus petit
+(
+    [rev] => numéro de version
+    [author] => nom de l'auteur
+    [msg] => message d'historisation
+    [date] => date, au format ISO 8601, i.e. date('c')
+    [paths] => Tableau, décrivant les fichiers modifiés
+        (
+            [0] => Array
+                (
+                    [action] => lettre, spécifiant la modification
+                    [path] =>  chemin absolu du dépôt vers le fichier modifié
+                )
+            [1] => ...
+        )
+)
+[1] => ...
+]]>
+    </screen>
+  </para>
+  <note>
+   <para>
+    La sortie sera toujours un tableau indexé numériquement de tableaux,
+    même s'il n'y en a aucun, ou seulement un seul message d'historisation.
+   </para>
+  </note>
+  <para>
+   La valeur de <varname>action</varname> est un sous-jeu de
+   <link xlink:href="&url.svn.manual.status;">la sortie de status
+    pour la première colonne</link>, où les valeurs possibles sont :
+  </para>
+  <table>
+   <title>Actions</title>
+   <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>Lettre</entry>
+       <entry>Description</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>M</entry>
+       <entry>L'élément/props a été modifié</entry>
+      </row>
+      <row>
+       <entry>A</entry>
+       <entry>L'élément a été ajouté</entry>
+      </row>
+      <row>
+       <entry>D</entry>
+       <entry>L'élément a été effacé</entry>
+      </row>
+      <row>
+       <entry>R</entry>
+       <entry>L'élément a été remplacé</entry>
+      </row>
+     </tbody>
+    </tgroup>
+  </table>
+  <para>
+   Si aucune modification n'a été effectué à l'élément, un tableau
+   vide sera retourné.
+  </para>
+ </refsect1>
+
+ <refsect1 role="notes">
+  &reftitle.notes;
+  &warn.experimental.func;
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>svn_log</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+print_r( svn_log('http://www.example.com/', 23) );
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+Array
+(
+    [0] => Array
+    (
+        [rev] => 23
+        [author] => 'joe'
+        [msg] => 'Add cheese and salami to our sandwich.'
+        [date] => '2007-04-06T16:00:27-04:00'
+        [paths] => Array
+            (
+                [0] => Array
+                    (
+                        [action] => 'M'
+                        [path] =>  '/sandwich.txt'
+                    )
+            )
+    )
+)
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Simulation de <userinput>--limit</userinput> avec <userinput>svn</userinput> et <function>svn_log</function></title>
+    <para>
+     Cette fonction simule le comportement de <userinput>--limit</userinput>
+     en utilisant l'exécutable SVN pour retourner la liste des versions.
+    </para>
+    <note>
+     <para>
+      Cette fonction effectue un total de <parameter>limit</parameter> + 1
+      requêtes : la première requête pour spécifier les versions requises,
+      et ensuite, chacune pour récupérer le message d'historisation de l'élément
+      pour cette requête.
+     </para>
+    </note>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/**
+ * Recupération les dernières $limit entrées de l'historisation.
+ * @param $repos_url URL du dépôt de l'élément
+ * @param $limit Nombre limite de messages
+ */
+function svn_log_limit($repos_url, $limit) {
+    $limit = (int) $limit;
+    if ($limit <= 0) return array();
+    // Drapeau -q utilisé pour prévenir le serveur de l'envoi des messages d'historisation
+    $output = shell_exec("svn log -q --limit $limit $repos_url");
+    preg_match_all('/^r(\d+) /m', $output, $matches);
+    $ret = array();
+    foreach ($matches[1] as $rev) {
+        $log = svn_log($repos_url, (int) $rev);
+        $ret[] = $log[0]; // Message d'historisation n'est que d'un seul élément
+    }
+    return $ret;
+}
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member>
+     <link xlink:href="&url.svn.manual.log;">Documentation SVN pour la commande log</link>
+    </member>
+   </simplelist>
+  </para>
+ </refsect1>
+
+</refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
