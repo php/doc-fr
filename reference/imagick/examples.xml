@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.4 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<chapter xml:id="imagick.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ &reftitle.examples;
+ <section xml:id="imagick.examples-1">
+  &reftitle.examples;
+  <para>
+   Imagick rend la manipulation des images via PHP extrèmement facile
+   grâce à une interface orientée objet. Voici un exemple rapide
+   illustrant la création d'une miniature :
+   <example>
+    <title>Création d'une miniature avec Imagick</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+header('Content-type: image/jpeg');
+
+$image = new Imagick('image.jpg');
+
+// Si 0 est fourni comme paramètre de hauteur ou de largeur,
+// le ratio sera conservé
+$image->thumbnailImage(100, 0);
+
+echo $image;
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+
+  <para>
+   En utilisant SPL ou tout autre fonctionnalité orientée objet supportée
+   par Imagick, il devient simple de redimensionner tous les fichiers
+   d'un dossier (utile pour des scripts batch redimensionnant des images
+   issues d'un appareil photo numérique afin de les rendre lisible sur le
+   web). Voici un exemple de redimensionnement de toutes les images
+   JPG d'un dossier, tout en conservant les métadonnées :
+   <example>
+    <title>Création de miniature de toutes les images JPG d'un dossier</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$images = new Imagick(glob('images/*.JPG'));
+
+foreach($images as $image) {
+
+    // On fournit 0 en guise de paramètre afin de conserver le ratio
+    $image->thumbnailImage(1024,0);
+
+}
+
+$images->writeImages();
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Voici un exemple permettant de créer le reflet d'une image. Ce reflet est créé en
+   retournant l'image et en y ajoutant un dégradé.
+   Ensuite, l'image original et son reflet sont ajoutés dans une nouvelle image.
+   <example>
+    <title>Création d'un reflet sur une image</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/* Lecture de l'image */
+$im = new Imagick("test.png");
+
+/* Création d'une miniature de l'image */
+$im->thumbnailImage(200, null);
+
+/* Création d'une bordure */
+$im->borderImage(new ImagickPixel("white"), 5, 5);
+
+/* Clône l'image et on la retourne */
+$reflection = $im->clone();
+$reflection->flipImage();
+
+/* Création du dégradé. Il sera ajouté à l'image retournée */
+$gradient = new Imagick();
+
+/* Le dégradé doit être assez large pour l'image et ses bordures */
+$gradient->newPseudoImage($reflection->getImageWidth() + 10, $reflection->getImageHeight() + 10, "gradient:transparent-black");
+
+/* Ajout du dégradé sur l'image retournée */
+$reflection->compositeImage($gradient, imagick::COMPOSITE_OVER, 0, 0);
+
+/* Ajout d'un peu d'opacité. Nécessite ImageMagick 6.2.9 ou supérieur */
+$reflection->setImageOpacity( 0.3 );
+
+/* Création d'une image vide */
+$canvas = new Imagick();
+
+/* L'image vide doit être assez large pour contenir les 2 images */
+$width = $im->getImageWidth() + 40;
+$height = ($im->getImageHeight() * 2) + 30;
+$canvas->newImage($width, $height, new ImagickPixel("black"));
+$canvas->setImageFormat("png");
+
+/* Ajout de l'image originale et de l'image retournée dans notre nouvelle image */
+$canvas->compositeImage($im, imagick::COMPOSITE_OVER, 20, 10);
+$canvas->compositeImage($reflection, imagick::COMPOSITE_OVER, 20, $im->getImageHeight() + 10);
+
+/* Affichage de l'image */
+header("Content-Type: image/png");
+echo $canvas;
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Voici un exemple montrant comment remplir un masque lors du dessein de l'image.
+   <example>
+    <title>Remplissage d'un texte avec un dégradé</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+/* Création d'un nouvel objet imagick */
+$im = new Imagick();
+
+/* Création d'une nouvelle image. Elle sera utilisé comme masque de remplissage */
+$im->newPseudoImage(50, 50, "gradient:red-black");
+
+/* Création d'un nouvel objet imagickdraw */
+$draw = new ImagickDraw();
+
+/* On commence un nouveau masque nommé "gradient" */
+$draw->pushPattern('gradient', 0, 0, 50, 50);
+
+/* Ajout du dégradé sur le masque */
+$draw->composite(Imagick::COMPOSITE_OVER, 0, 0, 50, 50, $im);
+
+/* Fermeture du masque */
+$draw->popPattern();
+
+/* Utilisation du masque nommé "gradient" comme remplissage */
+$draw->setFillPatternURL('#gradient');
+
+/* Définition de la taille du texte à 52 */
+$draw->setFontSize(52);
+
+/* Ajout d'un texte */
+$draw->annotation(20, 50, "Bonjour le monde !");
+
+/* Création d'un nouvel objet et d'une image blanche */
+$canvas = new Imagick();
+$canvas->newImage(350, 70, "white");
+
+/* Dessine le ImagickDraw sur la nouvelle image */
+$canvas->drawImage($draw);
+
+/* Une bordure noire d'1px autour de l'image */
+$canvas->borderImage('black', 1, 1);
+
+/* Définition du format à PNG */
+$canvas->setImageFormat('png');
+
+/* Affiche l'image */
+header("Content-Type: image/png");
+echo $canvas;
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </section>
+</chapter>
+
+
