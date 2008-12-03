@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.28 $ -->
-<!-- EN-Revision: 1.30 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.29 $ -->
+<!-- EN-Revision: 1.32 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
  <sect1 xml:id="language.oop5.overloading" xmlns="http://docbook.org/ns/docbook">
@@ -69,6 +69,7 @@
         <entry>5.3.0</entry>
         <entry>
          Ajout de <literal>__callStatic()</literal>.
+         Ajout d'un avertissement pour forcer la visibilité <literal>public</literal> et la déclaration non <literal>static</literal>.
         </entry>
        </row>
       </tbody>
@@ -145,7 +146,7 @@ class MemberTest {
     /**  La surcharge n'est pas utilisée sur les membres déclarés.  */
     public $declared = 1;
 
-    /**  La surcharge n'est pas lancée lorsque l'on accède à la classe.  */
+    /**  La surcharge n'est lancée que lorsque l'on accède à la classe depuis l'extérieur.  */
     private $hidden = 2;
 
     public function __set($name, $value) {
@@ -161,7 +162,7 @@ class MemberTest {
 
         $trace = debug_backtrace();
         trigger_error(
-            'Propriété non-définie : ' . $name .
+            'Propriété non-définie via __get(): ' . $name .
             ' dans ' . $trace[0]['file'] .
             ' à la ligne ' . $trace[0]['line'],
             E_USER_NOTICE);
@@ -182,7 +183,6 @@ class MemberTest {
 
     /**  Ce n'est pas une méthode magique, nécessaire ici que pour l'exemple.  */
     public function getHidden() {
-        echo "'hidden' visible ici, donc __get() non utilisé\n";
         return $this->hidden;
     }
 }
@@ -193,14 +193,19 @@ echo "<pre>\n";
 $obj = new MemberTest;
 
 $obj->a = 1;
-echo $obj->a . "\n";
+echo $obj->a . "\n\n";
 
 var_dump(isset($obj->a));
 unset($obj->a);
 var_dump(isset($obj->a));
+echo "\n";
 
-echo $obj->declared . "\n";
+echo $obj->declared . "\n\n";
+
+echo "Manipulons maintenant la propriété privée nommée 'hidden':\n";
+echo "'hidden' est visible depuis la classe, donc __get() n'est pas utilisé...\n";
 echo $obj->getHidden() . "\n";
+echo "'hidden' n'est pas visible en dehors de la classe, donc __get() est utlisé...\n";
 echo $obj->hidden . "\n";
 ?>
 ]]>
@@ -211,18 +216,23 @@ echo $obj->hidden . "\n";
 Définition de 'a' à '1'
 Récupération de 'a'
 1
+
 Est-ce que 'a' est défini ?
 bool(true)
 Effacement de 'a'
 Est-ce que 'a' est défini ?
 bool(false)
+
 1
-'hidden' visible ici, donc __get() non utilisé
+
+Manipulons maintenant la propriété privée nommée 'hidden':
+'hidden' est visible depuis la classe, donc __get() n'est pas utilisé...
 2
+'hidden' n'est pas visible en dehors de la classe, donc __get() est utlisé...
 Récupération de 'hidden'
 
 
-Notice:  Propriété non-définie : hidden dans <file> à la ligne 64 dans <file> à la ligne 28
+Notice:  Propriété non-définie via __get(): hidden dans <file> à la ligne 64 dans <file> à la ligne 28
 ]]>
     </screen>
 
