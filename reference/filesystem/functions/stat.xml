@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.23 $ -->
-<!-- EN-Revision: 1.17 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.24 $ -->
+<!-- EN-Revision: 1.24 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.stat">
@@ -66,7 +66,7 @@
       <row>
        <entry>1</entry>
        <entry>ino</entry>
-       <entry>inode</entry>
+       <entry>Numéro d'inode (*)</entry>
       </row>
       <row>
        <entry>2</entry>
@@ -81,17 +81,17 @@
       <row>
        <entry>4</entry>
        <entry>uid</entry>
-       <entry>userid du propriétaire</entry>
+       <entry>userid du propriétaire (*)</entry>
       </row>
       <row>
        <entry>5</entry>
        <entry>gid</entry>
-       <entry>groupid du propriétaire</entry>
+       <entry>groupid du propriétaire (*)</entry>
       </row>
       <row>
        <entry>6</entry>
        <entry>rdev</entry>
-       <entry>type du volume, si le volume est une inode (*)</entry>
+       <entry>type du volume, si le volume est une inode</entry>
       </row>
       <row>
        <entry>7</entry>
@@ -116,16 +116,19 @@
       <row>
        <entry>11</entry>
        <entry>blksize</entry>
-       <entry>taille de bloc (*)</entry>
+       <entry>taille de bloc (**)</entry>
       </row>
       <row>
        <entry>12</entry>
        <entry>blocks</entry>
-       <entry>nombre de blocs alloués (*)</entry>
+       <entry>nombre de blocs alloués (**)</entry>
       </row>
      </tbody>
     </tgroup>
    </table>
+   * - Sous Windows, vaudra toujours 0.
+  </para>
+  <para>
    * - uniquement sur les systèmes qui supportent le type <literal>st_blksize</literal>.
    Les autres systèmes (e.g. Windows) retournent -1.
   </para>
@@ -168,8 +171,77 @@
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>stat</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/* Récupération des informations */
+$stat = stat('C:\php\php.exe');
+
+/*
+ * Affichage de la date et heure de l'accès à ce fichier,
+ * identique à l'appel à la fonction fileatime()
+ */
+echo 'Date et heure d\'accès : ' . $stat['atime'];
+
+/*
+ * Affiche de la date et heure de modification du fichier,
+ * identique à l'appel à la fonction filemtime()
+ */
+echo 'Date et heure de modification : ' . $stat['mtime'];
+
+/* Affichage du numéro du device */
+echo 'Numéro du Device : ' . $stat['dev'];
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Utilisation des informations issues de <function>stat</function>
+    conjointement avec la fonction <function>touch</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/* Récupération des informations issues de la fonction stat */
+$stat = @stat('C:\php\php.exe');
+
+/* L'accès aux informations a-t-il échoué ? */
+if(!$stat)
+{
+    echo 'L\'appel à stat() a échoué...';
+}
+else
+{
+    /*
+     * Nous voulons que la date et heure d'accès soit d'une semaine avant la date courante.
+     */
+    $atime = $stat['atime'] + 604800;
+
+    /* Touchons le fichier ! */
+    if(!@touch('some_file.txt', time(), $atime))
+    {
+        echo 'Échec lors de l\'appel à la fonction touch()...';
+    }
+    else
+    {
+        echo 'La fonction touch() a réussi...';
+    }
+}
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
  <refsect1 role="notes">
   &reftitle.notes;
+  &note.filesystem-time-res;
   &note.clearstatcache;
   &tip.fopen-wrapper.stat;
  </refsect1>
