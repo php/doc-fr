@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.12 $ -->
-<!-- EN-Revision: 1.8 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.13 $ -->
+<!-- EN-Revision: 1.9 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <section xml:id="ibm-db2.configuration" xmlns="http://docbook.org/ns/docbook">
@@ -26,6 +26,12 @@
       <entry>Disponible depuis ibm_db2 1.4.9.</entry>
      </row>
      <row>
+      <entry>ibm_db2.i5_all_pconnect</entry>
+      <entry>"0"</entry>
+      <entry>PHP_INI_SYSTEM</entry>
+      <entry>Disponible depuis ibm_db2 1.6.5.</entry>
+     </row>
+     <row>
       <entry>ibm_db2.i5_allow_commit</entry>
       <entry>"0"</entry>
       <entry>PHP_INI_SYSTEM</entry>
@@ -44,10 +50,10 @@
       <entry></entry>
      </row>
      <row>
-      <entry>ibm_db2.i5_all_pconnect</entry>
+      <entry>ibm_db2.i5_ignore_userid</entry>
       <entry>"0"</entry>
       <entry>PHP_INI_SYSTEM</entry>
-      <entry>Disponible depuis ibm_db2 1.6.5.</entry>
+      <entry>Disponible depuis ibm_db2 1.8.0.</entry>
      </row>
     </tbody>
    </tgroup>
@@ -88,6 +94,40 @@
      </para>
     </listitem>
    </varlistentry>
+   <varlistentry xml:id="ini.ibm-db2.i5-all-pconnect">
+    <term>
+     <parameter>ibm_db2.i5_all_pconnect</parameter>
+     (&integer;)
+    </term>
+    <listitem>
+     <para>
+      Cette option écrase le comportement de la fonction <function>db2_connect</function>
+      pour les ouvertures et les fermetures en PHP 
+      Lorsque <parameter>ibm_db2.i5_all_pconnect</parameter> = 1, toutes les
+      connexions db2 deviennent persistente (<function>db2_pconnect</function>).
+      Sous i5/OS, <function>db2_pconnect</function> a des performances accrues
+      avec de petites machines comparée à la fonction <function>db2_connect</function>.
+      Cette option est pratique dans le sens où elle permet de modifier
+      le comportement de la fonction <function>db2_connect</function> en
+      <function>db2_pconnect</function> sans pour autant modifier le code source PHP.
+      <itemizedlist>
+       <listitem>
+        <para>
+         0 : le comportement de la fonction <function>db2_connect</function>
+         est inchangé
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         1 : le comportement de la fonction <function>db2_connect</function>
+         devient identique à la fonction <function>db2_pconnect</function>
+         pour les connexions persistentes uniquement.
+        </para>
+       </listitem>
+      </itemizedlist>
+     </para>
+    </listitem>
+   </varlistentry>
    <varlistentry xml:id="ini.ibm-db2.i5-allow-commit">
     <term>
      <parameter>ibm_db2.i5_allow_commit</parameter>
@@ -100,12 +140,12 @@
       <itemizedlist>
        <listitem>
         <para>
-         0 aucun envoi (voir i5_commit pour dérivé)
+         0 : aucun envoi (voir <parameter>i5_commit</parameter> pour dérivé)
         </para>
        </listitem>
        <listitem>
         <para>
-         1 autorise l'envoi (voir i5_commit pour dérivé)
+         1 : autorise l'envoi (voir <parameter>i5_commit</parameter> pour dérivé)
         </para>
        </listitem>
       </itemizedlist>
@@ -124,12 +164,14 @@
       <itemizedlist>
        <listitem>
         <para>
-         0 aucune allocation étendue (voir i5_dbcs_alloc pour dérivé)
+         0 : aucune allocation étendue (voir <parameter>i5_dbcs_alloc</parameter>
+         pour dérivé)
         </para>
        </listitem>
        <listitem>
         <para>
-         1 utilise les allocations étendues (voir i5_dbcs_alloc pour dérivé)
+         1 : utilise les allocations étendues (voir
+         <parameter>i5_dbcs_alloc</parameter> pour dérivé)
         </para>
        </listitem>
       </itemizedlist>
@@ -153,31 +195,33 @@
      </para>
     </listitem>
    </varlistentry>
-   <varlistentry xml:id="ini.ibm-db2.i5-all-pconnect">
+   <varlistentry xml:id="ini.ibm-db2.i5-ignore-userid">
     <term>
-     <parameter>ibm_db2.i5_all_pconnect</parameter>
-     &integer;
+     <parameter>ibm_db2.i5_ignore_userid</parameter>
+     (&integer;)
     </term>
     <listitem>
      <para>
-      Cette option modifie le comportement des ouvertures et des fermetures
-      i5 db2_connect dans vos applications PHP. Lorsque
-      ibm_db2.i5_all_pconnect = 1, toutes les db2 connections deviennent persistantes
-      (db2_pconnect). Sous i5/OS, db2_pconnect est bien plus performant avec des
-      machines peu puissantes qu'avec db2_connect. Cette option est utile car
-      elle permet ainsi d'appeler db2_pconnect à la place de db2_pconnect sans
-      modification du code source PHP.
+      Cette option surharge le comportement de db2_(p)connect quant aux
+      userid et au mot de passe dans vos application PHP.
+      Lorsque <parameter>ibm_db2.i5_ignore_userid</parameter> = 1, toutes les
+      connexions db2 (persistentes comprises) recoivent un userid et un mot de passe
+      vide. Ainsi, Apache se connecte avec le profil courant (NOBODY).
+      Vous ne devriez utiliser cette option que pour des sites web DB2 qui ne
+      nécessitent aucun changement de profile. Cette option est une
+      façon simple de définir le userid et le mot de passe pour les fonctions
+      db2_(p)connect sans pour autant modifier le code source PHP.
+      Cette option peut être utilisée avec l'option
+      <parameter>ibm_db2.i5_all_pconnect</parameter> = 1.
       <itemizedlist>
        <listitem>
         <para>
-         La valeur 0 est la valeur par défaut, et ne modifie rien au comportement
-         initial
+         0 : db2_(p)connect avec un userid et un mot de passé spécifique
         </para>
        </listitem>
        <listitem>
         <para>
-         La valeur 1 permet d'appeler db2_pconnect afin d'effectuer que des connexions
-         persistantes
+         1 : db2_(p)connect avec un userid et un mot de passe nul
         </para>
        </listitem>
       </itemizedlist>

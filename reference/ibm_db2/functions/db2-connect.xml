@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.15 $ -->
-<!-- EN-Revision: 1.12 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.16 $ -->
+<!-- EN-Revision: 1.14 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.db2-connect" xmlns="http://docbook.org/ns/docbook">
@@ -173,10 +173,38 @@
        </variablelist>
       </para>
       <para>
-       Les nouvelles options suivantes i5/OS sont disponibles depuis la
-       version 1.5.1 de ibm_db2.
-       Note : les anciennes versions de ibm_db2 ne supportent pas ces
-       nouvelles options.
+       La nouvelle option suivante est disponible pour les versions ibm_db2 1.7.0 et
+       suivantes.
+       <variablelist>
+        <varlistentry>
+         <term><parameter>trustedcontext</parameter></term>
+         <listitem>
+          <para>
+           Le fait de passer la valeur DB2_TRUSTED_CONTEXT_ENABLE active le contexte
+           pour ce gestionnaire de connexion. Ce paramètre ne peut être défini avec
+           la fonction <function>db2_set_option</function>.
+          </para>
+          <para>
+           Cette clé fonctionne uniquement si la base de données est cataloguée
+           (même si la base de données est locale), ou si vous spécifiez le DSN complet
+           lors de la création de la connexion.
+          </para>
+          <para>
+           Pour catalogue la base de données, utilisez les commandes suivantes :
+          </para>
+          <para>
+           <literallayout>db2 catalog tcpip node loopback remote &lt;SERVERNAME&gt; server &lt;SERVICENAME&gt;
+db2 catalog database &lt;LOCALDBNAME&gt; as &lt;REMOTEDBNAME&gt; at node loopback
+db2 "update dbm cfg using svcename &lt;SERVICENAME&gt;"
+db2set DB2COMM=TCPIP</literallayout>
+          </para>
+         </listitem>
+        </varlistentry>
+      </variablelist>
+      </para>
+      <para>
+       Les nouvelles options i5/OS suivantes sont disponibles dans les versions
+       ibm_db2 1.5.1 et suivantes.
        <variablelist>
         <varlistentry>
          <term><parameter>i5_lib</parameter></term>
@@ -217,11 +245,13 @@
            est à une source de données distance, le changement ne prendra
            effet qu'au prochain appel de <function>db2_connect</function>.
           </para>
-          <para>
-           Note : la configuration &php.ini; <parameter>ibm_db2.i5_allow_commit</parameter>==0 
-           ou <literal>DB2_I5_TXN_NO_COMMIT</literal> est par défaut, mais
-           peut être dérivée avec l'option <parameter>i5_commit</parameter>.
-          </para>
+          <note>
+            <para>
+            La configuration php.ini <parameter>ibm_db2.i5_allow_commit</parameter>==0
+            ou <literal>DB2_I5_TXN_NO_COMMIT</literal> est par défaut, mais
+            peut être dérivée avec l'option <parameter>i5_commit</parameter>.
+            </para>
+          </note>
           <para>
            <literal>DB2_I5_TXN_NO_COMMIT</literal> : contrôle d'envoi n'est pas utilisé.
           </para>
@@ -292,7 +322,7 @@
          <term><parameter>i5_date_fmt</parameter></term>
          <listitem>
           <para>
-           <literal>SQL_FMT_ISO</literal> : le format de date de l'organisation internationale de
+           <literal>DB2_I5_FMT_ISO</literal> : le format de date de l'organisation internationale de
            normalisation (ISO) <literal>"yyyy-mm-dd"</literal> est utilisé. Ceci est la valeur par
            défaut.
           </para>
@@ -426,6 +456,28 @@
            <literal>DB2_I5_SEP_JOB</literal> : la valeur par défaut est
            utilisée.
           </para>
+         </listitem>
+        </varlistentry>
+       </variablelist>
+      </para>
+      <para>
+       La nouvelle option i5/OS suivante est disponible depuis la version ibm_db2
+       1.8.0 et suivantes.
+       <variablelist>
+        <varlistentry>
+         <term><parameter>i5_libl</parameter></term>
+         <listitem>
+          <para>
+           Une chaîne indiquant la liste a utilisé pour résoudre les références
+           de fichiers non qualifiés. Spécifiez la liste en séparant les
+           valeurs par un espace, comme ceci : 'i5_libl'=>"MYLIB YOURLIB ANYLIB".
+          </para>
+          <note>
+           <para>
+            <parameter>i5_libl</parameter> appèle qsys2/qcmdexc('cmd',cmdlen),
+            qui ne sont disponibles que en i5/OS V5R4 et suivants.
+           </para>
+          </note>
          </listitem>
         </varlistentry>
        </variablelist>
@@ -585,6 +637,68 @@ Autocommit est désactivé.
 ANIMALS
 NAMES
 PICTURES
+]]>
+    </screen>
+   </example>
+   <example>
+    <title>Utilisation du contexte</title>
+    <para>
+     L'exemple suivant montre comment activer le contexte, changer d'utilisateur
+     et récupérer l'ID de l'utilisateur courant.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$database = "SAMPLE";
+$hostname = "localhost";
+$port = 50000;
+$authID = "db2inst1";
+$auth_pass = "ibmdb2";
+
+$tc_user = "tcuser";
+$tc_pass = "tcpassword";
+
+$dsn = "DATABASE=$database;HOSTNAME=$hostname;PORT=$port;
+  PROTOCOL=TCPIP;UID=$authID;PWD=$auth_pass;";
+$options = array ("trustedcontext" => DB2_TRUSTED_CONTEXT_ENABLE);
+
+$tc_conn = db2_connect($dsn, "", "", $options);
+if($tc_conn) {
+    echo "Explicit trusted connection succeeded.\n";
+
+    if(db2_get_option($tc_conn, "trustedcontext")) {
+        $userBefore = db2_get_option($tc_conn, "trusted_user");
+
+        //Code en tant qu'utilisateur 1.
+
+        //Modification en l'utilisateur de confiance.
+        $parameters = array("trusted_user" => $tc_user, 
+          "trusted_password" => $tcuser_pass);
+        $res = db2_set_option ($tc_conn, $parameters, 1);
+
+        $userAfter = db2_get_option($tc_conn, "trusted_user");
+        //Code en tant qu'utilisateur de confiance.
+
+        if($userBefore != $userAfter) {
+            echo "L'utilisateur a changé." . "\n";
+        }
+    }
+
+    db2_close($tc_conn);
+}
+else {
+    echo "Le changement de contexte de connexion a échoué.\n";
+}
+?>
+
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Le changement de contexte de connexion a échoué.
+L'utilisateur a changé.
 ]]>
     </screen>
    </example>
