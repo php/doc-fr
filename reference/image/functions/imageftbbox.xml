@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.13 $ -->
-<!-- EN-Revision: 1.9 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- $Revision: 1.14 $ -->
+<!-- EN-Revision: 1.12 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xml:id='function.imageftbbox' xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -14,11 +14,14 @@
    <type>array</type><methodname>imageftbbox</methodname>
    <methodparam><type>float</type><parameter>size</parameter></methodparam>
    <methodparam><type>float</type><parameter>angle</parameter></methodparam>
-   <methodparam><type>string</type><parameter>font_file</parameter></methodparam>
+   <methodparam><type>string</type><parameter>fontfile</parameter></methodparam>
    <methodparam><type>string</type><parameter>text</parameter></methodparam>
    <methodparam choice="opt"><type>array</type><parameter>extrainfo</parameter></methodparam>
   </methodsynopsis>
-  &warn.undocumented.func;
+  <para>
+   Calcule le rectangle d'encadrement pour un texte, en utilisant la police
+   courante et freetype2.
+  </para>
  </refsect1>
  <refsect1 role="parameters">
   &reftitle.parameters;
@@ -28,6 +31,8 @@
      <term><parameter>size</parameter></term>
      <listitem>
       <para>
+       La taille de la police. Suivant votre version de GD, elle devra
+       être spécifié en pixel (GD1) ou en point (GD2).
       </para>
      </listitem>
     </varlistentry>
@@ -35,13 +40,19 @@
      <term><parameter>angle</parameter></term>
      <listitem>
       <para>
+       Angle, en degrés, dans lequel le paramètre <parameter>text</parameter>
+       sera mesuré.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>font_file</parameter></term>
+     <term><parameter>fontfile</parameter></term>
      <listitem>
       <para>
+       Le nom du fichier de la police TrueType (peut être une URL).
+       Suivant la version de GD utilisée par PHP, il sera recherché les
+       fichiers qui ne commencent pas par un '/', en y ajoutant l'extension
+       '.ttf', et suivant le chemin des polices défini par la bibliothèque.
       </para>
      </listitem>
     </varlistentry>
@@ -49,6 +60,7 @@
      <term><parameter>text</parameter></term>
      <listitem>
       <para>
+       La chaîne à mesurer.
       </para>
      </listitem>
     </varlistentry>
@@ -56,6 +68,25 @@
      <term><parameter>extrainfo</parameter></term>
      <listitem>
       <para>
+       <table>
+       <title>Indexes possibles pour le tableau <parameter>extrainfo</parameter></title>
+        <tgroup cols="2">
+         <thead>
+          <row>
+           <entry>Clé</entry>
+           <entry>Type</entry>
+           <entry>Signification</entry>
+          </row>
+         </thead>
+         <tbody>
+          <row>
+           <entry><literal>linespacing</literal></entry>
+           <entry><type>float</type></entry>
+           <entry>Définit l'espacement entre les lignes lors du dessin</entry>
+          </row>
+         </tbody>
+        </tgroup>
+       </table>
       </para>
      </listitem>
     </varlistentry>
@@ -65,13 +96,99 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
+   <function>imageftbbox</function> retourne un tableau contenant 8 éléments
+   représentant les 4 points du rectangle antourant le texte :
+   <informaltable>
+    <tgroup cols="2">
+     <tbody>
+      <row>
+       <entry>0</entry>
+       <entry>Coin en bas, à gauche, position en X</entry>
+      </row>
+      <row>
+       <entry>1</entry>
+       <entry>Coin en bas, à gauche, position en Y</entry>
+      </row>
+      <row>
+       <entry>2</entry>
+       <entry>Coin en bas, à droite, position en X</entry>
+      </row>
+      <row>
+       <entry>3</entry>
+       <entry>Coin en bas, à droite, position en Y</entry>
+      </row>
+      <row>
+       <entry>4</entry>
+       <entry>Coin en haut, à droite, position en X</entry>
+      </row>
+      <row>
+       <entry>5</entry>
+       <entry>Coin en haut, à droite, position en Y</entry>
+      </row>
+      <row>
+       <entry>6</entry>
+       <entry>Coin en haut, à gauche, position en X</entry>
+      </row>
+      <row>
+       <entry>7</entry>
+       <entry>Coin en haut, à gauche, position en Y</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
+  <para>
+   Les points sont relatifs au <emphasis>texte</emphasis> suivant le paramètre
+   <parameter>angle</parameter>, aussi, "en haut à gauche" signifie le coin en
+   haut à gauche lorsque l'on regarde le texte horizontalement.
   </para>
  </refsect1>
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>imageftbbox</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Création d'une image de 300x150 pixels
+$im = imagecreatetruecolor(300, 150);
+$black = imagecolorallocate($im, 0, 0, 0);
+$white = imagecolorallocate($im, 255, 255, 255);
+
+// Définit l'arrière-plan en blanc
+imagefilledrectangle($im, 0, 0, 299, 299, $white);
+
+// Chemin vers notre fichier de police
+$font = './arial.ttf';
+
+// D'abord, nous créons un rectangle contenant notre texte
+$bbox = imageftbbox(10, 0, $font, 'The PHP Documentation Group');
+
+// Nos coordonnées en X et en Y
+$x = $bbox[0] + (imagesx($im) / 2) - ($bbox[4] / 2) - 5;
+$y = $bbox[1] + (imagesy($im) / 2) - ($bbox[5] / 2) - 5;
+
+imagefttext($im, 10, 0, $x, $y, $black, $font, 'The PHP Documentation Group');
+
+// Affichage vers le navigateur
+header('Content-type: image/png');
+
+imagepng($im);
+imagedestroy($im);
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
  <refsect1 role="notes">
   &reftitle.notes;
   &note.gd.2;
   &note.freetype;
  </refsect1>
+
  <refsect1 role="changelog">
   &reftitle.changelog;
   <para>
@@ -87,7 +204,7 @@
       <row>
        <entry>4.3.5</entry>
        <entry>
-        Le paramètre <parameter>extrainfo</parameter> est devenu optionnel.
+        Le paramètre <parameter>extrainfo</parameter> devient optionnel.
        </entry>
       </row>
      </tbody>

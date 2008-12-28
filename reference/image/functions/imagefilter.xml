@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='iso-8859-1'?>
-<!-- $Revision: 1.14 $ -->
-<!-- EN-Revision: 1.10 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- $Revision: 1.15 $ -->
+<!-- EN-Revision: 1.13 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xml:id="function.imagefilter" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -118,6 +118,28 @@
      <term><parameter>arg1</parameter></term>
      <listitem>
       <para>
+       <itemizedlist>
+        <listitem>
+         <simpara>
+          <constant>IMG_FILTER_BRIGHTNESS</constant> : Degré de luminosité.
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          <constant>IMG_FILTER_CONTRAST</constant> : Degré du contraste.
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          <constant>IMG_FILTER_COLORIZE</constant> : Valeur du composant rouge.
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          <constant>IMG_FILTER_SMOOTH</constant> : Degré du lissé.
+         </simpara>
+        </listitem>
+       </itemizedlist>
       </para>
      </listitem>
     </varlistentry>
@@ -125,6 +147,13 @@
      <term><parameter>arg2</parameter></term>
      <listitem>
       <para>
+       <itemizedlist>
+        <listitem>
+         <simpara>
+          <constant>IMG_FILTER_COLORIZE</constant> : Valeur du composant vert.
+         </simpara>
+        </listitem>
+       </itemizedlist>
       </para>
      </listitem>
     </varlistentry>
@@ -132,6 +161,29 @@
      <term><parameter>arg3</parameter></term>
      <listitem>
       <para>
+       <itemizedlist>
+        <listitem>
+         <simpara>
+          <constant>IMG_FILTER_COLORIZE</constant> : Valeur du composant bleu.
+         </simpara>
+        </listitem>
+       </itemizedlist>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>arg4</parameter></term>
+     <listitem>
+      <para>
+       <itemizedlist>
+        <listitem>
+         <simpara>
+          <constant>IMG_FILTER_COLORIZE</constant> : Canal Alpha. Une valeur
+          entre 0 et 127. 0 signifie totalement opaque, tandis que 127 signifie
+          totalement transparent.
+         </simpara>
+        </listitem>
+       </itemizedlist>
       </para>
      </listitem>
     </varlistentry>
@@ -180,10 +232,15 @@
 <![CDATA[
 <?php
 $im = imagecreatefrompng('dave.png');
-if ($im && imagefilter($im, IMG_FILTER_GRAYSCALE)) {
+
+if($im && imagefilter($im, IMG_FILTER_GRAYSCALE))
+{
     echo 'Image convertie en grayscale.';
+
     imagepng($im, 'dave.png');
-} else {
+}
+else
+{
     echo 'La convertion en grayscale a échoué.';
 }
 
@@ -198,14 +255,17 @@ imagedestroy($im);
 <![CDATA[
 <?php
 $im = imagecreatefrompng('sean.png');
-if ($im && imagefilter($im, IMG_FILTER_BRIGHTNESS, 20)) {
+
+if($im && imagefilter($im, IMG_FILTER_BRIGHTNESS, 20))
+{
     echo 'La luminosité de l\'image a été modifiée.';
     imagepng($im, 'sean.png');
-} else {
+    imagedestroy($im);
+}
+else
+{
     echo 'Echec lors de la modification de la luminosité.';
 }
-
-imagedestroy($im);
 ?>
 ]]>
     </programlisting>
@@ -218,24 +278,74 @@ imagedestroy($im);
 $im = imagecreatefrompng('philip.png');
 
 /* R, G, B, donc 0, 255, 0 correspond au vert */
-if ($im && imagefilter($im, IMG_FILTER_COLORIZE, 0, 255, 0)) {
+if($im && imagefilter($im, IMG_FILTER_COLORIZE, 0, 255, 0))
+{
     echo 'L\'image a été ombragée en vert avec succès.';
     imagepng($im, 'philip.png');
-} else {
+    imagedestroy($im);
+}
+else
+{
     echo 'Echec lors de la modification de l\'ombrage.';
 }
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Exemple d'image en négatif avec <function>imagefilter</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Définission de notre fonction "négatif" afin qu'elle soit portable
+// également sur les versions de PHP qui n'ont pas la fonction imagefilter()
+function negate($im)
+{
+    if(function_exists('imagefilter'))
+    {
+        return imagefilter($im, IMG_FILTER_NEGATE);
+    }
 
-imagedestroy($im);
+    for($x = 0; $x < imagesx($im); ++$x)
+    {
+        for($y = 0; $y < imagesy($im); ++$y)
+        {
+            $index = imagecolorat($im, $x, $y);
+            $rgb = imagecolorsforindex($index);
+            $color = imagecolorallocate($im, 255 - $rgb['red'], 255 - $rgb['green'], 255 - $rgb['blue']);
+
+            imagesetpixel($im, $x, $y, $color);
+        }
+    }
+
+    return(true);
+}
+
+$im = imagecreatefromjpeg('kalle.jpg');
+
+if($im && negate($im))
+{
+    echo 'Image convertie avec succès en couleur négative.';
+
+    imagejpeg($im, 'kalle.jpg', 100);
+    imagedestroy($im);
+}
+else
+{
+    echo 'Echec lors de la conversion en couleur négative.';
+}
 ?>
 ]]>
     </programlisting>
    </example>
   </para>
  </refsect1>
+
  <refsect1 role="notes">
   &reftitle.notes;
   &note.bundled.gd;
  </refsect1>
+
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>

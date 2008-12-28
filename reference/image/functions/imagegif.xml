@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.25 $ -->
-<!-- EN-Revision: 1.18 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.26 $ -->
+<!-- EN-Revision: 1.19 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.imagegif" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -28,6 +28,7 @@
    <acronym>GIF89a</acronym>.
   </para>
  </refsect1>
+
  <refsect1 role="parameters">
   &reftitle.parameters;
   <para>
@@ -45,12 +46,63 @@
    </variablelist>
   </para>
  </refsect1>
+
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
    &return.success;
   </para>
  </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Affichage d'une image en utilisant <function>imagegif</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Création d'une image
+$im = imagecreatetruecolor(100, 100);
+
+// Définit l'arrière-plan en blanc
+imagefilledrectangle($im, 0, 0, 99, 99, 0xFFFFFF);
+
+// Dessine un texte dans l'image
+imagestring($im, 3, 40, 20, 'GD Library', 0xFFBA00);
+
+// Affiche l'image sur le navigateur
+header('Content-type: image/gif');
+
+imagegif($im);
+imagedestroy($im);
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Convertion d'une image PNG en GIF, en utilisant <function>imagegif</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Chargement de l'image PNG
+$png = imagecreatefrompng('./php.png');
+
+// Sauvegarde de l'image en GIF
+imagegif($png, './php.gif');
+
+// Libération de la mémoire
+imagedestroy($png);
+
+// C'est fait !
+echo 'Convertion avec succès de l'image PNG en GIF !';
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
  <refsect1 role="notes">
   &reftitle.notes;
   <note>
@@ -71,20 +123,52 @@
      <programlisting role="php">
 <![CDATA[
 <?php
-if (function_exists("imagegif")) {
-    header("Content-type: image/gif");
+// Création d'une image
+$im = imagecreatetruecolor(100, 100);
+
+// On fait quelques opérations sur l'image ici...
+
+// Gestion de l'affichage
+if(function_exists('imagegif'))
+{
+    // Pour GIF
+    header('Content-type: image/gif');
+
     imagegif($im);
-} elseif (function_exists("imagejpeg")) {
-    header("Content-type: image/jpeg");
-    imagejpeg($im, "", 0.5);
-} elseif (function_exists("imagepng")) {
-    header("Content-type: image/png");
+}
+elseif(function_exists('imagejpeg'))
+{
+    // Pour JPEG
+    header('Content-type: image/jpeg');
+
+    imagejpeg($im, NULL, 100);
+}
+elseif(function_exists('imagepng'))
+{
+    // Pour PNG
+    header('Content-type: image/png');
+
     imagepng($im);
-} elseif (function_exists("imagewbmp")) {
-    header("Content-type: image/vnd.wap.wbmp");
+}
+elseif(function_exists('imagewbmp'))
+{
+    // Pour WBMP
+    header('Content-type: image/vnd.wap.wbmp');
+
     imagewbmp($im);
-} else {
-    die("Pas de support graphique avec PHP sur ce serveur");
+}
+else
+{
+    imagedestroy($im);
+
+    die('Aucun support sur ce serveur PHP n\'a été trouvé');
+}
+
+// Si un support a été trouvé pour un de ces formats,
+// nous libérons la mémoire
+if($im)
+{
+    imagedestroy($im);
 }
 ?>
 ]]>
@@ -94,7 +178,7 @@ if (function_exists("imagegif")) {
   </note>
   <note>
    <para>
-    Depuis les versions 3.0.18 et 4.0.2, vous pouvez utiliser la 
+    Depuis les versions 3.0.18 et 4.0.2 de PHP, vous pouvez utiliser la 
     fonction <function>imagetypes</function> au lieu de
     <function>function_exists</function> pour vérifier la
     présence des différents formats d'images supportés.:
@@ -102,10 +186,13 @@ if (function_exists("imagegif")) {
      <programlisting role="php">
 <![CDATA[
 <?php
-if (imagetypes() & IMG_GIF) {
-    header ("Content-type: image/gif");
-    imagegif ($im);
-} elseif (imagetypes() & IMG_JPG) {
+if(imagetypes() & IMG_GIF)
+{
+    header('Content-type: image/gif');
+    imagegif($im);
+}
+elseif(imagetypes() & IMG_JPG)
+{
     /* ... etc. */
 }
 ?>

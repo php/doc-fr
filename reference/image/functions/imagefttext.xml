@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.17 $ -->
-<!-- EN-Revision: 1.15 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.18 $ -->
+<!-- EN-Revision: 1.18 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id='function.imagefttext' xmlns="http://docbook.org/ns/docbook">
@@ -18,11 +18,12 @@
    <methodparam><type>int</type><parameter>x</parameter></methodparam>
    <methodparam><type>int</type><parameter>y</parameter></methodparam>
    <methodparam><type>int</type><parameter>color</parameter></methodparam>
-   <methodparam><type>string</type><parameter>font_file</parameter></methodparam>
+   <methodparam><type>string</type><parameter>fontfile</parameter></methodparam>
    <methodparam><type>string</type><parameter>text</parameter></methodparam>
    <methodparam choice="opt"><type>array</type><parameter>extrainfo</parameter></methodparam>
   </methodsynopsis>
  </refsect1>
+
  <refsect1 role="parameters">
   &reftitle.parameters;
   <para>
@@ -32,7 +33,7 @@
      <term><parameter>size</parameter></term>
      <listitem>
       <para>
-       La taille de la police à utiliser, en nombre de points
+       La taille de la police à utiliser, en nombre de points.
       </para>
      </listitem>
     </varlistentry>
@@ -66,8 +67,8 @@
      <term><parameter>y</parameter></term>
      <listitem>
       <para>
-       L'ordonnée <literal>y-ordinate</literal>. Ce paramètre configure la position de base de la police,
-       et non pas le bas de cette dernière.
+       L'ordonnée <literal>y-ordinate</literal>. Ce paramètre configure la
+       position de base de la police, et non pas le bas de cette dernière.
       </para>
      </listitem>
     </varlistentry>
@@ -76,16 +77,47 @@
      <listitem>
       <para>
        L'index de la couleur désirée pour le texte, voir
-       la fonction <function>imagecolorexact</function>
+       la fonction <function>imagecolorexact</function>.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>font_file</parameter></term>
+     <term><parameter>fontfile</parameter></term>
      <listitem>
       <para>
-       Le chemin complet vers le fichier représentant
-       la police de caractères à utiliser.
+       Le chemin vers la police TrueType à utiliser.
+      </para>
+      <para>
+       Suivant la version de GD utilisée par PHP, il sera recherché les
+       fichiers qui ne commencent pas par un '<literal>/</literal>', en y
+       ajoutant l'extension '<literal>.ttf</literal>', et suivant le chemin des
+       polices défini par la bibliothèque.
+      </para>
+      <para>
+       Lors de l'utilisation d'une version de GD inférieure à 2.0.18, un
+       caractère d'espacement (plutôt qu'un point-virgule) était utilisé
+       comment séparateur dans le chemin pour les différents fichiers de police.
+       Si vous utilisez toujours cette notation, vous obtiendrez le message
+       d'erreur suivant : 
+       <literal>Warning: Could not find/open font</literal>. Pour ces anciennes
+       versions, la seule solution est de déplacer la police dans un dossier qui
+       ne contient pas d'espace.
+      </para>
+      <para>
+       Dans la plupart des cas, lorsque la police se trouve dans le même dossier
+       que le script qui cherche à l'utiliser, la solution suivante permet
+       de s'affranchir de tous les problèmes relatifs à l'inclusion.
+       <programlisting role="php">
+<![CDATA[
+<?php
+// Définit la variable d'environnement pour GD
+putenv('GDFONTPATH=' . realpath('.'));
+
+// Nom de la police à utiliser (note qu'il n'y a pas d'extension .ttf)
+$font = 'SomeFont';
+?>
+]]>
+       </programlisting>
       </para>
      </listitem>
     </varlistentry>
@@ -101,12 +133,32 @@
      <term><parameter>extrainfo</parameter></term>
      <listitem>
       <para>
+       <table>
+       <title>Indexes possibles pour le tableau <parameter>extrainfo</parameter></title>
+        <tgroup cols="2">
+         <thead>
+          <row>
+           <entry>Clé</entry>
+           <entry>Type</entry>
+           <entry>Signification</entry>
+          </row>
+         </thead>
+         <tbody>
+          <row>
+           <entry><literal>linespacing</literal></entry>
+           <entry><type>float</type></entry>
+           <entry>Définit l'espacement entre les lignes lors du dessin</entry>
+          </row>
+         </tbody>
+        </tgroup>
+       </table>
       </para>
      </listitem>
     </varlistentry>
    </variablelist>
   </para>
  </refsect1>
+
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
@@ -153,11 +205,47 @@
    </informaltable>
   </para>
  </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>imagefttext</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Création d'une image de 300x100 pixels
+$im = imagecreatetruecolor(300, 100);
+$red = imagecolorallocate($im, 0xFF, 0x00, 0x00);
+$black = imagecolorallocate($im, 0x00, 0x00, 0x00);
+
+// Définit l'arrière-plan en rouge
+imagefilledrectangle($im, 0, 0, 299, 99, $red);
+
+// Chemin vers notre fichier de police ttf
+$font_file = './arial.ttf';
+
+// Dessine le texte 'PHP Manual' en utilisant une police de taille 13
+imagefttext($im, 13, 0, 105, 55, $black, $font_file, 'PHP Manual');
+
+// Affichage de l'image sur le navigateur
+header('Content-Type: image/png');
+
+imagepng($im);
+imagedestroy($im);
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
  <refsect1 role="notes">
   &reftitle.notes;
   &note.gd.2;
   &note.freetype;
  </refsect1>
+
  <refsect1 role="changelog">
   &reftitle.changelog;
   <para>
