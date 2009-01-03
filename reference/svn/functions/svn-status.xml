@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.3 $ -->
-<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.4 $ -->
+<!-- EN-Revision: 1.3 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.svn-status" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -14,10 +14,7 @@
   <methodsynopsis>
    <type>array</type><methodname>svn_status</methodname>
    <methodparam><type>string</type><parameter>path</parameter></methodparam>
-   <methodparam choice="opt"><type>bool</type><parameter>recursive</parameter></methodparam>
-   <methodparam choice="opt"><type>bool</type><parameter>get_all</parameter></methodparam>
-   <methodparam choice="opt"><type>bool</type><parameter>update</parameter></methodparam>
-   <methodparam choice="opt"><type>bool</type><parameter>no_ignore</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>flags</parameter></methodparam>
   </methodsynopsis>
   <para>
    Retourne le statut des fichiers et des dossiers de la copie de travail, en fournissant
@@ -40,40 +37,15 @@
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>recursive</parameter></term>
+     <term><parameter>flags</parameter></term>
      <listitem>
       <para>
-       Si l'on doit ou non récupérer récursivement les statuts. Par défaut, vaut &true;.
-      </para>
-     </listitem>
-    </varlistentry>
-    <varlistentry>
-     <term><parameter>get_all</parameter></term>
-     <listitem>
-      <para>
-       Si l'on doit ou non retourner tous les éléments, d'un point de
-       vue des modifications du statut. Par défaut, vaut &false;.
-      </para>
-     </listitem>
-    </varlistentry>
-    <varlistentry>
-     <term><parameter>update</parameter></term>
-     <listitem>
-      <para>
-       Si l'on doit ou non retourner les informations depuis le
-       serveur suivant si la copie de travail est à jour ou non
-       (les entrées seront ajoutées pour les éléments qui sont
-       à jour). Par défaut, vaut &false;.
-      </para>
-     </listitem>
-    </varlistentry>
-    <varlistentry>
-     <term><parameter>no_ignore</parameter></term>
-     <listitem>
-      <para>
-       Si l'on doit ou non ignorer les propriétés svn:ignore
-       lors de l'analyse des nouveaux fichiers. Par défaut, vaut
-       &false;.
+       Toute combinaison de <constant>SVN_NON_RECURSIVE</constant>,
+       <constant>SVN_ALL</constant> (indépendamment du statut de modification),
+       <constant>SVN_SHOW_UPDATES</constant> (les entrées seront ajoutées pour les éléments
+       qui ne sont pas à jour), <constant>SVN_NO_IGNORE</constant> (néglige les propriétés
+       <literal>svn:ignore</literal> lors de l'analyse des nouveaux fichiers)
+       et <constant>SVN_IGNORE_EXTERNALS</constant>.
       </para>
      </listitem>
     </varlistentry>
@@ -85,7 +57,7 @@
   &reftitle.returnvalues;
   <para>
    Retourne un tableau indexé numériquement de tableaux associatifs
-   détaillant le statut des éléments du dépôt :
+   détaillant le statut des éléments du référentiel :
   </para>
   <screen>
 <![CDATA[
@@ -123,7 +95,7 @@ Array (
     <term><varname>repos_text_status</varname></term>
      <listitem>
       <simpara>
-       Statut du texte de l'élément dans le dépôt. Ne survient que si
+       Statut du texte de l'élément dans le référentiel. Ne survient que si
        <parameter>update</parameter> est défini à &true;.
        &svn.referto.status;
       </simpara>
@@ -141,7 +113,7 @@ Array (
     <term><varname>repos_prop_status</varname></term>
      <listitem>
       <simpara>
-       Statut de la propriété de l'élément. Ne survient que si
+       Statut de la propriété de l'élément dans le référentiel. Ne survient que si
        <parameter>update</parameter> est défini à &true;. &svn.referto.status;
       </simpara>
      </listitem>
@@ -167,7 +139,7 @@ Array (
     <term><varname>switched</varname></term>
      <listitem>
       <simpara>
-       Si l'élément a changé de serveur de référence, 
+       Si l'élément a changé de référentiel de référence, 
        en utilisant la commande switch.
        (Définit que si &true;)
       </simpara>
@@ -182,7 +154,7 @@ Array (
     <term><varname>name</varname></term>
      <listitem>
       <simpara>
-       Nom de base de l'élément dans le dépôt.
+       Nom de base de l'élément dans le référentiel.
       </simpara>
      </listitem>
    </varlistentry>
@@ -190,7 +162,7 @@ Array (
     <term><varname>url</varname></term>
      <listitem>
       <simpara>
-       URL de l'élément dans le dépôt.
+       URL de l'élément dans le référentiel.
       </simpara>
      </listitem>
    </varlistentry>
@@ -198,7 +170,7 @@ Array (
     <term><varname>repos</varname></term>
      <listitem>
       <simpara>
-       URL de base du dépôt.
+       URL de base du référentiel.
       </simpara>
      </listitem>
    </varlistentry>
@@ -206,7 +178,7 @@ Array (
     <term><varname>revision</varname></term>
      <listitem>
       <simpara>
-       Version de l'élément dans la copie de travail.
+       Révision de l'élément dans la copie de travail.
       </simpara>
      </listitem>
    </varlistentry>
@@ -231,9 +203,9 @@ Array (
 <?php
 if (!defined('svn_wc_schedule_normal')) {
     define('svn_wc_schedule_normal',  0); // rien de spécial
-    define('svn_wc_schedule_add',     1); // élément a ajouté
-    define('svn_wc_schedule_delete',  2); // élément a supprimé
-    define('svn_wc_schedule_replace', 3); // élément a ajouté et effacé
+    define('svn_wc_schedule_add',     1); // élément à ajouté
+    define('svn_wc_schedule_delete',  2); // élément à supprimé
+    define('svn_wc_schedule_replace', 3); // élément à ajouté et effacé
 }
 ?>
 ]]>
@@ -244,7 +216,7 @@ if (!defined('svn_wc_schedule_normal')) {
     <term><varname>deleted</varname></term>
      <listitem>
       <simpara>
-       Si l'élément a été supprimé, mais les versions parents existent toujours
+       Si l'élément a été supprimé, mais les révisions parentes existent toujours
        (Définit que si &true;.)
       </simpara>
      </listitem>
@@ -280,7 +252,7 @@ if (!defined('svn_wc_schedule_normal')) {
     <term><varname>cmt_rev</varname></term>
      <listitem>
       <simpara>
-       Version de la dernière validation. (Non-Affecté par le paramètre
+       Révision de la dernière livraison. (Non-Affecté par le paramètre
        <parameter>update</parameter>).
       </simpara>
      </listitem>
@@ -289,7 +261,7 @@ if (!defined('svn_wc_schedule_normal')) {
     <term><varname>cmt_author</varname></term>
      <listitem>
       <simpara>
-       Nom de l'auteur de la dernière validation. (Non-Affecté par le
+       Nom de l'auteur de la dernière livraison. (Non-Affecté par le
        paramètre <parameter>update</parameter>).
       </simpara>
      </listitem>
@@ -370,7 +342,7 @@ Array (
    <simplelist>
     <member><function>svn_update</function></member>
     <member><function>svn_log</function></member>
-    <member><link xlink:href="&url.svn.manual.status;">Documentation SVN de la commande  status</link></member>
+    <member><link xlink:href="&url.svn.manual.status;">Documentation SVN de la commande <literal>"svn status"</literal></link></member>
    </simplelist>
   </para>
  </refsect1>

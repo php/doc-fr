@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.3 $ -->
-<!-- EN-Revision: 1.2 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.4 $ -->
+<!-- EN-Revision: 1.5 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.svn-log" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>svn_log</refname>
-  <refpurpose>Récupère le message d'historisation d'une URL du dépôt</refpurpose>
+  <refpurpose>Récupère le message d'historisation d'une URL du référentiel</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -17,18 +17,18 @@
    <methodparam choice="opt"><type>int</type><parameter>revision_no</parameter></methodparam>
   </methodsynopsis>
   <para>
-   <function>svn_log</function> récupère l'historique complète d'un élément à l'URL
-   <parameter>repos_url</parameter>, ou l'historique d'une version spécifique
-   si <parameter>revision_no</parameter> est défini. Cette fonction est équivalent
-   à la commande <userinput>svn log --verbose -r $revision_no $repos_url</userinput>.
+   <function>svn_log</function> récupère l'historique complète de l'élément 
+   correspondant à l'URL <parameter>repos_url</parameter>, ou l'historique d'une révision spécifique
+   si <parameter>start_revision</parameter> est spécifié. Cette fonction est équivalent
+   à la commande <userinput>svn log --verbose -r $start_revision $repos_url</userinput>.
   </para>
   <warning>
    <para>
-    Pour les dépôts dont l'historique est important, la sortie peut
-    être énorme (un tableau dont chaque élément représente une version).
+    Pour les référentiels dont l'historique est important, la sortie peut
+    être énorme (un tableau dont chaque élément représente une révision).
     Cette fonction ne supporte pas le drapeau
-    <userinput>--limit NUM</userinput>, ni un intervalle de versions
-    (<userinput>revision_no</userinput> doit être un entier).
+    <userinput>--limit NUM</userinput>, ni un intervalle de révisions
+    (<userinput>start_revision</userinput> doit être un entier).
    </para>
   </warning>
  </refsect1>
@@ -41,17 +41,46 @@
      <term><parameter>repos_url</parameter></term>
      <listitem>
       <para>
-       URL du dépôt de l'élément dont on doit récupérer l'historique.
+       URL dans le référentiel de l'élément dont on doit récupérer l'historique.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>revision_no</parameter></term>
+     <term><parameter>start_revision</parameter></term>
      <listitem>
       <para>
-       Numéro de version de l'historisation à récupérer. Utilisez
+       Numéro de révision de la première historisation à récupérer. Utilisez
        la constante <constant>SVN_REVISON_HEAD</constant> pour récupérer
-       l'historisation de la version la plus récente.
+       l'historisation de la révision la plus récente.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>end_revision</parameter></term>
+     <listitem>
+      <para>
+       Numéro de révision de la dernière historisation à récupérer. Par défaut vaut
+       <parameter>start_revision</parameter> s'elle est spécifié sinon vaut la
+       constante <constant>SVN_REVISION_INITIAL</constant>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>limit</parameter></term>
+     <listitem>
+      <para>
+       Nombre d'historisations à récupérer.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>flags</parameter></term>
+     <listitem>
+      <para>
+       Toutes combinaisons de <constant>SVN_OMIT_MESSAGES</constant>,
+       <constant>SVN_DISCOVER_CHANGED_PATHS</constant> et
+       <constant>SVN_STOP_ON_COPY</constant>, par défaut vaut
+       <userinput>SVN_DISCOVER_CHANGED_PATHS | SVN_STOP_ON_COPY</userinput>.
       </para>
      </listitem>
     </varlistentry>
@@ -66,9 +95,9 @@
    au format :
    <screen>
 <![CDATA[
-[0] => Tableau, ordonné du numéro de version le plus grand, au plus petit
+[0] => Tableau, ordonné du numéro de révision le plus grand, au plus petit
 (
-    [rev] => numéro de version
+    [rev] => numéro de révision
     [author] => nom de l'auteur
     [msg] => message d'historisation
     [date] => date, au format ISO 8601, i.e. date('c')
@@ -77,7 +106,7 @@
             [0] => Array
                 (
                     [action] => lettre, spécifiant la modification
-                    [path] =>  chemin absolu du dépôt vers le fichier modifié
+                    [path] =>  chemin absolu du référentiel vers le fichier modifié
                 )
             [1] => ...
         )
@@ -93,9 +122,9 @@
    </para>
   </note>
   <para>
-   La valeur de <varname>action</varname> est un sous-jeu de
+   La valeur de <varname>action</varname> est une sous-partie de
    <link xlink:href="&url.svn.manual.status;">la sortie de statut
-    pour la première colonne</link>, où les valeurs possibles sont :
+    dans la première colonne</link>, où les valeurs possibles sont :
   </para>
   <table>
    <title>Actions</title>
@@ -174,47 +203,6 @@ Array
     </screen>
    </example>
   </para>
-  <para>
-   <example>
-    <title>Simulation de <userinput>--limit</userinput> avec <userinput>svn</userinput> et <function>svn_log</function></title>
-    <para>
-     Cette fonction simule le comportement de <userinput>--limit</userinput>
-     en utilisant l'exécutable SVN pour retourner la liste des versions.
-    </para>
-    <note>
-     <para>
-      Cette fonction effectue un total de <parameter>limit</parameter> + 1
-      requêtes : la première requête pour spécifier les versions requises,
-      et ensuite, chacune pour récupérer le message de journalisation de l'élément
-      pour cette requête.
-     </para>
-    </note>
-    <programlisting role="php">
-<![CDATA[
-<?php
-/**
- * Recupération les dernières $limit entrées de la journalisation
- * @param $repos_url URL du dépôt de l'élément
- * @param $limit Nombre limite de messages
- */
-function svn_log_limit($repos_url, $limit) {
-    $limit = (int) $limit;
-    if ($limit <= 0) return array();
-    // Drapeau -q utilisé pour prévenir le serveur de l'envoi des messages du journal
-    $output = shell_exec("svn log -q --limit $limit $repos_url");
-    preg_match_all('/^r(\d+) /m', $output, $matches);
-    $ret = array();
-    foreach ($matches[1] as $rev) {
-        $log = svn_log($repos_url, (int) $rev);
-        $ret[] = $log[0]; // Message du journal n'est que d'un seul élément
-    }
-    return $ret;
-}
-?>
-]]>
-    </programlisting>
-   </example>
-  </para>
  </refsect1>
 
  <refsect1 role="seealso">
@@ -222,7 +210,7 @@ function svn_log_limit($repos_url, $limit) {
   <para>
    <simplelist>
     <member>
-     <link xlink:href="&url.svn.manual.log;">Documentation SVN pour la commande log</link>
+     <link xlink:href="&url.svn.manual.log;">Documentation SVN pour la commande <literal>"svn log"</literal></link>
     </member>
    </simplelist>
   </para>
