@@ -1,0 +1,227 @@
+<?xml version='1.0' encoding='iso-8859-1'?>
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.5 Maintainer: gui Status: ready -->
+<!-- Reviewed: no -->
+<refentry xml:id="phar.webphar" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <refnamediv>
+  <refname>Phar::webPhar</refname>
+  <refpurpose>mapPhar pour les phars orientés web. Contrôleur pour les applications web</refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>void</type><methodname>Phar::webPhar</methodname>
+   <methodparam choice="opt"><type>string</type><parameter>alias</parameter></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>index</parameter></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>f404</parameter></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>mimetypes</parameter></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>rewrites</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   <function>Phar::mapPhar</function> pour les phars orientés web. Cette méthode parse
+   <varname>$_SERVER['REQUEST_URI']</varname> et route les requêtes d'un navigateur vers un fichier
+   interne à l'archive. Dans le principe, cela simule un serveur web, en routant des requêtes vers le bon
+   fichier, en envoyant les bons en-têtes et parsant le fichier PHP comme il convient. Cette méthode puissante
+   permet de convertir facilement des applications PHP en archive phar. Combinée avec
+   <function>Phar::mungServer</function> et <function>Phar::interceptFileFuncs</function>,
+   n'importe quelle application web peut être utilisée sans changement à partir de l'archive phar.
+  </para>
+  <para>
+   <function>Phar::webPhar</function> doit être appelé uniquement à partir du conteneur de chargement
+   d'une archive phar (lisez <link linkend="phar.fileformat.stub">ceci</link>
+   pour en savoir davantage sur les conteneurs).
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>alias</parameter></term>
+     <listitem>
+      <para>
+       L'alias qui peut être utilisé dans l'URL <literal>phar://</literal> pour se référer à
+       l'archive, plutôt que son chemin complet.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>index</parameter></term>
+     <listitem>
+      <para>
+       L'emplacement au sein de l'archive de l'index de répertoire, par défaut
+       <literal>index.php</literal>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>f404</parameter></term>
+     <listitem>
+      <para>
+       L'emplacement du script à exécuter quand un fichier n'est pas trouvé. Ce
+       script doit envoyer des en-têtes HTTP 404 corrects.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>mimetypes</parameter></term>
+     <listitem>
+      <para>
+       Un tableau faisant correspondre des extensions de fichier supplémentaires à des types MIME.
+       Par défaut, ces correspondances sont les suivantes :
+       <programlisting role="php">
+        <![CDATA[
+$mimes = array(
+    'phps' => 2, // passage vers highlight_file()
+    'c' => 'text/plain',
+    'cc' => 'text/plain',
+    'cpp' => 'text/plain',
+    'c++' => 'text/plain',
+    'dtd' => 'text/plain',
+    'h' => 'text/plain',
+    'log' => 'text/plain',
+    'rng' => 'text/plain',
+    'txt' => 'text/plain',
+    'xsd' => 'text/plain',
+    'php' => 1, // parse en tant que PHP
+    'inc' => 1, // parse en tant que PHP
+    'avi' => 'video/avi',
+    'bmp' => 'image/bmp',
+    'css' => 'text/css',
+    'gif' => 'image/gif',
+    'htm' => 'text/html',
+    'html' => 'text/html',
+    'htmls' => 'text/html',
+    'ico' => 'image/x-ico',
+    'jpe' => 'image/jpeg',
+    'jpg' => 'image/jpeg',
+    'jpeg' => 'image/jpeg',
+    'js' => 'application/x-javascript',
+    'midi' => 'audio/midi',
+    'mid' => 'audio/midi',
+    'mod' => 'audio/mod',
+    'mov' => 'movie/quicktime',
+    'mp3' => 'audio/mp3',
+    'mpg' => 'video/mpeg',
+    'mpeg' => 'video/mpeg',
+    'pdf' => 'application/pdf',
+    'png' => 'image/png',
+    'swf' => 'application/shockwave-flash',
+    'tif' => 'image/tiff',
+    'tiff' => 'image/tiff',
+    'wav' => 'audio/wav',
+    'xbm' => 'image/xbm',
+    'xml' => 'text/xml',
+);
+        ]]>
+       </programlisting>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>rewrites</parameter></term>
+     <listitem>
+      <para>
+       Un tableau faisant correspondre des URI à des fichiers internes, simulant le mod_rewrite de apache.
+       Par exemple:
+       <programlisting role="php">
+        <![CDATA[
+array(
+    'moninfo' => 'moninfo.php'
+);
+        ]]>
+       </programlisting>
+       routera les appels à <literal>http://&lt;hôte&gt;/monphar.phar/moninfo</literal>
+       vers le fichier <literal>phar:///chemin/vers/monphar.phar/moninfo.php</literal>, en préservant les
+       GET/POST.  Ca ne fonctionne pas tout à fait comme mod_rewrite car ça ne fera pas correspondre
+       <literal>http://&lt;hôte&gt;/monphar.phar/moninfo/unautre</literal>.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+
+ </refsect1>
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+  Pas de valeur de retour
+  </para>
+ </refsect1>
+
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <para>
+   Lève une exception <classname>PharException</classname> quand le fichier interne ne peut pas être
+   ouvert ou si l'appel est fait en dehors d'un conteneur. Si un valeur de tableau non valide est passée dans
+   <parameter>mimetypes</parameter> ou dans <parameter>rewrites</parameter>, une exception
+   <classname>UnexpectedValueException</classname> est levée.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Un exemple avec <function>Phar::webPhar</function></title>
+    <para>
+     Dans l'exemple ci-dessous, le phar créé affichera <literal>Salut tout le monde</literal>
+     si quelqu'un appelle <literal>/monphar.phar/index.php</literal> ou
+     <literal>/monphar.phar</literal>, et affichera la source de 
+     <literal>index.phps</literal> si <literal>/monphar.phar/index.phps</literal> est appelé.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// l'archive phar est créée :
+try {
+    $phar = new Phar('monphar.phar');
+    $phar['index.php'] = '<?php echo "Salut tout le monde"; ?>';
+    $phar['index.phps'] = '<?php echo "Salut tout le monde"; ?>';
+    $phar->setStub('<?php
+Phar::webPhar();
+__HALT_COMPILER(); ?>');
+} catch (Exception $e) {
+    // on traite les erreurs ici
+}
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>Phar::mungServer</function></member>
+    <member><function>Phar::interceptFileFuncs</function></member>
+   </simplelist>
+  </para>
+ </refsect1>
+
+</refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
