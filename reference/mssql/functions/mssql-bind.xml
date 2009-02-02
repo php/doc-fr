@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.16 $ -->
-<!-- EN-Revision: 1.13 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.17 $ -->
+<!-- EN-Revision: 1.17 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id='function.mssql-bind' xmlns="http://docbook.org/ns/docbook">
@@ -17,9 +17,9 @@
    <methodparam><type>string</type><parameter>param_name</parameter></methodparam>
    <methodparam><type>mixed</type><parameter role="reference">var</parameter></methodparam>
    <methodparam><type>int</type><parameter>type</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>is_output</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>is_null</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>maxlen</parameter></methodparam>
+   <methodparam choice="opt"><type>bool</type><parameter>is_output</parameter><initializer>false</initializer></methodparam>
+   <methodparam choice="opt"><type>bool</type><parameter>is_null</parameter><initializer>false</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>maxlen</parameter><initializer>-1</initializer></methodparam>
   </methodsynopsis>
   <para>
    Ajoute un paramètre à une procédure stockée MSSQL (locale ou distante).
@@ -58,8 +58,8 @@
      <term><parameter>var</parameter></term>
      <listitem>
       <para>
-       La variable PHP que vous voulez lier au paramètre MSSQL. Vous pouvez
-       la passer par valeur, ou par référence pour récupérer les valeurs
+       La variable PHP que vous voulez lier au paramètre MSSQL. Il faut 
+       la passer par référence pour récupérer les valeurs
        OUTPUT et RETVAL après l'exécution de la procédure.
       </para>
      </listitem>
@@ -100,8 +100,8 @@
      <term><parameter>maxlen</parameter></term>
      <listitem>
       <para>
-       Utilisé avec les valeurs de type char et varchar. Vous devez indiquer
-       la longueur des données, donc, si ce paramètre vaut varchar(50), le type
+       Utilisé avec les valeurs de type CHAR et VARCHAR. Vous devez indiquer
+       la longueur des données, donc, si ce paramètre vaut VARCHAR(50), le type
        doit être <constant>SQLVARCHAR</constant> et sa valeur, <literal>50</literal>.
       </para>
      </listitem>
@@ -125,18 +125,23 @@
     <programlisting role="php">
 <![CDATA[
 <?php
+// Connexion à MSSQL
+mssql_connect('KALLESPC\SQLEXPRESS', 'sa', 'phpfi');
+mssql_select_db('php');
 
-$cn = mssql_connect($DBSERVER, $DBUSER, $DBPASS);
-mssql_select_db($DB, $cn);
+// Crée une nouvelle procédure stockée
+$stmt = mssql_init('NewUserRecord');
 
-$sp = mssql_init("WDumpAdd"); // stock le nom de la procédure
+// Lie les noms de champs
+mssql_bind($stmt, '@username',  'Kalle',        SQLVARCHAR,     false,  false,  60);
+mssql_bind($stmt, '@name',      'Kalle',        SQLVARCHAR,     false,  false,  60);
+mssql_bind($stmt, '@age',       19,             SQLINT1,        false,  false,   3);
 
-mssql_bind($sp, "@productname", stripslashes($newproduct), SQLVARCHAR, false, false, 150);
-mssql_bind($sp, "@quantity", stripslashes($newquantity), SQLVARCHAR, false, false, 50);
+// Exécute 
+mssql_execute($stmt);
 
-mssql_execute($sp);
-mssql_close($cn);
-
+// Libère les ressources
+mssql_free_statement($stmt);
 ?>
 ]]>
     </programlisting>
