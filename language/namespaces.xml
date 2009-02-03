@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.4 $ -->
-<!-- EN-Revision: 1.4 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.5 $ -->
+<!-- EN-Revision: 1.10 Maintainer: dams Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="language.namespaces" xmlns="http://docbook.org/ns/docbook"
@@ -8,433 +8,1501 @@
  <title>Les espaces de noms</title>
 
  <sect1 xml:id="language.namespaces.rationale">
-  <title>Les espaces de noms</title>
+  <title>Introduction aux espaces de noms</title>
   <simpara>
-   Les espaces de noms, en PHP, ont été conçus pour résoudre un problème
-   de portée de variables dans de grosses bibliothèques PHP. En PHP,
-   toutes les définitions de classes sont globales. Ainsi, lorsqu'une
-   bibliothèque crée divers utilitaires ou API de classes publiques,
-   l'auteur doit être prudent sur le faire que d'autres bibliothèques
-   avec les mêmes fonctionnalités peuvent exister et ainsi, choisir
-   des noms uniques afin que les bibliothèques puissent être utilisées
-   ensemble. Habituellement, l'on préfixe les noms des classes avec une
-   chaîne unique, i.e. les classes des bases de données sont
-   préfixées par <classname>Ma_Bibliotheque_DB</classname>, etc.
-   Lorsque la bibliothèque grossit, les préfixes s'enchaînent et l'on
-   atteint des noms très longs.
+   Que sont les espaces de noms? Dans leur définition la plus large, ils représentent
+   un moyen d'encapsuler des éléments. Cela peut être conçu comme un concept
+   abstrait, à différents endroits. Par exemple, dans un système de fichiers, les
+   dossiers représentent un groupe de fichiers associés, et sert d'espace de noms
+   pour les fichiers qu'il contient. Un exemple concret est que le fichier 
+   <literal>foo.txt</literal> peut exister dans les deux dossiers 
+   <literal>/home/greg</literal> et <literal>/home/other</literal>, mais que 
+   les deux copies de <literal>foo.txt</literal> ne peuvent pas co-exister
+   dans le même dossier. De plus, pour accéder au fichier <literal>foo.txt</literal> 
+   depuis l'extérieur du dossier <literal>/home/greg</literal>, il faut préciser
+   le nom du dossier en utilisant un séparateur de dossier, tel que 
+   <literal>/home/greg/foo.txt</literal>. Le même principe applique les
+   espaces de noms au monde de la programmation.
   </simpara>
   <simpara>
-   Les espaces de noms permettent aux développeurs de gérer les noms sans
-   pour autant avoir des noms longs à chaque fois que la classe y réfère,
-   et résout ainsi le partage des globales partagés sans rendre le code
-   illisible.
+   Dans le monde PHP, les espaces de noms sont conçus pour résoudre deux problèmes
+   que les auteurs de bibliothèques et applications rencontrent lors de la réutilisation
+   d'éléments tels que des classes ou des bibliothèques de fonctions : 
   </simpara>
+  <para>
+   <orderedlist>
+    <listitem>
+     <simpara>
+      Collisions de noms entre le code que vous créez, les classes, fonctions
+      ou constantes internes de PHP, ou celle de bibliothèques tierces.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      La capacité de faire des alias ou de raccourcir des Noms_Extremement_Long
+      pour aider à la résolution du premier problème, et améliorer la lisibilité
+      du code.
+     </simpara>
+    </listitem>
+   </orderedlist>
+  </para>
   <simpara>
-   Les espaces de noms sont disponibles en PHP depuis la version 5.3.0.
-   Cette section est expérimentale et est susceptible de changer.
+   Les espaces de noms PHP fournissent un moyen pour regrouper des classes,
+   fonctions ou constantes. Voici un exemple de syntaxe des espaces de noms PHP : 
+  </simpara>
+  <example>
+   <title>Exemple de syntaxe des espaces de noms</title>
+   <programlisting role="php">
+   <![CDATA[
+<?php
+namespace mon\nom; // Voyez la section "Définition des espaces de noms"
+
+class MaClasse {}
+function mafonction() {}
+const MACONSTANTE = 1;
+
+$a = new MaClasse;
+$c = new \mon\nom\MaClasse; // Voyez la section "Espace global"
+
+$a = strlen('bonjour'); // Voyez "Utilisation des espaces de noms : retour
+ 						// à l'espace global
+
+$d = namespace\MACONSTANTE; // Voyez "L'opérateur namespace et la constante __NAMESPACE__
+
+$d = __NAMESPACE__ . '\MACONSTANTE';
+echo constant($d); // Voyez "Espaces de noms et fonctionnalités dynamiques"
+?>
+    ]]>
+   </programlisting>
+  </example>
+  <simpara>
+   Les espaces de noms sont disponibles en PHP depuis PHP 5.3.0.
   </simpara>
  </sect1>
 
  <sect1 xml:id="language.namespaces.definition">
-  <title>Définition de l'espace de noms</title>
+  <title>Définition des espaces de noms</title>
   <para>
-   L'espace de noms est déclaré en utilisant le mot clé
-   <literal>namespace</literal>, devant être au tout début du fichier.
-   Par exemple :
+   Bien que du code PHP valide puisse être contenu dans un espace de noms,
+   seul trois type de code peut être affecté par les espaces de noms : 
+   les classes, les fonctions et les constantes.
+  </para>
+  <para>
+   Les espaces de noms sont déclarés avec le mot-clé <literal>namespace</literal>. 
+   Un fichier contenant un espace de noms doit déclarer l'espace au début
+   du fichier, avant tout autre code.
    <example>
-    <title>Définition de l'espace de noms</title>
+    <title>Déclaration d'un espace de noms</title>
     <programlisting role="php">
      <![CDATA[
 <?php
-namespace MyProject::DB;
+namespace MonProjet;
 
-const CONNECT_OK = 1;
-
-class Connection { /* ... */ }
-
-function connect() { /* ... */  }
+const CONNEXION_OK = 1;
+class Connexion { /* ... */ }
+function connecte() { /* ... */  }
 
 ?>
 ]]>
     </programlisting>
    </example>
-   Le nom d'un espace de noms peut être utilisé dans plusieurs fichiers.
+   Le seul élément autorisé avant la déclaration d'espace de noms est la commande
+   <literal>declare</literal>, pour définir l'encodage du fichier source. De plus,
+   aucun code non-PHP ne peut précéder la déclaration d'espace de noms, y compris
+   des espaces : 
+   <example>
+    <title>Erreur de déclaration d'un espace de noms</title>
+    <programlisting role="php">
+     <![CDATA[
+<html>
+<?php
+namespace MonProjet; // erreur fatale : l'espace de noms doit être le premier élément du script
+?>
+]]>
+    </programlisting>
+   </example>
   </para>
-
   <para>
-   L'espace de noms peut contenir des classes, des constantes et des fonctions,
-   mais pas de code libre.
+   De plus, contrairement à d'autres structures PHP, le même espace de noms peut 
+   être défini dans plusieurs fichiers, ce qui permet de scinder le contenu d'un
+   espace de noms sur plusieurs fichiers.
   </para>
-
+ </sect1>
+ <sect1 xml:id="language.namespaces.nested">
+  <title>Déclaration d'un sous espace de noms</title>
   <para>
-   La définition de l'espace de noms a pour conséquence ce qui suit :
-   <itemizedlist>
+   Comme pour les fichiers et les dossiers, les espaces de noms sont aussi
+   capables de spécifier une hiérarchie d'espaces de noms. Ainsi, un nom d'espace
+   de noms peut être défini avec ses sous-niveaux : 
+   <example>
+    <title>Déclaration d'un espace de noms avec hiérarchie</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+namespace MonProjet\Sous\Niveau;
+
+const CONNEXION_OK = 1;
+class Connexion { /* ... */ }
+function connecte() { /* ... */  }
+
+?>
+]]>
+    </programlisting>
+   </example>
+   Dans l'exemple ci-dessus, la constante <literal>MonProjet\Sous\Niveau\CONNEXION_OK</literal>,
+   la classe <literal>MonProjet\Sous\Niveau\Connexion</literal> et la fonction
+   <literal>MonProjet\Sous\Niveau\Connexion</literal> sont créés.
+  </para>
+ </sect1>
+ <sect1 xml:id="language.namespaces.definitionmultiple">
+  <title>Définition de plusieurs espaces de noms dans le même fichier</title>
+  <para>
+   Plusieurs espaces de noms peuvent aussi être déclarés dans le même fichier.
+   Il y a deux syntaxes autorisées.
+  </para>
+  <para>
+   <example>
+    <title>Déclaration de plusieurs espaces de noms, syntaxe à combinaison simple</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+namespace MonProjet;
+
+const CONNEXION_OK = 1;
+class Connexion { /* ... */ }
+function connecte() { /* ... */  }
+
+namespace AutreProjet;
+
+const CONNEXION_OK = 1;
+class Connexion { /* ... */ }
+function connecte() { /* ... */  }
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Cette syntaxe n'est pas recommandée pour combiner des espaces de noms 
+   dans un seul fichier. Au lieu de cela, il est recommandé d'utiliser 
+   la syntaxe à accolades.
+  </para>
+  <para>
+   <example>
+    <title>Déclaration de plusieurs espaces de noms, syntaxe à accolades</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+namespace MonProjet {
+
+const CONNEXION_OK = 1;
+class Connexion { /* ... */ }
+function connecte() { /* ... */  }
+}
+
+namespace AutreProjet {
+
+const CONNEXION_OK = 1;
+class Connexion { /* ... */ }
+function connecte() { /* ... */  }
+}
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Il est fortement recommandé, en tant que pratique de codage, de ne pas mélanger
+   plusieurs espaces de noms dans le même fichier. L'utilisation recommandée est de
+   combiner plusieurs scripts PHP dans le même fichier.
+  </para>
+  <para>
+   Pour combiner plusieurs code sans espaces de noms dans du code avec espace de noms,
+   seul la syntaxe à accolades est supportée. Le code global doit être encadré par un
+   espace de noms dans nom, tel que celui-ci : 
+   <example>
+    <title>Déclaration de plusieurs espaces de noms avec un espace sans noms</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+namespace MonProjet {
+
+const CONNEXION_OK = 1;
+class Connexion { /* ... */ }
+function connecte() { /* ... */  }
+}
+
+namespace { // code global
+session_start();
+$a = MonProjet\connecte();
+echo MonProjet\Connexion::start();
+}
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Aucun code PHP ne peut exister hors des accolades de l'espace de noms,
+   sauf pour ouvrir une nouvelle instruction <literal>declare</literal>.
+   <example>
+    <title>Déclaration de plusieurs espaces de noms avec un espace sans noms (2)</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+declare(encoding='UTF-8');
+namespace MonProjet {
+
+const CONNEXION_OK = 1;
+class Connexion { /* ... */ }
+function connecte() { /* ... */  }
+}
+
+namespace { // code global
+session_start();
+$a = MonProjet\connecte();
+echo MonProjet\Connexion::start();
+}
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </sect1>
+ <sect1 xml:id="language.namespaces.basics">
+  <title>Utilisation des espaces de noms : introduction</title>
+  <para>
+   Avant de discuter de l'utilisation des espaces de noms, il est important de
+   comprendre comment PHP devine de quel espace de noms votre code utilise. Une
+   analogie simple peut être faite entre les espaces de noms de PHP et un système
+   de fichiers. Il y a trois moyens d'accéder à un fichier dans un système de
+   fichiers :
+   <orderedlist>
     <listitem>
      <simpara>
-      Dans un espace de noms, tous les noms de classes, de fonctions, et de
-      constantes, dans leurs définitions, sont automatiquement préfixés par le
-      nom de l'espace de noms. Le nom de la classe est toujours le nom complet,
-      i.e. dans l'exemple ci-dessus, la classe est appelée
-      <classname>MyProject::DB::Connection</classname>.
+      Un nom relatif de fichier, tel que <literal>foo.txt</literal>. Cela est résolu
+      en <literal>dossiercourant/foo.txt</literal> où dossiercourant est le 
+      dossier de travail. Si le dossier courant est <literal>/home/foo</literal>, 
+      ce nom se résout en <literal>/home/foo/foo.txt</literal>.
      </simpara>
     </listitem>
     <listitem>
-    <simpara>
-     Les définitions de constantes créent les constantes, qui sont composées du
-     nom de l'espace de noms et du nom de la constante. Comme les constantes
-     de classe, les constantes de l'espace de noms ne peuvent contenir que
-     des valeurs statiques.
-    </simpara>
+     <simpara>
+      Un chemin relatif, tel que <literal>sous-dossier/foo.txt</literal>. Cela se 
+      résout en <literal>dossiercourant/sous-dossier/foo.txt</literal>.
+     </simpara>
     </listitem>
     <listitem>
-     <para>
-      Le nom de classe non-qualifié (i.e., nom ne contenant pas <literal>::</literal>)
-      est résolu au moment de l'exécution, en suivant cette procédure :
-      <orderedlist>
-       <listitem>
-        <simpara>
-         La classe est recherchée dans l'espace de noms courant (i.e. en préfixant
-         le nom avec le nom de l'espace de noms courant) sans tenter de la
-         <link linkend="language.oop5.autoload">charger automatiquement</link>.
-        </simpara>
-       </listitem>
-       <listitem>
-        <simpara>
-         La classe est recherchée dans l'espace de noms globale, sans tenter
-         de la charger automatiquement.
-        </simpara>
-       </listitem>
-       <listitem>
-        <simpara>
-         Le chargement automatique pour le nom de l'espace de noms
-         courant est tenté.
-        </simpara>
-       </listitem>
-       <listitem>
-        <simpara>Si la dernière tentative échoue, la recherche échoue.</simpara>
-       </listitem>
-      </orderedlist>
-     </para>
+     <simpara>
+      Un chemin absolu, tel que <literal>/main/foo.txt</literal>. Cela se résout
+      en <literal>/main/foo.txt</literal>.
+     </simpara>
+    </listitem>
+   </orderedlist>
+   Le même principe peut être appliqué aux espaces de noms de PHP.
+   Par exemple, on peut faire référence à une classe de trois manières : 
+   <orderedlist>
+    <listitem>
+     <simpara>
+      Un nom sans qualificatif, ou une classe sans préfixe, telle que 
+      <literal>$a = new foo();</literal> ou
+      <literal>foo::methodestatique();</literal>.  Si l'espace de noms courant
+      est <literal>espacedenomscourant</literal>, ceci se résout en 
+      <literal>espacedenomscourant\foo</literal>.  Si l'espace de noms est 
+      global, soit encore l'espace de noms sans nom, cela devient <literal>foo</literal>.
+     </simpara>
+     <simpara>
+      Une mise en garde : les noms sans qualificatif pour les fonctions et les
+      constantes vont être pris dans l'espace de noms global, si la fonction
+      n'est pas définie dans l'espace de noms courant. Voyez 
+      <link linkend="language.namespaces.fallback">Utilisation des espaces de noms :
+      retour à l'espace de noms globale pour les fonctions et les constantes</link> pour
+      plus de détails.
+     </simpara>
     </listitem>
     <listitem>
-     <para>
-      Le nom de la fonction non-qualifié (i.e. nom ne contenant pas
-      <literal>::</literal>) est recherché au moment de l'exécution tout d'abord
-      dans l'espace de noms courant, puis, dans l'espace global.
-     </para>
+     <simpara>
+      Un nom qualifié, ou une classe préfixée telle que 
+      <literal>$a = new sousespacedenoms\foo();</literal> or
+      <literal>sousespacedenoms\foo::methodestatique();</literal>. Si l'espace de noms courant
+      est <literal>espacedenomscourant</literal>, cela devient 
+      <literal>espacedenomscourant\sousespacedenoms\foo</literal>. Si
+      le code est global, c'est à dire l'espace de noms sans nom, 
+      cela devient <literal>sousespacedenoms\foo</literal>.
+     </simpara>
     </listitem>
     <listitem>
-    <para>
-     La constante non-qualifiée est recherché tout d'abord dans l'espace de noms
-     courant, puis, dans les constantes globales.
-    </para>
+     <simpara>
+      Un nom absolu, ou un nom préfixé avec un opérateur global tel que
+      <literal>$a = new \espacedenomscourant\foo();</literal> ou
+      <literal>\espacedenomscourant\foo::methodestatique();</literal>. Cela fait toujours
+      référence au nom littéral spécificé dans le code : <literal>espacedenomscourant\foo</literal>.
+     </simpara>
     </listitem>
-   </itemizedlist>
-   Voir aussi les <link linkend="language.namespaces.rules">règles complètes de résolution
-    de noms</link>.
+   </orderedlist>
   </para>
-
- </sect1>
-
- <sect1 xml:id="language.namespaces.using">
-  <title>Utilisation des espaces de noms</title>
   <para>
-   Toutes les classes et fonctions, dans un espace de noms, peuvent être référencées
-   par le nom complet - e.g. <classname>MyProject::DB::Connection</classname> ou
-   <classname>MyProject::DB::connect</classname> - à n'importe quel moment.
-   <example>
-    <title>Utilisation du nom de l'espace de noms</title>
-    <programlisting role="php">
-     <![CDATA[
-<?php
-require 'MyProject/Db/Connection.php';
-$x = new MyProject::DB::Connection;
-MyProject::DB::connect();
-?>
-]]>
-    </programlisting>
-   </example>
-  </para>
-
-  <para>
-   Les espaces de noms peuvent être importées dans le contexte courant (global ou
-   de l'espace de noms) en utilisant l'opérateur <literal>use</literal>. La syntaxe
-   est la suivante :
+   Voici un exemple des trois syntaxe, dans du code réel :
    <informalexample>
+    <simpara>file1.php</simpara>
     <programlisting role="php">
      <![CDATA[
 <?php
-/* ... */
-use Some::Name as Othername;
+namespace Foo\Bar\sousespacedenoms;
 
-// La forme simplifiée de use:
-use Foo::Bar;
-// Ce qui est identique à :
-use Foo::Bar as Bar;
+const FOO = 1;
+function foo() {}
+class foo
+{
+    static function methodestatique() {}
+}
 ?>
-]]>
+     ]]>
+    </programlisting>
+    <simpara>file2.php</simpara>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+namespace Foo\Bar;
+include 'file1.php';
+
+const FOO = 2;
+function foo() {}
+class foo
+{
+    static function methodestatique() {}
+}
+
+/* nom non qualifié */
+foo(); // Devient Foo\Bar\foo
+foo::methodestatique(); // Devient Foo\Bar\foo, méthode methodestatique
+echo FOO; // Deviet la constante Foo\Bar\FOO
+
+/* nom qualifié */
+sousespacedenoms\foo(); // Devient la fonction Foo\Bar\sousespacedenoms\foo
+sousespacedenoms\foo::methodestatique(); // devient la classe Foo\Bar\sousespacedenoms\foo,
+                                  // méthode methodestatique
+echo sousespacedenoms\FOO; // Devient la constante Foo\Bar\sousespacedenoms\FOO
+                                  
+/* nom absolu */
+\Foo\Bar\foo(); // Devient la fonction Foo\Bar\foo
+\Foo\Bar\foo::methodestatique(); // Devient la classe Foo\Bar\foo, méthode methodestatique
+echo \Foo\Bar\FOO; // Devient la constante Foo\Bar\FOO
+?>
+     ]]>
     </programlisting>
    </informalexample>
-   Le nom importé fonctionne comme ceci : chaque fois que le compilateur
-   rencontre le nom local <literal>Othername</literal> (comme nom stand-alone ou
-   comme préfixe au nom long, séparé par <literal>::</literal>), le nom
-   <literal>Some::Name</literal> importé y est substitué.
   </para>
-
   <para>
-   L'opérateur <literal>use</literal> ne peut être utilisé que dans le contexte global,
-   et non dans une classe ou une fonction. Les noms importés ont des effets depuis
-   le point d'importation jusqu'à la fin du fichier courant. Il est recommandé
-   d'effectuer l'importation au tout début du fichier afin d'éviter toute confusion.
-  </para>
-
-  <para>
+   Notez que pour accéder à n'importe quelle classe, fonction ou constante 
+   globale, un nom absolu peut être utilisé, tel que 
+   <function>\strlen</function> ou <classname>\Exception</classname> ou
+   <literal>\INI_ALL</literal>.
    <example>
-    <title>Importation et utilisation de l'espace de noms</title>
+    <title>Accès aux classes, fonctions et constantes globales depuis un espace de noms</title>
     <programlisting role="php">
      <![CDATA[
 <?php
-require 'MyProject/Db/Connection.php';
-use MyProject::DB;
-use MyProject::DB::Connection as DbConnection;
+namespace Foo;
 
-$x = new MyProject::DB::Connection();
-$y = new DB::connection();
-$z = new DbConnection();
-DB::connect();
+function strlen() {}
+const INI_ALL = 3;
+class Exception {}
+
+$a = \strlen('hi'); // appel la fonction globale strlen
+$b = \INI_ALL; // accès à une constante INI_ALL
+$c = new \Exception('error'); // instantie la classe globale Exception
+?>
+     ]]>
+    </programlisting>
+   </example>
+  </para>
+ </sect1>
+ <sect1 xml:id="language.namespaces.dynamic">
+  <title>Espaces de noms et langage dynamique</title>
+  <para>
+   L'implémentation des espaces de noms de PHP est influencée par sa nature dynamique
+   de langage de programmation. Par conséquent, pour convertir du code tel que le code
+   de l'exemple suivant, en un espace de noms : 
+   <example>
+    <title>Accès dynamique aux éléments</title>
+    <simpara>example1.php:</simpara>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+class classname
+{
+    function __construct()
+    {
+        echo __METHOD__,"\n";
+    }
+}
+function funcname()
+{
+    echo __FUNCTION__,"\n";
+}
+const constname = "global";
+
+$a = 'classname';
+$obj = new $a; // affiche classname::__construct
+$b = 'funcname';
+$b(); // affiche funcname
+echo constant('constname'), "\n"; // affiche global
+?>
+    ]]>
+    </programlisting>
+   </example>
+   il faut utiliser un nom absolu (le nom de la classe, avec son préfixe d'espace
+   de noms). Notez qu'il n'y a pas de différence entre un nom absolu et un nom qualifié
+   dans un nom de classe, de fonction ou de constante dynamique, ce qui fait que l'anti-slash
+   initial n'est pas nécessaire.
+   <example>
+    <title>Accès dynamique à des espaces de noms</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+namespace nomdelespacedenoms;
+class classname
+{
+    function __construct()
+    {
+        echo __METHOD__,"\n";
+    }
+}
+function funcname()
+{
+    echo __FUNCTION__,"\n";
+}
+const constname = "namespaced";
+
+include 'example1.php';
+
+$a = 'classname';
+$obj = new $a; // affiche classname::__construct
+$b = 'funcname';
+$b(); // affiche funcname
+echo constant('constname'), "\n"; // affiche global
+
+/* Note que si vous utilisez des guillemets doubles, "\\nomdelespacedenoms\\classname" doit être utilisé */
+$a = '\nomdelespacedenoms\classname';
+$obj = new $a; // affiche nomdelespacedenoms\classname::__construct
+$a = 'nomdelespacedenoms\classname';
+$obj = new $a; // affiche aussi nomdelespacedenoms\classname::__construct
+$b = 'nomdelespacedenoms\funcname';
+$b(); // affiche nomdelespacedenoms\funcname
+$b = '\nomdelespacedenoms\funcname';
+$b(); // affiche aussi nomdelespacedenoms\funcname
+echo constant('\nomdelespacedenoms\constname'), "\n"; // affiche namespaced
+echo constant('nomdelespacedenoms\constname'), "\n"; // affiche aussi namespaced
+?>
+    ]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Il est recommandé de lire la <link linkend="language.namespaces.faq.quote">note au sujet
+   de la protection des espaces de noms dans les chaînes</link>.
+  </para>
+ </sect1>
+ <sect1 xml:id="language.namespaces.nsconstants">
+  <title>La commande namespace et la constante __NAMESPACE__</title>
+  <para>
+   PHP supporte deux moyens pour accéder de manière abstraite aux éléments
+   dans l'espace de nom courant, à savoir la constante magique 
+   <constant>__NAMESPACE__</constant> et la commande <literal>namespace</literal>.
+  </para>
+  <para>
+   La valeur de <constant>__NAMESPACE__</constant> est une chaîne qui contient le nom
+   de l'espace de noms courant. Dans l'espace global, sans nom, elle contient 
+   une chaîne vide.
+   <example>
+    <title>Exemple avec __NAMESPACE__, dans un code avec espace de noms</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+namespace MonProjet;
+
+echo '"', __NAMESPACE__, '"'; // affiche "MonProjet"
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Exemple avec __NAMESPACE__, dans un code avec espace de noms global</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+
+echo '"', __NAMESPACE__, '"'; // affiche ""
+?>
+]]>
+    </programlisting>
+   </example>
+   La constante <constant>__NAMESPACE__</constant> est utile pour construire
+   dynamiquement des noms, tels que :
+   <example>
+    <title>Utilisation de __NAMESPACE__ pour une construction dynamique de noms</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+namespace MonProjet;
+
+function get($classname)
+{
+    $a = __NAMESPACE__ . '\\' . $classname;
+    return new $a;
+}
 ?>
 ]]>
     </programlisting>
    </example>
   </para>
   <para>
-   <note>
-    <simpara>
-     L'opération d'importation s'effectue uniquement lors de la compilation ;
-     tous les noms locaux sont convertis en leur équivalent au moment de la
-     compilation. Notez que le compilateur ne traduit pas les noms en simples
-     chaînes, ainsi les fonctions de rappel ne sauraient se prévaloir
-     des règles d'importation.
-    </simpara>
-   </note>
-  </para>
- </sect1>
-
- <sect1 xml:id="language.namespaces.global">
-  <title>Espace global</title>
-  <para>
-   Sans aucune définition d'espace de noms, toutes les définitions de classes
-   et de fonctions sont placées dans l'espace global - comme tel était le
-   cas dans PHP avant que les espaces de noms ne soient supportés. Le
-   fait de préfixer un nom avec <literal>::</literal> spécifie que le nom
-   est requis depuis l'espace global mais aussi dans le contexte de
-   l'espace de noms.
+   La commande <literal>namespace</literal> peut aussi être utilisée pour 
+   demander explicitement un élément de l'espace de noms courant, ou d'un
+   sous-espace. Si l'équivalent pour les espaces de noms de l'opérateur
+   <literal>self</literal> des classes.
    <example>
-    <title>Utilisation de l'espace global</title>
+    <title>l'opérateur namespace, dans un espace de noms</title>
     <programlisting role="php">
      <![CDATA[
 <?php
-namespace A::B::C;
+namespace MonProjet;
 
-/* La fonction est A::B::C::fopen */
-function fopen() {
+use blah\blah as mine; // Voyez "Utilisation des espaces de noms : importation et alias"
+
+blah\mine(); // appelle la fonction blah\blah\mine()
+namespace\blah\mine(); // appelle la fonction MonProjet\blah\mine()
+
+namespace\func(); // appelle la fonction MonProjet\func()
+namespace\sub\func(); // appelle la fonction MonProjet\sub\func()
+namespace\cname::method(); // appelle la méthode statique "method" de la classe MonProjet\cname
+$a = new namespace\sub\cname(); // instantie un objet de la classe MonProjet\sub\cname
+$b = namespace\CONSTANT; // assigne la valeur de la constante MonProjet\CONSTANT à $b
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>l'opérateur namespace, dans l'espace de noms global</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+
+namespace\func(); // appelle la fonction func()
+namespace\sub\func(); // appelle la fonction sub\func()
+namespace\cname::method(); // appelle la méthode statique "method" de la classe cname
+$a = new namespace\sub\cname(); // instantie un objet de la classe sub\cname
+$b = namespace\CONSTANT; // assigne la valeur de la constante CONSTANT à $b
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </sect1>
+ <sect1 xml:id="language.namespaces.importing">
+  <title>Utilisation des espaces de noms : importation et alias</title>
+  <para>
+   La capacité de faire référence à un nom absolu avec un alias ou en important
+   un espace de noms est stratégique. C'est un avantage similaire aux liens 
+   symbolique dans un système de fichiers.
+  </para>
+  <para>
+   Les espaces de noms PHP supportent deux types d'alias et d'importation : l'alias
+   de nom de classe, et l'alias d'espace de noms. Notez que l'importation de
+   constantes ou fonctions n'est pas supporté.
+  </para>
+  <para>
+   En PHP, l'alias est créé avec l'opérateur <literal>use</literal>.  Voici un
+   exemple qui présente les trois types d'importation :
+   <example>
+    <title>importation et alias avec l'opérateur use</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+namespace foo;
+use My\Full\Classname as Another;
+
+// Ceci est la même chose que use My\Full\NSname as NSname
+use My\Full\NSname;
+
+// importation d'une classe globale
+use \ArrayObject;
+
+$obj = new namespace\Another; // instantie un objet de la classe foo\Another
+$obj = new Another; // instantie un objet de la classe My\Full\Classname
+NSname\subns\func(); // appelle la fonction My\Full\NSname\subns\func
+$a = new ArrayObject(array(1)); // instantie un objet de la classe ArrayObject
+// Sans l'instruction "use \ArrayObject" nous aurions instantié un objet de la classe foo\ArrayObject
+?>
+]]>
+    </programlisting>
+   </example>
+   Notez que pour les noms avec chemin (les noms absolus contenant des 
+   séparateurs d'espaces, tels que <literal>Foo\Bar</literal>, par comparaison avec
+   les noms globaux, tels que <literal>FooBar</literal>), qui n'en contiennent pas, 
+   l'anti-slash initial n'est pas nécessaire, et même interdit, car les noms importés
+   doivent être absolus, et ne sont pas résolus relativement à l'espace de noms courant.
+  </para>
+  <para>
+   De plus, PHP supporte des raccourcis pratique, tels que les commandes use multiples.
+   <example>
+    <title>importation et alias multiples avec l'opérateur use</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+use My\Full\Classname as Another, My\Full\NSname;
+
+$obj = new Another; // instantie un objet de la classe My\Full\Classname
+NSname\subns\func(); // appelle la fonction My\Full\NSname\subns\func
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   L'importation est réalisée à la compilation, ce qui fait que cela n'affecte pas
+   les classes, fonctions et constantes dynamiques.
+   <example>
+    <title>Importation et noms d'espaces dynamiques</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+use My\Full\Classname as Another, My\Full\NSname;
+
+$obj = new Another; // instantie un objet de la classe My\Full\Classname
+$a = 'Another';
+$obj = new $a;      // instantie un objet de la classe Another
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   De plus, l'importation n'affecte que les noms sans qualifications. Les noms 
+   absolus restent absolus, et inchangés par un import.
+   <example>
+    <title>Importation et noms d'espaces absolus</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+use My\Full\Classname as Another, My\Full\NSname;
+
+$obj = new Another; // instantie un objet de la classe My\Full\Classname
+$obj = new \Another; // instantie un objet de la classe Another
+$obj = new Another\untruc; // instantie un objet de la classe My\Full\Classname\untruc
+$obj = new \Another\untruc; // instantie un objet de la classe Another\untruc
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </sect1>
+ <sect1 xml:id="language.namespaces.global">
+  <title>Espace de noms global</title>
+  <para>
+   Sans aucune définition d'espace de noms, toutes les classes et les fonctions
+   sont placées dans l'espace de noms global : comme en PHP avant que les espaces
+   de noms ait été introduits. En préfixant un nom avec un anti-slash 
+   <literal>\</literal>, on peut demander l'utilisation de l'espace de noms
+   globale, même dans un contexte d'espace de noms spécifique.
+   <example>
+    <title>Spécification d'espace de noms global</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+namespace A\B\C;
+
+/* Cette fonction est A\B\C\fopen */
+function fopen() { 
      /* ... */
-     $f = ::fopen(...); // appel global de fopen
+     $f = \fopen(...); // appel à fopen global
      return $f;
 } 
 ?>
-]]>
+    ]]>
     </programlisting>
    </example>
   </para>
  </sect1>
-
- <sect1 xml:id="language.namespaces.constant">
-  <title>__NAMESPACE__</title>
+ <sect1 xml:id="language.namespaces.fallback">
+  <title>Utilisation des espaces de noms : retour à l'espace global</title>
   <para>
-   La constante <constant>__NAMESPACE__</constant> au moment de la compilation
-   contient le nom de l'espace de noms courant. En dehors de l'espace de noms,
-   cette constante a comme valeur, une chaîne vide. Cette constante est utile
-   lorsque l'on souhaite composer un nom complet pour les noms locaux en style
-   espace de noms.
+   Dans un espace de noms, lorsque PHP rencontre un nom sans qualification,
+   que ce soit une classe, une fonction ou une constante, il le résout avec différentes
+   priorités. Les noms de classes sont toujours résolus avec l'espace de noms courant.
+   Pour accéder à des classes internes ou à des classes qui ne sont pas dans 
+   un espace de noms, il faut les représenter avec leur nom absolu, tel que : 
    <example>
-    <title>Utilisation de __NAMESPACE__</title>
+    <title>Accès aux classes globales depuis un espace de noms</title>
     <programlisting role="php">
      <![CDATA[
 <?php
-namespace A::B::C;
+namespace A\B\C;
+class Exception extends \Exception {}
 
-function foo() {
-// traitement
+$a = new Exception('hi'); // $a est un objet de la classe A\B\C\Exception
+$b = new \Exception('hi'); // $b est un objet de la classe Exception
+
+$c = new ArrayObject; // erreur fatale, classe A\B\C\ArrayObject non trouvée
+?>
+    ]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Pour les fonctions et constantes, PHP va aller les chercher dans l'espace
+   global s'il ne peut les trouver dans l'espace de noms courant.
+   <example>
+    <title>Accès aux fonctions et constantes globales dans un espace de noms</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+namespace A\B\C;
+
+const E_ERROR = 45;
+function strlen($str)
+{
+    return \strlen($str) - 1;
 }
 
-set_error_handler(__NAMESPACE__ . "::foo");
+echo E_ERROR, "\n"; // affiche "45"
+echo INI_ALL, "\n"; // affiche "7" : accès dans l'espace de noms global INI_ALL
+
+echo strlen('hi'), "\n"; // affiche "1"
+if (is_array('hi')) { // affiche "n'est pas un tableau"
+    echo "est un tableau\n";
+} else {
+    echo "n'est pas un tableau\n";
+}
 ?>
-]]>
+    ]]>
     </programlisting>
    </example>
   </para>
  </sect1>
 
  <sect1 xml:id="language.namespaces.rules">
-  <title>Règles de résolution de noms</title>
+  <title>Règles de résolutions de noms</title>
   <para>
-   Les noms sont résolus suivant ces règles de résolution :
+   Dans le cadre des règles de résolution, il y a plusieurs définitions importantes :
+   <variablelist>
+    <title>Définitions pour les espaces de noms</title>
+    <varlistentry>
+     <term>nom non qualifié</term>
+     <listitem>
+      <para>
+       Ceci est un identifiant ne contenant pas un séparateur d'espace de noms. 
+       Par exemple : <literal>Foo</literal>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term>nom qualifié</term>
+     <listitem>
+      <para>
+       Ceci est un identifiant contenant un séparateur d'espace de noms. 
+       Par exemple : <literal>Foo\Bar</literal>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term>Nom absolu</term>
+     <listitem>
+      <para>
+       Ceci est un identifiant qui commence par un séparateur d'espace de noms. 
+       Par exemple : <literal>\Foo\Bar</literal>. <literal>namespace\Foo</literal>
+       est aussi un nom absolu.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+  <para>
+   Les noms sont résolus en suivant les règles suivantes : 
    <orderedlist>
     <listitem>
      <simpara>
-      Toutes les noms qualifiés sont traduis au moment de la compilation
-      suivant les règles d'importation courantes. Par exemple, si l'espace
-      de noms A::B::C est importé, un appel à
-      <code>C::D::e()</code> est traduis en <code>A::B::C::D::e()</code>.
+      Les appels à des espaces de noms absolus pour des fonctions, classes ou constantes
+      sont résolus à la compilation. Par exemple, 
+      <literal>new \A\B</literal> utilise la classe <literal>A\B</literal>.
      </simpara>
     </listitem>
     <listitem>
      <simpara>
-      Les noms de classes non-qualifiés sont traduis au moment de la compilation
-      suivant les règles d'importation courantes (les noms complets sont substitués
-      par le nom court importé). Par exemple, si l'espace de noms <literal>A::B::C</literal>
-      est importé, <code>new C()</code> est traduit en <code>new A::B::C()</code>.
+      Tous les noms qui ne sont pas absolus sont traduits durant la compilation à
+      l'aide des règles d'importation. Par exemple, si le nom <literal>A\B\C</literal>
+      est importé sous l'alias <literal>C</literal>, un appel à 
+      <literal>C\D\e()</literal> est traduit en un appel à <literal>A\B\C\D\e()</literal>.
      </simpara>
     </listitem>
     <listitem>
      <simpara>
-      Dans un espace de noms, les appels aux fonctions non-qualifiées qui sont
-      définies dans l'espace de noms courant (et qui sont connues au moment où
-      l'appel est analysé), sont interprétés comme des appels aux fonctions de
-      l'espace de noms, au moment de la compilation.
+      Dans un nom de domaine, tous les noms qualifiés qui ne sont pas traduits
+      à l'aide des règles d'importation sont préfixés avec l'espace de noms courant.
+      Par exemple, si un appel à <literal>C\D\e()</literal> est effectué dans l'espace
+      de noms <literal>A\B</literal>, il est traduit en <literal>A\B\C\D\e()</literal>.
      </simpara>
     </listitem>
     <listitem>
      <simpara>
-      Dans un espace de noms (comme A::B), les appels aux fonctions non-qualifiées
-      qui ne sont pas définies dans l'espace de noms courant sont résolus au
-      moment de la compilation. Voici comme un appel à la fonction
-      <literal>foo()</literal> est résolu :
+      Les classes non qualifiées sont traduites durant la compilation en fonction 
+      des règles d'importations (le nom complet remplace les noms courts). Par exemple,
+      si l'espace de noms <literal>A\B\C</literal> est importé sous le nom C, 
+      <literal>new C()</literal> est remplacé par <literal>new A\B\C()</literal>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Dans un espace de noms, tel que A\B), les appels à des fonctions sans qualification
+      sont résolus à la compilation. Voici comment un appel à <literal>foo()</literal> 
+      est résolu :
      </simpara>
       <orderedlist>
        <listitem>
         <simpara>
-         On recherche une fonction depuis l'espace de noms courant :
-         <literal>A::B::foo()</literal>.
+         Il recherche une fonction dans l'espace de noms courant :
+         <literal>A\B\foo()</literal>.
         </simpara>
        </listitem>
        <listitem>
         <simpara>
-         Ensuite, on tente de chercher et d'appeler la fonction <emphasis>interne</emphasis>
+         Il essaie de trouver et appeler la fonction <emphasis>globale</emphasis>
          <literal>foo()</literal>.
         </simpara>
        </listitem>
       </orderedlist>
-      <simpara>
-       Pour appeler une fonction définie par l'utilisateur dans l'espace de noms
-       global, <literal>::foo()</literal> doit être utilisé.
-     </simpara>
     </listitem>
     <listitem>
      <simpara>
-      Dans un espace de noms (comme <literal>A::B</literal>), les appels aux noms de classes
-      non-qualifiées sont résolus au moment de l'exécution. Voici comment un appel à
-      <code>new C()</code> est résolu :
+      Dans un espace de noms, e.g. <literal>A\B</literal>), un appel
+      à une classe qualifié ou non qualifiée (pas absolue), et résolu
+      à l'exécution. Voici comment un appel à <literal>new C()</literal>
+      ou à <literal>new D\E()</literal> est résolu.
+      Pour <literal> new C()</literal>:
      </simpara>
      <orderedlist>
       <listitem>
        <simpara>
-        On recherche une classe depuis l'espace de noms courant :
-        <literal>A::B::C</literal>.
+        Il recherche une classe dans l'espace de noms courant : 
+        <literal>A\B\C</literal>.
        </simpara>
       </listitem>
       <listitem>
        <simpara>
-        Ensuite, on tente de chercher et d'appeler la classe <emphasis>interne</emphasis>
-        <literal>C</literal>.
-       </simpara>
-      </listitem>
-      <listitem>
-       <simpara>
-        Puis, on charge automatiquement <literal>A::B::C</literal>.
+        Il appelle l'autoload pour <literal>A\B\C</literal>.
        </simpara>
       </listitem>
      </orderedlist>
      <simpara>
-      Pour référencer une classe définie par l'utilisateur dans l'espace de noms
-      global, <code>new ::C()</code> doit être utilisé.
+      Pour <literal> new D\E()</literal>:
      </simpara>
-    </listitem>
-    <listitem>
+     <orderedlist>
+      <listitem>
+       <simpara>
+        Il recherche une classe dans l'espace de noms courant : 
+        <literal>A\B\D\E</literal>.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        Il appelle l'autoload pour <literal>A\B\D\E</literal>.
+       </simpara>
+      </listitem>
+     </orderedlist>
      <simpara>
-      Les appels aux fonctions qualifiées sont résolues au moment de l'exécution.
-      Voici comment un appel à <literal>A::B::foo()</literal> est résolu :
-     </simpara>
-      <orderedlist>
-       <listitem>
-        <simpara>
-         On recherche une fonction <literal>foo()</literal> dans l'espace de noms
-         <literal>A::B</literal>.
-        </simpara>
-       </listitem>
-       <listitem>
-        <simpara>
-         Puis, on cherche une classe <literal>A::B</literal> et on appelle sa
-         méthode statique <literal>foo()</literal>. On charge automatiquement
-         la classe si nécessaire.
-        </simpara>
-       </listitem>
-      </orderedlist>
-    </listitem>
-    <listitem>
-     <simpara>
-      Les noms de classes qualifiés sont résolus au moment de la compilation comme
-      une classe depuis l'espace de noms correspondant. Par exemple,
-      <code>new A::B::C()</code> se réfère à la classe
-      <classname>C</classname> depuis l'espace de noms <literal>A::B</literal>.
+      Pour référencer une classe globale dans l'espace de noms global,
+      son nom absolu <literal>new \C()</literal> doit être utilisé.
      </simpara>
     </listitem>
    </orderedlist>
   </para>
   <example>
-   <title>Illustration de la résolution de nom</title>
+   <title>Exemples de résolutions d'espaces de noms</title>
    <programlisting role="php">
 <![CDATA[
 <?php
 namespace A;
+use B\D, C\E as F;
 
-// Appels de fonctions
+// appels de fonctions
 
-foo();      // Tout d'abord, on tente d'appeler "foo", définie dans l'espace de noms "A"
-            // puis, on appèle la fonction interne "foo"
+foo();      // tente d'appeler la fonction "foo" dans l'espace de noms "A"
+            // puis appelle la fonction globale "foo"
 
-::foo();    // Appel de la fonction "foo", définie dans l'espace global
+\foo();     // appelle la fonction "foo" définie dans l'espace global
 
-// Références des classes
+my\foo();   // appelle la fonction "foo" définie dans l'espace de noms "A\my"
 
-new B();    // Tout d'abord, on tente de créer un objet de la classe "B", défini dans l'espace
-            // de noms "A", puis, on crée l'objet dans la classe interne "B"
+F();        // tente d'appeler la fonction "F" définie dans l'espace "A"
+            // puis tente d'appeler la fonction globale "F"
 
-new ::B();  // On crée un objet de la classe "B", défini dans l'espace global
+// référence de classes references
 
-// fonctions statiques de méthodes et d'espace de noms depuis un autre espace de noms
+new B();    // crée un objet de la classe "B" définie dans l'espace de noms  "A"
+            // si non trouvé, il essaie l'autoload sur la classe "A\B"
 
-B::foo();   // Tout d'abors, on tente d'appeler la fonction "foo" depuis l'espace de noms "A::B",
-            // puis, on appèle la méthode "foo" de la classe interne "B"
+new D();    // using import rules, crée un objet de la classe "D" définie dans l'espace de noms  "B"
+            // si non trouvé, il essaie l'autoload sur la classe "B\D"
 
-::B::foo(); // Tout d'abord, on tente d'appeler la fonction "foo" depuis l'espace de noms "B",
-            // puis, on appèle la méthode "foo" de la classe "B" depuis l'espace global
+new F();    // using import rules, crée un objet de la classe "E" définie dans l'espace de noms  "C"
+            // si non trouvé, il essaie l'autoload sur la classe "C\E"
 
-// fonctions statiques de méthodes et d'espace de noms depuis l'espace de noms courant
+new \B();   // crée un objet de la classe "B" defined in global scope
+            // si non trouvé, il essaie l'autoload sur la classe "B"
 
-A::foo();   // Tout d'abord, on tente d'appeler la fonction "foo" depuis l'espace de noms "A::A",
-            // puis, on tente d'appeler la méthode "foo" de la classe "A" depuis l'espace de noms "A",
-            // puis, on tente d'appeler la fonction "foo" depuis l'espace de noms "A",
-            // puis, on appèle la méthode "foo" de la classe interne "A"
+new \D();   // crée un objet de la classe "D" defined in global scope
+            // si non trouvé, il essaie l'autoload sur la classe "D"
 
-::A::foo(); // Tout d'abord, on tente d'appeler la fonction "foo" depuis l'espace de noms "A",
-            // puis, on appèle la méthode "foo" de la classe "A" depuis l'espace global
+new \F();   // crée un objet de la classe "F" defined in global scope
+            // si non trouvé, il essaie l'autoload sur la classe "F"
+
+// méthodes statiques et fonctions d'espace de noms d'un autre espace
+
+B\foo();    // appelle la fonction "foo" de l'espace de noms "A\B"
+
+B::foo();   // appelle la méthode "foo" de la classe "B" définie dans l'espace de noms  "A"
+            // si la classe "A\B" n'est pas trouvée, il essaie l'autoload sur la classe "A\B"
+
+D::foo();   // using import rules, appelle la méthode "foo" de la classe "D" définie dans l'espace de noms  "B"
+            // si la classe "B\D" n'est pas trouvée, il essaie l'autoload sur la classe "B\D"
+
+\B\foo();   // appelle la fonction "foo" de l'espace de noms "B"
+
+\B::foo();  // appelle la méthode "foo" de la classe "B" from global scope
+            // si la classe "B" n'est pas trouvée, il essaie l'autoload sur la classe "B"
+
+// méthodes statiques et fonctions d'espace de noms de l'espace courant
+
+A\B::foo();   // appelle la méthode "foo" de la classe "B" de l'espace de noms "A\A"
+              // si la classe "A\A\B" n'est pas trouvée, il essaie l'autoload sur la classe "A\A\B"
+
+\A\B::foo();  // appelle la méthode "foo" de la classe "B" de l'espace de noms "A\B"
+              // si la classe "A\B" n'est pas trouvée, il essaie l'autoload sur la classe "A\B"
 ?>
 ]]>
    </programlisting>
   </example>
  </sect1>
+ <sect1 xml:id="language.namespaces.faq">
+  <title>Foire aux questions : ce que vous devez savoir des espaces de noms</title>
+  <para>
+   Cette FAQ est décomposée en deux sections : les questions courantes,
+   et les points particuliers de l'implémentation, qui peuvent être
+   utile à la compréhension globale.
+  </para>
+  <para>
+   D'abord, les questions courantes.
+   <orderedlist>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.shouldicare">Si je n'utilise pas d'espaces
+      de noms, est-ce que je dois m'en soucier?</link>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.globalclass">Comment utiliser une classe
+      globale ou interne depuis un espace de noms?</link>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.innamespace">Comment utiliser les classes
+      d'espaces de noms,les fonctions ou les constantes dans leur propre espace? </link>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.full">
+       Comment est-ce qu'un nom comme <literal>\mon\nom</literal> ou 
+       <literal>\nom</literal> est résolu?
+      </link>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.qualified">Comment est-ce qu'un nom
+      tels que <literal>mon\nom</literal> est résolu?</link>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.shortname1">Comment un nom de classe
+      sans qualification, tel que <literal>nom</literal>, est résolu?</link>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.shortname2">Comment une fonction sans
+      qualification ou une constante de nom <literal>nom</literal> est résolue?</link>
+     </simpara>
+    </listitem>
+   </orderedlist>
+  </para>
+  <para>
+   Voici les points particuliers de l'implémentation, qui peuvent être
+   utile à la compréhension globale.
+   <orderedlist>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.conflict">Les noms importés ne doivent
+      pas entrer en conflit avec les classes définies dans le même fichier</link>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.nested">Les espaces de noms imbriqués
+      sont interdits</link>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.nofuncconstantuse">Ni les fonctions, 
+      ni les constantes ne peuvent être importées avec 
+      la commande <literal>use</literal></link>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.quote">Les noms d'espaces de noms 
+      dynamiques doivent protéger l'anti-slash</link>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.constants">Des constantes indéfinies 
+      référencées avec un anti-slash produisent une erreur fatale</link>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <link linkend="language.namespaces.faq.builtinconst">Impossible de remplacer 
+      des constantes spéciales comme NULL, TRUE, FALSE, ZEND_THREAD_SAFE ou ZEND_DEBUG_BUILD</link>
+     </simpara>
+    </listitem>
+   </orderedlist>
+  </para>
+  <sect2 xml:id="language.namespaces.faq.shouldicare">
+   <title>Si je n'utilise pas d'espaces de noms, est-ce que je dois m'en soucier?</title>
+   <para>
+    Non, les espaces de noms n'affectent pas le code existant, d'une
+    manière ou d'une autre, ni le code qui sera produit et qui n'utilise
+    pas les espaces de noms. Vous pouvez écrire ceci si vous voulez : 
+   </para>
+   <para>
+    <example>
+     <title>Accès à une classe globale de l'extérieur d'un espace de noms</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$a = new \stdClass;
+]]>
+     </programlisting>
+    </example>
+   </para>
+   <para>
+    This is functionally equivalent to:
+   </para>
+   <para>
+    <example>
+     <title>Accessing global classes outside a namespace</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$a = new stdClass;
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.globalclass">
+   <title>Comment utiliser une classe globale ou interne depuis un espace de noms?</title>
+   <para>
+    <example>
+     <title>Accès aux classes internes depuis un espace de noms</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+namespace foo;
+$a = new \stdClass;
+
+function test(\ArrayObject $typehintexample = null) {}
+
+$a = \DirectoryIterator::CURRENT_AS_FILEINFO;
+
+// extension d'une classe interne ou globale
+class MyException extends \Exception {}
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.innamespace">
+   <title>
+    Comment utiliser les classes d'espaces de noms, les fonctions ou 
+    les constantes dans leur propre espace? 
+   </title>
+   <para>
+    <example>
+     <title>Accès aux classes, fonctions et constantes internes dans un espace de noms</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+namespace foo;
+
+class MaClasse {}
+
+// utilisation d'une classe dans l'espace de noms courant, sous forme de type d'argument
+function test(MaClasse $typehintexample = null) {}
+
+// une autre manière d'utiliser une classe dans l'espace de noms courant
+function test(\foo\MaClasse $typehintexample = null) {}
+
+// extension d'une classe dans l'espace de noms courant
+class Extended extends MaClasse {}
+
+// accès à une fonction globale
+$a = \globalfunc();
+
+// accès à une constante globale
+$b = \INI_ALL;
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.full">
+   <title>
+     Comment est-ce qu'un nom comme <literal>\mon\nom</literal> ou 
+       <literal>\nom</literal> est résolu?
+   </title>
+   <para>
+    Les noms qui commencent par <literal>\</literal> sont toujours résolus en ce
+    à quoi ils ressemblent, ce qui fait que <literal>\mon\nom</literal> est en fait
+    <literal>mon\nom</literal>, et <literal>\Exception</literal> est 
+    <literal>Exception</literal>.
+    <example>
+     <title>Noms d'espaces absolus</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+namespace foo;
+$a = new \mon\nom(); // instantie la classe "mon\nom"
+echo \strlen('hi'); // appelle la fonction "strlen"
+$a = \INI_ALL; // $a reçoit la valeur de la constante "INI_ALL"
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.qualified">
+   <title>Comment est-ce qu'un nom tel que <literal>mon\nom</literal> est résolu?</title>
+   <para>
+    Les noms qui contiennent un anti-slash mais ne commencent par par un
+    anti-slash, comme <literal>mon\nom</literal> peuvent être résolus de deux manières
+    différentes.
+   </para>
+   <para>
+    S'il y a eu une commande d'importation qui fait un alias de 
+    <literal>mon</literal>, alors l'alias importé est appliqué à la place
+    de <literal>mon</literal>, et l'espace de noms devient <literal>mon\nom</literal>.
+   </para>
+   <para>
+    Sinon, l'espace de noms courant est ajouté avant le chemin de la classe
+    <literal>mon\nom</literal>.
+   </para>
+   <para>
+    <example>
+     <title>Noms qualifiés</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+namespace foo;
+use blah\blah as foo;
+
+$a = new mon\nom(); // instantie la classe "foo\mon\nom"
+foo\bar::name(); // appelle la méthode statique "name" dans la classe "blah\blah\bar"
+mon\bar(); // appelle la fonction "foo\mon\bar"
+$a = mon\BAR; // affecte à $a la valeur de la constante "foo\mon\BAR"
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.shortname1">
+   <title>Comment un nom de classe
+    sans qualification, tel que <literal>nom</literal>, est résolu</title>
+   <para>
+    Les noms de classes qui ne contiennent pas d'anti-slash comme 
+    <literal>nom</literal> peuvent être résolus de deux manières différentes.
+   </para>
+   <para>
+    S'il y a une instruction d'importation qui définit un alias pour <literal>nom</literal>, 
+    alors l'alias est appliquée.
+   </para>
+   <para>
+    Sinon, l'espace de noms courant est utilisé, et préfixé à
+    <literal>nom</literal>.
+   </para>
+   <para>
+    <example>
+     <title>Classes sans qualification</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+namespace foo;
+use blah\blah as foo;
+
+$a = new nom(); // instantie "foo\nom" class
+foo::nom(); // appelle la méthode statique "nom" dans la classe "blah\blah"
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.shortname2">
+   <title>
+    Comment une fonction sans qualification ou une constante 
+    de nom <literal>nom</literal> est résolue   
+   </title>
+   <para>
+    Les fonctions et constantes qui n'ont pas d'anti-slash dans leur nom
+    comme <literal>nom</literal> sont résolues de deux manières différentes : 
+   </para>
+   <para>
+    D'abord, l'espace de noms courants est préfixé à <literal>name</literal>.
+   </para>
+   <para>
+    Ensuite, si la constante ou la fonction <literal>nom</literal> n'existe pas
+    dans l'espace de nom courant, la version globale de la constante ou la 
+    fonction <literal>nom</literal> est utilisée.
+   </para>
+   <para>
+    <example>
+     <title>Fonctions et constantes sans espace de noms</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+namespace foo;
+use blah\blah as foo;
+
+const FOO = 1;
+
+function mon() {}
+function foo() {}
+function sort(&$a)
+{
+    sort($a);
+    $a = array_flip($a);
+    return $a;
+}
+
+mon(); // appelle "foo\mon"
+$a = strlen('hi'); // appelle la fonction globale "strlen" car "foo\strlen" n'existe pas
+$arr = array(1,3,2);
+$b = sort($arr); // appelle la fonction "foo\sort"
+$c = foo(); // appelle la fonction "foo\foo" : l'importation n'est pas appliquée
+
+$a = FOO; // assigne à $a la valeur de la constante "foo\FOO" : l'importation n'est pas appliquée
+$b = INI_ALL; // assigne à $b la valeur de la constante "INI_ALL"
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.conflict">
+   <title>Les noms importés ne doivent
+    pas entrer en conflit avec les classes définies dans le même fichier</title>
+   <para>
+    La combinaison de script suivante est valide : 
+    <informalexample>
+     <simpara>file1.php</simpara>
+     <programlisting role="php">
+     <![CDATA[
+<?php
+namespace mes\trucs;
+class MaClasse {}
+?>
+     ]]>
+     </programlisting>
+     <simpara>another.php</simpara>
+     <programlisting role="php">
+     <![CDATA[
+<?php
+namespace another;
+class untruc {}
+?>
+     ]]>
+     </programlisting>
+     <simpara>file2.php</simpara>
+     <programlisting role="php">
+     <![CDATA[
+<?php
+namespace mes\trucs;
+include 'file1.php';
+include 'another.php';
+
+use another\untruc as MaClasse;
+$a = new MaClasse; // instantie la classe "untruc" de l'espace de noms another
+?>
+     ]]>
+     </programlisting>
+    </informalexample>
+   </para>
+   <para>
+    Il n'y a pas de conflit de noms, même si la classe <literal>MaClasse</literal> existe
+    dans l'espace de noms <literal>mes\trucs</literal>, car la définition de 
+    <literal>MaClasse</literal> est dans un fichier séparé. Cependant, l'exemple
+    suivant produit une erreur fatale à cause d'un conflit de noms, car
+    <literal>MaClasse</literal> est définie dans le même fichier que l'instruction
+    <literal>use</literal>.
+    <informalexample>
+     <programlisting role="php">
+     <![CDATA[
+<?php
+namespace mes\trucs;
+use another\untruc as MaClasse;
+class MaClasse {} // erreur fatale: MaClasse est en conflit avec la commande d'importation
+$a = new MaClasse;
+?>
+     ]]>
+     </programlisting>
+    </informalexample>
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.nested">
+   <title>Les espaces de noms imbriqués sont interdits</title>
+   <para>
+    PHP ne permet pas d'imbriquer des espaces de noms.
+    <informalexample>
+     <programlisting role="php">
+     <![CDATA[
+<?php
+namespace mes\trucs {
+    namespace nested {
+        class foo {}
+    }
+}
+?>
+     ]]>
+     </programlisting>
+    </informalexample>
+    Cependant, il est facile de simuler des espaces de noms imbriqués,
+    comme ceci : 
+    <informalexample>
+     <programlisting role="php">
+     <![CDATA[
+<?php
+namespace mes\trucs\nested {
+    class foo {}
+}
+?>
+     ]]>
+     </programlisting>
+    </informalexample>
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.nofuncconstantuse">
+   <title>Ni les fonctions, ni les constantes ne peuvent être importées avec 
+   la commande <literal>use</literal></title>
+   <para>
+    Les seuls éléments qui sont affectés par la commande <literal>use</literal> 
+    sont les espaces de noms et les classes. Afin de réduire le nom d'une 
+    constante ou d'une fonction, il faut l'importer dans un espace de noms.
+    <informalexample>
+     <programlisting role="php">
+     <![CDATA[
+<?php
+namespace mine;
+use ultra\long\ns\nom;
+
+$a = name\CONSTANT;
+name\func();
+?>
+     ]]>
+     </programlisting>
+    </informalexample>
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.quote">
+   <title>Les noms d'espaces de noms dynamiques doivent protéger l'anti-slash</title>
+   <para>
+    Il est très important de réaliser que, comme les anti-slash sont utilisés comme
+    caractères de protection dans les chaînes, il faut toujours les doubler 
+    pour pouvoir les utiliser dans une chaîne. Sinon, il y a un risque d'utilisation
+    inattendue : 
+    <example>
+     <title>Dangers de l'utilisation des espaces de noms dans une chaîne</title>
+     <programlisting role="php">
+      <![CDATA[
+<?php
+$a = new "dangereux\nom"; // \n est une nouvelle ligne dans une chaîne!
+$obj = new $a;
+
+$a = new 'pas\vraiment\dangereux'; // aucun problem ici
+$obj = new $a;
+?>
+      ]]>
+     </programlisting>
+    </example>
+    Dans une chaîne à double guillemets, la séquence de protection est beaucoup plus
+    sécuritaire à utiliser, mais il est quand même recommandé de toujours protéger
+    les anti-slashs dans une chaîne qui contient un espace de noms.
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.constants">
+   <title>Des constantes indéfinies référencées avec un anti-slash produisent une erreur fatale</title>
+   <para>
+    Toute constante indéfinie qui est sans qualificatif tel que 
+    <literal>FOO</literal> va produite une alerte : PHP supposait que 
+    <literal>FOO</literal> était la valeur de la constante. Toute constante,
+    qualifiée partiellement ou totalement, qui contient un anti-slash, 
+    produite une erreur fatale si indéfinie.
+    <example>
+     <title>Constantes indéfinies</title>
+     <programlisting role="php">
+      <![CDATA[
+<?php
+namespace bar;
+$a = FOO; // produit une alerte : constante indéfinie "FOO", qu prend la valeur de "FOO";
+$a = \FOO; // erreur fatale, constante d'espace de noms indéfinie FOO
+$a = Bar\FOO; // erreur fatale, constante d'espace de noms indéfinie bar\Bar\FOO
+$a = \Bar\FOO; // erreur fatale, constante d'espace de noms indéfinie Bar\FOO
+?>
+      ]]>
+     </programlisting>
+    </example>
+   </para>
+  </sect2>
+  <sect2 xml:id="language.namespaces.faq.builtinconst">
+   <title>Impossible de remplacer des constantes spéciales comme NULL, TRUE, FALSE, ZEND_THREAD_SAFE ou ZEND_DEBUG_BUILD</title>
+   <para>
+    Toute tentative dans un espace de noms de remplacer les constantes
+    natives ou spéciales engendre une erreur fatale.
+    <example>
+     <title>Constantes qui ne peuvent être redéfinies</title>
+     <programlisting role="php">
+      <![CDATA[
+<?php
+namespace bar;
+const NULL = 0; // erreur fatale;
+const true = 'stupid'; // encore une erreur fatale;
+// etc.
+?>
+      ]]>
+     </programlisting>
+    </example>
+   </para>
+  </sect2>
+ </sect1>
+</chapter>
 </chapter>
 
 <!-- Keep this comment at the end of the file
