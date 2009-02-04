@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- $Revision: 1.1 $ -->
+<!-- EN-Revision: 1.4 Maintainer: dams Status: ready -->
+<!-- Reviewed: no -->
+
+ <sect1 xml:id="language.oop5.late-static-bindings" xmlns="http://docbook.org/ns/docbook">
+  <title>Late Static Bindings (Résolution statique à la volée)</title>
+  <para>
+   Depuis PHP 5.3.0, PHP implémente une fonctionnalité appelée 
+   <literal>late static bindings</literal>, en français la résolution
+   statique à la volée, qui est utilisée pour choisir la classe appelée
+   dans le cadre de l'héritage de méthodes statiques.
+  </para>
+
+  <para>
+   Cette fonctionnalité a été baptisée <literal>"late static bindings"</literal>,
+   d'un point de vue interne. <literal>"Late binding"</literal>, littéralement
+   compilation tardive, vient du fait que les éléments <literal>static::</literal>
+   ne seront plus résolus en utilisant la classe où la méthode a été définie, mais
+   celle qui est active durant l'exécution. L'adjectif statique a été
+   ajouté car ce problème s'applique aux méthodes statiques, mais pas seulement.
+  </para>
+
+  <sect2 xml:id="language.oop5.late-static-bindings.self">
+   <title>Limitations de <literal>self::</literal></title>
+   <para>
+    Les références à la clsse courante, avec <literal>self::</literal> ou
+    <literal>__CLASS__</literal> sont résolues en utilisant la classe à qui
+    appartiennent les fonctions, où elles ont été définies : 
+   </para>
+   <example>
+    <title>Utilisation de <literal>self::</literal></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class A {
+    public static function qui() {
+        echo __CLASS__;
+    }
+    public static function test() {
+        self::qui();
+    }
+}
+
+class B extends A {
+    public static function qui() {
+         echo __CLASS__;
+    }
+}
+
+B::test();
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+A
+]]>
+    </screen>
+   </example>
+
+  </sect2>
+
+  <sect2 xml:id="language.oop5.late-static-bindings.usage">
+   <title>Utilisation de la résolution statique à la volée</title>
+
+   <para>
+    La résolution statique à la volée essaie de dépasser cette limitation
+    en introduisant un mot clé qui fait référence à la classe
+    qui est appelée durant l'exécution. Simplement, ce mot-clé 
+    vous permet de faire référence à <literal>B</literal> depuis
+    <literal>test()</literal>, dans l'exemple précédent.
+    Il a été décidé de ne pas introduite de nouveau mot clé, mais
+    plutôt d'utiliser le mot <literal>static</literal> qui était déjà
+    réservé.
+   </para>
+
+   <example>
+    <title>Utilisation simple de <literal>static::</literal></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class A {
+    public static function qui() {
+        echo __CLASS__;
+    }
+    public static function test() {
+        static::qui(); // Ici, résolution à la volée
+    }
+}
+
+class B extends A {
+    public static function qui() {
+         echo __CLASS__;
+    }
+}
+
+B::test();
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+B
+]]>
+    </screen>
+   </example>
+   <note>
+    <para>
+     <literal>static::</literal> ne fonctionne pas comme <literal>$this</literal>
+     pour les méthodes statiques. <literal>$this-></literal> suit les règles
+     de l'héritage alors que <literal>static::</literal> ne les suit pas. Cette
+     différence est détaillée plus tard dans le manuel.
+    </para>
+   </note>
+   <example>
+    <title>Utilisation de <literal>static::</literal> dans un contexte non statique</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class TestChild extends TestParent {
+    public function __construct() {
+        static::qui();
+    }
+
+    public function test() {
+        $o = new TestParent();
+    }
+
+    public static function qui() {
+        echo __CLASS__."\n";
+    }
+}
+
+class TestParent {
+    public function __construct() {
+        static::qui();
+    }
+
+    public static function qui() {
+        echo __CLASS__."\n";
+    }
+}
+$o = new TestChild;
+$o->test();
+
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+TestChild
+TestParent
+]]>
+    </screen>
+   </example>
+   <note>
+    <para>
+     La résolution des statiques à la volée va s'arrêter à un appel statique
+     complètement résolu. D'un autre coté, les appels à statique en utilisant
+     un mot-clé comme <literal>parent::</literal> ou <literal>self::</literal> 
+     va transmettre l'information appelante.
+    </para>
+    <example>
+     <title>Appel avec ou sans transmission</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+class A {
+    public static function foo() {
+        static::qui();
+    }
+
+    public static function qui() {
+        echo __CLASS__."\n";
+    }
+}
+
+class B extends A {
+    public static function test() {
+        A::foo();
+        parent::foo();
+        self::foo();
+    }
+
+    public static function qui() {
+        echo __CLASS__."\n";
+    }
+}
+class C extends B {
+    public static function qui() {
+        echo __CLASS__."\n";
+    }
+}
+
+C::test();
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+A
+C
+C
+]]>
+     </screen>
+    </example>
+   </note>
+  </sect2>
+  <sect2 xml:id="language.oop5.late-static-bindings.edge-cases">
+   <title>Cas limites</title>
+   <para>
+    Il y a de nombreuses solutions pour lancer un appel à une méthode en PHP,
+    comme des fonctions de rappels, ou des méthodes magiques. La résolution
+    statique à la volée qui effectue son travail à l'exécution, il peut y avoir
+    des cas particuliers qui donnent des résultats inattendus.
+   </para>
+   <example>
+    <title>Résolution statique à la volée dans une méthod magique</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class A {
+
+   protected static function qui() {
+        echo __CLASS__."\n";
+   }
+
+   public function __get($var) {
+       return static::qui();
+   }
+}
+
+class B extends A {
+
+   protected static function qui() {
+        echo __CLASS__."\n";
+   }
+}
+
+$b = new B;
+$b->foo;
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+B
+]]>
+    </screen>
+   </example>
+  </sect2>
+ </sect1>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"../../manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
