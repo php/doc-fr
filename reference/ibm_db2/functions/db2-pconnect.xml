@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.6 $ -->
-<!-- EN-Revision: 1.5 Maintainer: jsgoupil Status: ready -->
+<!-- $Revision: 1.7 $ -->
+<!-- EN-Revision: 1.7 Maintainer: dams Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.db2-pconnect" xmlns="http://docbook.org/ns/docbook">
@@ -119,7 +119,316 @@
         </varlistentry>
        </variablelist>
       </para>
-     </listitem>
+      <para>
+       Les options suivantes sont disponibles depuis ibm_db2 version 1.7.0.
+       <variablelist>
+        <varlistentry>
+         <term><parameter>trustedcontext</parameter></term>
+         <listitem>
+          <para>
+           En passant la valeur DB2_TRUSTED_CONTEXT_ENABLE, le contexte de confiance
+           est activé pour cette connexion. Ce paramètre ne peut pas être activé
+           avec <function>db2_set_option</function>.
+          </para>
+          <para>
+           Cette option ne fonctionne que si la base est cataloguée, même si la base
+           est locale, ou si vous spécifiez un DSN complet lors de la création de la 
+           connexion.
+          </para>
+          <para>
+           Pour cataloguer la base, utilisez la commande suivante : 
+          </para>
+          <para>
+           <literallayout>db2 catalog tcpip node loopback remote &lt;SERVERNAME&gt; server &lt;SERVICENAME&gt;
+db2 catalog database &lt;LOCALDBNAME&gt; as &lt;REMOTEDBNAME&gt; at node loopback
+db2 "update dbm cfg using svcename &lt;SERVICENAME&gt;"
+db2set DB2COMM=TCPIP</literallayout>
+          </para>
+          
+         </listitem>
+        </varlistentry>             
+      </variablelist>
+      </para>
+      <para>
+       Les options i5/OS suivantes sont disponibles depuis ibm_db2 version 1.5.1.
+       <tip>
+        <para>
+         Des attributs de connexion contradictoires, en conjonction avec une
+         connexion persistante peut produire des résultats indéterminés sur i5/OS.
+         La politique du site doit être établie pour toutes les applications qui
+         utilisent une connexion persistante. La valeur par défaut de 
+         DB2_AUTOCOMMIT_ON est recommandée avec les connexions persistantes.
+        </para>
+       </tip>
+       <variablelist>
+        <varlistentry>
+         <term><parameter>i5_lib</parameter></term>
+         <listitem>
+          <para>
+           Une caractère qui indique la bibliothèque par défaut qui sera
+           utilisée pour résoudre les références de fichiers non qualifiées.
+           Cette option n'est pas valide si la connexion utilise le mode 
+           de nommage système.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>i5_naming</parameter></term>
+         <listitem>
+          <para>
+           <literal>DB2_I5_NAMING_ON</literal> active le mode de nommage système
+           de DB2 UDB CLI iSeries. Les fichiers sont alors qualifiés avec le délimiteur
+           slash (/). Les fichiers non qualifiés sont résolus en utilisant la liste
+           de bibliothèque de la tâche.
+          </para>
+          <para>
+           <literal>DB2_I5_NAMING_OFF</literal> active le mode de nommage par défaut,
+           qui est le nommage SQL. Les fichiers sont alors qualifiés avec le point (.) .
+           Les fichiers non qualifiés sont résolus avec la bibliothèque par défaut,
+           ou bien l'identifiant de l'utilisateur courant.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>i5_commit</parameter></term>
+         <listitem>
+          <para>
+           L'attribut <parameter>i5_commit</parameter> doit être configuré avant
+           l'appel à <function>db2_pconnect</function>. Si la valeur est changée
+           après la connexion, et que la connexion s'effectue sur des données distantes,
+           alors ce changement n'aura pas d'effets, juqu'au prochain appel réussi
+           à <function>db2_pconnect</function>.
+           <note>
+            <para>
+             La directive du &php.ini; <parameter>ibm_db2.i5_allow_commit</parameter>==0 
+             ou <literal>DB2_I5_TXN_NO_COMMIT</literal> est la valeur par défaut, mais peut
+             être remplacé par l'option <parameter>i5_commit</parameter>.
+            </para>
+           </note>           
+          </para>
+          <para>
+           <literal>DB2_I5_TXN_NO_COMMIT</literal> : le contrôle de validation n'est pas utilisé.
+          </para>
+          <para>
+           <literal>DB2_I5_TXN_READ_UNCOMMITTED</literal> : les lectures incohérentes, 
+           ou non répétables et les fantômes sont possibles.
+          </para>
+          <para>
+           <literal>DB2_I5_TXN_READ_COMMITTED</literal> : les lectures sont cohérentes.
+           Les lecteurs non répétables et les fantômes sont possibles.
+          </para>
+          <para>
+           <literal>DB2_I5_TXN_REPEATABLE_READ</literal> : les lectures cohérentes et 
+           répétables, mais les fantômes sont possibles.
+          </para>
+          <para>
+           <literal>DB2_I5_TXN_SERIALIZABLE</literal> : les transactions sont activées.
+           les lectures incohérentes, ou non répétables et les fantômes sont impossibles.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>i5_query_optimize</parameter></term>
+         <listitem>
+          <para>
+           <literal>DB2_FIRST_IO</literal> : toutes les requêtes sont optimisées
+           dans le but de retourner la première page le plus rapidement possible.
+           Cet objectif fonctionne bien lorsque le résultat est contrôler par un
+           utilisateur qui a de bonnes chances d'annuler la requête après avoir vu
+           les premières réponses. Les requêtes codée avec une clause
+           <literal>OPTIMIZE FOR nnn ROWS</literal> respectent aussi cet objectif.
+          </para>
+          <para>
+           <literal>DB2_ALL_IO</literal> : toutes les requêtes sont optimisées 
+           dans le but de traiter la requête complète le plus rapidement possible.
+           C'est une bonne option lorsque le résultat de la requête doit être
+           écrit dans un fichier ou un rapport, ou que l'interface accumule toutes
+           les données avant de les exporter. Les requêtes codées avec la clause
+           <literal>OPTIMIZE FOR nnn ROWS</literal> respectent aussi cet objectif.
+           C'est le comportement par défaut.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>i5_dbcs_alloc</parameter></term>
+         <listitem>
+          <para>
+           <literal>DB2_I5_DBCS_ALLOC_ON</literal> active le schéma d'allocation
+           DB2 6X pour la croissance des tailles de colonnes de translation DBCS.
+          </para>
+          <para>
+           <literal>DB2_I5_DBCS_ALLOC_OFF</literal> désactive le schéma d'allocation
+           DB2 6X pour la croissance des tailles de colonnes de translation DBCS.
+           <note>
+            <para>
+             La directive du &php.ini; <parameter>ibm_db2.i5_dbcs_alloc</parameter>==0 
+             ou <literal>DB2_I5_DBCS_ALLOC_OFF</literal> est la valeur par défaut, mais peut
+             être remplacé par l'option <parameter>i5_dbcs_alloc</parameter>.
+            </para>
+           </note>
+           </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>i5_date_fmt</parameter></term>
+         <listitem>
+          <para>
+           <literal>DB2_I5_FMT_ISO</literal> : le format de date ISO 
+           (<literal>International Organization for Standardization</literal>) est
+           utilisé : <literal>yyyy-mm-dd</literal>. C'est le format par défaut.
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_USA</literal> : le format des États Unis d'Amérique
+           est utilisé : <literal>mm/dd/yyyy</literal>.
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_EUR</literal> : le format de date européen 
+           <literal>dd.mm.yyyy</literal> est utilisé.
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_JIS</literal> : le format standard industriel japonais 
+           <literal>yyyy-mm-dd</literal> est utilisé.
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_MDY</literal> : le format de date 
+           <literal>mm/dd/yyyy</literal> est utilisé. 
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_DMY</literal> : le format de date 
+           <literal>dd/mm/yyyy</literal> est utilisé.
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_YMD</literal> : le format de date 
+           <literal>yy/mm/dd</literal> est utilisé.
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_JUL</literal> : Le format de date julien 
+           <literal>yy/ddd</literal> est utilisé.
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_JOB</literal> : le format de date par défaut est utilisé.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>i5_date_sep</parameter></term>
+         <listitem>
+          <para>
+           <literal>DB2_I5_SEP_SLASH</literal> : un slash ( / ) est utilisé comme séparateur de date.
+           C'est le format par défaut.
+          </para>
+          <para>
+           <literal>DB2_I5_SEP_DASH</literal> : un tiret ( - ) est utilisé comme séparateur de date.
+          </para>
+          <para>
+           <literal>DB2_I5_SEP_PERIOD</literal> : un point ( . ) est utilisé comme séparateur de date.
+          </para>
+          <para>
+           <literal>DB2_I5_SEP_COMMA</literal> : une virgule ( , ) est utilisé comme séparateur de date.
+          </para>
+          <para>
+           <literal>DB2_I5_SEP_BLANK</literal> : un espace est utilisé comme séparateur de date.
+          </para>
+          <para>
+           <literal>DB2_I5_SEP_JOB</literal> : la configuration par défaut est utilisée
+          </para>
+         </listitem>
+        </varlistentry>     
+        <varlistentry>
+         <term><parameter>i5_time_fmt</parameter></term>
+         <listitem>
+          <para>
+           <literal>DB2_I5_FMT_ISO</literal> : le format d'heure ISO 
+           (<literal>International Organization for Standardization</literal>) est
+           utilisé : <literal>hh.mm.ss</literal>. C'est le format par défaut.
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_USA</literal> : le format des États-Unis d'Amérique
+           est utilisé : <literal>hh:mmxx</literal> est utilisé, où <literal>xx</literal> 
+           vaut <literal>AM</literal> ou <literal>PM</literal>.
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_EUR</literal> : le format d'heure européen 
+           <literal>hh.mm.ss</literal> est utilisé.
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_JIS</literal> : le format standard industriel japonais 
+           est utilisé <literal>hh:mm:ss</literal>.
+          </para>
+          <para>
+           <literal>DB2_I5_FMT_HMS</literal> : le format <literal>hh:mm:ss</literal>
+           est utilisé.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>i5_time_sep</parameter></term>
+         <listitem>
+          <para>
+           <literal>DB2_I5_SEP_COLON</literal> : un deux-point ( : ) est utilisé comme
+           séparateur d'heure. C'est le défaut.
+          </para>
+          <para>
+           <literal>DB2_I5_SEP_PERIOD</literal> : un point ( . ) est utilisé comme
+           séparateur d'heure. 
+          </para>
+          <para>
+           <literal>DB2_I5_SEP_COMMA</literal> : une virgule ( , ) est utilisée comme
+           séparateur d'heure. 
+          </para>
+          <para>
+           <literal>DB2_I5_SEP_BLANK</literal> : un espace est utilisé comme
+           séparateur d'heure. 
+          </para>
+          <para>
+           <literal>DB2_I5_SEP_JOB</literal> : le séparateur par défaut est utilisé.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>i5_decimal_sep</parameter></term>
+         <listitem>
+          <para>
+           <literal>DB2_I5_SEP_PERIOD</literal> : un point ( . ) est utilisé comme
+           séparateur décimal. C'est le séparateur par défaut. 
+          </para>
+          <para>
+           <literal>DB2_I5_SEP_COMMA</literal> : une virgule ( , ) est utilisée comme
+           séparateur décimal.
+          </para>
+          <para>
+           <literal>DB2_I5_SEP_JOB</literal> : le séparateur par défaut est utilisé.
+          </para>
+         </listitem>
+        </varlistentry>        
+       </variablelist>
+      </para> 
+      <para>
+       Les options suivantes i5/OS sont disponibles depuis ibm_db2 version 1.8.0.
+       <variablelist>
+        <varlistentry>
+         <term><parameter>i5_libl</parameter></term>
+         <listitem>
+          <para>
+           Un caractère qui indique la bibliothèque qui sera utilisée pour résoudre
+           les références de fichiers non qualifiées. Spécifiez la liste de bibliothèque
+           sous la forme d'éléments séparés par des espaces : 
+           <literal>'i5_libl'=>"MYLIB YOURLIB ANYLIB"</literal>. 
+           <note>
+            <para>
+             i5_libl appelle <literal>qsys2/qcmdexc('cmd',cmdlen)</literal>, qui
+             est disponible depuis i5/OS V5R4.
+            </para>
+           </note>
+          </para>
+         </listitem>
+        </varlistentry>         
+       </variablelist>
+      </para>      
+      </listitem>
+     </varlistentry>
+    </variablelist>
+    </listitem>
     </varlistentry>
    </variablelist>
   </para>
@@ -179,6 +488,68 @@ else {
 <![CDATA[
 Connexion persistante réussie.
 Deuxième connexion persistante réussie.
+]]>
+    </screen>
+   </example>
+   <example>
+    <title>Utilisation de contextes de confiance DB2</title>
+    <para>
+     L'exemple suivant montre comment activer un utilisateur de confiance,
+     basculer dessus, et obtenir un identifiant d'utilisateur.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$database = "SAMPLE";
+$hostname = "localhost";
+$port = 50000;
+$authID = "db2inst1";
+$auth_pass = "ibmdb2";
+
+$tc_user = "tcuser";
+$tc_pass = "tcpassword";
+
+$dsn = "DATABASE=$database;HOSTNAME=$hostname;PORT=$port;
+  PROTOCOL=TCPIP;UID=$authID;PWD=$auth_pass;";
+$options = array ("trustedcontext" => DB2_TRUSTED_CONTEXT_ENABLE);
+
+$tc_conn = db2_pconnect($dsn, "", "", $options);
+if($tc_conn) {
+    echo "Connexion de confiance réussie.\n";
+
+    if(db2_get_option($tc_conn, "trustedcontext")) {
+        $userBefore = db2_get_option($tc_conn, "trusted_user");
+        
+        //Travail par l'utilisateur 1.
+
+        //Bascule sur l'utilisateur de confiance.
+        $parameters = array("trusted_user" => $tc_user, 
+          "trusted_password" => $tcuser_pass);
+        $res = db2_set_option ($tc_conn, $parameters, 1);
+
+        $userAfter = db2_get_option($tc_conn, "trusted_user");
+        //Do more work as trusted user.
+
+        if($userBefore != $userAfter) {
+            echo "Utilisateur changé." . "\n";    
+        }
+    }
+
+    db2_close($tc_conn);
+}
+else {
+    echo "Connexion de confiance échouée.\n";
+}
+?>
+
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Connexion de confiance réussie.
+Utilisateur changé
 ]]>
     </screen>
    </example>
