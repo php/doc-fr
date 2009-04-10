@@ -1,41 +1,42 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.13 $ -->
-<!-- EN-Revision: 1.10 Maintainer: yannick Status: ready -->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision: 1.14 $ -->
+<!-- EN-Revision: 1.11 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.ingres-fetch-array" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>ingres_fetch_array</refname>
-  <refpurpose>Récupère une ligne de résultat Ingres dans un tableau</refpurpose>
+  <refpurpose>RÃ©cupÃ¨re une ligne de rÃ©sultat Ingres dans un tableau</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
    <type>array</type><methodname>ingres_fetch_array</methodname>
+   <methodparam><type>resource</type><parameter>result</parameter></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>result_type</parameter></methodparam>
-   <methodparam choice="opt"><type>resource</type><parameter>link</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Cette fonction est une version améliorée de
-   <function>ingres_fetch_row</function>. En plus de stocker les données
-   dans un tableau à indices numériques, elle peut aussi les enregistrer
+   Cette fonction est une version amÃ©liorÃ©e de
+   <function>ingres_fetch_row</function>. En plus de stocker les donnÃ©es
+   dans un tableau Ã  indices numÃ©riques, elle peut aussi les enregistrer
    dans un tableau associatif, en utilisant les noms des champs comme
    indices.
   </para>
   <para>
-   Si plusieurs colonnes ont le même nom, la dernière colonne aura la
-   priorité. Pour accéder aux autres colonnes du même nom, vous devez
-   utiliser l'index numérique, ou faire un alias pour chaque colonne.
+   Si plusieurs colonnes ont le mÃªme nom, la derniÃ¨re colonne aura la
+   prioritÃ©. Pour accÃ©der aux autres colonnes du mÃªme nom, vous devez
+   utiliser l'index numÃ©rique, ou faire un alias pour chaque colonne.
+   Par exemple : 
    <informalexample>
     <programlisting role="php">
 <![CDATA[
 <?php
 
-ingres_query("select t1.f1 as foo t2.f1 as bar from t1, t2");
-$result = ingres_fetch_array();
-$foo = $result["foo"];
-$bar = $result["bar"];
+$result = ingres_query($link, "select ap_place as city, ap_ccode as country from airport where ap_iatacode = 'VLL'"); 
+$result = ingres_fetch_array($result);
+$foo = $result["city"];
+$bar = $result["country"];
 
 ?>
 ]]>
@@ -43,11 +44,29 @@ $bar = $result["bar"];
    </informalexample>
   </para>
   <para>
-   Du point de vue de la rapidité, cette fonction est identique à
+   Du point de vue de la rapiditÃ©, cette fonction est identique Ã 
    <function>ingres_fetch_object</function>, et presque aussi rapide
-   que <function>ingres_fetch_row</function> (la différence est
+   que <function>ingres_fetch_row</function> (la diffÃ©rence est
    insignifiante).
   </para>
+  <para>
+   Par dÃ©faut, les index numÃ©riques commmencent Ã  1, qui est le
+   premier champ du rÃ©sultat. Ce n'est pas la pratique avec les autres
+   bases de donnÃ©es, qui commencent la numÃ©rotation Ã  0. 
+   Pour changer cette valeur, voyez
+   <link linkend="ini.ingres.array-index-start">ingres.array_index_start</link>.
+   Ã€ utiliser avec <function>ingres_fetch_array</function>.
+  </para>
+  <note>
+   <title>Directives de configurations associÃ©es</title>
+   <para>
+    Voyez aussi 
+    <link linkend="ini.ingres.array-index-start">ingres.array_index_start</link>, 
+    <link linkend="ini.ingres.fetch-buffer-size">ingres.fetch_buffer_size</link>
+    et les directives <link linkend="ini.ingres.utf8">ingres.utf8</link>
+    dans les <link linkend="ingres.configuration">configurations Ã  l'exÃ©cution</link>.
+   </para>
+  </note>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -55,22 +74,22 @@ $bar = $result["bar"];
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>result_type</parameter></term>
+     <term><parameter>result</parameter></term>
      <listitem>
       <para>
-       <parameter>result_type</parameter> peut valoir INGRES_NUM pour un
-       tableau à indices numériques, INGRES_ASSOC pour un tableau associatif,
-       ou INGRES_BOTH (défaut) pour un tableau mixte (accessible selon les deux
-       méthodes).
+       La &resource; de rÃ©sutats
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>link</parameter></term>
+     <term><parameter>result_type</parameter></term>
      <listitem>
       <para>
-       L'identifiant de connexion. S'il n'est pas spécifié, la dernière
-       connexion ouverte sera utilisée.
+       <parameter>result_type</parameter> peut valoir 
+       <constant>INGRES_NUM</constant> pour un tableau Ã  index 
+       numÃ©riques, <constant>INGRES_ASSOC</constant> pour un tableau associatif,
+       ou <constant>INGRES_BOTH</constant> (dÃ©faut) pour un tableau mixte 
+       (accessible selon les deux mÃ©thodes).
       </para>
      </listitem>
     </varlistentry>
@@ -81,7 +100,7 @@ $bar = $result["bar"];
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne un tableau qui correspond à la ligne récupérée,
+   Retourne un tableau qui correspond Ã  la ligne rÃ©cupÃ©rÃ©e,
    ou &false; s'il n'y a plus de lignes.
   </para>
  </refsect1>
@@ -94,13 +113,14 @@ $bar = $result["bar"];
     <programlisting role="php">
 <![CDATA[
 <?php
-ingres_connect($database, $user, $password);
+$link = ingres_connect($database, $user, $password);
+ 
+$result = ingres_query($link,"select * from table");
 
-ingres_query("select * from table");
-while ($row = ingres_fetch_array()) {
+while ($row = ingres_fetch_array($result)) {
     echo $row["user_id"];  // utilisation du tableau associatif
     echo $row["fullname"];
-    echo $row[1];          // utilisation du tableau à indices numériques
+    echo $row[1];          // utilisation du tableau Ã  indices numÃ©riques
     echo $row[2];
 }
 ?>
