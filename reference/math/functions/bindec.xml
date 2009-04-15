@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- $Revision: 1.17 $ -->
-<!-- EN-Revision: 1.12 Maintainer: yannick Status: ready -->
+<!-- $Revision: 1.18 $ -->
+<!-- EN-Revision: 1.16 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.bindec" xmlns="http://docbook.org/ns/docbook">
@@ -22,6 +22,13 @@
    <function>bindec</function> convertie un nombre binaire en un &integer;,
    ou, si nécessaire (pour des raisons de taille), en &float;.
   </para>
+  <para>
+   <function>bindec</function> interprète toutes les valeurs
+   <parameter>binary_string</parameter> comme des valeurs non-signées entières.
+   Ceci est dû au fait que la fonction <function>bindec</function> voit
+   l'octet le plus significatif comme ayant plus de poids que l'octet représentant
+   le signe.
+  </para>
  </refsect1>
  <refsect1 role="parameters">
   &reftitle.parameters;
@@ -31,12 +38,18 @@
      <term><parameter>binary_string</parameter></term>
      <listitem>
       <para>
-       La chaîne binaire à convertir
+       La chaîne binaire à convertir.
       </para>
      </listitem>
     </varlistentry>
    </variablelist>
   </para>
+  <warning>
+   <para>
+    Ce paramètre doit être une &string;.
+    L'utilisation d'un autre type de données produit des résultats inattendus.
+   </para>
+  </warning>
  </refsect1>
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
@@ -94,7 +107,115 @@ echo bindec('111');
     </screen>
    </example>
   </para>
+  <para>
+   <example>
+    <title><function>bindec</function> interprète l'entrée
+     comme un entier non-signé</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/*
+ * Le plus important dans cet exemple est dans la sortie
+ * plutôt que dans le code PHP lui-même.
+ */
+
+$magnitude_lower = pow(2, (PHP_INT_SIZE * 8) - 2);
+p($magnitude_lower - 1);
+p($magnitude_lower, 'Avez-vous vu le changement ? Soyez attentif la prochaine fois...');
+
+p(PHP_INT_MAX, 'PHP_INT_MAX');
+p(~PHP_INT_MAX, 'interprété comme étant supérieur à PHP_INT_MAX');
+
+if (PHP_INT_SIZE == 4) {
+    $note = 'interprété comme étant le plus grand entier non-signé';
+} else {
+    $note = 'interprété comme étant le plus grand entier non-signé
+              (18446744073709551615) mais faussé par la précision de la virgule flottante';
+}
+p(-1, $note);
+
+
+function p($input, $note = '') {
+    echo "entrée :        $input\n";
+
+    $format = '%0' . (PHP_INT_SIZE * 8) . 'b';
+    $bin = sprintf($format, $input);
+    echo "binaire :       $bin\n";
+
+    ini_set('precision', 20);  // Pour plus de lisibilité sur les PC 64 bits.
+    $dec = bindec($bin);
+    echo 'bindec() :     ' . $dec . "\n";
+
+    if ($note) {
+        echo "Note :         $note\n";
+    }
+
+    echo "\n";
+}
+?>
+]]>
+    </programlisting>
+    &example.outputs.32bit;
+    <screen>
+<![CDATA[
+entrée :        1073741823
+binaire :       00111111111111111111111111111111
+bindec() :     1073741823
+
+entrée :        1073741824
+binaire :       01000000000000000000000000000000
+bindec():     1073741824
+Note :         Avez-vous vu le changement ? Soyez attentif la prochaine fois...
+
+entrée :        2147483647
+binaire :       01111111111111111111111111111111
+bindec():     2147483647
+Note :         PHP_INT_MAX
+
+entrée :        -2147483648
+binaire :       10000000000000000000000000000000
+bindec():     2147483648
+Note :         interprété comme étant supérieur à PHP_INT_MAX
+
+entrée :        -1
+binaire :       11111111111111111111111111111111
+bindec():     4294967295
+Note :         interprété comme étant le plus grand entier non-signé
+]]>
+    </screen>
+    &example.outputs.64bit;
+    <screen>
+<![CDATA[
+entrée :        4611686018427387903
+binaire :       0011111111111111111111111111111111111111111111111111111111111111
+bindec() :     4611686018427387903
+
+entrée :        4611686018427387904
+binaire :       0100000000000000000000000000000000000000000000000000000000000000
+bindec() :     4611686018427387904
+Note :         Avez-vous vu le changement ? Soyez attentif la prochaine fois...
+
+entrée :        9223372036854775807
+binaire :       0111111111111111111111111111111111111111111111111111111111111111
+bindec() :     9223372036854775807
+Note :         PHP_INT_MAX
+
+entrée :        -9223372036854775808
+binaire :       1000000000000000000000000000000000000000000000000000000000000000
+bindec() :     9223372036854775808
+Note :         interprété comme étant supérieur à PHP_INT_MAX
+
+entrée :        -1
+binaire :       1111111111111111111111111111111111111111111111111111111111111111
+bindec() :     18446744073709551616
+Note :         interprété comme étant le plus grand entier non-signé
+              (18446744073709551615) mais faussé par la précision de la virgule flottante
+]]>
+    </screen>
+   </example>
+  </para>
  </refsect1>
+
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
