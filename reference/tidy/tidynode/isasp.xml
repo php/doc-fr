@@ -1,24 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision: 1.1 $ -->
-<!-- EN-Revision: 1.2 Maintainer: dams Status: ready -->
+<!-- $Revision: 1.2 $ -->
+<!-- EN-Revision: 1.3 Maintainer: dams Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="tidynode.isasp" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
-  <refname>tidyNode->isAsp</refname>
-  <refpurpose>
-   Retourne &true; si ce noeud Tidy est du code ASP
-  </refpurpose>
+  <refname>tidyNode::isAsp</refname>
+  <refpurpose>Vérifie si le noeud est du code ASP</refpurpose>
  </refnamediv>
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <type>bool</type><methodname>tidyNode->isAsp</methodname>
+   <type>bool</type><methodname>tidyNode::isAsp</methodname>
    <void/>
   </methodsynopsis>
   <para>
-   <function>tidyNode->isAsp</function> retourne &true;
-   si le noeud courant est du code ASP, &false; sinon.
+   Vérifie si le noeud est du code ASP.
   </para>
  </refsect1>
  
@@ -29,11 +26,85 @@
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Extrait di code ASP depuis un document HTML mixte</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$html = <<< HTML
+<html><head>
+<?php echo '<title>title</title>'; ?>
+<# 
+  /* code JSTE */
+  alert('Hello World'); 
+#>
+</head>
+<body>
+
+<?php
+  // code PHP
+  echo 'hello world!';
+?>
+
+<%
+  /* code ASP */
+  response.write("Hello World!")
+%>
+
+<!-- Comments -->
+Hello World
+</body></html>
+Outside HTML
+HTML;
+
+
+$tidy = tidy_parse_string($html);
+$num = 0;
+
+get_nodes($tidy->html(), 'asp');
+
+function get_nodes($node, $node_type) {
+
+    // Vérifie si le noeud courant est du type requis
+    if($node->{"is$node_type"}()) {
+        echo "\n\n# Noeud $node_type #" . ++$GLOBALS['num'] . "\n";
+        echo $node->value;
+    }
+
+    // Vérifie si le noeud courant a des enfants
+    if($node->hasChildren()) {
+        foreach($node->child as $child) {
+            get_nodes($child, $node_type);
+        }
+    }
+}
+
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+# Noeud asp #1
+<%
+  /* code ASP */
+  response.write("Hello World!")
+%>
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
+
  <refsect1 role="notes">
   &reftitle.notes;  
   <note>
    <para>
-    Cette fonction était nommée <function>tidy_node->is_asp</function> en
+    Cette fonction était nommée <function>tidy_node::is_asp</function> en
     PHP 4/Tidy 1.
    </para>
   </note>

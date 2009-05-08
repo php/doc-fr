@@ -1,17 +1,17 @@
 <?xml version='1.0' encoding='utf-8'?>
-<!-- $Revision: 1.1 $ -->
+<!-- $Revision: 1.2 $ -->
 <!-- EN-Revision: 1.2 Maintainer: dams Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="tidynode.isphp" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
-  <refname>tidyNode->isPhp</refname>
+  <refname>tidyNode::isPhp</refname>
   <refpurpose>Indique si un noeud contient du code PHP</refpurpose>
  </refnamediv>
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <type>bool</type><methodname>tidyNode->isPhp</methodname>
+   <type>bool</type><methodname>tidyNode::isPhp</methodname>
    <void/>
   </methodsynopsis>
   <para>
@@ -38,38 +38,50 @@
 
 $html = <<< HTML
 <html><head>
-  <?php echo '<title>Titre</title>'; ?>
- </head>
- <body>
+<?php echo '<title>title</title>'; ?>
+<# 
+  /* code JSTE */
+  alert('Hello World'); 
+#>
+</head>
+<body>
 
-  <?php
-       echo 'Bonjour le monde !';
-       ?>
+<?php
+  // code PHP
+  echo 'hello world!';
+?>
 
- </body></html>
+<%
+  /* code ASP */
+  response.write("Hello World!")
+%>
+
+<!-- Comments -->
+Hello World
+</body></html>
+Outside HTML
 HTML;
 
 
 $tidy = tidy_parse_string($html);
 $num = 0;
 
-get_php($tidy->html());
+get_nodes($tidy->html(), 'php');
 
+function get_nodes($node, $node_type) {
 
-function get_php($node) {
+    // Vérifie si le noeud courant est du type demandé
+    if($node->{"is$node_type"}()) {
+        echo "\n\n# Noeud $node_type #" . ++$GLOBALS['num'] . "\n";
+        echo $node->value;
+    }
 
-// vérifie si le noeud courant est du code PHP
-if($node->isPHP()) {
-echo "\n\n# PHP node #" . ++$GLOBALS['num'] . "\n";
-echo $node->value;
-}
-
-// vérifie si le noeud courant a des enfants
-if($node->hasChildren()) {
-foreach($node->child as $child) {
-get_php($child);
-}
-}
+    // Vérifie si le noeud courant a des enfants
+    if($node->hasChildren()) {
+        foreach($node->child as $child) {
+            get_nodes($child, $node_type);
+        }
+    }
 }
 
 ?>
@@ -78,13 +90,14 @@ get_php($child);
     &example.outputs;
     <screen>
 <![CDATA[
-# PHP node #1
+# Noeud PHP #1
 <?php echo '<title>Titre</title>'; ?>
 
-# PHP node #2
+# Noeud PHP #2
 <?php
-     echo 'Bonjour le monde !';
-     ?>
+  // code PHP
+  echo 'hello world!';
+?>
 ]]>
     </screen>
    </example>
@@ -95,7 +108,7 @@ get_php($child);
   &reftitle.notes;
   <note>
    <para>
-    Cette fonction était nommée <function>tidy_node->is_php</function>
+    Cette fonction était nommée <function>tidy_node::is_php</function>
     en PHP 4/Tidy 1.
    </para>
   </note>

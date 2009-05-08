@@ -1,11 +1,11 @@
 <?xml version='1.0' encoding='utf-8'?>
-<!-- $Revision: 1.1 $ -->
+<!-- $Revision: 1.2 $ -->
 <!-- EN-Revision: 1.2 Maintainer: dams Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="tidynode.ishtml" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
-  <refname>tidyNode->isHtml</refname>
+  <refname>tidyNode::isHtml</refname>
   <refpurpose>
    Indique si le noeud est une partie d'un document HTML
   </refpurpose>
@@ -13,7 +13,7 @@
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <type>bool</type><methodname>tidyNode->isHtml</methodname>
+   <type>bool</type><methodname>tidyNode::isHtml</methodname>
    <void/>
   </methodsynopsis>
   <para>
@@ -28,11 +28,158 @@
    &false; sinon.
   </para>
  </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Extrait du code HTML depuis un document mixte</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$html = <<< HTML
+<html><head>
+<?php echo '<title>title</title>'; ?>
+<# 
+  /* code JSTE */
+  alert('Hello World'); 
+#>
+</head>
+<body>
+
+<?php
+  // code PHP
+  echo 'hello world!';
+?>
+
+<%
+  /* code ASP */
+  response.write("Hello World!")
+%>
+
+<!-- Comments -->
+Hello World
+</body></html>
+Outside HTML
+HTML;
+
+
+$tidy = tidy_parse_string($html);
+$num = 0;
+
+get_nodes($tidy->html(), 'text');
+
+function get_nodes($node, $node_type) {
+    // Vérifie si le noeud courant est du type demandé
+    if($node->{"is$node_type"}()) {
+        echo "\n\n# Noeud $node_type #" . ++$GLOBALS['num'] . "\n";
+        echo $node->value;
+    }
+
+    // Vérifie si le noeud courant a des enfants
+    if($node->hasChildren()) {
+        foreach($node->child as $child) {
+            get_nodes($child, $node_type);
+        }
+    }
+}
+
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+# Noeud html #1
+<html>
+<head>
+<?php echo '<title>title</title>'; ?><# 
+  /* code JSTE */
+  alert('Hello World'); 
+#>
+<title></title>
+</head>
+<body>
+<?php
+  // code PHP
+  echo 'hello world!';
+?><%
+  /* code ASP */
+  response.write("Hello World!")
+%><!-- Comments -->
+Hello WorldOutside HTML
+</body>
+</html>
+
+# Noeud html #2
+<head>
+<?php echo '<title>title</title>'; ?><# 
+  /* code JSTE */
+  alert('Hello World'); 
+#>
+<title></title>
+</head>
+
+
+# Noeud html #3
+<?php echo '<title>title</title>'; ?>
+
+# Noeud html #4
+<# 
+  /* code JSTE */
+  alert('Hello World'); 
+#>
+
+# Noeud html #5
+<title></title>
+
+
+# Noeud html #6
+<body>
+<?php
+  // code PHP
+  echo 'hello world!';
+?><%
+  /* code ASP */
+  response.write("Hello World!")
+%><!-- Comments -->
+Hello WorldOutside HTML
+</body>
+
+
+# Noeud html #7
+<?php
+  // code PHP
+  echo 'hello world!';
+?>
+
+# Noeud html #8
+<%
+  /* code ASP */
+  response.write("Hello World!")
+%>
+
+# Noeud html #9
+<!-- Comments -->
+
+
+# Noeud html #10
+Hello World
+
+# Noeud html #11
+Outside HTML
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
+
  <refsect1 role="notes">
   &reftitle.notes;
   <note>
    <para>
-    Cette fonction était appelée <function>tidy_node->is_html</function>
+    Cette fonction était appelée <function>tidy_node::is_html</function>
     dans PHP 4/Tidy 1.
    </para>
   </note>
