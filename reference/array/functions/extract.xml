@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 876c81c602fe21a5404b74ed5e412198f632eac0 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: af4410a7e15898c3dbe83d6ea38246745ed9c6fb Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.extract" xmlns="http://docbook.org/ns/docbook">
@@ -254,7 +254,8 @@ blue, large, sphere, medium
   <warning>
    <para>
     N'utilisez pas <function>extract</function> sur des données inconnues, comme
-    les données utilisateurs (<varname>$_GET</varname>, etc).
+    les données utilisateurs (i.e. <varname>$_GET</varname>,
+    <varname>$_FILES</varname>, etc.).
     Si vous le faites, par exemple, pour rendre compatible un vieux code avec
     <link linkend="security.globals">register_globals</link>
     à Off de façon temporaire, assurez-vous d'utiliser l'une des constantes
@@ -265,6 +266,90 @@ blue, large, sphere, medium
     linkend="ini">&php.ini;</link>.
    </para>
   </warning>
+  <note>
+   <para>
+    Si vous avez la directive
+    <link linkend="security.globals">register_globals</link> d'activée
+    et que vous utilisez la fonction <function>extract</function>
+    sur les variables <varname>$_FILES</varname> et que vous spécifiez
+    la constante <constant>EXTR_SKIP</constant>, vous pourriez être surpris
+    du résultat.
+   </para>
+   <warning>
+    <para>
+     Cette façon de faire n'est pas recommandée et est uniquement documentée
+     ici pour bien comprendre le comportement.
+     L'utilisation de la directive
+     <link linkend="security.globals">register_globals</link> est obsolète
+     et appeler la fonction <function>extract</function> sur des données
+     partagées comme les variables <varname>$_FILES</varname> est, comme mentionné
+     ci-dessus, un risque potentiel pour la sécurité. Si vous rencontrez
+     ce problème, cela signifie que vous avez écrit votre code de la mauvaise
+     manière pour au moins 2 raisons.
+    </para>
+   </warning>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+/* Supposez que $testfile est le nom d'un champ de téléchargement de fichier
+   et que register_globals est actif. */
+
+var_dump($testfile);
+extract($_FILES, EXTR_SKIP);
+var_dump($testfile);
+var_dump($testfile['tmp_name']);
+
+?>
+]]>
+   </programlisting>
+   <simpara>
+    Vous vous attendez à voir quelque chose comme :
+   </simpara>
+   <screen>
+<![CDATA[
+string(14) "/tmp/phpgCCPX8"
+array(5) {
+  ["name"]=>
+  string(10) "somefile.txt"
+  ["type"]=>
+  string(24) "application/octet-stream"
+  ["tmp_name"]=>
+  string(14) "/tmp/phpgCCPX8"
+  ["error"]=>
+  int(0)
+  ["size"]=>
+  int(4208)
+}
+string(14) "/tmp/phpgCCPX8"
+]]>
+   </screen>
+   <simpara>
+    Cependant, vous devriez plutôt voir quelque comme :
+   </simpara>
+   <screen>
+<![CDATA[
+string(14) "/tmp/phpgCCPX8"
+string(14) "/tmp/phpgCCPX8"
+string(1) "/"
+]]>
+   </screen>
+   <para>
+    Ceci est dû au fait que, depuis que la directive
+    <link linkend="security.globals">register_globals</link> est ative,
+    la variable <varname>$testfile</varname> existe déjà dans le scope global
+    lorsque la fonction <function>extract</function> est appelée.
+    Et vû que la constante <constant>EXTR_SKIP</constant> est spécifiée,
+    la variable <varname>$testfile</varname> n'est pas écrasée avec le contenu
+    du tableau <constant>$_FILES</constant>, aussi, la variable
+    <varname>$testfile</varname> reste une &string;.
+    Parceque les <link linkend="language.types.string.substr">chaînes de caractères
+    peuvent être accédées en utilisant la synthaxe des tableaux</link>
+    et que la &string; non-numérique <literal>tmp_name</literal> est interprétée
+    comme <literal>0</literal>, PHP voit <varname>$testfile['tmp_name']</varname>
+    comme <varname>$testfile[0]</varname>.
+   </para>
+  </note>
  </refsect1>
  <refsect1 role="seealso">
   &reftitle.seealso;
@@ -287,7 +372,7 @@ sgml-indent-step:1
 sgml-indent-data:t
 indent-tabs-mode:nil
 sgml-parent-document:nil
-sgml-default-dtd-file:"../../../../manual.ced"
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
 sgml-exposed-tags:nil
 sgml-local-catalogs:nil
 sgml-local-ecat-files:nil
