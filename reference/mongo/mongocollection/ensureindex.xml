@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: af4410a7e15898c3dbe83d6ea38246745ed9c6fb Maintainer: dams Status: ready -->
+<!-- EN-Revision: 7846ce8d16f52d26cb7f7a04855a65a006cc93c4 Maintainer: dams Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongocollection.ensureindex" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -10,15 +10,21 @@
    Crée un index sur un champ donné
   </refpurpose>
  </refnamediv>
-
+ 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
    <modifier>public</modifier> <type>boolean</type><methodname>MongoCollection::ensureIndex</methodname>
-   <methodparam><type>string|array</type><parameter>keys</parameter></methodparam>
+   <methodparam><type>array</type><parameter>keys</parameter></methodparam>
+   <methodparam><type>array</type><parameter>options</parameter></methodparam>
   </methodsynopsis>
+  <para>
+   Un index unique ne peut être créé dans un champ si plusieurs documents existants
+   ne contiennent pas ce champ. Le champ vaut effectivement &null; pour ces documents
+   et ces derniers ne sont déjà pas uniques.
+  </para>
  </refsect1>
-
+ 
  <refsect1 role="parameters"> 
   &reftitle.parameters; 
   <para>
@@ -32,11 +38,42 @@
        Le ou les champs à indexer.
       </para>
      </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term>
+      <parameter>options</parameter>
+     </term>
+     <listitem>
+      <para>
+       Ce paramètre est un tableau associatif sous la forme
+       <literal>array("optionname" => &lt;boolean&gt;, ...)</literal>.
+       Actuellement, les options supportées sont :
+       <itemizedlist>
+        <listitem>
+         <para>
+          <literal>"unique"</literal>
+         </para>
+         <para>
+          Crée un index unique.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <literal>"dropDups"</literal>
+         </para>
+         <para>
+          Si un index unique est sur le point d'être créé et que les
+          valeurs dupliquées existent, les valeurs existantes seront supprimées.
+         </para>
+        </listitem>
+       </itemizedlist>
+      </para>
+     </listitem>
     </varlistentry>   
    </variablelist>
   </para>
  </refsect1>
-
+ 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
@@ -44,6 +81,32 @@
   </para>
  </refsect1>
 
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>1.0.2</entry>
+       <entry>
+        Le paramètre "options" passe de booléen à un tableau.
+        En version Pre-1.0.2, le second paramètre était une valeur booléenne
+        optionnelle spécifiant un index unique.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
+ </refsect1>
+ 
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
@@ -54,24 +117,50 @@
 
 $c = new MongoCollection($db, 'foo');
 
-// crée un index ascendant sur 'x'
-$c->ensureIndex('x');
+// Crée un index montant sur 'x'
+$c->ensureIndex(array('x' => 1));
 
-// crée un index ascendant sur 'y'
-$c->ensureIndex(array('y' => 1));
-
-// crée un index descendant sur 'w'
-$c->ensureIndex(array('w' => -1));
-
-// crée un index ascendant sur 'z' et descendant sur 'zz'
+// Crée un index montant sur 'z' et descendant sur 'zz'
 $c->ensureIndex(array('z' => 1, 'zz' => -1));
+
+// Crée un index unique sur 'x'
+$c->ensureIndex(array('x' => 1), array("unique" => true));
+?>
+]]>
+   </programlisting>
+  </example>
+  <example>
+   <title>Exemple de suppression de données dupliquées</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$collection->insert(array("username" => "joeschmoe"));
+$collection->insert(array("username" => "joeschmoe"));
+
+/*
+ * La création d'index a échoué, vous ne pouvez pas créer d'index unique
+ * sur une clé ne possédant pas de valeurs non-uniques
+ */
+$collection->ensureIndex(array("username" => 1), array("unique" => 1));
+
+/*
+ * La création d'index a réussi : un des documents est supprimé de la collection
+ */
+$collection->ensureIndex(array("username" => 1), array("unique" => 1, "dropDups" => 1));
+
+/*
+ * Maintenant que nous avons un index unique, les prochaines insertions
+ * avec le même nom d'utilisateur (comme ci-dessous) échoueront
+ */
+$collection->insert(array("username" => "joeschmoe"));
 
 ?>
 ]]>
    </programlisting>
   </example>
  </refsect1>
-
+ 
 </refentry>
 <!-- Keep this comment at the end of the file
 Local variables:
