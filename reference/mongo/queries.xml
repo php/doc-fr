@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 4508b6ad44cfdc54885461e172ec9755a39d1071 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<chapter xml:id="mongo.queries" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Interrogation de MongoDB</title>
+
+ <section>
+  <title>INterrogation sur un _id</title>
+  <para>
+   Chaque objet inséré se voit assigné automatiquement un champ unique _id,
+   qui est bien utile pour être utilisé dans les requêtes..
+  </para>
+  <para>
+   Supposez que vous voulez trouver un document que vous venez tout juste d'insérer.
+   L'insertion ajoute un champ _id au document, aussi, vous pouvez effectuer votre
+   requête de la sorte :
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$person = array("name" => "joe");
+
+$people->insert($person);
+
+// Maintenant, $joe a un champ _id
+$joe = $people->findOne(array("_id" => $person['_id']));
+
+?>
+]]>
+   </programlisting>
+  </para>
+  <para>
+   Tant que l'utilisateur ne l'a pas spécifié autrement, le champ _id
+   est un <classname>MongoId</classname>. L'erreur la plus courante
+   est d'essayer d'utiliser une chaîne qui correspond à un
+   <classname>MongoId</classname>. Gardez à l'esprit que cet identifiant
+   a 2 types de données différents, et ne correspond pas l'un l'autre,
+   de la même façon que la chaîne "array()" n'est pas la même chose
+   qu'un tableau vide. Par exemple :
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$person = array("name" => "joe");
+
+$people->insert($person);
+
+// Convertion de l'_id en une chaîne
+$pid = $person['_id'] . "";
+
+// ECHEC - $pid est une chaîne, et non un MongoId
+$joe = $people->findOne(array("_id" => $pid));
+
+?>
+]]>
+   </programlisting>
+  </para>
+ </section>
+
+ <section>
+  <title>Les tableaux</title>
+  <para>
+   Supposez que vous voulez trouver tous les documents correspondant à un tableau
+   d'éléments d'une certaine valeur. Par exemple, les documents avec "gold" et "award",
+   comme ceci :
+   <programlisting>
+<![CDATA[
+{ "_id" : ObjectId("4b06c282edb87a281e09dad9"), "awards" : ["gold", "silver", "bronze"]}
+]]>
+   </programlisting>
+   Ceci peut être effectué avec une requête simple, en ignorant le fait que "awards"
+   est un tableau :
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$cursor = $collection->find(array("awards" => "gold"));
+
+?>
+]]>
+   </programlisting>
+  </para>
+  <para>
+   Supposez que vous interrogez la base de données avec un objet plus complexe,
+   dont chaque élément du tableau sont eux-mêmes des objets, comme ceci :
+   <programlisting>
+<![CDATA[
+{ 
+     "_id" : ObjectId("4b06c282edb87a281e09dad9"), 
+     "awards" : 
+     [
+        {
+            "first place" : "gold"
+        },
+        {
+            "second place" : "silver" 
+        },
+        {
+            "third place" :  "bronze"
+        }
+     ]
+}
+]]>
+   </programlisting>
+   Continuons d'ignorer que c'est un tableau. Nous pouvons utiliser
+   la notation basée sur les points pour interroger le sous-objet :
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$cursor = $collection->find(array("awards.first place" => "gold"));
+
+?>
+]]>
+   </programlisting>
+   Notez qu'il importe peu qu'il y ait un espace dans le nom du champ
+   (bien qu'il convient de ne pas en mettre, juste pour rendre le code
+   plus lisible).
+  </para>
+ </section>
+
+</chapter>
