@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 32c02d8b9f8ac64c25be324b09be6e2a5075bf0b Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 201dc3748c7a94e788d470c697f017d2149c6736 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.filter-var" xmlns="http://docbook.org/ns/docbook">
@@ -33,8 +33,8 @@
      <term><parameter>filter</parameter></term>
      <listitem>
       <para>
-       Identifiant du filtre à utiliser. Par défaut, vaut
-       <constant>FILTER_SANITIZE_STRING</constant>.
+       Identifiant du filtre à utiliser
+       (voir la page du manuel <xref linkend="filter.filters" />).
       </para>
      </listitem>
     </varlistentry>
@@ -45,7 +45,46 @@
        Tableau associatif d'options ou des drapeaux. Si le filtre accepte les options,
        les drapeaux peuvent être fournis dans le champ "flags" du tableau.
        Pour les fonctions de rappel, le type <type>callback</type> devra être
-       passé.
+       passé. La fonction de rappel doit acceptée un seul argument ; la valeur à
+       filtrer et retournera la valeur, une fois le filtre appliqué.
+      </para>
+      <para>
+       <programlisting role="php">
+        <![CDATA[
+<?php
+// Pour les filtres acceptant les options,
+// utilisez ce format
+$options = array(
+    'options' => array(
+        'default' => 3, // valeur à retourner si le filtre échoue
+        // autres options ici...
+        'min_range' => 0
+    ),
+    'flags' => FILTER_FLAG_ALLOW_OCTAL,
+);
+$var = filter_var('0755', FILTER_VALIDATE_INT, $options);
+
+// Pour les filtres qui n'acceptent que des drapeaux,
+// vous pouvez les passez directement
+$var = filter_var('oops', FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+// Pour les filtres qui n'acceptent que des drapeaux,
+// vous pouvez également les passer sous forme de tableau
+$var = filter_var('oops', FILTER_VALIDATE_BOOLEAN,
+                  array('flags' => FILTER_NULL_ON_FAILURE));
+
+// Fonction de rappel du filtre
+function foo($value)
+{
+    $ret = new stdClass;
+    $ret->value = filter_var($value, FILTER_VALIDATE_BOOLEAN,
+                             array('flags' => FILTER_NULL_ON_FAILURE));
+    return $ret;
+}
+$var = filter_var('yes', FILTER_CALLBACK, array('options' => 'foo'));
+?>
+        ]]>
+       </programlisting>
       </para>
      </listitem>
     </varlistentry>
@@ -108,7 +147,7 @@ sgml-indent-step:1
 sgml-indent-data:t
 indent-tabs-mode:nil
 sgml-parent-document:nil
-sgml-default-dtd-file:"../../../../manual.ced"
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
 sgml-exposed-tags:nil
 sgml-local-catalogs:nil
 sgml-local-ecat-files:nil
