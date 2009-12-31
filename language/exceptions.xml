@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 04077dd209c5fb9de2b55fcaf57cd4beef8c4273 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: af4410a7e15898c3dbe83d6ea38246745ed9c6fb Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
  <chapter xml:id="language.exceptions" xmlns="http://docbook.org/ns/docbook">
@@ -130,21 +130,27 @@ string(4) "foo!"
 class Exception
 {
   protected $message = 'exception inconnu'; // message de l'exception
+  private   $string;                        // __toString cache
   protected $code = 0;                      // code de l'exception défini par l'utilisateur
   protected $file;                          // nom du fichier source de l'exception
   protected $line;                          // ligne de la source de l'exception
+  private   $trace;                         // backtrace
+  private   $previous;                      // exception précédente
 
-  function __construct(string $message=NULL, int code=0);
+  public function __construct($message = null, $code = 0, Exception $previous = null);
 
-  final function getMessage();              // message de l'exception
-  final function getCode();                 // code de l'exception
-  final function getFile();                 // nom du fichier source
-  final function getLine();                 // ligne du fichier source
-  final function getTrace();                // un tableau de backtrace()
-  final function getTraceAsString();        // chaîne formattée de trace
+  final private function __clone();         // Inhibe le clonage des exceptions.
+
+  final public function getMessage();              // message de l'exception
+  final public function getCode();                 // code de l'exception
+  final public function getFile();                 // nom du fichier source
+  final public function getLine();                 // ligne du fichier source
+  final public function getTrace();                // un tableau de backtrace()
+  final public function getPrevious();             // exception précédente
+  final public function getTraceAsString();        // chaîne formattée de trace
 
   /* Remplacable */
-  function __toString();                    // chaîne formatée pour l'affichage
+  public function __toString();                    // chaîne formatée pour l'affichage
 }
 ?>
 ]]>
@@ -162,6 +168,14 @@ class Exception
     pour fournir un affichage personnalisé lorsque l'objet est présenté comme
     une chaîne.
    </para>
+   <note>
+    <para>
+     Les exceptions ne peuvent pas être clônées. Si vous tentez
+     de <link linkend="language.oop5.cloning">clôner</link> une
+     exception, une erreur fatale (<literal>E_FATAL</literal>)
+     sera émise.
+    </para>
+   </note>
    <example>
     <title>Étendre la classe Exception</title>
     <programlisting role="php">
@@ -173,12 +187,12 @@ class Exception
 class MyException extends Exception
 {
   // Redéfinissez l'exception ainsi le message n'est pas facultatif
-  public function __construct($message, $code = 0) {
+  public function __construct($message, $code = 0, Exception $previous = null) {
 
     // traitement personnalisé que vous voulez réaliser ...
 
     // assurez-vous que tout a été assigné proprement
-    parent::__construct($message, $code);
+    parent::__construct($message, $code, $previous);
   }
 
   // chaîne personnalisé représentant l'objet
@@ -235,7 +249,7 @@ try {
 }
 
 // Continue l'exécution
-var_dump($o);
+var_dump($o); // Null
 echo "\n\n";
 
 
@@ -250,7 +264,7 @@ try {
 }
 
 // Continue l'exécution
-var_dump($o);
+var_dump($o); // Null
 echo "\n\n";
 
 
@@ -262,7 +276,7 @@ try {
 }
 
 // Continue l'exécution
-var_dump($o);
+var_dump($o); // Null
 echo "\n\n";
 
 
@@ -274,7 +288,7 @@ try {
 }
 
 // Continue l'exécution
-var_dump($o);
+var_dump($o); // TestException
 echo "\n\n";
 ?>
 ]]>
@@ -295,7 +309,7 @@ sgml-indent-step:1
 sgml-indent-data:t
 indent-tabs-mode:nil
 sgml-parent-document:nil
-sgml-default-dtd-file:"../../manual.ced"
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
 sgml-exposed-tags:nil
 sgml-local-catalogs:nil
 sgml-local-ecat-files:nil
