@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: af4410a7e15898c3dbe83d6ea38246745ed9c6fb Maintainer: yannick Status: ready -->
+<!-- EN-Revision: f2c64624b2a6d71abde7224bdfe984ea91976c46 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.feof">
@@ -8,7 +8,7 @@
   <refname>feof</refname>
   <refpurpose>Teste la fin du fichier</refpurpose>
  </refnamediv>
-
+ 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
@@ -19,7 +19,7 @@
    Teste la fin du fichier.
   </para>
  </refsect1>
-
+ 
  <refsect1 role="parameters">
   &reftitle.parameters;
   <para>
@@ -33,7 +33,7 @@
    </variablelist>
   </para>
  </refsect1>
-
+ 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
@@ -42,22 +42,44 @@
    une erreur survient, sinon, retourne &false;.
   </para>
  </refsect1>
-
+ 
  <refsect1 role="notes">
   &reftitle.notes;
   <warning>
-   <simpara>
+   <para>
     Si une connexion ouverte avec <function>fsockopen</function> n'est pas fermée
-    par le serveur, <function>feof</function> attendra qu'un délai limite ne soit atteint
-    pour retourner &true;. Le délai par défaut vaut 60 secondes. Vous devez utiliser
-    la fonction <function>stream_set_timeout</function> pour modifier cette valeur.
-    value.
-   </simpara>
+    par le serveur, <function>feof</function> se bloquera.
+    Pour contourner ce comportement, reportez-vous à l'exemple ci-dessous :
+    <example>
+     <title>Gestion des délais d'attente dépassés <function>feof</function></title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+function safe_feof($fp, &start = NULL) {
+ $start = microtime(true);
+
+ return feof($fp);
+}
+
+/* Assumons que $fp a été précédemment ouvert par fsockopen() */
+
+$start = NULL;
+$timeout = ini_get('default_socket_timeout');
+
+while(!safe_feof($fp, $start) && (microtime(true) - $start) < $timeout)
+{
+ /* Gestion */
+}
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
   </warning>
   <warning>
    <para>
-    Si le pointeur de fichier passé n'est pas valide, vous obtiendrez une boucle infinie,
-    car <function>feof</function> échoue à retourner &true;.
+    Si le pointeur de fichier passé n'est pas valide, vous obtiendrez une
+    boucle infinie car <function>feof</function> échouera à retourner &true;.
     <example>
      <title>Exemple avec <function>feof</function> et un pointeur de fichier invalide</title>
      <programlisting role="php">
@@ -78,7 +100,7 @@ fclose($file);
    </para>
   </warning>
  </refsect1>
-
+ 
 </refentry>
 
 <!-- Keep this comment at the end of the file

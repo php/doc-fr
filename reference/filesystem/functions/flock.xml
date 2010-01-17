@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7f5fbb545cb862865ea31d8fa49b86135fc91982 Maintainer: dams Status: ready -->
+<!-- EN-Revision: 326303276c3db4e013e805b389913b353bc56ae0 Maintainer: dams Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.flock">
@@ -32,8 +32,8 @@
    même méthode de verrouillage pour qu'il soit efficace. Par
    défaut, cette fonction se bloquera tant que le verrou demandé
    ne sera pas acquis ; ce comportement peut être contrôlé (sur les
-   systèmes différents de Windows) avec l'option LOCK_NB dont vous trouverez
-   la documentation ci-dessous.
+   systèmes différents de Windows) avec l'option <constant>LOCK_NB</constant>
+   dont vous trouverez la documentation ci-dessous.
   </para>
  </refsect1>
 
@@ -73,7 +73,8 @@
        </itemizedlist>
       </para>
       <para>
-       Il est également possible d'ajouter <constant>LOCK_NB</constant> si vous ne
+       Il est également possible d'ajouter <constant>LOCK_NB</constant>
+       comme masque d'une des opérations précédentes si vous ne
        voulez pas que la fonction <function>flock</function> bloque durant le verrouillage.
        (non supporté sous Windows)
       </para>
@@ -84,7 +85,8 @@
      <listitem>
       <para>
        Ce troisième argument optionnel est défini à &true; si le verrou
-       doit bloquer le script (condition d'erreur <literal>EWOULDBLOCK</literal>).
+       doit bloquer le script (condition d'erreur <literal>EWOULDBLOCK</literal>)
+       (non supporté sous Windows).
       </para>
      </listitem>
     </varlistentry>
@@ -152,13 +154,36 @@ fclose($fp);
     </programlisting>
    </example>
   </para>
+  <para>
+   <example>
+    <title>Exemple avec <function>flock</function> en utilisant l'option <constant>LOCK_NB</constant></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$fp = fopen('/tmp/lock.txt', 'r+');
+
+/* Activation de l'option LOCK_NB lors d'une opération LOCK_EX */
+if(!flock($fp, LOCK_EX | LOCK_NB)) {
+ echo 'Impossible d\'obtenir le verrou';
+ exit(-1);
+}
+
+/* ... */
+
+fclose($fp);
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
  </refsect1>
 
  <refsect1 role="notes">
   &reftitle.notes;
   <note>
    <para>
-    <function>flock</function> est obligatoire sous Windows.
+    <function>flock</function> est obligatoire sous Windows ainsi que
+    sous quelques systèmes basés sur POSIX.
    </para>
   </note>
   <note>
@@ -169,6 +194,14 @@ fclose($fp);
     comme argument de <function>fopen</function>).
    </para>
   </note>
+  <note>
+   <para>
+    Les systèmes compatibles POSIX.1 déverrouilleront les scripts utilisant
+    <function>flock</function> sur un fichier, si ces scripts utilisent la
+    fonction <function>fclose</function> sur un des gestionnaires de ce
+    fichier.
+   </para>
+  </note>
   <warning>
    <para>
     Assigner une autre valeur à l'argument <parameter>handle</parameter>
@@ -176,11 +209,6 @@ fclose($fp);
    </para>
   </warning>
   <warning>
-   <para>
-    <function>flock</function> ne fonctionne pas sur NFS ou sur les autres
-    systèmes de fichiers réseaux. Vérifiez la documentation de votre
-    système d'exploitation pour plus de détails.
-   </para>
    <para>
     Sur certains systèmes d'exploitation, <function>flock</function> est implémenté
     au niveau processus. Lorsque vous utilisez une API multithread comme

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 50f05a02f3267ca1461b6bc51349b3b6a7542db9 Maintainer: dams Status: ready -->
+<!-- EN-Revision: 4a0548937b4d25734de2296a39aab716ea0b477f Maintainer: dams Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.json-decode" xmlns="http://docbook.org/ns/docbook">
@@ -47,7 +47,7 @@
      <term><parameter>depth</parameter></term>
      <listitem>
       <para>
-       Limite de profondeur d'imbrication.
+       Définit la profondeur de récursion.
       </para>
      </listitem>
     </varlistentry>
@@ -58,8 +58,13 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne un &object; ou, si le paramètre optionnel
-   <parameter>assoc</parameter> vaut &true;, un tableau associatif.
+   Retourne la valeur encodée dans le paramètre <parameter>json</parameter>
+   dans le type PHP approprié. Les valeurs <literal>true</literal>,
+   <literal>false</literal> et <literal>null</literal> (insensible à la casse)
+   sont retournées respectivement comme &true;, &false; et &null;.
+   &null; est retourné si le paramètre <parameter>json</parameter> n'a pu
+   être décodé ou si les données encodées sont plus profondes que la limite
+   de récursion fournie.
   </para>
  </refsect1>
 
@@ -140,6 +145,72 @@ json_decode($bad_json); // null
 ]]>
     </programlisting>
    </example>
+   <example>
+    <title>Erreurs avec le paramètre <parameter>depth</parameter></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Encode les données.
+$json = json_encode(
+ array(
+  1 => array(
+   'English' => array(
+    'One',
+    'January'
+   ),
+   'French' => array(
+    'Une',
+    'Janvier'
+   )
+  )
+ )
+);
+
+// Définie les erreurs
+$json_errors = array(
+ JSON_ERROR_NONE => 'Aucune erreur n\'est survenue',
+ JSON_ERROR_DEPTH => 'La profondeur maximale a été atteinte',
+ JSON_ERROR_CTRL_CHAR => 'Erreur sur le caractère de contrôle, erreur d\'encodage possible',
+ JSON_ERROR_SYNTAX => 'Erreur de syntaxe',
+);
+
+// Affiche les erreurs pour les différentes profondeurs.
+foreach(range(4, 3, -1) as $depth) {
+ var_dump(json_decode($json, True, $depth));
+ echo 'Dernière erreur : ', $json_errors[json_last_error()], PHP_EOL, PHP_EOL;
+ }
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(1) {
+  [1]=>
+  array(2) {
+    ["English"]=>
+    array(2) {
+      [0]=>
+      string(3) "One"
+      [1]=>
+      string(7) "January"
+    }
+    ["French"]=>
+    array(2) {
+      [0]=>
+      string(3) "Une"
+      [1]=>
+      string(7) "Janvier"
+    }
+  }
+}
+Dernière erreur : Aucune erreur n'est survenue
+
+NULL
+Dernière erreur : La profondeur maximale a été atteinte
+]]>
+    </screen>
+   </example>
   </para>
  </refsect1>
 
@@ -151,12 +222,13 @@ json_decode($bad_json); // null
     mais d'un sous-projet de Javascript.
    </para>
   </note>
-  <caution>
+  <note>
    <para>
-    Cette fonction retournera &false; si les données encodées JSON sont plus
-    profondes que 127 éléments.
+    Si une erreur survient lors du décodage, la fonction
+    <function>json_last_error</function> pourra être utilisée pour
+    déterminer la nature exacte de l'erreur.
    </para>
-  </caution>
+  </note>
  </refsect1>
 
  <refsect1 role="changelog">
@@ -173,7 +245,8 @@ json_decode($bad_json); // null
      <tbody>
       <row>
        <entry>5.3.0</entry>
-       <entry>Ajout du paramètre optionnel <parameter>depth</parameter></entry>
+       <entry>Ajout du paramètre optionnel <parameter>depth</parameter>.
+        La profondeur de récursion par défaut a augmenté de 128 à 512</entry>
       </row>
       <row>
        <entry>5.2.3</entry>
@@ -190,6 +263,7 @@ json_decode($bad_json); // null
   <para>
    <simplelist>
     <member><function>json_encode</function></member>
+    <member><function>json_last_error</function></member>
    </simplelist>
   </para>
  </refsect1>
