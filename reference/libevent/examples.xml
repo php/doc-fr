@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: b71e8b802f19ebed1067898d628e8a03b0550a11 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 948d610a63615728ae8b8e0dbe7ecb5d3798e9ed Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="libevent.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -12,36 +12,35 @@
 <![CDATA[
 <?php
 
-function callback_func($fd, $events, $arg)
+function print_line($fd, $events, $arg)
 {
-    static $max_requests;
+    static $max_requests = 0;
 
     $max_requests++;
 
-    if ($max_requests == 10) { /* sortie de la boucle après 10 écritures */
+    if ($max_requests == 10) {
+        // Sort de la boucle après 10 écritures
         event_base_loopexit($arg[1]);
     }
 
-    /* Lecture tant que possible */
-    while (false !=== ($data = fread($fd, 4096))) {
-        echo $data;
-    }
+    // Affiche la ligne
+    echo  fgets($fd);
 }
 
-/* Création de la base et de l'événement */
+// Création de la base et de l'événement
 $base = event_base_new();
 $event = event_new();
 
 $fd = STDIN;
 
-/* Définit les drapeaux de l'événements */
-event_set($event, $fd, EV_READ | EV_PERSIST, "callback_func", array($event, $base));
-/* Définit la base de l'événement */
+// Définit les drapeaux de l'événement
+event_set($event, $fd, EV_READ | EV_PERSIST, "print_line", array($event, $base));
+// Définit la base de l'événement
 event_base_set($event, $base);
 
-/* Activation de l'événement */
+// Activation de l'événement
 event_add($event);
-/* Début de la boucle de l'événement */
+// Début de la boucle de l'événement
 event_base_loop($base);
 
 ?>
@@ -56,7 +55,7 @@ event_base_loop($base);
 <![CDATA[
 <?php
 
-function callback_func($buf, $arg)
+function print_line($buf, $arg)
 {
     static $max_requests;
 
@@ -66,22 +65,20 @@ function callback_func($buf, $arg)
         event_base_loopexit($arg);
     }
 
-    /* Lecture tant que possible */
-    while (false !=== ($data = event_buffer_read($buf, 10))) {
-        echo $data;
-    }
+    // Affiche la ligne
+    echo event_buffer_read($buf, 4096);
 }
 
 function error_func($buf, $what, $arg)
 {
-    /* Gestion de l'erreur */
+    // Gestion de l'erreur
 }
 
 $base = event_base_new();
-$b = event_buffer_new(STDIN, "callback_func", NULL, "error_func", $base);
+$eb = event_buffer_new(STDIN, "print_line", NULL,  "error_func", $base);
 
-event_buffer_base_set($b, $base);
-event_buffer_enable($b, EV_READ);
+event_buffer_base_set($eb,  $base);
+event_buffer_enable($eb,  EV_READ);
 
 event_base_loop($base);
 

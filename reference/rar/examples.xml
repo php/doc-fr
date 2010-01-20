@@ -1,25 +1,140 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 2ef641d354cc0546add23a5088357651e1db8165 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 1703b5e2b995ac80245a18e9c162a864e0ae086d Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="rar.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  &reftitle.examples;
  <para>
   <example>
-   <title>Exemple d'utilisation de l'extension Rar</title>
+   <title>Décompression à la volée</title>
    <programlisting role="php">
 <![CDATA[
 <?php
 
-$rar_file = rar_open('example.rar') or die("Impossible d'ouvrir l'archive Rar");
+if (!array_key_exists("i", $_GET) || !is_numeric($_GET["i"]))
+    die("Index non spécifié ou non numérique");
+$index = (int) $_GET["i"];
+    
+$arch = RarArchive::open("example.rar");
+if ($arch === FALSE)
+    die("Impossible d'ouvrir example.rar");
+
+$entries = $arch->list();
+if ($entries === FALSE)
+    die("Impossible de récupérer les entrées");
+
+if (!array_key_exists($index, $entries))
+    die("L'index $index n'existe pas");
+
+$orfilename = $entries[$index]->getName(); //Encodage UTF-8
+
+$filesize = $entries[$index]->getUnpackedSize();
+
+/* Vous pouvez vérifier ici HTTP_IF_MODIFIED_SINCE et le comparer
+ * avec $entries[$index]->getFileTime(). Vous pouvez également envoyer
+ * un en-tête "Last modified" */
+
+$fp = $entries[$index]->getStream();
+if ($fp === FALSE)
+    die("Impossible d'ouvrir le fichier d'index $index depuis l'archive.");
+
+$arch->close(); //plus nécessaire ; le flux est indépendant
+
+function detectUserAgent() {
+    if (!array_key_exists('HTTP_USER_AGENT', $_SERVER))
+        return "Autre";
+    
+    $uas = $_SERVER['HTTP_USER_AGENT'];
+    if (preg_match("@Opera/@", $uas))
+        return "Opera";
+    if (preg_match("@Firefox/@", $uas))
+        return "Firefox";
+    if (preg_match("@Chrome/@", $uas))
+        return "Chrome";
+    if (preg_match("@MSIE ([0-9.]+);@", $uas, $matches)) {
+        if (((float)$matches[1]) >= 7.0)
+            return "IE";
+    }
+    
+    return "Autre";
+}
+
+/*
+ * Nous avons 3 options :
+ * - Pour FF et Opera, qui supportent RFC 2231, utilisez ce format.
+ * - Pour IE et Chrome, utilisez attwithfnrawpctenclong
+ *   (http://greenbytes.de/tech/tc2231/#attwithfnrawpctenclong)
+ * - Pour les autres, convertissez en ISO-8859-1, si possible
+ */
+$formatRFC2231 = 'Content-Disposition: attachment; filename*=UTF-8\'\'%s';
+$formatDef = 'Content-Disposition: attachment; filename="%s"';
+
+switch (detectUserAgent()) {
+    case "Opera":
+    case "Firefox":
+        $orfilename = rawurlencode($orfilename);
+        $format = $formatRFC2231;
+        break;
+
+    case "IE":
+    case "Chrome":
+        $orfilename = rawurlencode($orfilename);
+        $format = $formatDef;
+        break;
+    default:
+        if (function_exists('iconv'))
+            $orfilename =
+                @iconv("UTF-8", "ISO-8859-1//TRANSLIT", $orfilename);
+        $format = $formatDef;
+}
+
+header(sprintf($format, $orfilename));
+// Impossible d'envoyer les messages d'erreur à partir d'ici (les en-têtes
+// ont déjà été émis)
+
+// Remplacement par le type de contenu réel, pourquoi pas par déduction de l'extension du fichier
+$contentType = "application/octet-stream";
+header("Content-Type: $contentType");
+
+header("Content-Transfer-Encoding: binary");
+
+header("Content-Length: $filesize");
+
+if ($_SERVER['REQUEST_METHOD'] == "HEAD")
+    die();
+    
+while (!feof($fp)) {
+    $s = @fread($fp, 8192);
+    if ($s === false)
+        break; //utile pour envoyer des messages d'erreur
+  
+    echo $s;
+}
+]]>
+   </programlisting>
+  </example>
+ </para>
+ <para>
+  Cet exemple ouvre l'archive RAR et extrait chacune des entrées dans
+  un dossier spécifié.
+ </para>
+ 
+ <para>
+  <example>
+   <title>Exemple d'extractions RAR</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$rar_file = rar_open('example.rar') or die("Can't open Rar archive");
 
 $entries = rar_list($rar_file);
 
 foreach ($entries as $entry) {
     echo 'Nom du fichier : ' . $entry->getName() . "\n";
-    echo 'Taille de l\'archive : ' . $entry->getPackedSize() . "\n";
-    echo 'Taille décompressée : ' . $entry->getUnpackedSize() . "\n";
+    echo 'Taille de l'archive : ' . $entry->getPackedSize() . "\n";
+    echo 'Taille après décompression : ' . $entry->getUnpackedSize() . "\n";
 
     $entry->extract('/dir/extract/to/');
 }
@@ -32,9 +147,10 @@ rar_close($rar_file);
   </example>
  </para>
  <para>
-  Cet exemple ouvre l'archive Rar et extrait chacune des entrées dans
-  un dossier spécifié.
+  Cet exemple ouvre une archive RAR et extrait chaque entrée dans le
+  dossier spécifié.
  </para>
+ 
 </chapter>
 
 <!-- Keep this comment at the end of the file
