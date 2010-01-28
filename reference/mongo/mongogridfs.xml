@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: fbfb74628214e09614e856d054a2c18329150032 Maintainer: dams Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 4724b47c25b48f509355d27291aa6893ad0b40c0 Maintainer: dams Status: ready -->
+<!-- Reviewed: no -->
 
 <phpdoc:classref xml:id="class.mongogridfs" xmlns:phpdoc="http://php.net/ns/phpdoc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
  
@@ -14,18 +14,73 @@
   <section xml:id="mongogridfs.intro">
    &reftitle.intro;
    <para>
-    Utilitaires de stockage et lecture de fichiers dans la base 
-     de données
+    Utilitaires de stockage et lecture de fichiers dans la base de données
    </para>
    <para>
-    <classname>MongoGridFS</classname> étend
-    <classname>MongoCollection</classname>, aussi, toutes les méthodes
-    de la classe <classname>MongoCollection</classname> peuvent être utilisées
-    pour manipuler les méta-données. Par exemple :
+    GridFS est une spécification de stockage que tous les pilotes implémentent. 
+    Simplement, il définit deux collections: <literal>files</literal>, pour les
+    métadonnées du fichier, et <literal>chunks</literal> pour le contenu du fichier.
+    Si le fichier est volumineux, il sera automatiquement scindé en sous-parties et
+    chacune sera sauvée comme document dans la collection 'chunks' représentant le contenu
+    du fichier.
    </para>
 
-   <informalexample>
-    <programlisting role="php">
+   <para>
+    Chaque document dans la collection 'files' est caractérisé par un nom, une date
+    d'envoi et un hash md5. Il contient aussi un champ unique <literal>_id</literal>,
+    qui peut être utilisé pour requêter la collection 'chunks' et obtenir le contenu
+    du fichier. Chaque document dans la collection 'chunks' contient des données
+    inaires, un champ <literal>files_id</literal> qui correspond au <literal>_id</literal>
+    du fichier, et la position de ce document dans le fichier.
+   </para>
+
+   <para>
+    Par exemple, la collection 'files' ressemble à:
+    <programlisting>
+<![CDATA[
+array("_id" => 123456789, "filename" => "foo.txt", "chunkSize" => 3, "length" => 12)
+]]>
+    </programlisting>
+    et la collection 'chunks' à:
+    <programlisting>
+<![CDATA[
+array("files_id" => 123456789, "n" => 0, "data" => new MongoBinData("abc"));
+array("files_id" => 123456789, "n" => 1, "data" => new MongoBinData("def"));
+array("files_id" => 123456789, "n" => 2, "data" => new MongoBinData("ghi"));
+array("files_id" => 123456789, "n" => 3, "data" => new MongoBinData("jkl"));
+]]>
+    </programlisting>
+    Bien sur la taille par défaut des segments est de plusieurs milliers d'octets, non représentatif
+    pour notre exemple.
+   </para>
+  </section>
+
+  <section>
+   <title>La famille <classname>MongoGridFS</classname></title>
+
+   <para>
+    <classname>MongoGridFS</classname> représente les collections 'files' et 'chunks'.
+    <classname>MongoGridFS</classname> étend MongoCollection, 
+    et une instance de <classname>MongoGridFS</classname> a accès à toutes les méthodes de
+    <classname>MongoCollection</classname>, qui agissent sur la collection 'files':
+    <informalexample>
+     <programlisting role="php">
+<![CDATA[
+<?php
+
+$grid = $db->getGridFS();
+$grid->update(array("filename" => "foo"), $newObj)); // met à jour la collection
+
+?>
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+
+   <para>
+    Un autre exemple de manipulation des méta-données:
+    <informalexample>
+     <programlisting role="php">
 <![CDATA[
 <?php
 
@@ -44,6 +99,83 @@ $grid->update(array("_id" => $id), array('$inc' => array("downloads" => 1)));
 ]]>
     </programlisting>
    </informalexample>
+    </para>
+
+   <para>
+    Vous pouvez aussi accéder aux objets dans la collection 'chunks'
+    depuis une instance de <classname>MongoGridFS</classname>:
+    <informalexample>
+     <programlisting role="php">
+<![CDATA[
+<?php
+
+  $chunks = $grid->chunks; // $chunks est une MongoCollection
+$chunks->insert(array("x" => 4));
+
+?>
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+   <para>
+    Il existe des méthodes dans <classname>MongoGridFS</classname> qui ont le même
+    no que dans <classname>MongoCollection</classname> mais elles se comportent différement.
+    Par exemple, <function>MongoGridFS::remove</function> suppriment les objets qui
+    correspondent au critère depuis la collection des fichiers ('files'), ainsi que
+    leur contenu depuis la collection des données ('chunks').
+   </para>
+
+   <para>
+    Pour stocker un nouvel enregistrement dans GridFS, il y a plusieurs options.
+    Si vous possédez un nom de fichier, agissez comme cela:
+    <informalexample>
+     <programlisting role="php">
+<![CDATA[
+<?php
+
+$grid->storeFile($filename, array("whatever" => "metadata", "you" => "want"));
+
+?>
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+
+   <para>
+    Si vous avez une chaine d'octets qui n'est pas un fichier, vous pouvez la stocker
+    grâce à <function>MongoGridFS::storeBytes</function>:
+    <informalexample>
+     <programlisting role="php">
+<![CDATA[
+<?php
+
+$grid->storeBytes($bytes, array("whatever" => "metadata", "you" => "want");
+
+?>
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+
+   <para>
+    Requêter une collection <classname>MongoGridFS</classname> retourne un
+    <classname>MongoGridFSCursor</classname>, qui se comporte comme un
+    <classname>MongoCursor</classname> normal sauf qu'il retourne des
+    <classname>MongoGridFSFiles</classname> plutôt que des tableaux associatifs.
+   </para>
+
+   <para>
+    <classname>MongoGridFSFiles</classname> peut être écrit sur le disque en utilisant
+    <function>MongoGridFSFile::write</function> ou récupéré de la mémoire avec
+    <function>MongoGridFSFile::getBytes</function>. Il n'y a pas de méthode
+    actuellement qui guide les données d'un à l'autre, mais ce n'est pas très
+    difficile à écrire en utilisant <literal>$grid->chunks</literal> de la collection.
+   </para>
+
+   <para>
+    Les objets <classname>MongoGridFSFile</classname> contiennent un champ file
+    qui contient les méta-données du fichier.
+   </para>
   </section>
   <!-- }}} -->
   
@@ -57,7 +189,7 @@ $grid->update(array("_id" => $id), array('$inc' => array("downloads" => 1)));
     <!-- {{{ Class synopsis -->
     <classsynopsisinfo>
      <ooclass>
-      <modifier>extends</modifier>
+      <modifier>étend</modifier>
       <classname>MongoCollection</classname>
      </ooclass>
     </classsynopsisinfo>
@@ -83,7 +215,7 @@ $grid->update(array("_id" => $id), array('$inc' => array("downloads" => 1)));
      <initializer>&null;</initializer>
     </fieldsynopsis>
     
-    <classsynopsisinfo role="comment">&class.methods;</classsynopsisinfo>
+    <classsynopsisinfo role="comment">&Methods;</classsynopsisinfo>
     <xi:include xpointer="xmlns(db=http://docbook.org/ns/docbook) xpointer(id('class.mongogridfs')/db:refentry/db:refsect1[@role='description']/descendant::db:methodsynopsis[1])" />
    </classsynopsis>
    <!-- }}} -->
