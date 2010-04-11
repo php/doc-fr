@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: af4410a7e15898c3dbe83d6ea38246745ed9c6fb Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xml:id="function.oci-commit" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -17,7 +17,24 @@
   </methodsynopsis>
   <para>
    Valide toutes les transactions en cours sur la connexion Oracle
-   <parameter>connection</parameter>.
+   <parameter>connection</parameter>. Une validation rend permanentes
+   toutes les modifications, en libérant tous les verrous.
+  </para>
+  <para>
+   Une transaction commence lorsque la première requête SQL
+   qui modifie des données est exécutée avec la fonction
+   <function>oci_execute</function> en utilisant le drapeau
+   <constant>OCI_NO_AUTO_COMMIT</constant>. Les prochaines modifications
+   faîtes par d'autres requêtes deviennent parties intégrantes de la
+   même transaction. Les données modifiées par une transaction sont
+   temporaires tant que la transaction n'est pas validée ou annulée.
+   Les autres utilisateurs de la base de données ne verront ces modifications
+   qu'une fois la transaction validée.
+  </para>
+  <para>
+   Lors de l'insertion ou de la mise à jour de données, l'utilisation
+   des transactions est recommandé afin de garantir la consistence
+   relationnelle des données, mais aussi afin d'augmenter les performances.
   </para>
  </refsect1>
 
@@ -29,9 +46,9 @@
      <term><parameter>connection</parameter></term>
      <listitem>
       <para>
-       Un identifiant de connexion Oracle, retourn� par la fonction
-       <function>oci_connect</function> ou la fonction
-       <function>oci_pconnect</function>.
+       Un identifiant de connexion Oracle, retourné par la fonction
+       <function>oci_connect</function>, <function>oci_pconnect</function>,
+       ou <function>oci_new_connect</function>.
       </para>
      </listitem>
     </varlistentry>
@@ -54,36 +71,34 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-// Connexion au serveur Oracle
-$conn = oci_connect('scott', 'tiger');
 
-// Analyse de la requ�te SQL
-$stmt = oci_parse($conn, "
-                          INSERT INTO
-                                     employees (name, surname)
-                               VALUES
-                                     ('Maxim', 'Maletsky')
-                         ");
+// Insertion dans plusieurs tables, avec une annulation des modifications si des erreurs surviennent
 
-/* Ex�cution de la requ�te
-   OCI_DEFAULT demande � oci_execute() 
-   de ne pas valider imm�diatement le r�sutat */
-oci_execute($stmt, OCI_DEFAULT);
+$conn = oci_connect('hr', 'welcome', 'localhost/XE');
 
-/*
-....
-Analyse et ex�cution d'autres commandes ici...
-....
-*/
+$stid = oci_parse($conn, "INSERT INTO mysalary (id, name) VALUES (1, 'Chris')");
 
-// Validation de la transaction
-$committed = oci_commit($conn);
+// Le drapeau OCI_NO_AUTO_COMMIT indique à Oracle de ne pas valider les insertions automatiquement.
+/// Utilisez le drapeau OCI_DEFAULT pour PHP <= 5.3.1. Les 2 sont équivalents
+$r = oci_execute($stid, OCI_NO_AUTO_COMMIT);
+if (!$r) {    
+    $e = oci_error($stid);
+    trigger_error(htmlentities($e['message']), E_USER_ERROR);
+}
 
-// V�rification de la validation : si une erreur est survenue, afficher
-// le message d'erreur
-if (!$committed) {
-    $error = oci_error($conn);
-    echo 'Validation �chou�e. Oracle dit : ' . $error['message'];
+$stid = oci_parse($conn, 'INSERT INTO myschedule (startday) VALUES (12)');
+$r = oci_execute($stid, OCI_NO_AUTO_COMMIT);
+if (!$r) {    
+    $e = oci_error($stid);
+    oci_rollback($conn);  // Annulation des modifications sur les 2 tables
+    trigger_error(htmlentities($e['message']), E_USER_ERROR);
+}
+
+// Valide les modifications sur les 2 tables
+$r = oci_commit($conn);
+if (!r) {
+    $e = oci_error($conn);
+    trigger_error(htmlentities($e['message']), E_USER_ERROR);
 }
 
 ?>
@@ -97,11 +112,27 @@ if (!$committed) {
   &reftitle.notes;
   <note>
    <para>
-    Les transactions sont automatiquement annul�es lorsque vous
+    Les transactions sont automatiquement annulées lorsque vous
     fermez la connexion, ou lorsque le script se termine, un des deux
     arrivant le premier. Vous devez explicitement appeler la fonction
-    <function>oci_commit</function> pour valider la transaction
-    ou la fonction <function>oci_rollback</function> pour l'annuler.
+    <function>oci_commit</function> pour valider la transaction.
+   </para>
+   <para>
+    Chaque appel à la fonction <function>oci_execute</function> qui
+    utilise le mode <constant>OCI_COMMIT_ON_SUCCESS</constant>
+    explicitement ou par défaut, validera toutes les transactions
+    précédentes non validées à ce stade.
+   </para>
+   <para>
+    Toutes les requêtes Oracle comme <literal>CREATE</literal>
+    ou <literal>DROP</literal> validera également toutes les
+    transactions non validées.
+   </para>
+  </note>
+  <note>
+   <para>
+    Dans les version PHP avant 5.0.0, vous devez utiliser la fonction
+    <function>ocicommit</function> à la place. &oci.name.compat.note;
    </para>
   </note>
  </refsect1>
@@ -110,8 +141,8 @@ if (!$committed) {
   &reftitle.seealso;
   <para>
    <simplelist>
-    <member><function>oci_rollback</function></member>
     <member><function>oci_execute</function></member>
+    <member><function>oci_rollback</function></member>
    </simplelist>
   </para>
  </refsect1>
