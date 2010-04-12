@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: af4410a7e15898c3dbe83d6ea38246745ed9c6fb Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.oci-rollback" xmlns="http://docbook.org/ns/docbook">
@@ -16,8 +16,27 @@
    <methodparam><type>resource</type><parameter>connection</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Annule les transactions en cours sur la connexion Oracle
-   <parameter>connection</parameter>.
+   Annule toutes les modifications non validées pour une
+   connexion <parameter>connection</parameter> Oracle
+   et met fin à la transaction courante. Tous les verrous seront
+   également libérés. Tous les points de sauvegarde Oracle
+   (<literal>SAVEPOINTS</literal>) seront supprimés.
+  </para>
+  <para>
+   Une transaction commence lorsque la première requête SQL
+   qui modifie des données est exécuté avec la fonction
+   <function>oci_execute</function> en utilisant le drapeau
+   <constant>OCI_NO_AUTO_COMMIT</constant>. Les modifications suivantes
+   effectuées par d'autres requêtes deviennent partie intégrante de la
+   même transaction. Les modifications effectuées lors d'une transaction sont
+   temporaires tant que la transaction n'a pas été validée ou annulée.
+   Les autres utilisateurs de la base de données ne verront ces modifications
+   que lors de la validation de la transaction.
+  </para>
+  <para>
+   Lors de l'insertion ou de la mise à jour de données, l'utilisation
+   des transactions est fortement recommandée afin de garantir la consistence
+   relationnelle des données, mais aussi pour des raisons de performance.
   </para>
  </refsect1>
 
@@ -29,9 +48,9 @@
      <term><parameter>connection</parameter></term>
      <listitem>
       <para>
-       Un identifiant de connexion Oracle, retourn� par la fonction
-       <function>oci_connect</function> ou la fonction
-       <function>oci_pconnect</function>.
+       Un identifiant de connexion Oracle, retourné par la fonction
+       <function>oci_connect</function>, <function>oci_pconnect</function>
+       ou <function>oci_new_connect</function>.
       </para>
      </listitem>
     </varlistentry>
@@ -46,24 +65,100 @@
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>oci_rollback</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// Insertion dans plusieurs tables, puis, annulation des modifications si des erreurs surviennent
+
+$conn = oci_connect('hr', 'welcome', 'localhost/XE');
+
+$stid = oci_parse($conn, "INSERT INTO mysalary (id, name) VALUES (1, 'Chris')");
+
+// Le drapeau OCI_NO_AUTO_COMMIT indique à Oracle de ne pas valider l'insertion immédiatement.
+// Utilisez le drapeau OCI_DEFAULT en PHP <= 5.3.1. Les 2 sont identiques.
+$r = oci_execute($stid, OCI_NO_AUTO_COMMIT);
+if (!$r) {    
+    $e = oci_error($stid);
+    trigger_error(htmlentities($e['message']), E_USER_ERROR);
+}
+
+$stid = oci_parse($conn, 'INSERT INTO myschedule (startday) VALUES (12)');
+$r = oci_execute($stid, OCI_NO_AUTO_COMMIT);
+if (!$r) {    
+    $e = oci_error($stid);
+    oci_rollback($conn);  // Annulation des modifications sur les 2 tables
+    trigger_error(htmlentities($e['message']), E_USER_ERROR);
+}
+
+// Validation des modifications sur les 2 tables
+$r = oci_commit($conn);
+if (!r) {
+    $e = oci_error($conn);
+    trigger_error(htmlentities($e['message']), E_USER_ERROR);
+}
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Exemple de retour à un point de sauvegarde (<literal>SAVEPOINT</literal>)</title>
+    <programlisting role="php">
+<![CDATA[
+$stid = oci_parse($conn, 'UPDATE mytab SET id = 1111');
+oci_execute($stid, OCI_NO_AUTO_COMMIT);
+
+// création du point de sauvegarde
+$stid = oci_parse($conn, 'SAVEPOINT mysavepoint');
+oci_execute($stid, OCI_NO_AUTO_COMMIT);
+
+$stid = oci_parse($conn, 'UPDATE mytab SET id = 2222');
+oci_execute($stid, OCI_NO_AUTO_COMMIT);
+
+// utilise une requête SQL explicite pour effectuer le retour au point de sauvegarde
+$stid = oci_parse($conn, 'ROLLBACK TO SAVEPOINT mysavepoint');
+oci_execute($stid, OCI_NO_AUTO_COMMIT);
+
+oci_commit($conn);  // mytab a maintenant un id de 1111
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
  <refsect1 role="notes">
   &reftitle.notes;
   <note>
    <para>
-    Les transactions sont automatiquement annul�es lorsque vous fermez
+    Les transactions sont automatiquement annulées lorsque vous fermez
     la connexion, ou lorsque le script se termine, un des deux arrivant le premier.
     Vous devez explicitement appeler la fonction <function>oci_commit</function>
-    pour valider la connexion, ou la fonction <function>oci_rollback</function> pour l'annuler.
+    pour valider la connexion.
+   </para>
+   <para>
+    Tous les appels à la fonction <function>oci_execute</function> qui utilisent
+    le mode <constant>OCI_COMMIT_ON_SUCCESS</constant>, qui se soit par défaut ou
+    de façon explicite, valideront toutes les transactions en attente.
+   </para>
+   <para>
+    Toutes les requêtes Oracle comme <literal>CREATE</literal>
+    ou <literal>DROP</literal> valideront également, automatiquement,
+    toutes les transactions en attente.
    </para>
   </note>
   <note>
    <para>
-    Dans les versions de PHP ant�rieures � la version 5.0.0,
-    vous devez utiliser la fonction <function>ocirollback</function>. 
-    Cet ancien nom est toujours utilisable : un alias a �t� fait vers
-    la fonction <function>oci_rollback</function>, pour assurer
-    la compatibilit� ascendante. Toutefois, il est recommand� de ne
-    plus l'utiliser.
+    Avant la version 5.0.0 de PHP, vous devez utiliser la fonction
+    <function>ocirollback</function> à la place.
+    &oci.name.compat.note;
    </para>
   </note>
  </refsect1>
@@ -73,6 +168,7 @@
   <para>
    <simplelist>
     <member><function>oci_commit</function></member>
+    <member><function>oci_execute</function></member>
    </simplelist>
   </para>
  </refsect1>
