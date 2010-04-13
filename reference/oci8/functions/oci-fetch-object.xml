@@ -1,12 +1,12 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: af4410a7e15898c3dbe83d6ea38246745ed9c6fb Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.oci-fetch-object" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>oci_fetch_object</refname>
-  <refpurpose>Lit une ligne d'un r�sultat Oracle sous forme d'objet</refpurpose>
+  <refpurpose>Lit une ligne d'un résultat sous forme d'objet</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -16,11 +16,11 @@
    <methodparam><type>resource</type><parameter>statement</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Retourne la prochaine ligne depuis le jeu de r�sultats sous la forme d'un objet.
-  </para>
-  <para>
-   Les prochains appels � <function>oci_fetch_object</function> retourneront
-   la ligne suivante, et &false; s'il n'y a plus de lignes.
+   Retourne un objet contenant la prochaine ligne de résultat d'une
+   requête. Chaque attribut de cet objet correspond à une colonne
+   de la ligne. Cette fonction est appelé typiquement dans une boucle
+   tant qu'elle ne retourne pas &false;, indiquant qu'il n'y a plus
+   de lignes de disponible.
   </para>
   &oci.datatypes;
  </refsect1>
@@ -32,9 +32,7 @@
     <varlistentry>
      <term><parameter>statement</parameter></term>
      <listitem>
-      <para>
-       Un identifiant de requ�te OCI valide.
-      </para>
+      &oci.arg.statement.id;
      </listitem>
     </varlistentry>
    </variablelist>
@@ -44,26 +42,169 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne un objet, dont les attributs correspondent aux champs de la requ�te,
-   ou &false; s'il n'y a plus de ligne dans la requ�te <parameter>statement</parameter>.
+   Retourne un objet. Chaque attribut de cet objet correspond à une colonne de la ligne.
+   Si'il n'y a plus de lignes de disponible dans la requête <parameter>statement</parameter>
+   alors &false; est retourné.
   </para>
-  &database.fetch-null;
-  <note>
-   <simpara>
-    Oracle retourne tous les noms de champs en majuscules,
-    et les noms des membres de l'objet r�sultant seront donc aussi en majuscules.
-   </simpara>
-  </note>
+  <para>
+    Toutes les colonnes <literal>LOB</literal> sont retournées sous la forme de
+    descripteurs LOB.
+  </para>
+  <para>
+   Les colonnes <literal>DATE</literal> sont retournées sous forme de chaînes formattées
+   avec le format de date courante. Le format par défaut peut être changé à l'aide des variables
+   d'environnement Oracle, comme <literal>NLS_LANG</literal> ou en exécutant la commande
+   <literal>ALTER SESSION SET NLS_DATE_FORMAT</literal>.
+  </para>
+  <para>
+   Les noms de colonnes qui ne sont pas sensibles à la casse (par défaut sous Oracle),
+   auront des noms d'attributs en majuscule. Les noms de colonnes qui sont sensibles à la
+   casse, auront des noms d'attributs utilisant exactement la même casse de la colonne.
+   Utilisez la fonction <function>var_dump</function> sur l'objet de résultat pour vérifier
+   la casse appropriée à utiliser pour chaque requête.
+  </para>
+  <para>
+   Les valeurs d'attribut seront &null; pour chaque champ de données <literal>NULL</literal>.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>oci_fetch_object</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+/*
+  Avant l'exécution, créez la table :
+    CREATE TABLE mytab (id NUMBER, description VARCHAR2(30));
+    INSERT INTO mytab (id, description) values (1, 'Fish and Chips');
+    COMMIT;
+*/
+
+$conn = oci_connect('hr', 'welcome', 'localhost/XE');
+if (!$conn) {
+    $e = oci_error();
+    trigger_error(htmlentities($e['message'], ENT_QUOTES), E_USER_ERROR);
+}
+
+$stid = oci_parse($conn, 'SELECT id, description FROM mytab');
+oci_execute($stid);
+
+while (($row = oci_fetch_object($stid))) {
+    // Utilisez des noms d'attributs sensibles à la casse pour chaque colonne standart Oracle
+    echo $row->ID . "<br>\n";
+    echo $row->DESCRIPTION . "<br>\n"; 
+}
+
+// Affiche :
+//    1
+//    Fish and Chips
+
+oci_free_statement($stid);
+oci_close($conn);
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Exemple avec <function>oci_fetch_object</function> avec des noms de colonne sensibles à la casse</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+/*
+  Avant l'exécution, créez la tableau avec une colonne dont le nom est sensible à la casse :
+    CREATE TABLE mytab (id NUMBER, "MyDescription" VARCHAR2(30));
+    INSERT INTO mytab (id, "MyDescription") values (1, 'Iced Coffee');
+    COMMIT;
+*/
+
+$conn = oci_connect('hr', 'welcome', 'localhost/XE');
+if (!$conn) {
+    $e = oci_error();
+    trigger_error(htmlentities($e['message'], ENT_QUOTES), E_USER_ERROR);
+}
+
+$stid = oci_parse($conn, 'SELECT id, "MyDescription" FROM mytab');
+oci_execute($stid);
+
+while (($row = oci_fetch_object($stid))) {
+    // Utilisez des noms d'attributs en majuscule pour chaque colonne Oracle standart
+    echo $row->ID . "<br>\n";
+    // Utilisez la casse exacte pour les noms de colonnes sensibles à la casse
+    echo $row->MyDescription . "<br>\n";   
+}
+
+// Affiche :
+//    1
+//    Iced Coffee
+
+oci_free_statement($stid);
+oci_close($conn);
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Exemple avec <function>oci_fetch_object</function> avec des LOBs</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+/*
+  Avant l'exécution, créez la table :
+    CREATE TABLE mytab (id NUMBER, description CLOB);
+    INSERT INTO mytab (id, description) values (1, 'A very long string');
+    COMMIT;
+*/
+
+$conn = oci_connect('hr', 'welcome', 'localhost/XE');
+if (!$conn) {
+    $e = oci_error();
+    trigger_error(htmlentities($e['message'], ENT_QUOTES), E_USER_ERROR);
+}
+
+$stid = oci_parse($conn, 'SELECT id, description FROM mytab');
+oci_execute($stid);
+
+while (($row = oci_fetch_object($stid))) {
+    echo $row->ID . "<br>\n";
+    // Ce qui suit affichera les 11 premiers octets depuis DESCRIPTION
+    echo $row->DESCRIPTION->read(11) . "<br>\n"; 
+}
+
+// Affiche :
+//    1
+//    A very long
+
+oci_free_statement($stid);
+oci_close($conn);
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
  </refsect1>
 
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
    <simplelist>
-    <member><function>oci_fetch_array</function></member>
-    <member><function>oci_fetch_assoc</function></member>
-    <member><function>oci_fetch_row</function></member>
+    <member><function>oci_fetch</function></member>
     <member><function>oci_fetch_all</function></member>
+    <member><function>oci_fetch_assoc</function></member>
+    <member><function>oci_fetch_array</function></member>
+    <member><function>oci_fetch_row</function></member>
    </simplelist>
   </para>
  </refsect1>
