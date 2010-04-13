@@ -1,14 +1,14 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: af4410a7e15898c3dbe83d6ea38246745ed9c6fb Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xml:id="function.oci-execute" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>oci_execute</refname>
-  <refpurpose>Ex�cute une commande SQL Oracle</refpurpose>
+  <refpurpose>Exécute une commande SQL Oracle</refpurpose>
  </refnamediv>
-
+ 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
@@ -17,10 +17,25 @@
    <methodparam choice="opt"><type>int</type><parameter>mode</parameter><initializer>OCI_COMMIT_ON_SUCCESS</initializer></methodparam>
   </methodsynopsis>
   <para>
-   Ex�cute une requ�te SQL <parameter>statement</parameter>, analys�e pr�c�demment.
+   Exécute une requête <parameter>statement</parameter> précédemment
+   retournée par la fonction <function>oci_parse</function>.
+  </para>
+  <para>
+   Après exécution, les requêtes comme <literal>INSERT</literal>
+   auront des données à valider sur la base de données par défaut.
+   Pour les requêtes comme <literal>SELECT</literal>, l'exécution
+   effectue la logique de la requête. Les résultats de la requête
+   peuvent être récupérés par PHP avec des fonctions comme
+   <function>oci_fetch_array</function>.
+  </para>
+  <para>
+   Chaque requête analysé peut être exécutée plusieurs fois, inutile
+   donc de les analyser de nouveau. Ceci est pratique pour des requêtes
+   de type <literal>INSERT</literal> lorsque des données y sont liées
+   grâce à la fonction <function>oci_bind_by_name</function>.
   </para>
  </refsect1>
-
+ 
  <refsect1 role="parameters">
   &reftitle.parameters;
   <para>
@@ -29,7 +44,7 @@
      <term><parameter>statement</parameter></term>
      <listitem>
       <para>
-       Un identifiant de requ�te OCI valide.
+       Un identifiant de requête OCI valide.
       </para>
      </listitem>
     </varlistentry>
@@ -37,26 +52,79 @@
      <term><parameter>mode</parameter></term>
      <listitem>
       <para>
-       Permet de sp�cifier le mode d'ex�cution (par d�faut,
-       il est � <constant>OCI_COMMIT_ON_SUCCESS</constant>).
+       Un second paramètre optionnel peut prendre une des constantes suivantes :
+       <table>
+        <title>Modes d'exécution</title>
+        <tgroup cols="2">
+         <thead>
+          <row>
+           <entry>Constante</entry>
+           <entry>Description</entry>
+          </row>
+         </thead>
+         <tbody>
+          <row>
+           <entry><constant>OCI_COMMIT_ON_SUCCESS</constant></entry>
+           <entry>Validation automatique sur la connexion lorsque la requête
+            a été exécutée avec succès. C'est le comportement par défaut.</entry>
+          </row>
+          <row>
+           <entry><constant>OCI_DEFAULT</constant></entry>
+           <entry>Obsolète depuis PHP 5.3.2 (PECL OCI8 1.4) mais toujours disponible
+            pour des raisons de compatibilité. Utilisez la constante équivalent
+            <constant>OCI_NO_AUTO_COMMIT</constant> dans votre nouveau code.</entry>
+          </row>
+          <row>
+           <entry><constant>OCI_DESCRIBE_ONLY</constant></entry>
+           <entry>Rend les méta-donnes de la requête disponible aux fonctions
+            comme <function>oci_field_name</function> mais ne crée pas de jeu
+            de résultats. Tout appel à des fonctions de récupérer comme
+            <function>oci_fetch_array</function> échouera.</entry>
+          </row>
+          <row>
+           <entry><constant>OCI_NO_AUTO_COMMIT</constant></entry>
+           <entry>Ne valide pas automatiquement les modifications. Avant PHP
+            5.3.2 (PECL OCI8 1.4), utilisez la constante
+            <constant>OCI_DEFAULT</constant> qui est un alias de la constante
+            <constant>OCI_NO_AUTO_COMMIT</constant>.</entry>
+          </row>
+         </tbody>
+        </tgroup>
+       </table>
       </para>
       <para>
-       Si vous ne voulez pas que la commande soit automatiquement 
-       valid�e, utilisez le mode <constant>OCI_DEFAULT</constant>.
+       L'utilisation du mode <constant>OCI_NO_AUTO_COMMIT</constant> commence
+       une nouvelle transaction. Les transactions sont automatiquement annulées
+       lorsque la connexion est fermée ou lorsque le script se termine.
+       Appelez explicitement la fonction <function>oci_commit</function> pour
+       valider la transaction ou la fonction <function>oci_rollback</function>
+       pour l'annuler.
       </para>
       <para>
-       Lors de l'utilisation du mode <constant>OCI_DEFAULT</constant>, vous cr�ez une transaction.
-       Les transactions sont automatiquement annul�es lorsque vous fermez la connexion,
-       ou lorsque le script se termine, un des deux arrivant le premier. Vous devez
-       explicitement appeler la fonction <function>oci_commit</function> pour valider
-       la transaction, ou la fonction <function>oci_rollback</function> pour l'annuler.
+       Lors de l'insertion ou de la mise à jour de données, l'utilisation
+       de transactions est fortement recommandée pour garantir la consistence
+       relationnelle des données, mais aussi en raison d'un gain non négligeable
+       de performance.
+      </para>
+      <para>
+       Si le mode <constant>OCI_NO_AUTO_COMMIT</constant> est utilisé pour
+       toutes opérations y compris les requêtes, et que les fonctions
+       <function>oci_commit</function> et <function>oci_rollback</function>
+       ne sont jamais appelées, OCI8 effectuera une annulation à la fin du
+       script même si les données ont changées. Pour éviter ce comportement,
+       la plupart des scripts n'utilise pas le mode
+       <constant>OCI_NO_AUTO_COMMIT</constant> pour les requêtes ou 
+       les procédures stockées PL/SQL. Assurez-vous de la consistance
+       transactionnelle appropriée de vos applications lors de l'utilisation
+       de la fonction <function>oci_execute</function> avec différents modes dans
+       le même script.
       </para>
      </listitem>
     </varlistentry>
    </variablelist>
   </para>
  </refsect1>
-
+ 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
@@ -64,20 +132,163 @@
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>oci_execute</function> pour des requêtes</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$conn = oci_connect('hr', 'welcome', 'localhost/XE');
+
+$stid = oci_parse($conn, 'SELECT * FROM employees');
+oci_execute($stid);
+
+echo "<table border='1'>\n";
+while ($row = oci_fetch_array($stid, OCI_ASSOC+OCI_RETURN_NULLS)) {
+    echo "<tr>\n";
+    foreach ($row as $item) {
+        echo "    <td>" . ($item !== null ? htmlentities($item, ENT_QUOTES) : "") . "</td>\n";
+    }
+    echo "</tr>\n";
+}
+echo "</table>\n";
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Exemple avec <function>oci_execute</function> sans spécifier de mode</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// Avant exécution, créez la table :
+//   CREATE TABLE MYTABLE (col1 NUMBER);
+
+$conn = oci_connect('hr', 'welcome', 'localhost/XE');
+
+$stid = oci_parse($conn, 'INSERT INTO mytab (col1) VALUES (123)');
+
+oci_execute($stid); // La ligne est validée et est immédiatement visible par les autres utilisateurs
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Exemple avec <function>oci_execute</function> et <constant>OCI_NO_AUTO_COMMIT</constant></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// Avant exécution, créez la table :
+//   CREATE TABLE MYTABLE (col1 NUMBER);
+
+$conn = oci_connect('hr', 'welcome', 'localhost/XE');
+
+$stid = oci_parse($conn, 'INSERT INTO mytab (col1) VALUES (:bv)');
+oci_bind_by_name($stid, ':bv', $i, 10);
+for ($i = 1; $i <= 5; ++$i) {
+    oci_execute($stid, OCI_NO_AUTO_COMMIT);  // utilisez OCI_DEFAULT pour PHP <= 5.3.1
+}
+oci_commit($conn);  // valide toutes les nouvelles valeurs : 1, 2, 3, 4, 5
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Exemple avec <function>oci_execute</function> et différents modes dans le même script</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// Avant exécution, créez la table :
+//   CREATE TABLE MYTABLE (col1 NUMBER);
+
+$conn = oci_connect('hr', 'welcome', 'localhost/XE');
+
+$stid = oci_parse($conn, 'INSERT INTO mytab (col1) VALUES (123)');
+oci_execute($stid, OCI_NO_AUTO_COMMIT);  // data not committed
+
+$stid = oci_parse($conn, 'INSERT INTO mytab (col1) VALUES (456)');
+oci_execute($stid);  // valide à la fois les valeurs 123 et 456
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Exemple avec <function>oci_execute</function> et
+     <constant>OCI_DESCRIBE_ONLY</constant></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$conn = oci_connect('hr', 'welcome', 'localhost/XE');
+
+$stid = oci_parse($conn, 'SELECT * FROM locations');
+oci_execute($s, OCI_DESCRIBE_ONLY);
+for ($i = 1; $i <= oci_num_fields($stid); ++$i) {
+    echo oci_field_name($stid, $i) . "<br>\n";
+}
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+ 
  <refsect1 role="notes">
   &reftitle.notes;
   <note>
    <para>
-    Dans les versions de PHP ant�rieures � la version 5.0.0,
+    Les transactions sont automatiquement annulées lorsque les connexions
+    sont fermées, ou lorsque le script se termine, le premier arrivant en premier.
+    Appelez explicitement la fonction <function>oci_commit</function> pour valider
+    une transaction.
+   </para>
+   <para>
+    Tout appel à la fonction <function>oci_execute</function> qui utilise le mode
+    <constant>OCI_COMMIT_ON_SUCCESS</constant> explicitement ou par défaut
+    validera toutes les transactions en cours.
+   </para>
+   <para>
+    Toutes les requêtes Oracle DDL comme <literal>CREATE</literal>
+    ou <literal>DROP</literal> valideront toutes les transactions en cours.
+   </para>
+  </note>
+  <note>
+   <para>
+    À cause du fait que la fonction <function>oci_execute</function> envoie
+    généralement la requête à la base de données, la fonction
+    <function>oci_execute</function> peut identifier les erreurs de syntaxe
+    de la requête que la fonction <function>oci_parse</function> aurait pû
+    ne pas détecter.
+   </para>
+  </note>
+  <note>
+   <para>
+    Dans les versions de PHP antérieures à la version 5.0.0,
     vous devez utiliser la fonction <function>ociexecute</function>.
-    Cet ancien nom est toujours utilisable : un alias a �t� fait vers
-    la fonction <function>oci_execute</function>, pour assurer
-    la compatibilit� ascendante. Toutefois, il est recommand� de ne
-    plus l'utiliser.
+    oci.name.compat.note;
    </para>
   </note>
  </refsect1>
-
+ 
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
@@ -86,7 +297,7 @@
    </simplelist>
   </para>
  </refsect1>
-
+ 
 </refentry>
 
 <!-- Keep this comment at the end of the file
