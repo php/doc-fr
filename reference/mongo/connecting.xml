@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 13d9a87041ee11fbffc2846d5c643344c9bc5d58 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<section xml:id="mongo.connecting" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Connection</title>
+
+ <para>
+  La connexion à MongoDB est aussi simple que cela : <literal>new Mongo</literal>,
+  mais il existe aussi plusieurs options et plusieurs configurations.
+  La page sur la méthode <function>Mongo::__construct</function> couvre
+  toutes les options offertes par l'API, mais aussi, propose
+  plusieurs cas pratiques.
+ </para>
+
+ <section>
+  <title>Identification sur une connexion</title>
+  <para>
+   Si MongoDB est en fonctionnement avec l'option <literal>--auth</literal>,
+   les connexions doivent être authentifiées avant d'être utilisées.
+   Vous pouvez le faire grâce à la méthode <function>MongoDB::authenticate</function> :
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$m = new Mongo();
+$db = $m->admin;
+
+$db->authenticate($username, $password);
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Mais cela implique un inconvénient majeur : si la connexion à la base de
+   données est interrompue et puis, recréée, la connexion ne sera plus
+   authentifiée.
+  </para>
+  <para>
+   Si vous utilisez le format de connexion décrit dans la méthode
+   <function>Mongo::__construct</function>, la base de données authentifiera
+   la connexion aussitôt la connexion établit, et une ré-authentification
+   sera effectuée si la connexion est ré-établit.
+  </para>
+  <para>
+   Ceci est équivalent au code ci-dessous, mise à part que les reconnexions
+   à la base de données seront automatiquement authentifiées :
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$m = new Mongo("mongodb://${username}:${password}@localhost");
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Par défaut, le driver authentifiera l'utilisateur suivant la base de
+   données d'administration. Pour effectuer une identification via une
+   base de données différente, vous devez spécifier le nom de la
+   base de données après avoir spécifié l'hôte. Cet exemple identifiera
+   un utilisateur via la base de données "blog" :
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$m = new Mongo("mongodb://${username}:${password}@localhost/blog");
+
+?>
+]]>
+  </programlisting>
+ </section>
+
+ <section>
+  <title>Paire de réplication</title>
+  <para>
+   Pour se connecter à une paire de réplication, vous devez spécifier
+   les deux côtés de la paire.
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$m = new Mongo("mongodb://localhost:27017,localhost:27018");
+
+?>
+]]>
+  </programlisting>
+  <para>
+   L'ordre est significatif sachant que le driver PHP interrogera les serveurs
+   de base de données pour trouver quel est le maître. A partir du moment où
+   au moins un serveur est en fonctionnement et qu'il est le maître, la connexion
+   réussira. Si aucun n'est pas en fonctionnement, ou bien qu'il n'y a pas de maître,
+   une exception <classname>MongoConnectionException</classname> sera émise.
+  </para>
+  <para>
+   Si le maître devient indisponible, l'esclave ne deviendra pas maître pendant ces
+   quelques secondes. Pendant ce temps là, le driver ne sera pas capable d'effactuer
+   les opérations sur la base de données tout simplement parce que le maître n'est
+   plus disponible et que seul l'esclave fonctionne. Aussi, si vous tentez d'exécuter
+   n'importe quelle requête (y compris les opérations de type "sûres"), une exception
+   sera émise.
+  </para>
+  <para>
+   L'esclave pourra éventuellement réalisé que le maître n'est plus disponible
+   et devenir maître à son tour. A ce moment là, le driver en fera sa base de données
+   de référence sur la connexion courante et continuera les opérations normalement.
+  </para>
+  <para>
+   Pour plus d'informations sur les paires de réplication, reportez-vous à la
+   <link xlink:href="&url.mongodb.replica;">documentation interne</link>.
+  </para>
+ </section>
+
+ <section>
+  <title>Les connexions persistantes </title>
+
+  <para>
+   La création de nouvelles connexions à la base de données est une opération lente.
+   Pour minimiser le nombre de connexions que vous devez effectuer, vous pouvez utiliser
+   les connexions dites "persistantes". Une connexion persistante est sauvegardée par PHP,
+   et ainsi, vous pourrez utiliser la même connexion pour toutes vos requêtes.
+  </para>
+
+  <para>
+   Par exemple, ce programme simple se connecte à la base de données 1000 fois :
+  </para>
+
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+for ($i=0; $i<1000; $i++) {
+  $m = new Mongo();
+}
+
+?>
+]]>
+  </programlisting>
+
+  <para>
+   Son exécution prend approximativement 18 secondes. Si vous changez ce code pour
+   utiliser les connexions persistantes :
+  </para>
+
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+for ($i=0; $i<1000; $i++) {
+  $m = new Mongo("localhost:27017", array("persist" => "x"));
+}
+
+?>
+]]>
+  </programlisting>
+
+  <para>
+   ... il ne prend plus que .02 secondes, vu qu'il ne réalise réellement qu'une seule
+   connexion à la base de données.
+  </para>
+
+  <para>
+   Les connexions persistantes ont besoin d'une chaîne d'identification (qui est "x" dans
+   notre précédent exemple) afin de les identifier de façon unique. Afin d'utiliser une
+   connexion persistante, le nom de l'hôte, le port, la chaîne d'identification, le nom
+   d'utilisateur ainsi que le mot de passe (si fourni) doivent correspondre avec une
+   connexion persistante existante. Sinon, une nouvelle connexion sera créée avec ces
+   informations d'identification.
+  </para>
+ </section>
+
+</section>
