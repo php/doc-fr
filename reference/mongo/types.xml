@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: a33cd08acaa764c17d9c54c70d9698433180c1c0 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<part xml:id="mongo.types" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ 
+ <title>Les types</title>
+ 
+ <partintro>
+  
+  <section>
+   <para>
+    MongoDB permet aux développeurs de sauvegarder et de requérir des données
+    en utilisant tous les types basiques de PHP, comme les tableaux, les tableaux
+    associatifs, les objets mais aussi en utilisant toutes les classes fournies
+    par le driver PHP MongoDB (pour les expressions rationnelles, les dates
+    et les autres applications spécialisées).
+   </para>
+  </section>
+  
+  <section>
+   <title>Types simples</title>
+   <para>
+    Les types internes sont :
+   </para>
+   <para>
+    <informaltable>
+     <tgroup cols="3">
+      <thead>
+       <row>
+        <entry>Type</entry>
+        <entry>Description</entry>
+        <entry>Taille dans MongoDB (en octets)</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry>&null;</entry>
+        <entry>La classique valeur NULL</entry>
+        <entry>0</entry>
+       </row>
+       <row>
+        <entry>boolean</entry>
+        <entry>&true; et &false;</entry>
+        <entry>1</entry>
+       </row>
+       <row>
+        <entry>int</entry>
+        <entry>Valeurs entières</entry>
+        <entry>4</entry>
+       </row>
+       <row>
+        <entry>float</entry>
+        <entry>Valeurs doubles</entry>
+        <entry>8</entry>
+       </row>
+       <row>
+        <entry>string</entry>
+        <entry>&string; en UTF-8</entry>
+        <entry>longueur de la chaîne + 1</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </informaltable>
+   </para>
+  </section>
+  
+  <section>
+   <title>Les tableaux et les objets</title>
+   
+   <para>
+    Les tableaux et les objets peuvent également être sauvegardés dans
+    la base de données. Un tableau possédant des clés numériques sera
+    sauvegardé sous la forme d'un tableau, tous les autres seront sauvegardés
+    sous la forme d'objets.
+   </para>
+   
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+// $scores sera sauvegardé sous la forme d'un tableau
+$scores = array(98, 100, 73, 85);
+$collection->insert(array("scores" => $scores);
+
+// $scores sera sauvegardé sous la forme d'un objet
+$scores = array("quiz1" => 98, "midterm" => 100, "quiz2" => 73, "final" => 85);
+$collection->insert(array("scores" => $scores);
+
+?>
+]]>
+   </programlisting>
+   
+   <para>
+    Si vous interrogeais ces objets en utilisant la console de base de données,
+    elles ressembleront à ceci :
+    <programlisting>
+<![CDATA[
+> db.students.find()
+{ "_id" : ObjectId("4b06beada9ad6390dab17c43"), "scores" : [ 98, 100, 73, 85 ] }
+{ "_id" : ObjectId("4b06bebea9ad6390dab17c44"), "scores" : { "quiz1" : 98, "midterm" : 100, "quiz2" : 73, "final" : 85 } }
+]]>
+    </programlisting>
+   </para>
+   
+   <para>
+    La base de données peut également être sauvegardé sous forme d'objets PHP
+    (malgré le fait qu'elle soit en réalité retourné sous la forme d'un tableau
+    associatif). Ces champs sont utilisés pour les paires clé/valeurs.
+    Par exemple, un billet de blog peut ressembler à ceci :
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+  // La classe permettant de gérer le billet d'un blog
+  class Post {
+
+  var $author;
+  var $content;
+  var $comments = array();
+  var $date;
+
+  public function __construct($author, $content) {
+  $this->author = $author;
+$this->content = $content;
+    $this->date = new MongoDate();
+  }
+
+  public function setTitle($title) {
+    $this->title = $title;
+  }
+}
+
+// Crée un billet simple et l'insère dans la base de données
+$post1 = new Post("Adam", "This is a blog post");
+
+$blog->insert($post1);
+
+// Rien ne restreint le type du champ "author", nous pouvons donc en faire
+// un objet imbriqué
+$author = array("name" => "Fred", "karma" => 42);
+$post2 = new Post($author, "This is another blog post.");
+
+// Nous créons un champ supplémentaire pour y définir le titre
+$post2->setTitle("Second Post");
+
+$blog->insert($post2);
+
+?>
+]]>
+    </programlisting>
+   </para>
+   
+   <para>
+    Depuis la console de la base de données, les données ressembleront à ceci :
+    <programlisting>
+<![CDATA[
+> db.blog.find()
+{ "_id" : ObjectId("4b06c263edb87a281e09dad8"), "author" : "Adam", "content" : "This is a blog post", "comments" : [ ], "date" : "Fri Nov 20 2009 11:22:59 GMT-0500 (EST)" }
+{ "_id" : ObjectId("4b06c282edb87a281e09dad9"), "author" : { "name" : "Fred", "karma" : 42 }, "content" : "This is a blog post", "comments" : [ ], "date" : "Fri Nov 20 2009 11:23:30 GMT-0500 (EST)", "title" : "Second Post" }
+]]>
+    </programlisting>
+   </para>
+   
+   <para>
+    Le driver ne détectera pas les boucles de référence dans les tableaux
+    et les objets. Par exemple, ceci produira une erreur fatale :
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$collection->insert($GLOBALS);
+
+?>
+]]>
+    </programlisting>
+    <programlisting>
+<![CDATA[
+
+Fatal error: Nesting level too deep - recursive dependency?
+
+]]>
+    </programlisting>
+    Si vous devez insérer des documents qui possèdent des dépendances récursives,
+    vous devez les vérifier vous même avant de les passer aux drivers.
+   </para>
+  </section>
+  
+  <section>
+   <title>Les types MongoDB</title>
+   
+   <para>
+    Le driver MongoDB définit également quelques nouveaux types à utiliser avec
+    la base de données. Reportez-vous à la documentation de la classe correspondante
+    pour plus de détails ainsi que des exemples.
+   </para>
+   <para>
+    <informaltable>
+     <tgroup cols="3">
+      <thead>
+       <row>
+        <entry>Type</entry>
+        <entry>Description</entry>
+        <entry>Taille dans MongoDB (en octets)</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry><classname>MongoBinData</classname></entry>
+        <entry>Donnée binaire</entry>
+        <entry>Nombre d'octets des données binaires + 5</entry>
+       </row>
+       <row>
+        <entry><classname>MongoCode</classname></entry>
+        <entry>Code Javascript</entry>
+        <entry>Longueur du code Javascript + taille de l'objet de contexte</entry>
+       </row>
+       <row>
+        <entry><classname>MongoDate</classname></entry>
+        <entry>Dates et heures. Stocké sous forme de timestamp</entry>
+        <entry>8</entry>
+       </row>
+       <row>
+        <entry><classname>MongoId</classname></entry>
+        <entry>Identifiant unique du document :
+         <itemizedlist>
+          <listitem>
+           <para>4 octets du timestamp</para>
+           <para>
+            2 documents ne peuvent pas avoir le même identifiant s'ils ont été
+            insérés à des moments différents.
+           </para>
+          </listitem>
+          <listitem>
+           <para>3 octets de l'identifiant de la machine</para>
+           <para>
+            2 documents ne peuvent pas avoir le même identifiant s'ils ont été
+            insérés sur des machines différentes.
+           </para>
+          </listitem>
+          <listitem>
+           <para>2 octets de l'identifiant du processus</para>
+           <para>
+            2 documents ne peuvent pas avoir le même identifiant s'ils ont été
+            insérés par des processus différents tournant sur la même machine.
+           </para>
+          </listitem>
+          <listitem>
+           <para>3 octets d'incrément</para>
+           <para>
+            Chaque fois qu'un identifiant est créé, un compteur global est incrémenté
+            et utilisé comme valeur d'incrémentation pour le prochaine identifiant.
+           </para>
+          </listitem>
+         </itemizedlist>
+         Ainsi, 2 enregistrements peuvent avoir le même identifiant si un processus
+         unique, sur une seule machine, utilisée pour insérer 256^3 (plus de
+         16 millions) documents en une seconde, débordant ainsi la valeur d'incrémentation.
+        </entry>
+        <entry>12</entry>
+       </row>
+       <row>
+        <entry><classname>MongoMinKey</classname></entry>
+        <entry>Toujours plus petite que n'importe quelle autre valeur</entry>
+        <entry>Longueur du code + taille de l'objet de contexte</entry>
+       </row>
+       <row>
+        <entry><classname>MongoMaxKey</classname></entry>
+        <entry>Code JavaScript</entry>
+        <entry>Toujours plus grande que n'importe quelle autre valeur</entry>
+       </row>
+       <row>
+        <entry><classname>MongoRegex</classname></entry>
+        <entry>Expressions rationnelles</entry>
+        <entry>
+         Nombre de caractères de l'expression rationnelle + nombre de drapeaux utilisés
+        </entry>
+       </row>
+       <row>
+        <entry><classname>MongoTimestamp</classname></entry>
+        <entry>Timestamp partagé</entry>
+        <entry>8</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </informaltable>
+   </para>
+  </section>
+  
+  <section>
+   <title>Les types non supportés</title>
+   
+   <para>
+    Voici la liste des types supportés par Mongo, mais pas
+    par le driver PHP :
+   </para>
+   <para>
+    <informaltable>
+     <tgroup cols="3">
+      <thead>
+       <row>
+        <entry>Type</entry>
+        <entry>Description</entry>
+        <entry>Taille dans MongoDB (en octets)</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry>long</entry>
+        <entry>
+         Vu que PHP ne supporte pas les entiers sur 8 octets, ces valeurs récupérées
+         depuis la base de données sont automatiquement converties en valeur double.
+         Les entiers seront toujours sauvegardés dans la base de données sur 4 octets
+         (y compris sur les machines supportant le stockage sur 8 octets) et les 
+         valeurs doubles seront sauvegardées sur 8 octets, ainsi, il n'y a aucun
+         moyen de sauvegarder une valeur de type longue dans la base de données
+         en utilisant le driver PHP.
+        </entry>
+        <entry>8</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </informaltable>
+   </para>
+  </section>
+  
+  <section>
+   <title>BSON</title>
+   <para>
+    MongoDB utilise un format de stoquage appelé "BSON" (<literal>Binary
+    Serializable Object Notation</literal>) qui est similaire à JSON mais en
+    plus compact et est plus riche en types. Ci-dessous, nous avons listés
+    la taille exacte en octets de chaque type (ou les informations nécessaires
+    pour calculer leurs tailles, dans le cas de types variables en longueur).
+    Gardez à l'esprit que ces tailles n'incluent pas les noms des champs.
+    La taille d'un objet peut être calculée manuellement, mais c'est plus facile
+    pour un développeur d'appeler la fonction <function>bson_encode</function>
+    et de prendre la longueur de la chaîne résultante.
+   </para>
+   <para>
+    Exemple de calcul manuel d'un taille BSON pour sauvegarder l'objet
+    array("x" => null, "y" => 40) :
+    <programlisting>
+<![CDATA[
+4 bytes (object size)
+
+1 byte  (type of "x" field)
+2 bytes ("x" and "\0")
+0 bytes (for null)
+
+1 byte  (type of "y" field)
+2 bytes ("y" and "\0")
+4 bytes (for an integer)
+
+1 byte  (end-of-object byte)
+-----------------------
+15 bytes
+]]>
+    </programlisting>
+   </para>
+  </section>
+  
+ </partintro>
+ 
+ &reference.mongo.mongoid;
+ &reference.mongo.mongocode;
+ &reference.mongo.mongodate;
+ &reference.mongo.mongoregex;
+ &reference.mongo.mongobindata;
+ &reference.mongo.mongodbref;
+ &reference.mongo.mongominkey;
+ &reference.mongo.mongomaxkey;
+ &reference.mongo.mongotimestamp;
+ 
+</part>
