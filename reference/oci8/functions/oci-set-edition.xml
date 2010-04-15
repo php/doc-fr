@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 47610a5ee436db15327615836f3f69694ba5444f Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<refentry xml:id="function.oci-set-edition" xmlns="http://docbook.org/ns/docbook">
+ <refnamediv>
+  <refname>oci_set_edition</refname>
+  <refpurpose>Définit l'édition de la base de données</refpurpose>
+ </refnamediv>
+ 
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>bool</type><methodname>oci_set_edition</methodname>
+   <methodparam><type>string</type><parameter>edition</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   Définit l'édition des objets de la base de données à utiliser par les
+   connexions.
+  </para>
+  <para>
+   L'édition Oracle permet à des versions concurrentes des applications
+   d'être exécutées en utilisant le même nom de schéma et d'objets.
+   Ceci est pratique pour mettre à jour en direct les systèmes.
+  </para>
+  <para>
+   Appelez la fonction <function>oci_set_edition</function> avant d'appeler
+   une fonction comme <function>oci_connect</function>, <function>oci_pconnect</function>
+   ou <function>oci_new_connect</function>.
+  </para>
+  <para>
+   Si une édition est définie mais n'est pas valide sur la base de données,
+   toute tentative de connexion échouera même si la fonction
+   <function>oci_set_edition</function> retourne un statut de réussite.
+  </para>
+  <para>
+   Lors de l'utilisation des connexions persistantes, si une connexion
+   avec l'édition demandée existe déjà, elle sera ré-utilisée.
+   Sinon, une connexion persistante différente sera créée.
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>edition</parameter></term>
+     <listitem>
+      <para>
+       Nom de l'édition Oracle, précédemment créé avec la commande
+       <acronym>SQL</acronym> "<literal>CREATE EDITION</literal>".
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="notes">
+  &reftitle.notes;
+  <note>
+   <title>Exigence de la version Oracle</title>
+   <para>
+    Cette fonction est disponible pour Oracle 11gR2 et suivants.
+   </para>
+  </note>
+  <caution>
+   <title>Connexions persistantes</title>
+   <para>
+    Pour éviter les inconsistances de données ou des erreurs inattendues,
+    n'utilisez pas la requête ALTER SESSION SET EDITION pour changer
+    une édition sur les connexions persistantes.
+   </para>
+  </caution>
+  <caution>
+   <title>File d'attente de connexions DRCP</title>
+   <para>
+    Pour éviter les inconsistances de données ou des erreurs inattendues
+    lors de l'utilisation des éditions et de
+    <link linkend="oci8.connection">DRCP</link> avec Oracle 11.2.0.1,
+    conservez une correspondance un-à-un entre
+    <link linkend="ini.oci8.connection.class">oci8.connection_class</link>
+    et le nom de l'édition utilisé par vos applications. Chaque serveur
+    pour une classe de connexion donnée doit être utilisé avec une seule
+    édition.
+   </para>
+  </caution>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   &return.success;
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>2 scripts peuvent utiliser différentes versions
+     de myfunc() au même moment</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// Fichier 1
+
+echo "Version 1 de l'application\n";
+
+oci_set_edition('ORA$BASE');
+$c = oci_connect('hr', 'welcome', 'localhost/XE');
+
+$s = oci_parse($c, "begin :r := myfunc(); end;");
+oci_bind_by_name($s, ":r", $r, 20);
+oci_execute($s);
+echo "Le résultat est $r\n";
+
+?>
+]]>
+</programlisting>
+
+<programlisting role="php">
+<![CDATA[
+<?php
+
+// Fichier 2
+
+echo "Version 2 de l'application\n";
+
+oci_set_edition('E1');
+$c = oci_connect('hr', 'welcome', 'localhost/XE');
+
+$s = oci_parse($c, "begin :r := myfunc(); end;");
+oci_bind_by_name($s, ":r", $r, 20);
+oci_execute($s);
+echo "Le résultat est $r\n";
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
+</refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
