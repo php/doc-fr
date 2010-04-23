@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: d35b3508e740b25aeb74b7f42270a9d0d6541741 Maintainer: dams Status: ready -->
+<!-- EN-Revision: d1befb8a78bf4ae181c13a5d5a9ae4f03bb5547c Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongocollection.deleteindex" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -15,6 +15,56 @@
    <modifier>public</modifier> <type>array</type><methodname>MongoCollection::deleteIndex</methodname>
    <methodparam><type>string|array</type><parameter>keys</parameter></methodparam>
   </methodsynopsis>
+  <para>
+   Cette méthode est identique à:
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+public function deleteIndexes($keys) {
+  // toIndexString est une méthode protégée qui transforme les chaines, tableaux
+  // et objets en noms d'index
+  $index = $this->toIndexString($keys);
+
+  return $this->db->command(array("deleteIndexes" => $this->getName(), 
+    "index" => $index);
+}
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Chaque index possède un nom unique à sa création. C'est l'utilisateur qui le précise en
+   général (avec l'option "name" de <function>MongoCollection::ensureIndex</function>) ou
+   alors il est généré par le pilote depuis une combinaisons de clés. Ce nom est alors utilisé
+   par <function>MongoCollection::deleteIndex</function>.
+  </para>
+  <para>
+   Malheureusement, la méthode <function>MongoCollection::ensureIndex</function> 
+   génère des noms très différents de la commande shell à cause de problèmes de compatibilité
+   ascendante, et <function>MongoCollection::deleteIndex</function> ne peut supprimer les index
+   dont les noms sont personnalisés. De ce fait, la meilleure manière de supprimer des index
+   créés via le shell ou avec des noms personnalisés est d'appeler directement la commande
+   <literal>deleteIndexes</literal> de la base de données.
+  </para>
+  <para>
+   Ainsi, si vous avez appelé un index "superfast query", vous pouvez le supprimer avec:
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$db->command(array("deleteIndexes" => $collection->getName(), "index" => "superfast query");
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Pour trouver le nom d'un index, vous pouvez requêter la collection
+   <literal>system.indexes</literal> d'une base de données et chercher le champ
+   <literal>name</literal>.
+  </para>
  </refsect1>
 
  <refsect1 role="parameters">
