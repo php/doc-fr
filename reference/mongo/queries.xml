@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8f1beeca1167fcf13cdae37d523cef0ccd12d7e6 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: d2eb1917c4999c4176f80a1726390c14eba30614 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <section xml:id="mongo.queries" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Interrogation</title>
-
+ 
  <section>
   <title>Interrogation sur un _id</title>
   <para>
@@ -58,21 +58,48 @@ $joe = $people->findOne(array("_id" => $pid));
    </programlisting>
   </para>
  </section>
-
+ 
  <section>
   <title>Les tableaux</title>
   <para>
-   Supposez que vous voulez trouver tous les documents correspondant à un tableau
-   d'éléments d'une certaine valeur. Par exemple, les documents avec "gold" et "award",
-   comme ceci :
-   <programlisting>
+   Les tableaux sont spéciaux à plus d'un titre. Tout d'abord, il y a 2 types
+   utilisés par MongoDB : des tableaux "normaux" et des tableaux associatifs.
+   Les tableaux associatifs peuvent avoir plusieurs types de clés et de valeurs.
+   Les tableaux "normaux" sont définis comme tableaux dans ces indices numériques
+   ascendants, en commençant par 0 et s'incrémentant de 1 pour chaque élément.
+   Ces 2 types correspondent à ce que vous connaissez déjà comme type en PHP.
+  </para>
+  
+  <para>
+   Actuellement, si vous voulez sauvegarder la liste des récompenses
+   dans un document, vous pouvez :
+  </para>
+  
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$collection->save(array("awards" => array("gold", "silver", "bronze")));
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Les requêtes peuvent effectuer des recherches directement dans les éléments.
+   Supposez que nous souhaitons trouver tous les documents dont l'élément du
+   tableau est à une valeur fournie. Par exemple, les documents sont la
+   récompense est l'or, comme ceci :
+  </para>
+  <programlisting>
 <![CDATA[
 { "_id" : ObjectId("4b06c282edb87a281e09dad9"), "awards" : ["gold", "silver", "bronze"]}
 ]]>
-   </programlisting>
+  </programlisting>
+  <para>
    Ceci peut être effectué avec une requête simple, en ignorant le fait que "awards"
    est un tableau :
-   <programlisting role="php">
+  </para>
+  <programlisting role="php">
 <![CDATA[
 <?php
 
@@ -80,12 +107,14 @@ $cursor = $collection->find(array("awards" => "gold"));
 
 ?>
 ]]>
-   </programlisting>
-  </para>
+  </programlisting>
+  
   <para>
    Supposez que vous interrogez la base de données avec un objet plus complexe,
    dont chaque élément du tableau sont eux-mêmes des objets, comme ceci :
-   <programlisting>
+  </para>
+  
+  <programlisting>
 <![CDATA[
 { 
      "_id" : ObjectId("4b06c282edb87a281e09dad9"), 
@@ -103,10 +132,12 @@ $cursor = $collection->find(array("awards" => "gold"));
      ]
 }
 ]]>
-   </programlisting>
-   Continuons d'ignorer que c'est un tableau. Nous pouvons utiliser
-   la notation basée sur les points pour interroger le sous-objet :
-   <programlisting role="php">
+  </programlisting>
+  <para>
+  Continuons d'ignorer que c'est un tableau. Nous pouvons utiliser
+  la notation basée sur les points pour interroger le sous-objet :
+  </para>
+  <programlisting role="php">
 <![CDATA[
 <?php
 
@@ -114,13 +145,30 @@ $cursor = $collection->find(array("awards.first place" => "gold"));
 
 ?>
 ]]>
-   </programlisting>
+  </programlisting>
+  <para>
    Notez qu'il importe peu qu'il y ait un espace dans le nom du champ
    (bien qu'il convient de ne pas en mettre, juste pour rendre le code
    plus lisible).
   </para>
- </section>
+  
+  <para>
+   Vous pouvez également utiliser un tableau contenant plusieurs valeurs
+   à chercher. Actuellement, si nous cherchons les documents "gold" et "copper",
+   nous pouvons le faire comme ceci :
+  </para>
+  
+  <programlisting role="php">
+<![CDATA[
+<?php
 
+$cursor = $collection->find(array("awards" => array('$in' => array("gold", "copper"))));
+
+?>
+]]>
+  </programlisting>
+  
+ </section>
 </section>
 
 <!-- Keep this comment at the end of the file
