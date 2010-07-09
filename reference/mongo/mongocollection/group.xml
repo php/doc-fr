@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 74a3aaff8c722fc4a8f69bc85fa61642adaf60ce Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 3b8aa620b5d7370ec376f44aaf67bbed9bf92a0c Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongocollection.group" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -16,7 +16,7 @@
    <methodparam><type>mixed</type><parameter>keys</parameter></methodparam>
    <methodparam><type>array</type><parameter>initial</parameter></methodparam>
    <methodparam><type>MongoCode</type><parameter>reduce</parameter></methodparam>
-   <methodparam choice="opt"><type>array</type><parameter>condition</parameter><initializer>array()</initializer></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>options</parameter><initializer>array()</initializer></methodparam>
   </methodsynopsis>
  </refsect1>
 
@@ -108,10 +108,50 @@
   &reftitle.examples;
   <example>
    <title>Exemple avec <function>MongoCollection::group</function></title>
+   <para>
+    Cet exemple regroupe des documents par catégorie et crée une liste de noms
+    à l'intérieur des catégories
+   </para>
    <programlisting role="php">
 <![CDATA[
 <?php
 
+$collection->insert(array("category" => "fruit", "name" => "apple"));
+$collection->insert(array("category" => "fruit", "name" => "peach"));
+$collection->insert(array("category" => "fruit", "name" => "banana"));
+$collection->insert(array("category" => "veggie", "name" => "corn"));
+$collection->insert(array("category" => "veggie", "name" => "broccoli"));
+
+$keys = array("category" => 1);
+
+$initial = array("items" => array());
+
+$reduce = "function (obj, prev) { prev.items.push(obj.name); }";
+
+$g = $collection->group($keys, $initial, $reduce);
+
+echo json_encode($g['retval']);
+
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+[{"category":"fruit","items":["apple","peach","banana"]},{"category":"veggie","items":["corn","broccoli"]}]
+]]>
+   </screen>
+  </example>
+
+  <example>
+   <title>Exemple avec <function>MongoCollection::group</function></title>
+   <para>
+    Cet exemple n'utilise aucune clé, donc chaque document sera dans son propre
+    groupe. Il y a aussi une condition: seuls les documents qui correspondent à
+    cette condition seront traités par la fonction de regroupement.
+   </para>
+   <programlisting role="php">
+<![CDATA[
 $collection->save(array("a" => 2));
 $collection->save(array("b" => 5));
 $collection->save(array("a" => 1));
