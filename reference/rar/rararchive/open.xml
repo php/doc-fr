@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: ff65144390564426bdf289c2351c4e8a0f6a73e1 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: d29e172cab4cce6dff2854b65e7c47de55f60dad Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="rararchive.open" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -16,13 +16,15 @@
   <methodsynopsis>
    <modifier>public</modifier> <modifier>static</modifier> <type>RarArchive</type><methodname>RarArchive::open</methodname>
    <methodparam><type>string</type><parameter>filename</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>password</parameter></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>password</parameter><initializer>NULL</initializer></methodparam>
+   <methodparam choice="opt"><type>callback</type><parameter>volume_callback</parameter><initializer>NULL</initializer></methodparam>
   </methodsynopsis>
   <para>Style procédural :</para>
   <methodsynopsis>
    <type>RarArchive</type><methodname>rar_open</methodname>
    <methodparam><type>string</type><parameter>filename</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>password</parameter></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>password</parameter><initializer>NULL</initializer></methodparam>
+   <methodparam choice="opt"><type>callback</type><parameter>volume_callback</parameter><initializer>NULL</initializer></methodparam>
   </methodsynopsis>
   <para>
    Ouvre une archive RAR et retourne une instance <type>RarArchive</type> la représentant.
@@ -59,6 +61,22 @@
       </para>
      </listitem>
     </varlistentry>
+    <varlistentry>
+     <term><parameter>volume_callback</parameter></term>
+     <listitem>
+      <para>
+       Une fonction qui reçoit un seul paramètre - le chemin du volume
+       non trouvé - et retourne une &string; contenant le chemin correct
+       du volume ou <literal>NULL</literal> si le volume n'existe pas ou
+       le chemin n'est pas connu. Attention à ne pas créer de boucle infinie
+       sachant que la fonction sera appelée indéfiniment si le chemin retourné
+       dans un précédent appel ne correspond pas au volume désiré. Le fait de
+       spécifier ce paramètre évitera une alerte qui devrait être émise lorsqu'un
+       volume n'est pas trouvé ; une implémentation qui ne retourne que &false;
+       peut toutefois être utilisée pour éviter une telle alerte.
+      </para>
+     </listitem>
+    </varlistentry>
    </variablelist>
   </para>
   <warning>
@@ -73,6 +91,30 @@
   &reftitle.returnvalues;
   <para>
    Retourne l'instance <type>RarArchive</type> requise &return.falseforfailure;.
+  </para>
+ </refsect1>
+ 
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>3.0.0</entry>
+       <entry>
+        Le paramètre <parameter>volume_callback</parameter> a été ajouté.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
   </para>
  </refsect1>
  
@@ -153,6 +195,37 @@ fclose($stream);
 ]]>
     </programlisting>
    </example>
+  </para>
+  <para>
+   <example>
+    <title>Fonction de rappel pour le volume</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/* Dans cet exemple, il y a un volume nommé multi_broken.part1.rar
+ * dont le volume suivant est nommé multi.part2.rar */
+function resolve($vol) {
+ if (preg_match('/_broken/', $vol))
+  return str_replace('_broken', '', $vol);
+ else
+  return null;
+}
+$rar_file1 = rar_open(dirname(__FILE__).'/multi_broken.part1.rar', null, 'resolve');
+$entry = $rar_file1->getEntry('file2.txt');
+$entry->extract(null, dirname(__FILE__) . "/temp_file2.txt");
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+ 
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member>Le gestionnaire <link linkend="wrappers.rar"><literal>rar://</literal></link></member>
+   </simplelist>
   </para>
  </refsect1>
  
