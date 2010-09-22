@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 9c9dbceddd74aef5971ce9e5ce9e74ab3490628d Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 5aed1fa31d8f77222c60fdc82df7072653a77cfb Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="inclued.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -14,7 +14,7 @@
   </para>
   <para>
    <example>
-    <title>Lecture des informations depuis inclued</title>
+    <title>Traitement des informations dans une application PHP</title>
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -56,6 +56,66 @@ $ php graphviz.php -i /tmp/wp.ser -o wp.dot
 $ dot -Tpng -o inclued.png wp.dot
 ]]>
     </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Lister les données depuis une capture inclued</title>
+    <para>
+     En utilisant la directive <link linkend="ini.inclued.dumpdir">inclued.dumpdir</link>
+     , des fichiers (les traces include) sont écrits à chaque requête. Voici un moyen de
+     lister ces fichiers et utiliser <function>unserialize</function> avec.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$path = ini_get('inclued.dumpdir');
+if ($path && is_dir($path)) {
+
+    echo "Path: $path", PHP_EOL;
+
+    $inclues = new GlobIterator($path . DIRECTORY_SEPARATOR . 'inclued*');
+
+    if ($inclues->count() === 0) {
+        echo 'Pas de traces', PHP_EOL;
+        exit;
+    }
+
+    foreach ($inclues as $inclue) {
+
+        echo 'Fichier Inclus: ', $inclue->getFilename(), PHP_EOL;
+
+        $data = file_get_contents($inclue->getPathname());
+        if ($data) {
+            $inc = unserialize($data);
+            echo ' -- fichier: ', $inc['request']['SCRIPT_FILENAME'], PHP_EOL;
+            echo ' -- nombre d'inclusions: ', count($inc['includes']), PHP_EOL;
+        }
+        echo PHP_EOL;
+    }
+} else {
+    echo 'Pas de traces.', PHP_EOL;
+}
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+PATH: /tmp/inclued
+Fichier Inclus: inclued.56521.1
+ -- fichier: /Users/philip/test.php
+ -- nombre d'inclusions: 1
+
+Fichier Inclus: inclued.56563.1
+ -- fichier: /tmp/none.php
+ -- nombre d'inclusions: 0
+
+Fichier Inclus: inclued.56636.1
+ -- fichier: /tmp/three.php
+ -- nombre d'inclusions: 3
+]]>
+    </screen>
    </example>
   </para>
  </section>
