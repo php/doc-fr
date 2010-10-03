@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: dams Status: ready -->
+<!-- EN-Revision: 0c878e752fc5d604326641412f2244b2562990e1 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
 
  <sect1 xml:id="language.oop5.late-static-bindings" xmlns="http://docbook.org/ns/docbook">
@@ -11,12 +11,28 @@
    statique à la volée, qui est utilisée pour choisir la classe appelée
    dans le cadre de l'héritage de méthodes statiques.
   </para>
+  
+  <para>
+   Plus précisément, les résolutions statiques à la volée fonctionnent en enregistrant
+   le nom de le classe dans le dernier "appel non transmis". Dans le cas des appels de
+   méthodes statiques, il s'agit de la classe explicitement nommée à gauche de l'opérateur
+   <link linkend="language.oop5.paamayim-nekudotayim"><literal>::</literal></link>;
+   dans le cas de méthodes non statiques, il s'agit de la classe de l'objet. Un "appel
+   transmis" est déclenché par <literal>self::</literal>,
+   <literal>parent::</literal>, <literal>static::</literal>, ou, tout en haut de la
+   hierarchie des classes, <function>forward_static_call</function>.
+   <!-- technically, static:: may be non forwarding, but it's irrelevant -->
+   
+   La fonction <function>get_called_class</function> peut être utilisée pour récupérer
+   une chaine contenant le nom de la classe appelée et <literal>static::</literal>
+   introduit son espace.
+  </para>
 
   <para>
    Cette fonctionnalité a été baptisée <literal>"late static bindings"</literal>,
    d'un point de vue interne. <literal>"Late binding"</literal>, littéralement
    compilation tardive, vient du fait que les éléments <literal>static::</literal>
-   ne seront plus résolus en utilisant la classe où la méthode a été définie, mais
+   ne seront pas résolus en utilisant la classe où la méthode a été définie, mais
    celle qui est active durant l'exécution. L'adjectif statique a été
    ajouté car ce problème s'applique aux méthodes statiques, mais pas seulement.
   </para>
@@ -109,10 +125,12 @@ B
    </example>
    <note>
     <para>
-     <literal>static::</literal> ne fonctionne pas comme <literal>$this</literal>
-     pour les méthodes statiques. <literal>$this-></literal> suit les règles
-     de l'héritage alors que <literal>static::</literal> ne les suit pas. Cette
-     différence est détaillée plus loin dans le manuel.
+     Notez que dans les contextes non statiques, la classe appelée sera la même
+     que la classe de l'objet. Comme <literal>$this-></literal> essayera d'appeler
+     des méthodes privées depuis le même contexte, utiliser <literal>static::</literal>
+     pourrait donner des résultats différents. Notez aussi que
+     <literal>static::</literal> ne peut faire référence qu'à des attributs/méthodes
+     statiques.
     </para>
    </note>
    <example>
@@ -120,40 +138,43 @@ B
     <programlisting role="php">
 <![CDATA[
 <?php
-class TestChild extends TestParent {
-    public function __construct() {
-        static::qui();
+class A {
+    private function foo() {
+        echo "success!\n";
     }
-
     public function test() {
-        $o = new TestParent();
-    }
-
-    public static function qui() {
-        echo __CLASS__."\n";
+        $this->foo();
+        static::foo();
     }
 }
 
-class TestParent {
-    public function __construct() {
-        static::qui();
-    }
+class B extends A {
+   /* foo() sera copiée dans B, par conséquent son contexte sera toujours A
+    * et l'appel se fera sans problème */
+}
 
-    public static function qui() {
-        echo __CLASS__."\n";
+class C extends A {
+    private function foo() {
+        /* La méthode originale est remplacée; le contexte est celui de C */
     }
 }
-$o = new TestChild;
-$o->test();
 
+$b = new B();
+$b->test();
+$c = new C();
+$c->test();   //échoue
 ?>
 ]]>
     </programlisting>
     &example.outputs;
     <screen>
 <![CDATA[
-TestChild
-TestParent
+success!
+success!
+success!
+
+
+Fatal error:  Call to private method C::foo() from context 'A' in /tmp/test.php on line 9
 ]]>
     </screen>
    </example>
@@ -210,50 +231,6 @@ C
      </screen>
     </example>
    </note>
-  </sect2>
-  <sect2 xml:id="language.oop5.late-static-bindings.edge-cases">
-   <title>Cas limites</title>
-   <para>
-    Il y a de nombreuses solutions pour lancer un appel à une méthode en PHP,
-    comme des fonctions de rappels, ou des méthodes magiques. La résolution
-    statique à la volée qui effectue son travail à l'exécution, il peut y avoir
-    des cas particuliers qui donnent des résultats inattendus.
-   </para>
-   <example>
-    <title>Résolution statique à la volée dans une méthode magique</title>
-    <programlisting role="php">
-<![CDATA[
-<?php
-class A {
-
-   protected static function qui() {
-        echo __CLASS__."\n";
-   }
-
-   public function __get($var) {
-       return static::qui();
-   }
-}
-
-class B extends A {
-
-   protected static function qui() {
-        echo __CLASS__."\n";
-   }
-}
-
-$b = new B;
-$b->foo;
-?>
-]]>
-    </programlisting>
-    &example.outputs;
-    <screen>
-<![CDATA[
-B
-]]>
-    </screen>
-   </example>
   </sect2>
  </sect1>
 <!-- Keep this comment at the end of the file
