@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: bc3a5cc7bd9d0ed1388589352f63e080a61b80d2 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3bbb0ff28b32a373b5236ed20b1eb0b186c4af7f Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.strtr" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -23,15 +23,31 @@
    <methodparam><type>array</type><parameter>replace_pairs</parameter></methodparam>
   </methodsynopsis>
   <para>
-   <function>strtr</function> retourne la chaîne <parameter>str</parameter>,
-   après avoir remplacé chaque caractère du paramètre
-   <parameter>from</parameter> par son équivalent dans le paramètre
-   <parameter>to</parameter>.
+   Si trois arguments sont utilisés, <function>strtr</function> retourne la chaîne
+   <parameter>str</parameter> après avoir remplacé chaque caractère (de un octet)
+   du paramètre <parameter>from</parameter> par son équivalent dans le paramètre
+   <parameter>to</parameter>, chaque occurence de <literal>$from[$n]</literal> est
+   remplacée par <literal>$to[$n]</literal>, où <literal>$n</literal> est une valeur
+   valide pour chaque argument.
   </para>
   <para>
    Si <parameter>from</parameter> et <parameter>to</parameter> sont de
    tailles différentes, les caractères en trop dans l'un ou l'autre
-   seront ignorés.
+   seront ignorés. La taille de <parameter>str</parameter> sera la même que celle
+   des valeurs retournées.
+  </para>
+  <para>
+   Si seuls deux arguments sont utilisés, le deuxième doit être un <type>array</type>
+   de la forme <literal>array('from' => 'to', ...)</literal>. La données retournée est
+   une <type>string</type> dans laquelle toutes les occurrences des clés du tableau ont
+   été remplacées par les valeurs correspondantes. Les clés les plus longues seront d'abord
+   utilisées. Une fois une sous-chaine remplacée, sa nouvelle valeur ne sera plus recherchée.
+  </para>
+  <para>
+   Dans ce cas, les clés et les valeurs peuvent avoir n'importe quelle taille, en supposant
+   qu'il n'y a pas de clé vide; aussi, la taille de la valeur retournée peut différer de celle
+   de <parameter>str</parameter>. Cependant, cette fonction sera la plus efficace lorsque toutes
+   les clés ont la même taille.
   </para>
  </refsect1>
 
@@ -68,7 +84,7 @@
      <listitem>
       <para>
        Le paramètre <parameter>replace_pairs</parameter> peut être utilisé
-       comme substitue à <parameter>to</parameter> et <parameter>from</parameter>
+       à la place de <parameter>to</parameter> et <parameter>from</parameter>
        et dans ce cas, ce sera un tableau sous la forme
        <literal>array('from' => 'to', ...)</literal>.
       </para>
@@ -97,6 +113,8 @@
     <programlisting role="php">
 <![CDATA[
 <?php
+// Ici, strtr() remplace octet par octet, nous supposons
+// donc ici des encodages dur un seul octet:
 $addr = strtr($addr, "äåö", "aao");
 ?>
 ]]>
@@ -104,20 +122,17 @@ $addr = strtr($addr, "äåö", "aao");
    </example>
   </para>
   <para>
-   <function>strtr</function> peut être appelée avec uniquement
-   deux arguments. Dans ce cas, elle se comporte d'une autre
-   façon : <parameter>from</parameter> doit alors être un tableau
-   associatif de paires, qui seront remplacées
-   dans la chaîne <parameter>str</parameter>. <function>strtr</function>
-   commence toujours par rechercher la chaîne la plus longue,
-   et ne travaille pas sur des segments qu'elle a déjà modifié.
+   L'exemple suivant montre l'utilisation de <function>strtr</function> avec
+   deux arguments. Notez la préférence des remplacements (<literal>h</literal> n'est
+   pas utilisé car il y a des correspondances plus longues) et comment le texte
+   remplacé n'est pas réutilisé par la suite.
   </para>
   <example>
    <title>Exemple avec <function>strtr</function> et 2 arguments</title>
     <programlisting role="php">
 <![CDATA[
 <?php
-$trans = array("hello" => "hi", "hi" => "hello");
+$trans = array("h" => "-", "hello" => "hi", "hi" => "hello");
 echo strtr("hi all, I said hello", $trans);
 ?>
 ]]>
@@ -126,6 +141,31 @@ echo strtr("hi all, I said hello", $trans);
     <screen>
 <![CDATA[
 hello all, I said hi
+]]>
+    </screen>
+  </example>
+  <para>
+   Les deux comportements sont différents. Avec trois arguments, 
+   <function>strtr</function> remplacera les octets; avec deux, elle peut
+   remplacer des sous-chaines plus longues.
+  </para>
+  <example>
+   <title>Comparaison de comportement de <function>strtr</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+echo strtr("baab", "ab", "01"),"\n";
+
+$trans = array("ab" => "01");
+echo strtr("baab", $trans);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+1001
+ba01
 ]]>
     </screen>
   </example>

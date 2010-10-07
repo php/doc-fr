@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 008922dd52774f92951f46176789e4c8c58706bc Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 6e268a928712966330c37b9a2beb6e00b6a9842a Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="reference.pcre.pattern.syntax" xmlns="http://docbook.org/ns/docbook">
@@ -268,8 +268,8 @@
   </para>
  </section>
  
- <section xml:id="regexp.reference.backslash">
-  <title>Antislash</title>
+ <section xml:id="regexp.reference.escape">
+  <title>Séquences d'échappement</title>
   <para>
    Le caractère antislash a de nombreuses utilisations.
    En premier lieu, s'il est suivi d'un caractère non
@@ -762,11 +762,11 @@
    comme spécifié par l'argument <parameter>offset</parameter> de la
    fonction <function>preg_match</function>. Elle diffère de <literal>\A</literal>
    lorsque la valeur du paramètre <parameter>offset</parameter> est différente
-   de zéro. Elle est disponible depuis PHP 4.3.3.
+   de zéro.
   </para>
   <para>
    <literal>\Q</literal> et <literal>\E</literal> peuvent être utilisés
-   pour ignorer les métacaractères dans le masque, depuis PHP 4.3.3.
+   pour ignorer les métacaractères dans le masque.
    Par exemple : <literal>\w+\Q.$.\E$</literal> recherchera un ou plusieurs
    caractères suivis par la chaîne littérale <literal>.$.</literal> et ancrés à la
    fin de la chaîne.
@@ -784,7 +784,7 @@
  <section xml:id="regexp.reference.unicode">
   <title>Propriétés des caractères Unicode</title>
   <para>
-   Depuis PHP 4.4.0 et 5.1.0, trois nouvelles séquences d'échappement
+   Depuis PHP 5.1.0, trois nouvelles séquences d'échappement
    pour trouver des types de caractères sont disponibles lorsque
    le mode <emphasis>UTF-8</emphasis> est sélectionné. Elles sont :
   </para>
@@ -817,10 +817,14 @@
    en l'absence de négation, les accolades dans la séquence d'échappement sont
    optionnelles ; ceci revient à la même chose :
   </para>
-  <literallayout>
-   \p{L}
-   \pL
-  </literallayout>
+  <informalexample>
+   <programlisting>
+<![CDATA[
+\p{L}
+\pL
+]]>
+   </programlisting>
+  </informalexample>
   <table>
    <title>Codes des propriétés supportées</title>
    <tgroup cols="3">
@@ -1054,8 +1058,8 @@
   </para>
  </section>
  
- <section xml:id="regexp.reference.circudollar">
-  <title>Accent circonflexe et Dollar</title>
+ <section xml:id="regexp.reference.anchors">
+  <title>Ancres</title>
   <para>
    En dehors d'une classe de caractères, avec les options par
    défaut, <literal>^</literal> est une assertion qui n'est
@@ -1143,8 +1147,8 @@
   </para>
  </section>
  
- <section xml:id="regexp.reference.squarebrackets">
-  <title>Crochets</title>
+ <section xml:id="regexp.reference.character-classes">
+  <title>Classes de caractères</title>
   <para>
    Un crochet ouvrant <literal>[</literal> introduit une classe de
    caractères, et le crochet fermant <literal>]</literal>la
@@ -1325,8 +1329,8 @@
   </para>
  </section>
  
- <section xml:id="regexp.reference.verticalbar">
-  <title>Barre verticale</title>
+ <section xml:id="regexp.reference.alternation">
+  <title>Alternatives</title>
   <para>
    La barre verticale <literal>|</literal> sert à séparer des
    alternatives. Par exemple, dans le masque "<literal>/dupont|martin/</literal>"
@@ -1406,9 +1410,7 @@
    Lorsqu'une modification d'option survient au degré le plus haut (et donc, pas dans
    les parenthèses du sous-masque), les modifications sont appliquées dans le reste
    du masque qui suit. Donc, <literal>/ab(?i)c/</literal> valide uniquement
-   "abc" et "abC". Ce comportement a été modifié en PCRE 4.0 et est inclus depuis
-   PHP 4.3.3. Dans les versions précédentes, <literal>/ab(?i)c/</literal> fonctionne
-   de la même façon que <literal>/abc/i</literal> (e.g. valide "ABC" et "aBc").
+   "abc" et "abC".
   </para>
   <para>
    Si une option intervient dans un sous-masque, le comportement est différent.
@@ -1450,23 +1452,26 @@
    et peuvent être imbriqués. Ajouter des sous-masques a deux
    utilités :
   </para>
-  <para>
-   1. Délimiter des alternatives. Par exemple, le masque
-   
-   <literal>char(don|mant|)</literal>
-   
-   acceptera les mots "<literal>char</literal>", "<literal>chardon</literal>",
-   ou "<literal>charmant</literal>". Sans les parenthèses, il
-   n'accepterait que "<literal>chardon</literal>",
-   "<literal>mant</literal>" ou la chaîne vide "".
-  </para>
-  <para>
-   2. Le sous-masque est considéré comme capturant : lorsqu'une
-   chaîne sujet est acceptée par le masque complet, les
-   sous-masques sont transmis à l'appelant grâce à
-   un <emphasis>vecteur</emphasis> de sous-masques. Les parenthèses ouvrantes sont
-   comptées de gauche à droite, (commençant à 1).
-  </para>
+   <orderedlist>
+   <listitem>
+    <para>
+     Localiser un ensemble d'alternatives. Par exemple, le motif
+     <literal>cat(aract|erpillar|)</literal> trouve un des mots "cat",
+     "cataract", ou "caterpillar". Sans les parenthèses, cela trouverait
+     "cataract", "erpillar" ou la chaine vide.
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     Cela configure le sous-masque comme capturant. Lorsque tout le motif
+     correspond, la portion de la sous-chaine qui correspond au sous-masque
+     est passé à l'appelant grâce à l'argument <emphasis>ovector</emphasis>
+     de <function>pcre_exec</function>. Les parenthèses ouvrantes sont comptées
+     depuis la gauche vers la droite (commençant à 1) jusqu'à obtenir le nombre
+     des sous-masques capturants.
+    </para>
+   </listitem>
+  </orderedlist>
   <para>
    Par exemple, soit la chaîne sujet "<literal>le roi soleil</literal>"
    qui est utilisée avec le masque suivant :
@@ -1499,10 +1504,12 @@
    et le signe <literal>":"</literal>. Ainsi, les 2 masques
   </para>
   
-  <literallayout>
+  <informalexample>
+   <programlisting>
    (?i:samedi|dimanche)
    (?:(?i)samedi|dimanche)
-  </literallayout>
+   </programlisting>
+  </informalexample>
   
   <para>
    captureront exactement les mêmes chaînes. Du fait que les branches
@@ -1514,12 +1521,45 @@
    <literal>"Samedi"</literal>.
   </para>
   <para>
-   A partir de PHP 4.3.3, il est possible de nommer un sous masque 
+   Il est possible de nommer un sous masque 
    en utilisant la syntaxe <literal>(?P&lt;name&gt;pattern)</literal>. Ce sous
    masque sera alors indexé dans le tableau de concordance par sa position, ainsi 
    que par son nom. PHP 5.2.2 a introduit 2 nouvelles syntaxes :
    <literal>(?&lt;name&gt;pattern)</literal> et
    <literal>(?'name'pattern)</literal>.
+  </para>
+  
+  <para>
+   Quelques fois, il est nécessaire d'avoir plusieurs correspondances en alternant
+   les sous groupes dans une expression régulière. Normallement, chacun recevra son
+   propre nombre de références arrières même si seulement un d'entre eux ne peut
+   correspondre. Pour éviter cela, la syntaxe <literal>(?|</literal> permet d'autoriser
+   les nombres dupliqués. Soit l'expression ci-après utilisée avec la chaine
+   <literal>Sunday</literal>:
+  </para>
+
+  <informalexample>
+   <programlisting>
+<![CDATA[(?:(Sat)ur|(Sun))day]]>
+   </programlisting>
+  </informalexample>
+
+  <para>
+   Ici <literal>Sun</literal>est stocké dans la référence arrière 2, alors que la référence
+   arrière 1 est vide. La correspondance mène donc à <literal>Sat</literal> dans la référence
+   arrière 1 alors que la référence arrière 2 n'existe pas. Changer le masque en utilisant
+   <literal>(?|</literal> résoud ce problème:
+  </para>
+
+  <informalexample>
+   <programlisting>
+<![CDATA[(?|(Sat)ur|(Sun))day]]>
+   </programlisting>
+  </informalexample>
+
+  <para>
+   Avec ce masque, à la fois <literal>Sun</literal> et <literal>Sat</literal>
+   seront stockés dans la référence arrière 1.
   </para>
  </section>
  
@@ -1667,7 +1707,7 @@
    <literal>"abc"</literal>, tandis que <literal>.*+abc</literal> ne le trouvera
    pas, car <literal>.*+</literal> accapare totalement la chaîne.
    Les quantificateurs possessifs peuvent être utilisés pour 
-   accélérer le traitement depuis PHP 4.3.3
+   accélérer le traitement.
   </para>
   <para>
    Lorsqu'un sous-masque est quantifié avec un nombre minimum
@@ -1728,7 +1768,9 @@
    n'est pas suffisant. En d'autres termes, il faut qu'il existe
    suffisamment de parenthèses ouvrantes à gauche
    de la référence, surtout si la référence
-   est inférieure à 10. Reportez-vous à la section "antislash"
+   est inférieure à 10. Une "référence arrière vers l'avant" peut avoir du sens
+   lorsqu'une répétition est isolée et que le sous masque à droite a participé
+   dans l'itération précédente. Reportez-vous à la section "antislash"
    pour avoir de plus amples détails à propos du nombre de
    chiffres qui suivent l'antislash.
   </para>
@@ -2102,10 +2144,12 @@
    Les deux formes possibles de sous-masques conditionnels sont
   </para>
   
-  <literallayout>
+ <informalexample>
+   <programlisting>
    (?(condition)masque positif)
    (?(condition) masque positif | masque négatif)
-  </literallayout>
+  </programlisting>
+  </informalexample>
   <para>
    Si les conditions sont satisfaites, le masque positif est utilisé,
    sinon, le masque négatif est utilisé, si présent.
@@ -2150,10 +2194,12 @@
    alternatives en seconde ligne :
   </para>
   
-  <literallayout>
+  <informalexample>
+   <programlisting>
    (?(?=[^a-z]*[a-z])
    \d{2}-[a-z]{3}-\d{2}  |  \d{2}-\d{2}-\d{2} )
-  </literallayout>
+   </programlisting>
+  </informalexample>
   <para>
    La condition est une assertion avant positive, qui recherche une
    séquence optionnelle de caractères non-lettre. En d'autres
@@ -2254,7 +2300,7 @@
   </para>
   
   <para>
-   Depuis PHP 4.3.3, <literal>(?1)</literal>, <literal>(?2)</literal> et suivant
+   <literal>(?1)</literal>, <literal>(?2)</literal> et suivants
    peuvent être également utilisés pour les sous masques récursifs. Il est également
    possible d'utiliser les sous masques nommés : <literal>(?P&gt;foo)</literal> ou
    <literal>(?P&amp;name)</literal>.
