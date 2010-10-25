@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: dams Status: ready -->
+<!-- EN-Revision: 2d567b44c9fe64702bab9f8a1811c186dd4371c7 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
  <chapter xml:id="language.references" xmlns="http://docbook.org/ns/docbook">
@@ -64,12 +64,6 @@ $a =& $b;
    </para>
    <note>
     <para>
-     Si un tableau par référence est copié, ses valeurs ne sont pas déréférencées.
-     Cela est valide également pour les tableaux passés par valeur aux fonctions.
-    </para>
-   </note>
-   <note>
-    <para>
      Si vous assignez, passez ou retournez une variable indéfinie par référence,
      elle sera créée automatiquement.
      <example>
@@ -109,7 +103,13 @@ $foo =& find_var($bar);
     </informalexample>
     Depuis PHP 5, <link linkend="language.oop5.basic.new">new</link> retourne
     une référence automatiquement, donc, l'utilisation de <literal>=&amp;</literal>
-    dans ce contexte est obsolète et produit un message de niveau <constant>E_STRICT</constant>.
+    dans ce contexte est obsolète et produit un message de niveau <constant>E_DEPRECATED</constant>
+    à partir de PHP 5.3, et un message <constant>E_STRICT</constant> dans les versions
+     antérieures. (Techniquement, la difference est qu'en PHP 5, les objets comme les
+     ressources sont des pointeurs vers la donnée réelle. La notion de "référence" ici
+     est donc un peu différente (alias). Pour plus d'informations, voyez
+     <link linkend="language.oop5.references">Les objects et les références</link>.)
+    
     </para>
     <warning>
      <para>
@@ -168,6 +168,58 @@ echo $ref; // 3 - le dernier élément du tableau itéré
      </example>
     </para>
    </note>
+    <para>
+     Même si ce n'est pas strictement une assignation par référence, les expressions
+     créees avec la structure de langage
+     <link linkend="function.array"><literal>array()</literal></link> peuvent aussi
+     se comporter comme tel en préfixant par <literal>&amp;</literal> l'élément du tableau.
+     Exemple:
+     <informalexample>
+      <programlisting role="php">
+<![CDATA[
+<?php
+$a = 1;
+$b = array(2, 3);
+$arr = array(&$a, &$b[0], &$b[1]);
+$arr[0]++; $arr[1]++; $arr[2]++;
+/* $a == 2, $b == array(3, 4); */
+?>
+]]>
+      </programlisting>
+     </informalexample>
+    </para>
+    <para>
+     Notez par contre que les références à l'intérieur des tableaux peuvent s'avérer
+     dangereuses. Utiliser une assignation normale (pas par référence) avec une
+     référence à droite de l'opérateur ne transforme pas la partie gauche de l'expression
+     en référence, mais les références dans les tableaux sont préservées. Ceci
+     s'applique aussi aux appels de fonctions avec un tableau passé par valeur.
+     Exemple:
+     <informalexample>
+      <programlisting role="php">
+<![CDATA[
+<?php
+/* Assignation de variables scalaires */
+$a = 1;
+$b =& $a;
+$c = $b;
+$c = 7; //$c n'est pas une référence; pas de changement à $a ou $b
+
+/* Assignation de variables de type tableau */
+$arr = array(1);
+$a =& $arr[0]; //$a et $arr[0] sont des références vers la même valeur
+$arr2 = $arr; //PAS une assignation par référence!
+$arr2[0]++;
+/* $a == 2, $arr == array(2) */
+/* Les contenus de $arr sont changés même si ce n'était pas une référence! */
+?>
+]]>
+      </programlisting>
+     </informalexample>
+     In other words, the reference behavior of arrays is defined in an
+     element-by-element basis; the reference behavior of individual elements
+     is dissociated from the reference status of the array container.
+    </para>
    </sect2>
    <sect2 xml:id="language.references.whatdo.pass">
     <title>Passage par référence</title>
