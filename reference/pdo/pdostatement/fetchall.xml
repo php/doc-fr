@@ -15,7 +15,7 @@
   <methodsynopsis>
    <type>array</type><methodname>PDOStatement::fetchAll</methodname>
    <methodparam choice="opt"><type>int</type><parameter>fetch_style</parameter><initializer>PDO::FETCH_BOTH</initializer></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>column_index</parameter><initializer>0</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>fetch_argument</parameter><initializer>0</initializer></methodparam>
    <methodparam choice="opt"><type>array</type><parameter>ctor_args</parameter><initializer>array()</initializer></methodparam>
   </methodsynopsis>
 
@@ -34,29 +34,48 @@
       </para>
       <para>
        Pour retourner un tableau contenant toutes les valeurs d'une seule colonne
-       depuis le jeu de résultats, spécifiez <literal>PDO::FETCH_COLUMN</literal>.
+       depuis le jeu de résultats, spécifiez <constant>PDO::FETCH_COLUMN</constant>.
        Vous pouvez spécifier quelle colonne vous voulez avec le paramètre
        <parameter>column-index</parameter>.
       </para>
       <para>
        Pour récupérer uniquement les valeurs uniques d'une seule colonne depuis
-       le jeu de résultats, utilisez <literal>PDO::FETCH_COLUMN</literal> avec
-       <literal>PDO::FETCH_UNIQUE</literal>.
+       le jeu de résultats, utilisez <constant>PDO::FETCH_COLUMN</constant> avec
+       <constant>PDO::FETCH_UNIQUE</constant>.
       </para>
       <para>
        Pour retourner un tableau associatif groupé par les valeurs d'une
-       colonne spécifique, utilisez <literal>PDO::FETCH_COLUMN</literal> avec
-       <literal>PDO::FETCH_GROUP</literal>.
+       colonne spécifique, utilisez <constant>PDO::FETCH_COLUMN</constant> avec
+       <constant>PDO::FETCH_GROUP</constant>.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>column_index</parameter></term>
+     <term><parameter>fetch_argument</parameter></term>
      <listitem>
       <para>
-       Retourne la colonne indiquée où la valeur de
-       <parameter>fetch_style</parameter> est
-       <literal>PDO::FETCH_COLUMN</literal>.
+       Cet argument prend une valeur différente en fonction de la valeur de
+       l'argument <parameter>fetch_style</parameter>:
+       <itemizedlist>
+        <listitem>
+         <para>
+          <constant>PDO::FETCH_COLUMN</constant>: Retourne le numéro de la colonne
+          demandée (indéxée à partir de 0).
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <constant>PDO::FETCH_CLASS</constant>: Retourne une instance de la classe désirée.
+          Les colonnes sélectionnées sont liées aux attributs de la classe.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <constant>PDO::FETCH_FUNC</constant>: Retourne la valeur de retour de la fonction
+          de rappel précisée.
+         </para>
+        </listitem>
+       </itemizedlist>
       </para>
      </listitem>
     </varlistentry>
@@ -64,7 +83,8 @@
      <term><parameter>ctor_args</parameter></term>
      <listitem>
       <para>
-       Arguments du constructeur personnalisé de la classe.
+       Arguments du constructeur personnalisé de la classe lorsque l'argument <parameter>fetch_style</parameter> 
+       est à <constant>PDO::FETCH_CLASS</constant>.
       </para>
      </listitem>
     </varlistentry>
@@ -109,7 +129,7 @@ print_r($result);
 ?>
 ]]>
     </programlisting>
-    &example.outputs;
+    &example.outputs.similar;
     <screen>
 <![CDATA[
 Récupération de toutes les lignes d'un jeu de résultats :
@@ -154,7 +174,7 @@ var_dump($result);
 ?>
 ]]>
     </programlisting>
-    &example.outputs;
+    &example.outputs.similar;
     <screen>
 <![CDATA[
 Array(3)
@@ -195,7 +215,7 @@ var_dump($sth->fetchAll(PDO::FETCH_COLUMN|PDO::FETCH_GROUP));
 ?>
 ]]>
     </programlisting>
-    &example.outputs;
+    &example.outputs.similar;
     <screen>
 <![CDATA[
 array(3) {
@@ -220,6 +240,90 @@ array(3) {
     }
 }
 
+]]>
+    </screen>
+   </example>
+   <example><title>Instancier une classe pour chaque résultat</title>
+    <para>
+     L'exemple suivant montre le comportement de
+     <constant>PDO::FETCH_CLASS</constant>.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class fruit {
+    public $name;
+    public $colour;
+}
+
+$sth = $dbh->prepare("SELECT name, colour FROM fruit");
+$sth->execute();
+
+$result = $sth->fetchAll(PDO::FETCH_CLASS, "fruit");
+var_dump($result);
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+array(3) {
+  [0]=>
+  object(fruit)#1 (2) {
+    ["name"]=>
+    string(5) "apple"
+    ["colour"]=>
+    string(5) "green"
+  }
+  [1]=>
+  object(fruit)#2 (2) {
+    ["name"]=>
+    string(4) "pear"
+    ["colour"]=>
+    string(6) "yellow"
+  }
+  [2]=>
+  object(fruit)#3 (2) {
+    ["name"]=>
+    string(10) "watermelon"
+    ["colour"]=>
+    string(4) "pink"
+  }
+}
+]]>
+    </screen>
+   </example>
+   <example><title>Appel d'une fonction pour chaque résultat</title>
+    <para>
+     L'exemple suivant montre le comportement de
+     <constant>PDO::FETCH_FUNC</constant>.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+function fruit($name, $colour) {
+    return "{$name}: {$colour}";
+}
+
+$sth = $dbh->prepare("SELECT name, colour FROM fruit");
+$sth->execute();
+
+$result = $sth->fetchAll(PDO::FETCH_FUNC, "fruit");
+var_dump($result);
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+array(3) {
+  [0]=>
+  string(12) "apple: green"
+  [1]=>
+  string(12) "pear: yellow"
+  [2]=>
+  string(16) "watermelon: pink"
+}
 ]]>
     </screen>
    </example>
