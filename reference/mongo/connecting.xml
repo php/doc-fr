@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 13d9a87041ee11fbffc2846d5c643344c9bc5d58 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 7214d04a66fb2e93d8156f8995b01b858e12e3f8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <section xml:id="mongo.connecting" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -35,17 +35,16 @@ $db->authenticate($username, $password);
   </programlisting>
   <para>
    Mais cela implique un inconvénient majeur : si la connexion à la base de
-   données est interrompue et puis, recréée, la connexion ne sera plus
+   données est interrompue et recréée, la connexion ne sera plus
    authentifiée.
   </para>
   <para>
    Si vous utilisez le format de connexion décrit dans la méthode
    <function>Mongo::__construct</function>, la base de données authentifiera
-   la connexion aussitôt la connexion établit, et une ré-authentification
-   sera effectuée si la connexion est ré-établit.
+   à la connexion et ré-authentifiera si la connexion est à nouveau établie.
   </para>
   <para>
-   Ceci est équivalent au code ci-dessous, mise à part que les reconnexions
+   Ceci est équivalent au code ci-dessus, mise à part que les reconnexions
    à la base de données seront automatiquement authentifiées :
   </para>
   <programlisting role="php">
@@ -76,43 +75,77 @@ $m = new Mongo("mongodb://${username}:${password}@localhost/blog");
  </section>
 
  <section>
-  <title>Paire de réplication</title>
+  <title>Paires de réplication</title>
   <para>
    Pour se connecter à une paire de réplication, vous devez spécifier
-   les deux côtés de la paire.
+   au moins un membre de la paire et utiliser l'option <literal>replicaSet</literal>.
   </para>
   <programlisting role="php">
 <![CDATA[
 <?php
 
-$m = new Mongo("mongodb://localhost:27017,localhost:27018");
+$m = new Mongo("mongodb://localhost:27017", array("replicaSet" => true));
 
 ?>
 ]]>
   </programlisting>
   <para>
-   L'ordre est significatif sachant que le driver PHP interrogera les serveurs
-   de base de données pour trouver quel est le maître. A partir du moment où
-   au moins un serveur est en fonctionnement et qu'il est le maître, la connexion
-   réussira. Si aucun n'est pas en fonctionnement, ou bien qu'il n'y a pas de maître,
-   une exception <classname>MongoConnectionException</classname> sera émise.
+   Les versions 1.0.9+ du pilote sont requises pour connecter une paire
+   (les versions d'avant ne detectent pas correctement le maitre et ne se reconnectent
+   pas correctement.
   </para>
   <para>
-   Si le maître devient indisponible, l'esclave ne deviendra pas maître pendant ces
-   quelques secondes. Pendant ce temps là, le driver ne sera pas capable d'effactuer
-   les opérations sur la base de données tout simplement parce que le maître n'est
-   plus disponible et que seul l'esclave fonctionne. Aussi, si vous tentez d'exécuter
-   n'importe quelle requête (y compris les opérations de type "sûres"), une exception
-   sera émise.
+   Le pilote PHP requêtera le(s) serveur(s) de base de données listé(s) pour vérifier qui
+   est le maitre. Dès qu'il peut se connecter à au moins un hôte listé, et trouver un maitre,
+   la connexion sera réussie. Dans le cas contraire, une
+   <classname>MongoConnectionException</classname> est envoyée.
   </para>
   <para>
-   L'esclave pourra éventuellement réalisé que le maître n'est plus disponible
-   et devenir maître à son tour. A ce moment là, le driver en fera sa base de données
-   de référence sur la connexion courante et continuera les opérations normalement.
+   Si le maître devient indisponible, les esclaves ne deviendront pas maîtres pendant ces
+   quelques secondes. Pendant ce temps là, la connexion ne sera pas capable d'effectuer
+   les opérations sur la base de données (les connexions aux esclaves pourront toujours
+   effectuer des lectures) et une exception sera levée.
+  </para>
+  <para>
+   Une fois le maitre trouvé, essayer des lectures ou écritures permettra au pilote de
+   détecter le nouveau maitre. Le pilote en fera alors sa connexion principale et continuera
+   les opérations normalement.
   </para>
   <para>
    Pour plus d'informations sur les paires de réplication, reportez-vous à la
    <link xlink:href="&url.mongodb.replica;">documentation interne</link>.
+  </para>
+ </section>
+ 
+ <section>
+  <title>Distribuer les lectures</title>
+  <para>
+   Une des tâches des paires de connexion est la possibilité d'effectuer des lectures sur
+   les esclaves pour soulager la charge du maitre. Le pilote ne fera pa cela automatiquement,
+   mais vous pouvez le configurer par vous-même.
+  </para>
+  <para>
+   D'abord, connectez la paire grâce à l'option <literal>replicaSet</literal>. Ceci vous
+   donnera une connexion, utilisez la pour appeler la commande <literal>ismaster</literal>
+   qui listera tous les esclaves de la paire.
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$m = new Mongo("mongodb://localhost:27017", array("replicaSet" => true));
+$result = $m->admin->command(array("ismaster" => 1));
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Maintenant, créez des connexions à des hôtes listés dans les champs "hosts" et "passives"
+   (passives sont des membres de la paire qui ne pourront jamais devenir maitres). N'utilisez
+   pas <literal>replicaSet =&gt; true</literal>, ou alors le pilote trouvera automatiquement
+   le maitre et l'utilisera. Dès lors, vous pouvez distribuer les lectures sur ces connexions.
+   Vérifiez que <literal>MongoCursor::slaveOkay</literal> est à &true; avant de tenter une
+   lecture depuis un esclave.
   </para>
  </section>
 
@@ -172,6 +205,59 @@ for ($i=0; $i<1000; $i++) {
    connexion persistante existante. Sinon, une nouvelle connexion sera créée avec ces
    informations d'identification.
   </para>
+  <para>
+   Les connexions persistantes sont <emphasis>hautement recommandées</emphasis> et
+   devraient être systématiquement utilisées en production sauf si une très bonne raison
+   indique le contraire. La plupart des raisons qui font qu'elles ne sont pas recommandées
+   dans le cas des bases de données relationnelles ne sont pas applicables pour MongoDB.
+  </para>
+  <para>
+   Les connexions persistantes sont utilisées par défaut depuis 1.0.12. Pour créer une
+   connexion non-persistante, vous devez passer <literal>"persist" =&gt; false</literal> à
+   <function>Mongo::__construct</function>.
+  </para>
+ </section>
+ 
+ <section>
+  <title>Support des Domain Socket</title>
+
+  <para>
+   Si vous utilisez MongoDB localement et que vous avez une version 1.0.9 ou supérieure du
+   pilote, vous pouvez vous connecter au travers d'un fichier. MongoDB ouvre automatiquement
+   un fichier de socket au démarrage: /tmp/mongodb-&lt;port&gt;.sock.
+  </para>
+
+  <para>
+   Pour vous connecter au fichier de socket, specifiez le chemin dans la chaine de connexion
+   MongoDB:
+  </para>
+
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$m = new Mongo("mongodb:///tmp/mongo-27017.sock");
+
+?>
+]]>
+  </programlisting>
+
+  <para>
+   Si vous voulez utiliser une authentification sur la connexion avec un fichier de socket,
+   vous devez alors préciser un port égal à 0 comme cela l'analyseur sait où trouver la fin
+   de la chaine de connexion.
+  </para>
+
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$m = new Mongo("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
+
+?>
+]]>
+  </programlisting>
+
  </section>
 
 </section>

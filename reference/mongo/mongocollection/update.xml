@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 1eb68ccad461defb2ed0594193653b9e91c003ff Maintainer: yannick Status: ready -->
+<!-- EN-Revision: e4d35a1e03d267d36168f7b93eb27cc5789372bb Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongocollection.update" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -90,6 +90,17 @@
           <classname>MongoCursorException</classname> si l'insertion a échouée.
          </para>
          <para>
+          Si vous utilisez la réplication et que le maitre a changé, utiliser "safe"
+          fera que le pilote se déconnectera du maitre, enverra une exception, et tentera
+          de trouver un nouveau maitre à l'opération suivante (votre application doit
+          décider si oui ou non l'opération devra être rééssayée sur le nouveau maitre).
+         </para>
+         <para>
+          Si vous n'utilisez <emphasis>pas</emphasis> "safe" avec une paire de réplication
+          et que le maitre change, il n'y aura aucun moyen pour le pilote d'avoir connaissance
+          de ce changement et il continuera des écritures en échec.
+         </para>
+         <para>
           Si <literal>safe</literal> est un entier, l'insertion sera répliquée
           sur l'ensemble des machines avant de retourner le succès de l'opération
           (ou lancera une exception si la réplication échoue). Cette valeur écrase
@@ -170,6 +181,12 @@
         et ajout de l'option "fsync".
        </entry>
       </row>
+       <row>
+       <entry>1.0.11</entry>
+       <entry>
+        Se déconnecte lors d'erreurs "not master" si "safe" est utilisé.
+       </entry>
+      </row>
      </tbody>
     </tgroup>
    </informaltable>
@@ -244,6 +261,36 @@ array(3) {
 }
 ]]>
    </screen>
+   <para>
+    Si <literal>newobj</literal> ne se compose pas d'opérateurs à $, un upsert créera un nouveau
+    document isolé.  Ceci adopte le comportement d'une mise à jour normale, dans laquelle ne
+    pas utiliser d'opérateurs $ implique que tout le document soit écrasé.
+   </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$c->update(array("name" => "joe"), array("username" => "joe312", "createdAt" => new MongoDate()),
+    array("upsert" => true));
+
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+array(3) {
+  ["_id"]=>
+  object(MongoId)#10 (0) {
+  }
+  ["username"]=>
+  string(6) "joe312"
+  ["createdAt"]=>
+  object(MongoDate)#4 (0) {
+  }
+}
+]]>
+   </screen>
   </example>
   <example>
    <title>Exemple avec plusieurs <function>MongoCollection::update</function></title>
@@ -272,8 +319,8 @@ $people->update(array("birthday" => $today), array('$set' => array('gift' => $su
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
-   Documentation de MongoDB <link xlink:href="&url.mongodb.dochub.update;">concernant
-   update</link>.
+   La <link linkend="mongo.updates">documentation PHP sur les mises à jour</link> et la
+   <link xlink:href="&url.mongodb.dochub.update;">documentation core de MongoDB</link>.
   </para>
  </refsect1>
 </refentry>

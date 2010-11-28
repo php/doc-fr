@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: c65fc65d3b7b94b3bd94f66263e739dd66f81743 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 7214d04a66fb2e93d8156f8995b01b858e12e3f8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <phpdoc:classref xml:id="class.mongocursorexception" xmlns:phpdoc="http://php.net/ns/phpdoc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
@@ -29,48 +29,85 @@
    <itemizedlist>
     <listitem>
      <para>
-      <literal>threw away response, please try again</literal>
+      <literal>cannot modify cursor after beginning iteration</literal>
+     </para>
+     <para>
+      Code : 0
+     </para>
+     <para>
+      Vous appelez une méthode qui affecte la requête après l'exécuter. Remettez à zéro
+      le curseur et rééssayez.
+     </para>
+    </listitem>
+    
+    <listitem>
+     <para>
+      Get next batch send errors
      </para>
      <para>
       Code : 1
      </para>
      <para>
-      Ce code est peu probable sur une application ne comportant qu'un seul
-      thread. La base de données envoie une réponse tandis qu'un autre thread
-      attend une réponse, aussi, cet autre thread rejette la réponse. Vous devriez
-      tenter de nouveau la requête, en utilisant moins de threads.
+      Ne peut envoyer la requête à la base. Vérifiez l'état su serveur et du réseau.
      </para>
     </listitem>
+    
     <listitem>
      <para>
-      <emphasis>various</emphasis>
-     </para>
-     <para>
-      Code : 1
-     </para>
-     <para>
-      La réponse issue de la base de données n'a pu être reçue car
-      une connexion avec la base de données n'a pu être établie.
-     </para>
-    </listitem>
-    <listitem>
-     <para>
-      <literal>various</literal>
+      <literal>cursor not found</literal>
      </para>
      <para>
       Code : 2
      </para>
      <para>
-      Causé par le dépassement du délai d'attente de la requête. Ceci retournera
-      un message d'erreur depuis la socket de la bibliothèque C.
+      Le pilote a tenté de récupérer plus de données depuis la base, mais celle-ci n'avait
+      pas assez d'enregistrements. Ceci signifie en général que le curseur a expiré coté serveur
+      après quelques minutes d'inactivité, la base va détruire un curseur. (Voyez
+      <function>MongoCursor::immortal</function> pour plus d'informations).
      </para>
     </listitem>
+    
+    <listitem>
+     <para>
+      Couldn't get response header.
+     </para>
+     <para>
+      Code : 4
+     </para>
+    </listitem>
+ 
+    <listitem>
+     <para>
+      <literal>cursor->buf.pos is null</literal>
+     </para>
+     <para>
+      Code: 3
+     </para>
+     <para>
+      Ceci pourrait indiquer que vous n'avez plus d'espace disponible sur le disque
+      ou une autre erreur relativement peu commune.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      <literal>couldn't get response header</literal>
+     </para>
+     <para>
+      Code: 4
+     </para>
+     <para>
+      Le pilote n'a pas pu obtenir les en-têtes de la réponse depuis la base, il a donc
+      abandonné. Vérifiez l'état du serveur et du réseau.
+     </para>
+    </listitem>
+
     <listitem>
      <para>
       <literal>no db response</literal>
      </para>
      <para>
-      Code : 4
+      Code: 5
      </para>
      <para>
       Ceci n'est pas toujours une erreur, par exemple, la commande
@@ -79,9 +116,13 @@
       la base de données n'a pas réussi à la fournir.
      </para>
     </listitem>
+    
     <listitem>
      <para>
       <literal>bad response length: %d, max: %d, did the db assert?</literal>
+     </para>
+     <para>
+      Code: 6
      </para>
      <para>
       Ceci signifie que la base de données dit que sa réponse est plus
@@ -92,15 +133,72 @@
       est survenue sur la base de données.
      </para>
     </listitem>
+    
+    <listitem>
+     <para>
+      <literal>incomplete header</literal>
+     </para>
+     <para>
+      Code: 7
+     </para>
+     <para>
+      Très peu commun. Apparait si la réponse de la base commence de manière correcte, mais
+      échoue en plein milieu. Probablement un problème réseau.
+     </para>
+    </listitem>
+
     <listitem>
      <para>
       <literal>incomplete response</literal>
      </para>
+      <para>
+      Code: 8
+     </para>
      <para>
       Très rare. Survient si la réponse de la base de données a commencé avec succès,
-      mais s'est interrompue avant la fin.
+      mais s'est interrompue avant la fin. Probablement un problème réseau.
      </para>
     </listitem>
+    
+    <listitem>
+     <para>
+      <literal>couldn't find a response</literal>
+     </para>
+     <para>
+      Code: 9
+     </para>
+     <para>
+      Si la réponse est en cache mais ne peut être trouvée.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      <literal>error getting socket</literal>
+     </para>
+     <para>
+      Code: 10
+     </para>
+     <para>
+      La socket a été fermée ou a rencontré un problème. Le pilote devrait se reconnecter
+      automatiquement (si possible) lors de l'opération suivante.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      <literal>couldn't find reply, please try again</literal>
+     </para>
+     <para>
+      Code: 11
+     </para>
+     <para>
+      Le pilote sauvegarde toutes les réponses de la base qu'il ne peut associer immédiatement
+      à une requête. Cette exception arrive lorsque le pilote a déja passé la réponse à
+      votre requête mais ne peut la trouver dans son cache.
+     </para>
+    </listitem>
+    
     <listitem>
      <para>
       <literal>error getting database response: errstr</literal>
@@ -113,7 +211,73 @@
       du sous-système. Sous Windows, le message d'erreur est préfixé par "WSA".
      </para>
     </listitem>
+    
+    <listitem>
+     <para>
+      <literal>Timeout error</literal>
+     </para>
+     <para>
+      Code: 13
+     </para>
+     <para>
+      Erreur lors de l'attente qu'une requête s'exécute.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      <literal>couldn't send query: &lt;various&gt;</literal>
+     </para>
+     <para>
+      Code: 14
+     </para>
+     <para>
+      Erreur de socket C à l'envoi.
+     </para>
+    </listitem>
    </itemizedlist>
+  </section>
+  
+  <section>
+   <title>Erreur de la base de données</title>
+   <para>
+    Les erreurs de la base devraient toujours déclencher une MongoCursorException. Les
+    messages d'erreur et les codes sont envoyés directement depuis la base et devraient se
+    retrouver dans le journal de la base de données.
+   </para>
+
+   <para>
+    Voici quelques erreurs classiques de base de données:
+   </para>
+
+   <itemizedlist>
+    <listitem>
+     <para>
+      <literal>E11000 duplicate key error index: foo.bar.$X  dup key: { /* ... */ }</literal>
+     </para>
+     <para>
+      Code: 11000
+     </para>
+     <para>
+      Erreur de clé dupliquée.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      <literal>not master</literal>
+     </para>
+     <para>
+      Codes: 10107, 13435, and 10058
+     </para>
+     <para>
+      Erreurs not master, pipée vers la base. Chacune causera une déconnection du pilote
+      et sa recherche d'un nouveau maitre. L'erreur en failover peut ne pas être de type
+      "not master", en fonction du déclenchement du changement de maitre.
+     </para>
+    </listitem>
+   </itemizedlist>
+
   </section>
   <!-- }}} -->
 
