@@ -1,10 +1,187 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: b18d2da96be56a85f8abb9f4045cbd6c40c19203 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: ffc053f6055f5ccc57e44a063c295a8d3063d7d8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <section xml:id="mongo.queries" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Interrogation</title>
+  <section>
+  <title>Distribution des requêtes aux esclaves</title>
+
+  <note>
+   <title>1.1.0+</title>
+   <para>
+    Si vous utilisez un
+    <link xlink:href="&url.mongodb.replica;">jeux de réplication</link>
+    ainsi que la version 1.1.0 ou suivante du driver, le driver peut automatiquement
+    acheminer les lectures sur les esclaves. Ce comportement n'existe pas
+    dans les précédentes versions du driver et  <emphasis>ne peut pas</emphasis>
+    être utilisé avec un serveur principal/esclave normal.
+   </para>
+  </note>
+
+  <para>
+   Par défaut, le driver envoie toutes les requêtes au serveur principal.
+   Si vous définissez l'option "slaveOkay", le driver enverra toutes les
+   requêtes à un serveur non-principal, si c'est possible. L'option
+   "slaveOkay" peut être définie à plusieurs niveaux :
+   <link linkend="mongo.setslaveokay">à la connexion</link>,
+   <link linkend="mongodb.setslaveokay">à la base de données</link>,
+   <link linkend="mongocollection.setslaveokay">à la collection</link>, et
+   <link linkend="mongocursor.slaveokay">au niveau du curseur</link>.
+   Chaque classe hérite de la configuration "slaveOkay" de la classe supérieure, aussi,
+   si vous faîtes :
+  </para>
+
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$db->setSlaveOkay(true);
+$c = $db->myCollection;
+
+$cursor = $c->find();
+
+?>
+]]>
+  </programlisting>
+
+  <para>
+   alors la requête sera exécutée sur un esclave (le collection hérite de
+   "slaveOkay" depuis la base de données et le curseur en hérite de la collection).
+  </para>
+
+  <section>
+   <title>Comment les esclaves sont choisis ?</title>
+
+   <para>
+    Chaque instance de <classname>Mongo</classname> prend son propre esclave,
+    choisi de façon aléatoire depuis les esclaves disponibles. Il en est de
+    même si vous utilisez des connexions persistantes. Aussi, si vous
+    faîtes quelque chose comme :
+   </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+// connexion à un jeu de réplication avec les membres ip0, ip1 et ip2
+// ip0 est le principal, ip1 et ip2 sont les secondaires
+$m1 = new Mongo("mongodb://ip0", array("replicaSet" => true, "persist" => "x"));
+echo "L'esclave m1 est : ".$m1->getSlave()."\n";
+
+// utilisation de la même connexion que $m1
+$m2 = new Mongo("mongodb://ip0", array("replicaSet" => true, "persist" => "x"));
+echo "L'esclave m2 est : ".$m2->getSlave()."\n";
+
+?>
+]]>
+   </programlisting>
+   <para>
+    nous pourrions constater quelque chose comme :
+   </para>
+   <screen>
+L'esclave m1 est : ip2
+L'esclave m2 est : ip1
+   </screen>
+
+   <para>
+    Si nous continuons de créer de nouvelles instances de la classe
+    <classname>Mongo</classname>, nous constaterions toujours une distribution
+    entre ip1 et ip2.
+   </para>
+
+   <para>
+    Les esclaves sont choisis pour chaque instante et ne changent pas
+    (tant qu'aucune erreur n'intervient à votre jeux de réplication).
+   </para>
+
+   <para>
+    Le driver connait le statut courant de ces membres
+    en exécutant la méthode <function>Mongo::getHosts</function>.
+   </para>
+
+   <para>
+    Si aucun serveur non-principal n'est disponible, le driver enverra
+    la lecture vers le serveur principal (y compris si "slaveOkay" est défini).
+    Un serveur est considéré comme accessible si son statut vaut 2 (SECONDARY)
+    et sa santé, 1. Vous pouvez vérifier ces valeurs avec la méthode
+    <function>Mongo::getHosts</function> (quelques champs ont été volontairement
+    supprimés pour plus de lisibilité) :
+   </para>
+   <programlisting>
+<![CDATA[
+Array
+(
+    [ubuntu:27017] => Array
+        (
+            [_id] => 0
+            [name] => ip0
+            [health] => 1
+            [state] => 1
+            [stateStr] => PRIMARY
+        )
+
+    [ubuntu:27019] => Array
+        (
+            [_id] => 2
+            [name] => ip1
+            [health] => 1
+            [state] => 2
+            [stateStr] => SECONDARY
+        )
+
+    [ubuntu:27018] => Array
+        (
+            [_id] => 1
+            [name] => ip2
+            [health] => 1
+            [state] => 2
+            [stateStr] => SECONDARY
+        )
+
+)
+]]>
+   </programlisting>
+   <para>
+    Le jeu ci-dessus contient 2 serveurs accessibles, "ip1" et "ip2".
+    Si ces 2 serveurs deviennent inaccessibles ou obsolètes, les
+    lectures seront dirigées vers "ip0".
+   </para>
+
+   <para>
+    Si vous aimez toucher à ce que vous ne devriez pas, vous pouvez
+    forcer le driver à utiliser un esclave différent en appelant la
+    méthode <function>Mongo::switchSlave</function>. Ceci choisira
+    alternativement un nouvel esclave à utiliser et ne devrait pas
+    être utilisé sauf si vous savez ce que vous faîtes.
+   </para>
+
+  </section>
+  <section>
+   <title>Diverses notes</title>
+
+   <para>
+    Les écritures sont toujours envoyés au serveur principal. Les commandes
+    de base de données, y compris celles en lecture seule, sont également
+    toujours envoyés au serveur principal.
+   </para>
+
+   <para>
+    La santé et le statut d'un esclave est vérifié toutes les 5 secondes ou bien
+    lorsque la prochaine opération intervient après 5 secondes. La configuration
+    est également re-vérifiée lorsque le driver a un problème à atteindre un serveur.
+    Vous pouvez manuellement forcer le driver à mettre à jour le statut
+    en appelant la méthode <function>Mongo::getHosts</function>.
+   </para>
+   
+   <para>
+    Notez qu'un serveur non-principal peut être derrière le principal dans les
+    opérations, ainsi, votre application doit admettre de recevoir des données
+    non mises à jour (ou vous devez utiliser l'option w pour toutes les écritures).
+   </para>
+  </section>
+
+ </section> 
  
  <section>
   <title>Interrogation sur un _id</title>
