@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: jsgoupil Status: ready -->
+<!-- EN-Revision: c1eb0795943a34c005f5c6ab7f5f4a81e556b999 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.win32-start-service-ctrl-dispatcher" xmlns="http://docbook.org/ns/docbook">
@@ -23,11 +23,17 @@
    niveau avec le gestionnaire de contrôle de service.
   </para>
   <para>
-   Une fois démarré, le processus de service devrait continuer à archiver
-   avec le gestionnaire de contrôle de service ce qui permet de déterminer si
-   il doit être terminé. Cela est effectué périodiquement en appelant
-   <function>win32_get_last_control_message</function> et en gérant le code de
-   retour correctement.
+   Une fois démarré, le processus du service doit faire 2 choses. La première
+   est d'indiquer au Service Control Manager que le service est en cours
+   d'exécution. La seconde est d'appeler la fonction
+   <function>win32_set_service_status</function> avec la constante
+   <constant>WIN32_SERVICE_RUNNING</constant>. Si vous avez besoin de
+   lancer des processus longs avant que le service ne soit lancé, alors
+   vous pouvez utiliser la constante <constant>WIN32_SERVICE_START_PENDING</constant>.
+   La seconde est de continuer à vérifier en utilisant le Service Control Manager
+   sachant qu'il peut déterminer si le service se termine ou non. Ceci consiste
+   à appeler, périodiquement, la fonction <function>win32_get_last_control_message</function>
+   et à traiter le code retourné.
   </para>
  </refsect1>
 
@@ -51,7 +57,7 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   &return.success;
+   &win32service.success.false.error;
   </para>
  </refsect1>
 
@@ -70,6 +76,13 @@ if (!win32_start_service_ctrl_dispatcher('dummyphp')) {
   die("Je ne fonctionne probablement pas sous le gestionnaire de contrôle de service");
 }
 
+win32_set_service_status(WIN32_SERVICE_START_PENDING);
+
+// Quelques processus longs à récupérer pendant que le service fonctionne.
+
+win32_set_service_status(WIN32_SERVICE_RUNNING);
+
+
 while (WIN32_SERVICE_CONTROL_STOP != win32_get_last_control_message()) {
   # effectuer votre travail ici.
   # essayez de ne pas prendre plus de 30 secondes avant de retourner au
@@ -85,7 +98,9 @@ while (WIN32_SERVICE_CONTROL_STOP != win32_get_last_control_message()) {
   &reftitle.seealso;
   <para>
    <simplelist>
+    <member><function>win32_set_service_status</function></member>
     <member><function>win32_get_last_control_message</function></member>
+    <member>Les <link linkend="win32service.constants.errors">codes erreur Win32</link></member>
    </simplelist>
   </para>
  </refsect1>
