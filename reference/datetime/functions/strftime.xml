@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: cb18b62069d314b4a38c7b8a2b87ab325b2b311b Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 38b8faf1805fcaf24456c82563b2c8fcd599da81 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.strftime" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -337,6 +337,12 @@
         manière d'écrire un code cross-plateforme.
        </simpara>
       </warning>
+      <warning>
+       <simpara>
+        <emphasis>Mac OS X uniquement :</emphasis> Le modificateur <literal>%P</literal>
+        n'est pas supporté sous l'implémentation de Mac OS X de cette fonction.
+       </simpara>
+      </warning>
      </listitem>
     </varlistentry>
     
@@ -468,23 +474,171 @@ echo "1/3/2005 - %V,%G,%Y = " . strftime("%V,%G,%Y",strtotime("1/3/2005")) . "\n
   </para>
   <para>
    <example>
-    <title>%e fonctionnant sous toute plateforme</title>
+    <title><literal>%e</literal> fonctionnant sous toute plateforme</title>
     <programlisting role="php">
 <![CDATA[
 <?php
 
-$format = '%e';
+// Jan 1 : résultats dans : '%e%1%' (%%, e, %%, %e, %%)
+$format = '%%e%%%e%%';
 
-// Vérifie si Windows et remplace les %e existants
-if (strtoupper(substr(PHP_OS, 0, 3)) == 'WIN' && strpos($format, '%e') !== false)
-{
-   $format = str_replace('%e', '%#d', $format);
+// Vérifie sous Windows, pour trouver et remplacer le modificateur %e 
+// correctement
+if (strtoupper(substr(PHP_OS, 0, 3)) == 'WIN') {
+    $format = preg_replace('#(?<!%)((?:%%)*)%e#', '\1%#d', $format);
 }
 
 echo strftime($format);
 ?>
 ]]>
     </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Affiche tous les formats connus ou non.</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Décrit les formats.
+$strftimeFormats = array(
+    'A' => 'Une représentation textuelle complète du jour',
+    'B' => 'Nom du mois complet, basé sur la locale',
+    'C' => 'Représentation sur 2 chiffres de l\'année (année, divisée par 100, tronquée en entier)',
+    'D' => 'Identique à "%m/%d/%y"',
+    'E' => '',
+    'F' => 'Identique à "%Y-%m-%d"',
+    'G' => 'La version complète, sur 4 chiffres de %g',
+    'H' => 'Une représentation sur 2 chiffres de l\'heure au format 24-heures',
+    'I' => 'Une représentation sur 2 chiffres de l\'heure au format 12-heures',
+    'J' => '',
+    'K' => '',
+    'L' => '',
+    'M' => 'Une représentation sur 2 chiffres des minutes',
+    'N' => '',
+    'O' => '',
+    'P' => '"am" ou "pm" (en minuscule) basé sur l\'heure courante',
+    'Q' => '',
+    'R' => 'Identique à "%H:%M"',
+    'S' => 'Une représentation sur 2 chiffres des secondes',
+    'T' => 'Identique à "%H:%M:%S"',
+    'U' => 'Numéro de la semaine pour l\'année courante, en commençant par le premier Dimanche comme première semaine',
+    'V'  => 'ISO-8601:1988 numéro de la semaine de l\'année courante, commençant par la première semaine de l\'année avec au moins 4 jours de semaine, avec le Lundi comme début de semaine',
+    'W' => 'Une représentation numérique de la semaine de l\'année, en commençant par le premier Lundi comme première semaine',
+    'X' => 'Représentation préférée pour l\'heure, basée sur la locale, sans la date',
+    'Y' => 'Une représentation sur 4 chiffres de l\'année',
+    'Z' => 'L\'abréviation du décalage horaire, non fournie par %z (dépend sur système d\'exploitation)',
+    'a' => 'L\'abréviation de la représentation textuelle du jour',
+    'b' => 'L\'abréviation du nom du mois, basée sur la locale',
+    'c' => 'Timestamp préféré basé sur la locale',
+    'd' => 'Jour du mois sur 2 chiffres (avec le zéro initial)',
+    'e' => 'Jour du mois, avec un espace précédent un seul chiffre',
+    'f' => '',
+    'g' => 'Une représentation sur 2 chiffres de l\'année au format ISO-8601:1988 (voir %V)',
+    'h' => 'Abréviation du nom du mois, basée sur la locale (alias de %b)',
+    'i' => '',
+    'j' => 'Jour de l\'année, sur 3 chiffres avec zéro initial',
+    'k' => '',
+    'l' => 'Heure, au format 12-heures, avec un espace précédent un seul chiffre',
+    'm' => 'Une représentation du mois sur 2 chiffres',
+    'n' => 'Un caractère de nouvelle ligne ("\n")',
+    'o' => '',
+    'p' => '"AM" ou "PM" (en majuscule) basé sur l'heure courante',
+    'q' => '',
+    'r' => 'Identique à "%I:%M:%S %p"',
+    's' => 'Timestamp par rapport à l\'époque Unix',
+    't' => 'Un caractère de tabulation ("\t")',
+    'u' => 'Représentation numérique du jour de la semaine au format ISO-8601',
+    'v' => '',
+    'w' => 'Représentation numérique du jour de la semaine',
+    'x' => 'Représentation préférée de la date, basée sur la locale, sans l\'heure',
+    'y' => 'Représentation de l\'année sur 2 chiffres',
+    'z' => 'Soit le décalage horaire depuis UTC ou son abréviation (suivant le système d\'exploitation)',
+    '%' => 'Un caractère pourcentage ("%")',
+);
+
+// Résultats.
+$strftimeValues = array();
+
+// 2value les formats tout en supprimant les erreurs.
+foreach($strftimeFormats as $format => $description){
+    if (False !== ($value = @strftime("%{$format}"))){
+        $strftimeValues[$format] = $value;
+    }
+}
+
+// Trouve la valeur la plus longue.
+$maxValueLength = 2 + max(array_map('strlen', $strftimeValues));
+
+// Affiche tous les formats connus.
+foreach($strftimeValues as $format => $value){
+    echo "Format connu : '{$format}' = ", str_pad("'{$value}'", $maxValueLength), " ( {$strftimeFormats[$format]} )\n";
+}
+
+// Affiche tous les formats non connus.
+foreach(array_diff_key($strftimeFormats, $strftimeValues) as $format => $description){
+    echo "Format inconnu : '{$format}'   ", str_pad(' ', $maxValueLength), ($description ? " ( {$description} )" : ''), "\n";
+}
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+Format connu : 'A' = 'Friday'            ( Une représentation textuelle complète du jour )
+Format connu : 'B' = 'December'          ( Nom du mois complet, basé sur la locale )
+Format connu : 'H' = '11'                ( Une représentation sur 2 chiffres de l'heure au format 24-heures )
+Format connu : 'I' = '11'                ( Une représentation sur 2 chiffres de l'heure au format 12-heures )
+Format connu : 'M' = '24'                ( Une représentation sur 2 chiffres des minutes )
+Format connu : 'S' = '44'                ( Une représentation sur 2 chiffres des secondes )
+Format connu : 'U' = '48'                ( Numéro de la semaine pour l'année courante, en commençant par le premier Dimanche comme première semaine )
+Format connu : 'W' = '48'                ( Une représentation numérique de la semaine de l'année, en commençant par le premier Lundi comme première semaine )
+Format connu : 'X' = '11:24:44'          ( Représentation préférée pour l'heure, basée sur la locale, sans la date )
+Format connu : 'Y' = '2010'              ( Une représentation sur 4 chiffres de l'année )
+Format connu : 'Z' = 'GMT Standard Time' ( L'abréviation du décalage horaire, non fournie par %z (dépend sur système d'exploitation )
+Format connu : 'a' = 'Fri'               ( L'abréviation de la représentation textuelle du jour )
+Format connu : 'b' = 'Dec'               ( L'abréviation du nom du mois, basée sur la locale )
+Format connu : 'c' = '12/03/10 11:24:44' ( Timestamp préféré basé sur la locale )
+Format connu : 'd' = '03'                ( Jour du mois sur 2 chiffres (avec le zéro initial) )
+Format connu : 'j' = '337'               ( Jour de l'année, sur 3 chiffres avec zéro initial )
+Format connu : 'm' = '12'                ( Une représentation du mois sur 2 chiffres )
+Format connu : 'p' = 'AM'                ( "AM" ou "PM" (en majuscule) basé sur l'heure courante )
+Format connu : 'w' = '5'                 ( Représentation numérique du jour de la semaine )
+Format connu : 'x' = '12/03/10'          ( Représentation préférée de la date, basée sur la locale, sans l'heure )
+Format connu : 'y' = '10'                ( Représentation de l'année sur 2 chiffres )
+Format connu : 'z' = 'GMT Standard Time' ( Soit le décalage horaire depuis UTC ou son abréviation (suivant le système d'exploitation) )
+Format connu : '%' = '%'                 ( Un caractère pourcentage ("%") )
+Format inconnu : 'C'                       ( Représentation sur 2 chiffres de l'année (année, divisée par 100, tronquée en entier) )
+Format inconnu : 'D'                       ( Identique à "%m/%d/%y" )
+Format inconnu : 'E'
+Format inconnu : 'F'                       ( Identique à "%Y-%m-%d" )
+Format inconnu : 'G'                       ( La version complète, sur 4 chiffres de %g )
+Format inconnu : 'J'
+Format inconnu : 'K'
+Format inconnu : 'L'
+Format inconnu : 'N'
+Format inconnu : 'O'
+Format inconnu : 'P'                       ( "am" ou "pm" (en minuscule) basé sur l'heure courante )
+Format inconnu : 'Q'
+Format inconnu : 'R'                       ( Identique à "%H:%M" )
+Format inconnu : 'T'                       ( Identique à "%H:%M:%S" )
+Format inconnu : 'V'                       ( ISO-8601:1988 numéro de la semaine de l'année  courante, commençant par la première semaine de l'année avec au moins 4  jours de semaine, avec le Lundi comme début de semaine )
+Format inconnu : 'e'                       ( Jour du mois, avec un espace précédent un seul chiffre )
+Format inconnu : 'f'
+Format inconnu : 'g'                       ( Une représentation sur 2 chiffres de l'année au format ISO-8601:1988 (voir %V) )
+Format inconnu : 'h'                       ( Abréviation du nom du mois, basée sur la locale (alias de %b) )
+Format inconnu : 'i'
+Format inconnu : 'k'
+Format inconnu : 'l'                       ( Heure, au format 12-heures, avec un espace précédent un seul chiffre )
+Format inconnu : 'n'                       ( Un caractère de nouvelle ligne ("\n") )
+Format inconnu : 'o'
+Format inconnu : 'q'
+Format inconnu : 'r'                       ( Identique à "%I:%M:%S %p" )
+Format inconnu : 's'                       ( Timestamp par rapport à l'époque Unix )
+Format inconnu : 't'                       ( Un caractère de tabulation ("\t") )
+Format inconnu : 'u'                       ( Représentation numérique du jour de la semaine au format ISO-8601 )
+Format inconnu : 'v'
+]]>
+    </screen>
    </example>
   </para>
  </refsect1>
