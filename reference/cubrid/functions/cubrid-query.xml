@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: b78db5931b2265723702694343cca6ad0b36c900 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<refentry xml:id="function.cubrid-query" xmlns="http://docbook.org/ns/docbook">
+ <refnamediv>
+  <refname>cubrid_query</refname>
+  <refpurpose>Envoi une requête CUBRID</refpurpose>
+ </refnamediv>
+ 
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>resource</type><methodname>cubrid_query</methodname>
+   <methodparam><type>string</type><parameter>query</parameter></methodparam>
+   <methodparam choice="opt"><type>resource</type><parameter>conn_identifier</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   La fonction <function>cubrid_query</function> envoie une seule requête
+   (l'envoi de plusieurs requête n'est pas supporté) à la base de données
+   active sur le serveur associé avec le paramètre <parameter>conn_identifier</parameter>
+   fourni.
+  </para>
+ </refsect1>
+ 
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>query</parameter></term>
+     <listitem>
+      <para>
+       Une requête SQL
+      </para>
+      <para>
+       Les données de la requête doivent être
+       <link linkend="function.cubrid-real-escape-string">proprement échappées</link>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>conn_identifier</parameter></term>
+     <listitem>
+      <para>
+       La connexion CUBRID. Si l'identifiant de connexion n'est pas
+       spécifié, la dernière connexion ouverte avec la fonction
+       <function>cubrid_connect</function> sera utilisée.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+ 
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Pour les requête de type SELECT, SHOW, DESCRIBE, EXPLAIN et autres requêtes
+   retournant un jeu de résultats, <function>cubrid_query</function> retourne
+   une &resource; en cas de succès, ou &false; si une erreur survient.
+  </para>
+  <para>
+   Pour les autres requêtes (INSERT, UPDATE, DELETE, DROP, etc.),
+   <function>cubrid_query</function> retourne &true; en cas de succès, ou &false;
+   si une erreur survient.
+  </para>
+  <para>
+   La ressource de résultats retournée doit être passée à la fonction
+   <function>cubrid_fetch_array</function>, et autres fonctions gérants
+   les ressources de résultats, afin d'accéder aux données retournées.
+  </para>
+  <para>
+   Utilisez la fonction <function>cubrid_num_rows</function> pour trouver
+   le nombre de lignes retournées par une requête SELECT ou la fonction
+   <function>cubrid_affected_rows</function> afin de savoir le nombre
+   de lignes affectées par une requête DELETE, INSERT, REPLACE, ou UPDATE.
+  </para>
+  <para>
+   La fonction <function>cubrid_query</function> échouera et retournera &false;
+   si l'utilisateur n'a pas l'autorisation d'accéder à la table utilisée dans
+   la requête.
+  </para>
+ </refsect1>
+ 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Requête invalide</title>
+    <para>
+     La requête suivante n'est littéralement pas valide, aussi, la fonction
+     <function>cubrid_query</function> échouera et retournera &false;.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$conn = cubrid_connect('localhost', 33000, 'foo');
+
+$result = cubrid_query('SELECT * WHERE 1=1');
+if (!$result) {
+    die('Requête invalide : ' . cubrid_error());
+}
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Requête valide</title>
+    <para>
+     La requête suivante est valide, aussi, la fonction
+     <function>cubrid_query</function> retournera une ressource.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Ces variables pourraient être fournis par un utilisateur, par exemple
+$firstname = 'fred';
+$lastname  = 'fox';
+
+$conn = cubrid_connect('localhost', 33000, 'foo');
+
+// Requête formelle
+// C'est la meilleure façon d'exécuter une requête SQL
+// Pour plus d'exemples, voir la fonction cubrid_real_escape_string()
+$query = sprintf("SELECT firstname, lastname, address, age FROM friends WHERE firstname='%s' AND lastname='%s'",
+cubrid_real_escape_string($firstname),
+cubrid_real_escape_string($lastname));
+
+// Exécution de la requête
+$result = cubrid_query($query);
+
+// Vérifie le résultat
+// Montre la requête envoyée à CUBRID, et l'erreur. Utile pour le débogage.
+if (!$result) {
+    $message  = 'Requête invalide : ' . cubrid_error() . "\n";
+    $message .= 'Requête complète : ' . $query;
+    die($message);
+}
+
+// Utilisation du résultat
+// Le fait de tenter d'afficher $result ne vous donnera pas accès à l'information de la ressource
+// Une des fonctions de traitement des résultats CUBRID doit être utilisée
+// Voir aussi cubrid_result(), cubrid_fetch_array(), cubrid_fetch_row(), etc.
+while ($row = cubrid_fetch_assoc($result)) {
+    echo $row['firstname'];
+    echo $row['lastname'];
+    echo $row['address'];
+    echo $row['age'];
+}
+
+// Libère les ressources associées avec le jeu de résultats
+// Ceci est fait automatiquement à la fin du script
+cubrid_free_result($result);
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+ 
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>cubrid_connect</function></member>
+    <member><function>cubrid_error</function></member>
+    <member><function>cubrid_real_escape_string</function></member>
+    <member><function>cubrid_result</function></member>
+    <member><function>cubrid_fetch_assoc</function></member>
+    <member><function>cubrid_unbuffered_query</function></member>
+   </simplelist>
+  </para>
+ </refsect1>
+ 
+</refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
