@@ -1,51 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
+<!-- EN-Revision: 307984 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <chapter xml:id="gearman.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  &reftitle.examples;
  <section xml:id="gearman.examples-reverse">
   <para>
    <example>
-    <title>Basic Gearman client and worker</title>
+    <title>Client et agen Gearman simple</title>
     <para>
-     This example shows a very simple client and worker.  The client sends a string
-     to the job server, and the worker reverses the string and sends it back.
-     The job is performed synchronously.
+     Cet exemple montre un client et un agent simple. Le client
+     envoie une &string; au serveur de travaux, et l'agent inverse
+     la &string; et la retourne. Le travail est exécuté de façon synchronisée.
     </para>
     <programlisting role="php">
 <![CDATA[
 <?php
 
-# Create our client object.
+# Crée un nouveau client.
 $gmclient= new GearmanClient();
 
-# Add default server (localhost).
+# Ajoute un serveur par défaut (localhost).
 $gmclient->addServer();
 
-echo "Sending job\n";
+echo "Envoie du travail\n";
 
-# Send reverse job
+# Envoie le travail d'inversion
 do
 {
   $result = $gmclient->do("reverse", "Hello!");
 
-  # Check for various return packets and errors.
+  # Vérifie les paquets et les erreurs retournés.
   switch($gmclient->returnCode())
   {
     case GEARMAN_WORK_DATA:
-      echo "Data: $result\n";
+      echo "Données : $result\n";
       break;
     case GEARMAN_WORK_STATUS:
       list($numerator, $denominator)= $gmclient->doStatus();
-      echo "Status: $numerator/$denominator complete\n";
+      echo "Statut : $numerator/$denominator complete\n";
       break;
     case GEARMAN_WORK_FAIL:
-      echo "Failed\n";
+      echo "Échec\n";
       exit;
     case GEARMAN_SUCCESS:
       break;
     default:
-      echo "RET: " . $gmclient->returnCode() . "\n";
+      echo "Code retourné : " . $gmclient->returnCode() . "\n";
       exit;
   }
 }
@@ -58,53 +60,53 @@ while($gmclient->returnCode() != GEARMAN_SUCCESS);
 <![CDATA[
 <?php
 
-echo "Starting\n";
+echo "Début\n";
 
-# Create our worker object.
+# Crée un nouvel agent.
 $gmworker= new GearmanWorker();
 
-# Add default server (localhost).
+# Ajoute un serveur par défaut (localhost).
 $gmworker->addServer();
 
-# Register function "reverse" with the server. Change the worker function to
-# "reverse_fn_fast" for a faster worker with no output.
+# Enregistre la fonction "reverse" avec le serveur. Modifie la fonction
+# de l'agent en "reverse_fn_fast" pour en améliorer la rapidité avec aucun affichage.
 $gmworker->addFunction("reverse", "reverse_fn");
 
-print "Waiting for job...\n";
+print "Attente d'un travail...\n";
 while($gmworker->work())
 {
   if ($gmworker->returnCode() != GEARMAN_SUCCESS)
   {
-    echo "return_code: " . $gmworker->returnCode() . "\n";
+    echo "return_code : " . $gmworker->returnCode() . "\n";
     break;
   }
 }
 
 function reverse_fn($job)
 {
-  echo "Received job: " . $job->handle() . "\n";
+  echo "Travail reçu : " . $job->handle() . "\n";
 
   $workload = $job->workload();
   $workload_size = $job->workloadSize();
 
-  echo "Workload: $workload ($workload_size)\n";
+  echo "Charge de l'agent : $workload ($workload_size)\n";
 
-  # This status loop is not needed, just showing how it works
+  # Cette boucle n'est pas nécessaire, mais montre simplement le fonctionnement
   for ($x= 0; $x < $workload_size; $x++)
   {
-    echo "Sending status: " . ($x + 1) . "/$workload_size complete\n";
+    echo "Envoie du statut : " . ($x + 1) . "/$workload_size complete\n";
     $job->sendStatus($x, $workload_size);
     sleep(1);
   }
 
   $result= strrev($workload);
-  echo "Result: $result\n";
+  echo "Résultat : $result\n";
 
-  # Return what we want to send back to the client.
+  # On retourne ce que l'on veut au client.
   return $result;
 }
 
-# A much simpler and less verbose version of the above function would be:
+# Une version plus simple et moins verbeuse de la fonction ci-dessus pourrait être :
 function reverse_fn_fast($job)
 {
   return strrev($job->workload());
@@ -117,31 +119,31 @@ function reverse_fn_fast($job)
     <screen>
 <![CDATA[
 % php reverse_worker.php
-Starting
-Waiting for job...
-Received job: H:foo.local:36
-Workload: Hello! (6)
-Sending status: 1/6 complete
-Sending status: 2/6 complete
-Sending status: 3/6 complete
-Sending status: 4/6 complete
-Sending status: 5/6 complete
-Sending status: 6/6 complete
-Result: !olleH
+Début
+Attente d'un travail...
+Travail reçu : H:foo.local:36
+Charge de l'agent : Hello! (6)
+Envoie du statut : 1/6 complete
+Envoie du statut : 2/6 complete
+Envoie du statut : 3/6 complete
+Envoie du statut : 4/6 complete
+Envoie du statut : 5/6 complete
+Envoie du statut : 6/6 complete
+Résultat : !olleH
 ]]>
     </screen>
     <screen>
 <![CDATA[
 % php reverse_client.php
-Starting
-Sending job
-Status: 1/6 complete
-Status: 2/6 complete
-Status: 3/6 complete
-Status: 4/6 complete
-Status: 5/6 complete
-Status: 6/6 complete
-Success: !olleH
+Début
+Envoie du travail
+Statut : 1/6 complete
+Statut : 2/6 complete
+Statut : 3/6 complete
+Statut : 4/6 complete
+Statut : 5/6 complete
+Statut : 6/6 complete
+Succès : !olleH
 ]]>
     </screen>
    </example>
@@ -150,33 +152,34 @@ Success: !olleH
  <section xml:id="gearman.examples-reverse-bg">
   <para>
    <example>
-    <title>Basic Gearman client and worker, background</title>
+    <title>Client et agent Gearman simple, en arrière-plan</title>
     <para>
-     This example shows a very simple client and worker.  The client sends a string
-     to the job server as a background job, and the worker reverses the string.
-     Note that since the work is performed asynchronously, the client does not
-     wait for the job to complete and exits (and hence the client never receives the results).
+     Cet exemple montre un client et un agent simple. Le client envoie une &string;
+     au serveur de travaux en tant que travail d'arrière-plan, et l'agent
+     renverse la &string;. Notez que vu l'exécution asynchrone de l'agent, le
+     client n'attend pas la fin et qu'il sort (y compris lorsqu'il ne
+     reçoit pas les résultats).
     </para>
     <programlisting role="php">
 <![CDATA[
 <?php
 
-# create our client object
+# Crée un objet client
 $gmclient= new GearmanClient();
 
-# add the default server (localhost)
+# Ajoute un serveur par défaut (localhost)
 $gmclient->addServer();
 
-# run reverse client in the background
+# Exécute le client en arrière-plan
 $job_handle = $gmclient->doBackground("reverse", "this is a test");
 
 if ($gmclient->returnCode() != GEARMAN_SUCCESS)
 {
-  echo "bad return code\n";
+  echo "Mauvais code retour\n";
   exit;
 }
 
-echo "done!\n";
+echo "fait !\n";
 
 ?>
 ]]>
@@ -185,53 +188,53 @@ echo "done!\n";
 <![CDATA[
 <?php
 
-echo "Starting\n";
+echo "Début\n";
 
-# Create our worker object.
+# Crée un nouvel agent
 $gmworker= new GearmanWorker();
 
-# Add default server (localhost).
+# Ajoute un serveur par défaut (localhost).
 $gmworker->addServer();
 
-# Register function "reverse" with the server. Change the worker function to
-# "reverse_fn_fast" for a faster worker with no output.
+# Enregistre la fonction "reverse" sur le serveur. Modifie la fonction de l'agent en
+# "reverse_fn_fast" pour une exécution plus rapide sans affichage.
 $gmworker->addFunction("reverse", "reverse_fn");
 
-print "Waiting for job...\n";
+print "Attente d'un travail...\n";
 while($gmworker->work())
 {
   if ($gmworker->returnCode() != GEARMAN_SUCCESS)
   {
-    echo "return_code: " . $gmworker->returnCode() . "\n";
+    echo "return_code : " . $gmworker->returnCode() . "\n";
     break;
   }
 }
 
 function reverse_fn($job)
 {
-  echo "Received job: " . $job->handle() . "\n";
+  echo "Travail reçu : " . $job->handle() . "\n";
 
   $workload = $job->workload();
   $workload_size = $job->workloadSize();
 
-  echo "Workload: $workload ($workload_size)\n";
+  echo "Charge de l'agent : $workload ($workload_size)\n";
 
-  # This status loop is not needed, just showing how it works
+  # Cette boucle n'est pas nécessaire, mais nous l'utilisons pour en comprendre le fonctionnement
   for ($x= 0; $x < $workload_size; $x++)
   {
-    echo "Sending status: " . ($x + 1) . "/$workload_size complete\n";
+    echo "Envoi du statut : " . ($x + 1) . "/$workload_size complete\n";
     $job->sendStatus($x, $workload_size);
     sleep(1);
   }
 
   $result= strrev($workload);
-  echo "Result: $result\n";
+  echo "Résultat : $result\n";
 
-  # Return what we want to send back to the client.
+  # Retourne ce que l'on veut au client.
   return $result;
 }
 
-# A much simpler and less verbose version of the above function would be:
+# Une version plus simple et moins vebeuse de la fonction ci-dessus serait :
 function reverse_fn_fast($job)
 {
   return strrev($job->workload());
@@ -244,10 +247,10 @@ function reverse_fn_fast($job)
     <screen>
 <![CDATA[
 % php reverse_worker.php
-Starting
-Waiting for job...
-Received job: H:foo.local:41
-Workload: this is a test (14)
+Début
+Attente d'un travail...
+Travail reçu : H:foo.local:41
+Charge de l'agent : this is a test (14)
 1/14 complete
 2/14 complete
 3/14 complete
@@ -262,13 +265,13 @@ Workload: this is a test (14)
 12/14 complete
 13/14 complete
 14/14 complete
-Result: tset a si siht
+Résultat : tset a si siht
 ]]>
     </screen>
     <screen>
 <![CDATA[
 % php reverse_client_bg.php
-done!
+Fait !
 ]]>
     </screen>
    </example>
@@ -277,68 +280,68 @@ done!
  <section xml:id="gearman.examples-reverse-task">
   <para>
    <example>
-    <title>Basic Gearman client and worker, submitting tasks</title>
+    <title>Client et agent Gearman simple, avec la soumission de tâches</title>
     <para>
-     In this example, the basic reverse client extended to run two tasks in parallel.
-     The reverse worker is unchanged except to add sending of data back during processing.
+     Dans cet exemple, le client "reverse" a été étendu pour exécuter 2 tâches en parallèle.
+     L'agent "reverse" est inchangé, mise à part qu'il retourne des données durant le processus.
     </para>
     <programlisting role="php">
 <![CDATA[
 <?php
 
-# create the gearman client
+# Crée un client gearman
 $gmc= new GearmanClient();
 
-# add the default server (localhost)
+# Ajoute un serveur par défaut (localhost)
 $gmc->addServer();
 
-# register some callbacks
+# Enregistre quelques fonctions de rappel
 $gmc->setCreatedCallback("reverse_created");
 $gmc->setDataCallback("reverse_data");
 $gmc->setStatusCallback("reverse_status");
 $gmc->setCompleteCallback("reverse_complete");
 $gmc->setFailCallback("reverse_fail");
 
-# set some arbitrary application data
+# Définit quelques données arbitraires pour l'application
 $data['foo'] = 'bar';
 
-# add two tasks
+# Ajoute 2 tâches
 $task= $gmc->addTask("reverse", "foo", $data);
 $task2= $gmc->addTaskLow("reverse", "bar", NULL);
 
-# run the tasks in parallel (assuming multiple workers)
+# Exécute les tâches en parallèle (en assumant plusieurs agents)
 if (! $gmc->runTasks())
 {
-    echo "ERROR " . $gmc->error() . "\n";
+    echo "ERREUR " . $gmc->error() . "\n";
     exit;
 }
 
-echo "DONE\n";
+echo "Fait !\n";
 
 function reverse_created($task)
 {
-    echo "CREATED: " . $task->jobHandle() . "\n";
+    echo "Créé : " . $task->jobHandle() . "\n";
 }
 
 function reverse_status($task)
 {
-    echo "STATUS: " . $task->jobHandle() . " - " . $task->taskNumerator() . 
+    echo "STATUT : " . $task->jobHandle() . " - " . $task->taskNumerator() . 
          "/" . $task->taskDenominator() . "\n";
 }
 
 function reverse_complete($task)
 {
-    echo "COMPLETE: " . $task->jobHandle() . ", " . $task->data() . "\n";
+    echo "TERMINÉ : " . $task->jobHandle() . ", " . $task->data() . "\n";
 }
 
 function reverse_fail($task)
 {
-    echo "FAILED: " . $task->jobHandle() . "\n";
+    echo "ÉCHEC : " . $task->jobHandle() . "\n";
 }
 
 function reverse_data($task)
 {
-    echo "DATA: " . $task->data() . "\n";
+    echo "DONNÉES : " . $task->data() . "\n";
 }
 
 ?>
@@ -348,54 +351,54 @@ function reverse_data($task)
 <![CDATA[
 <?php
 
-echo "Starting\n";
+echo "Début\n";
 
-# Create our worker object.
+# Crée un nouvel agent.
 $gmworker= new GearmanWorker();
 
-# Add default server (localhost).
+# Ajoute un serveur par défaut (localhost).
 $gmworker->addServer();
 
-# Register function "reverse" with the server. Change the worker function to
-# "reverse_fn_fast" for a faster worker with no output.
+# Enregistre la fonction "reverse" avecle serveur. Modifie la fonction de l'agent en
+# "reverse_fn_fast" pour être plus rapide sans affichage.
 $gmworker->addFunction("reverse", "reverse_fn");
 
-print "Waiting for job...\n";
+print "Attente d'un travail...\n";
 while($gmworker->work())
 {
   if ($gmworker->returnCode() != GEARMAN_SUCCESS)
   {
-    echo "return_code: " . $gmworker->returnCode() . "\n";
+    echo "return_code : " . $gmworker->returnCode() . "\n";
     break;
   }
 }
 
 function reverse_fn($job)
 {
-  echo "Received job: " . $job->handle() . "\n";
+  echo "Travail reçu : " . $job->handle() . "\n";
 
   $workload = $job->workload();
   $workload_size = $job->workloadSize();
 
-  echo "Workload: $workload ($workload_size)\n";
+  echo "Charge de l'agent : $workload ($workload_size)\n";
 
-  # This status loop is not needed, just showing how it works
+  # Cette boucle n'est pas nécessaire, mais nous l'utilisons pour en comprendre le fonctionnement
   for ($x= 0; $x < $workload_size; $x++)
   {
-    echo "Sending status: " . ($x + 1) . "/$workload_size complete\n";
+    echo "Envoi du statut : " . ($x + 1) . "/$workload_size complete\n";
     $job->sendStatus($x+1, $workload_size);
     $job->sendData(substr($workload, $x, 1));
     sleep(1);
   }
 
   $result= strrev($workload);
-  echo "Result: $result\n";
+  echo "Résultat : $result\n";
 
-  # Return what we want to send back to the client.
+  # Retourne ce que l'on veut au client.
   return $result;
 }
 
-# A much simpler and less verbose version of the above function would be:
+# Une version plus simple et moins vebeuse de la fonction ci-dessus serait :
 function reverse_fn_fast($job)
 {
   return strrev($job->workload());
@@ -408,42 +411,42 @@ function reverse_fn_fast($job)
     <screen>
 <![CDATA[
 % php reverse_worker.php
-Starting
-Waiting for job...
-Received job: H:foo.local:45
-Workload: foo (3)
+Début
+Attente d'un travail...
+Travail reçu : H:foo.local:45
+Charge de l'agent : foo (3)
 1/3 complete
 2/3 complete
 3/3 complete
 Result: oof
-Received job: H:foo.local:44
-Workload: bar (3)
+Travail reçu : H:foo.local:44
+Charge de l'agent : bar (3)
 1/3 complete
 2/3 complete
 3/3 complete
-Result: rab
+Résultat : rab
 ]]>
     </screen>
     <screen>
 <![CDATA[
 % php reverse_client_task.php
-CREATED: H:foo.local:44
-CREATED: H:foo.local:45
-STATUS: H:foo.local:45 - 1/3
-DATA: f
-STATUS: H:foo.local:45 - 2/3
-DATA: o
-STATUS: H:foo.local:45 - 3/3
-DATA: o
-COMPLETE: H:foo.local:45, oof
-STATUS: H:foo.local:44 - 1/3
-DATA: b
-STATUS: H:foo.local:44 - 2/3
-DATA: a
-STATUS: H:foo.local:44 - 3/3
-DATA: r
-COMPLETE: H:foo.local:44, rab
-DONE
+Créé : H:foo.local:44
+Créé : H:foo.local:45
+STATUT : H:foo.local:45 - 1/3
+DONNÉES : f
+STATUT : H:foo.local:45 - 2/3
+DONNÉES : o
+STATUT : H:foo.local:45 - 3/3
+DONNÉES : o
+TERMINÉ : H:foo.local:45, oof
+STATUT : H:foo.local:44 - 1/3
+DONNÉES : b
+STATUT : H:foo.local:44 - 2/3
+DONNÉES : a
+STATUT : H:foo.local:44 - 3/3
+DONNÉES : r
+TERMINÉ : H:foo.local:44, rab
+FAIT
 ]]>
     </screen>
    </example>
