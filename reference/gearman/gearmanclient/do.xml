@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 169775b8b2e2b117d6f1026201060aad799285ce Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<refentry xml:id="gearmanclient.do" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <refnamediv>
+  <refname>GearmanClient::do</refname>
+  <refpurpose>Exécute une seule tâche et retourne le résultat</refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <modifier>public</modifier> <type>string</type><methodname>GearmanClient::do</methodname>
+   <methodparam><type>string</type><parameter>function_name</parameter></methodparam>
+   <methodparam><type>string</type><parameter>workload</parameter></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>unique</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   Exécute une seule tâche et retourne une représentation sous forme de &string;
+   du résultat. C'est aux méthodes <classname>GearmanClient</classname>
+   et <classname>GearmanWorker</classname> de valider le format du résultat.
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>function_name</parameter></term>
+     <listitem>
+      <para>
+       &gearman.parameter.functionname;
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>workload</parameter></term>
+     <listitem>
+      <para>
+       &gearman.parameter.workload;
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>unique</parameter></term>
+     <listitem>
+      <para>
+       &gearman.parameter.unique;
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Une représentation sous forme de &string; du résultat de l'exécution
+   de la tâche.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Soumission d'une seule tâche avec un retour immédiat</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+# Code du client
+
+echo "Début\n";
+
+# Crée un client.
+$gmclient= new GearmanClient();
+
+# Ajoute un serveur par défaut (localhost).
+$gmclient->addServer();
+
+echo "Envoi d'un travail\n";
+
+$result = $gmclient->do("reverse", "Hello!");
+
+echo "Succès : $result\n";
+
+?>
+]]>
+    </programlisting>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+echo "Début\n";
+
+# Crée un agent.
+$gmworker= new GearmanWorker();
+
+# Ajoute un serveur par défaut (localhost).
+$gmworker->addServer();
+
+# Enregistre la fonction "reverse" avec le serveur. Modifie la fonction en
+# "reverse_fn_fast" pour une exécution plus rapide sans affiche.
+$gmworker->addFunction("reverse", "reverse_fn");
+
+print "Attente d'un travail...\n";
+while($gmworker->work())
+{
+  if ($gmworker->returnCode() != GEARMAN_SUCCESS)
+  {
+    echo "return_code: " . $gmworker->returnCode() . "\n";
+    break;
+  }
+}
+
+function reverse_fn($job)
+{
+  return strrev($job->workload());
+}
+
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+Début
+Envoi d'un travail
+Succès : !olleH
+]]>
+    </screen>
+   </example>
+   <example>
+    <title>Soumission d'un travail et récupération incrémentale du statut</title>
+    <para>
+     Un travail est soumis et le script boucle pour récupérer les informations
+     de statut. L'agent a un délai artificiel pour récupérer les résultats
+     lors d'une exécution longue d'un travail mais aussi l'envoi des statuts
+     et des données. Chaque sous-séquence appèle la méthode
+     <methodname>GearmanClient::do</methodname> permettant de produire des
+     informations de statut sur le travail en cours.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+# Code du client
+
+# Crée un client.
+$gmclient= new GearmanClient();
+
+# Ajoute un serveur par défaut (localhost).
+$gmclient->addServer();
+
+echo "Envoi d'un travail\n";
+
+# Envoi du travail
+do
+{
+  $result = $gmclient->do("reverse", "Hello!");
+  # Vérifie les paquets et les erreurs retournés.
+
+  switch($gmclient->returnCode())
+  {
+    case GEARMAN_WORK_DATA:
+      echo "Données : $result\n";
+      break;
+    case GEARMAN_WORK_STATUS:
+      list($numerator, $denominator)= $gmclient->doStatus();
+      echo "Statut : $numerator/$denominator complete\n";
+      break;
+    case GEARMAN_WORK_FAIL:
+      echo "Échec\n";
+      exit;
+    case GEARMAN_SUCCESS:
+      break;
+    default:
+      echo "RET : " . $gmclient->returnCode() . "\n";
+      echo "Erreur : " . $gmclient->error() . "\n";
+      echo "N° de l'erreur : " . $gmclient->getErrno() . "\n";
+      exit;
+  }
+}
+while($gmclient->returnCode() != GEARMAN_SUCCESS);
+
+echo "Succès : $result\n";
+
+?>
+]]>
+    </programlisting>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+# Code de l'agent
+
+echo "Début\n";
+
+# Crée un nouvel agent.
+$gmworker= new GearmanWorker();
+
+# Ajoute un serveur par défaut (localhost).
+$gmworker->addServer();
+
+# Enregistre la fonction "reverse" avec le serveur.
+$gmworker->addFunction("reverse", "reverse_fn");
+
+print "Attente d'un travail...\n";
+while($gmworker->work())
+{
+  if ($gmworker->returnCode() != GEARMAN_SUCCESS)
+  {
+    echo "return_code: " . $gmworker->returnCode() . "\n";
+    break;
+  }
+}
+
+function reverse_fn($job)
+{
+  echo "Travail reçu : " . $job->handle() . "\n";
+
+  $workload = $job->workload();
+  $workload_size = $job->workloadSize();
+
+  echo "Charge de l'agent: $workload ($workload_size)\n";
+
+  # Cette boucle n'est pas nécessaire, mais montre le fonctionnement
+  for ($x= 0; $x < $workload_size; $x++)
+  {
+    echo "Envoi du statut : " + $x + 1 . "/$workload_size complete\n";
+    $job->sendStatus($x+1, $workload_size);
+    $job->sendData(substr($workload, $x, 1));
+    sleep(1);
+  }
+
+  $result= strrev($workload);
+  echo "Résultat : $result\n";
+
+  # Nous retournons ce que l'on souhaite au client.
+  return $result;
+}
+
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <para>
+     L'agent affiche :
+    </para>
+    <screen>
+<![CDATA[
+Début
+Attente d'un travail...
+Travail reçu : H:foo.local:106
+Charge de l'agent : Hello! (6)
+1/6 complete
+2/6 complete
+3/6 complete
+4/6 complete
+5/6 complete
+6/6 complete
+Résultat : !olleH
+]]>
+    </screen>
+    <para>
+     Le client affiche :
+    </para>
+    <screen>
+<![CDATA[
+Début
+Envoi d'un travail
+Statut : 1/6 complete
+Données : H
+Statut : 2/6 complete
+Données : e
+Statut : 3/6 complete
+Données : l
+Statut : 4/6 complete
+Données : l
+Statut : 5/6 complete
+Données : o
+Statut : 6/6 complete
+Données : !
+Succès : !olleH
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><methodname>GearmanClient::doHigh</methodname></member>
+    <member><methodname>GearmanClient::doLow</methodname></member>
+    <member><methodname>GearmanClient::doBackground</methodname></member>
+    <member><methodname>GearmanClient::doHighBackground</methodname></member>
+    <member><methodname>GearmanClient::doLowBackground</methodname></member>
+   </simplelist>
+  </para>
+ </refsect1>
+
+</refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
