@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 30ecbf680862db4d35ee4665029e4ba32ebd3a50 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.snmpset" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>snmpset</refname>
-  <refpurpose>Configure un objet <acronym>SNMP</acronym></refpurpose>
+  <refpurpose>Définit la valeur d'un objet <acronym>SNMP</acronym></refpurpose>
  </refnamediv>
+ 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
    <type>bool</type><methodname>snmpset</methodname>
-   <methodparam><type>string</type><parameter>hostname</parameter></methodparam>
+   <methodparam><type>string</type><parameter>host</parameter></methodparam>
    <methodparam><type>string</type><parameter>community</parameter></methodparam>
    <methodparam><type>string</type><parameter>object_id</parameter></methodparam>
    <methodparam><type>string</type><parameter>type</parameter></methodparam>
@@ -33,10 +34,10 @@
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>hostname</parameter></term>
+     <term><parameter>host</parameter></term>
      <listitem>
       <para>
-       L'agent <acronym>SNMP</acronym>.
+       Le nom d'hôte de l'agent <acronym>SNMP</acronym> (serveur).
       </para>
      </listitem>
     </varlistentry>
@@ -52,7 +53,7 @@
      <term><parameter>object_id</parameter></term>
      <listitem>
       <para>
-       L'objet <acronym>SNMP</acronym>.
+       L'identifiant de l'objet <acronym>SNMP</acronym>.
       </para>
      </listitem>
     </varlistentry>
@@ -60,13 +61,82 @@
      <term><parameter>type</parameter></term>
      <listitem>
       <para>
+       Le <acronym>MIB</acronym> définit le type de chaque identifiant
+       d'objet. Il doit être spécifié sous la forme d'un seul caractère, depuis
+       la liste suivante.
       </para>
+      <table>
+       <title>types</title>
+       <tgroup cols="2">
+        <tbody>
+         <row><entry>=</entry><entry>Le type est pris depuis le MIB</entry></row>
+         <row><entry>i</entry><entry>INTEGER</entry> </row>
+         <row><entry>u</entry><entry>INTEGER</entry></row>
+         <row><entry>s</entry><entry>STRING</entry></row>
+         <row><entry>x</entry><entry>HEX STRING</entry></row>
+         <row><entry>d</entry><entry>DECIMAL STRING</entry></row>
+         <row><entry>n</entry><entry>NULLOBJ</entry></row>
+         <row><entry>o</entry><entry>OBJID</entry></row>
+         <row><entry>t</entry><entry>TIMETICKS</entry></row>
+         <row><entry>a</entry><entry>IPADDRESS</entry></row>
+         <row><entry>b</entry><entry>BITS</entry></row>
+        </tbody>
+       </tgroup>
+      </table>
+      <para>
+       Si OPAQUE_SPECIAL_TYPES a été défini lors de la compilation de la
+       bibliothèque SNMP, les types suivants sont aussi valides :
+      </para>
+      <table>
+       <title>types</title>
+       <tgroup cols="2">
+        <tbody>
+         <row><entry>U</entry><entry>int64 non signé</entry></row>
+         <row><entry>I</entry><entry>int64 signé</entry></row>
+         <row><entry>F</entry><entry>float</entry></row>
+         <row><entry>D</entry><entry>double</entry></row>
+        </tbody>
+       </tgroup>
+      </table>
+      <para>
+       La plupart de ces types utilise le type correspondant ASN.1.
+       's', 'x', 'd', et 'b' sont tous des façons différentes de spécifier
+       une valeur OCTET STRING , et le type non signé 'u' est également
+       utilisé pour gérer les valeurs Gauge32.
+      </para>       
+      <para>
+       Si les MIB-Files sont chargés dans l'arbre MIB avec "snmp_read_mib"
+       ou en le spécifiant dans la configuration libsnmp, '=' pourra être utilisé
+       comme paramètre <parameter>type</parameter> pour tous les identifiants d'objets
+       et pourront être lus automatiquement depuis le MIB.
+      </para>
+      <para>
+       Notez qu'il y a 2 façons de définir une variable de type BITS :
+       "SYNTAX    BITS {telnet(0), ftp(1), http(2), icmp(3), snmp(4), ssh(5), https(6)}"
+      </para>
+      <itemizedlist>
+       <listitem>
+        <para>
+         Utilisez le type "b" et une liste de numéros d'octets, comme :
+         <programlisting role="php">snmpset('FOO-MIB::bar.42', 'b', '0 1 2 3 4');</programlisting>
+         avec le désavantage que la vérification du succès de l'opération ne sera
+         pas facilement vérifiable sachant que snmpget() pour un même OID retournera, i.e. 0xF8.
+        </para>
+       </listitem>
+       <listitem>
+        <para>
+         Utilisez le type "x" et un nombre hexadécimal mais sans (!) le préfixe "0x" habituel :
+         <programlisting role="php">snmpset('FOO-MIB::bar.42', 'x', 'F0');</programlisting>
+        </para>
+       </listitem>
+      </itemizedlist>
      </listitem>
     </varlistentry>
     <varlistentry>
      <term><parameter>value</parameter></term>
      <listitem>
       <para>
+       La nouvelle valeur.
       </para>
      </listitem>
     </varlistentry>
@@ -82,6 +152,7 @@
      <term><parameter>retries</parameter></term>
      <listitem>
       <para>
+       Le nombre d'essais avant d'atteindre le délai maximal d'attente.
       </para>
      </listitem>
     </varlistentry>
@@ -93,6 +164,30 @@
   &reftitle.returnvalues;
   <para>
    &return.success;
+  </para>
+  <para>
+   Si l'hôte SNMP rejète le type de données, une alerte de type
+   E_WARNING comme
+   "Warning: Error in packet. Reason: (badValue) The value given has the
+   wrong type or length." sera affiché.
+   Si un OID inconnu ou invalide est spécifié, le contenu de l'alerte sera
+   probablement "Could not add variable".
+  </para>
+ </refsect1>
+ 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>snmpgetnext</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+  snmpset("localhost", "public", "IF-MIB::ifAlias.3", "s", "foo");
+?>
+ ]]>
+    </programlisting>
+   </example>
   </para>
  </refsect1>
 
