@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 37e48ccbbd457e838f20d1dd995cc13eb3e24a8e Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3c08ec64aebb60e9d3163aa56711ccac9d2d0f05 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-fetch-object" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>cubrid_fetch_object</refname>
-  <refpurpose>Retourne un objet contenant les noms de la colonne</refpurpose>
+  <refpurpose>Récupère la prochaine ligne et la retourne sous la forme d'un objet</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -72,31 +72,64 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-    $link = cubrid_connect("localhost", 30000, "demodb2", "dba", "");
-    if (!$link)
-    {
-        die('Connexion impossible.');
+$conn = cubrid_connect("localhost", 33000, "demodb");
+$res = cubrid_execute($conn, "SELECT * FROM code");
+
+var_dump(cubrid_fetch_object($res));
+
+class demodb_code {
+    public $s_name = null;
+    public $f_name = null;
+
+    public function toString() {
+        var_dump($this);
     }
-    $query = 'SELECT name, address, salary FROM employees';
-    $result = cubrid_execute($link, $query);
-    if ($result) 
-    {
-        $row = cubrid_fetch_object($result);
-        echo $row->name."<BR>";
-        echo $row->address."<BR>";
-        echo $row->salary;
-        
-        cubrid_close_request($result); 
-    }
+}
+
+var_dump(cubrid_fetch_object($res, "demodb_code"));
+
+class demodb_code_construct extends demodb_code {
+    public function __construct($s, $f) {
+        $this->s_name = $s;
+        $this->f_name = $f;
+    }   
+}
+
+var_dump(cubrid_fetch_object($res, 'demodb_code_construct', array('s_name', 'f_name')));
+var_dump(cubrid_fetch_object($res));
+
+cubrid_close_request($res);
+cubrid_disconnect($conn);
 ?>
 ]]>
    </programlisting>
     &example.outputs;
     <screen>
 <![CDATA[
-Peter
-1st Avenue, New York
-1000.0000000000000000
+object(stdClass)#1 (2) {
+  ["s_name"]=>
+  string(1) "X"
+  ["f_name"]=>
+  string(5) "Mixed"
+}
+object(demodb_code)#1 (2) {
+  ["s_name"]=>
+  string(1) "W"
+  ["f_name"]=>
+  string(5) "Woman"
+}
+object(demodb_code_construct)#1 (2) {
+  ["s_name"]=>
+  string(6) "s_name"
+  ["f_name"]=>
+  string(6) "f_name"
+}
+object(stdClass)#1 (2) {
+  ["s_name"]=>
+  string(1) "B"
+  ["f_name"]=>
+  string(6) "Bronze"
+}
 ]]>
     </screen>
   </example>

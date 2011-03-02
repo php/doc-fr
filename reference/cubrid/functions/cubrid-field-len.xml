@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 37e48ccbbd457e838f20d1dd995cc13eb3e24a8e Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3c08ec64aebb60e9d3163aa56711ccac9d2d0f05 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-field-len" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>cubrid_field_len</refname>
-  <refpurpose>Retourne la longueur maximale du champ spécifié</refpurpose>
+  <refpurpose>Récupère la longueur maximale du champ spécifié</refpurpose>
  </refnamediv>
  
  <refsect1 role="description">
@@ -35,7 +35,7 @@
      <term><parameter>field_offset</parameter></term>
      <listitem><para>La position numérique du champ. <parameter>field_offset</parameter>
       commence à 0. Si <parameter>field_offset</parameter> n'existe pas, une erreur
-     de niveau <constant>E_WARNING</constant> sera également émise.</para></listitem>
+      de niveau <constant>E_WARNING</constant> sera également émise.</para></listitem>
     </varlistentry>
    </variablelist>
   </para>
@@ -58,27 +58,33 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-    $link = cubrid_connect("localhost", 30000, "demodb2", "dba", "");
-    if (!$link)
-    {
-        die('Connexion impossible.');
-    }
-    $query = 'SELECT id, name, address, salary FROM employees';
-    $result = cubrid_execute($link, $query);
-    if ($result) 
-    {
-        $length = cubrid_field_len($result, 1);
-        echo "Longueur du champ NAME : ".$length;
+$conn = cubrid_connect("localhost", 33000, "demodb");
+$result = cubrid_execute($conn, "SELECT * FROM game WHERE host_year=2004 AND nation_code='AUS' AND medal='G'");
 
-        cubrid_close_request($result); 
-    }
+$column_names = cubrid_column_names($result);
+$column_types = cubrid_column_types($result);
+
+printf("%-30s %-30s %-15s\n", "Column Names", "Column Types", "Column Maxlen");
+for($i = 0, $size = count($column_names); $i < $size; $i++) {
+    $column_len = cubrid_field_len($result, $i);
+    printf("%-30s %-30s %-15s\n", $column_names[$i], $column_types[$i], $column_len);
+}
+
+cubrid_disconnect($conn);
 ?>
 ]]>
    </programlisting>
    &example.outputs;
    <screen>
 <![CDATA[
-Longueur du champ NAME : 256
+Column Names                   Column Types                   Column Maxlen  
+host_year                      integer                        11             
+event_code                     integer                        11             
+athlete_code                   integer                        11             
+stadium_code                   integer                        11             
+nation_code                    char(3)                        3              
+medal                          char(1)                        1              
+game_date                      date                           10             
 ]]>
    </screen>
   </example>

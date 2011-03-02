@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 9b785467c8cb0e8bf704b2a08e0a6bd4ec235ecd Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3c08ec64aebb60e9d3163aa56711ccac9d2d0f05 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-free-result" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -17,7 +17,10 @@
   </methodsynopsis>
   <para>
    Cette fonction libère la mémoire occupées par les données
-   de résultat. Elle retourne &true; en cas de succès, &false; sinon. 
+   de résultat. Elle retourne &true; en cas de succès, &false; sinon.
+   Notez que cette fonction ne libère que le buffer de récupération
+   du client, et que si vous voulez libérer toute la mémoire,
+   vous devez utilisez la fonction <function>cubrid_close_request</function>. 
   </para>
  </refsect1>
  
@@ -50,28 +53,33 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-    $link = cubrid_connect("localhost", 30000, "demodb2", "dba", "");
-    if (!$link)
-    {
-        die('Connexion impossible.');
-    }
-    $query = 'SELECT id, name, address, salary FROM employees';
-    $result = cubrid_execute($link, $query);
-    if ($result) 
-    {
-        $row = cubrid_fetch_assoc($result);
-        /* Maintenant, nous libérons la mémoire associée au résultat et nous continuons d'utiliser le résultat dans notre script */
-        cubrid_free_result($result);
-        echo $row['id']."<br>".$row['address'];
-    }
+$conn = cubrid_connect("localhost", 33000, "demodb");
+
+$req = cubrid_execute($conn, "SELECT * FROM history WHERE host_year=2004 ORDER BY event_code");
+$row = cubrid_fetch_assoc($req);
+var_dump($row);
+
+cubrid_free_result($req);
+cubrid_close_request($req);
+cubrid_disconnect($conn);
 ?>
 ]]>
    </programlisting>
    &example.outputs;
    <screen>
 <![CDATA[
-1
-1st Avenue, New York
+array(5) {
+  ["event_code"]=>
+  string(5) "20005"
+  ["athlete"]=>
+  string(12) "Hayes Joanna"
+  ["host_year"]=>
+  string(4) "2004"
+  ["score"]=>
+  string(5) "12.37"
+  ["unit"]=>
+  string(4) "time"
+}
 ]]>
    </screen>
   </example>

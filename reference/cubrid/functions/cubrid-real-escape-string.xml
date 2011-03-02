@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 459bc86722bb9e35e7ea8a57391de69b7b0b374a Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3c08ec64aebb60e9d3163aa56711ccac9d2d0f05 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-real-escape-string" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>cubrid_real_escape_string</refname>
-  <refpurpose>Retourne la version échappée d'une chaîne donnée</refpurpose>
+  <refpurpose>Échappe les caractères spéciaux d'une chaîne pour l'utiliser dans une requête SQL</refpurpose>
  </refnamediv>
  
  <refsect1 role="description">
@@ -18,9 +18,17 @@
   </methodsynopsis>
   <para>
    Cette fonction retourne la version échappée de la chaîne fournie. Elle ajoute
-   des anti-slashes aux caractères suivants : <constant>'</constant>. Cette fonction
-   doit toujours (avec quelques exceptions) être utilisée afin de rendre sûr les données
-   avant l'envoi de la requête à CUBRID.
+   des anti-slashes aux caractères suivants : <constant>'</constant>.
+   
+   En général, les guillemets simples sont utilisés pour entourer
+   la chaîne. Les doubles guillemets peuvent être utilisés également suivant
+   la valeur de ansi_quotes, qui est un paramètre des requêtes SQL. Si la
+   valeur de ansi_quotes est "no", les guillemets doubles
+   seront gérés comme un caractère de la chaîne et non un identifiant.
+   La valeur par défaut est "yes".
+   
+   Si vous voulez inclure un guillemet simple comme caractère d'une chaîne,
+   vous devez le spécifier 2 fois.
   </para>
  </refsect1>
  
@@ -59,20 +67,34 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-    $user = "'username'";
-    $password = "\"pass\"";
-    $query = sprintf("SELECT * FROM users WHERE user='%s' AND password='%s'",
-            cubrid_real_escape_string($user),
-            cubrid_real_escape_string($password));
-    
-    echo $query;
+$conn = cubrid_connect("localhost", 33000, "demodb");
+
+$unescaped_str = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~';
+$escaped_str = cubrid_real_escape_string($unescaped_str);
+
+$len = strlen($unescaped_str);
+
+@cubrid_execute($conn, "DROP TABLE cubrid_test");
+cubrid_execute($conn, "CREATE TABLE cubrid_test (t char($len))");
+cubrid_execute($conn, "INSERT INTO cubrid_test (t) VALUES('$escaped_str')");
+
+$req = cubrid_execute($conn, "SELECT * FROM cubrid_test");
+$row = cubrid_fetch_assoc($req);
+
+var_dump($row);
+
+cubrid_close_request($req);
+cubrid_disconnect($conn);
 ?>
 ]]>
    </programlisting>
    &example.outputs;
    <screen>
 <![CDATA[
-SELECT * FROM users WHERE user='\'username\'' AND password='"pass"'
+array(1) {
+  ["t"]=>
+  string(95) " !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+}
 ]]>
    </screen>
   </example>

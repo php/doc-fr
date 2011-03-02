@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 9b785467c8cb0e8bf704b2a08e0a6bd4ec235ecd Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3c08ec64aebb60e9d3163aa56711ccac9d2d0f05 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-get-db-parameter" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -22,11 +22,111 @@
   </para>
   <para>
    <simplelist>
-    <member><constant>CCI_PARAM_ISOLATION_LEVEL</constant></member>
-    <member><constant>CCI_PARAM_LOCK_TIMEOUT</constant></member>
-    <member><constant>CCI_PARAM_MAX_STRING_LENGTH</constant></member>
-    <member><constant>CCI_PARAM_AUTO_COMMIT</constant></member>
+    <member><constant>PARAM_ISOLATION_LEVEL</constant></member>
+    <member><constant>LOCK_TIMEOUT</constant></member>
+    <member><constant>MAX_STRING_LENGTH</constant></member>
+    <member><constant>PARAM_AUTO_COMMIT</constant></member>
    </simplelist>
+  </para>
+  <para>
+  <table>
+   <title>Paramètres de la base de données</title>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>Paramètre</entry>
+       <entry>Description</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>PARAM_ISOLATION_LEVEL</entry>
+       <entry>Dans la version courante de CUBRID PHP, vous pouvez définir
+        le niveau d'isolation de la transaction en utilisant le paramètre
+        isolation_level dans $CUBRID/conf/cubrid.conf ou avec la requête
+        SET TRANSACTION. Dans la prochaine version, le niveau d'isolation
+        pourra être défini en utilisant l'API CUBRID PHP.
+       </entry>
+      </row>
+      <row>
+       <entry>LOCK_TIMEOUT</entry>
+       <entry>CUBRID fournit la fonctionnalité de verrou du délai d'expiration,
+        qui définit le temps d'attente pour le verrou tant que la configuration
+        du verrou de la transaction est autorisée. Le paramètre
+        lock_timeout_in_secs du fichier $CUBRID/conf/cubrid.conf contrôle
+        cette fonctionnalité ou via la requête SET TRANSACTION
+        (en secondes). Dans la prochaine version, ce paramètre pourra être
+        défini en utilisant l'API CUBRID PHP. La valeur par défaut du paramètre
+        lock_timeout_in_secs vaut -1, qui signifie que l'application cliente
+        attendra indéfiniment tant que le verrou de transaction est autorisé.</entry>
+      </row>
+      <row>
+       <entry>PARAM_AUTO_COMMIT</entry>
+       <entry>En CUBRID PHP, le mode auto-commit est désactivé par défaut pour
+        le gestionnaire de transaction, et il ne peut être activé dans la
+        version courante de CUBRID PHP. Il le pourra dans la prochaine version.
+        Le mode auto-commit peut être appliqué qu'uniquement pour les requêtes
+        SELECT en définissant les paramètres du courtier.</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+  <para>
+   La table suivante montre les niveaux d'isolation de 1 à 6 :
+  <table>
+   <title>Niveaux d'isolation supportés par CUBRID</title>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>Nom</entry>
+       <entry>Description</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>SERIALIZABLE (6)</entry>
+       <entry>Dans ce niveau d'isolation, les problèmes de concurrence
+        (i.e. lecture de données modifiées, lecture répétée de données,
+        lecture de données fantôme, etc.) ne peuvent pas survenir.</entry>
+      </row>
+      <row>
+       <entry>REPEATABLE READ CLASS avec REPEATABLE READ INSTANCES (5)</entry>
+       <entry>Une autre transaction T2 ne peut pas mettre à jour le schéma
+        de la table A tant que la transaction T1 lit la table A. La transaction
+        T1 peut rencontrer des données fantômes de l'enregistrement R
+        qui a été inséré par la transaction T2 lorsqu'elle récupère à plusieurs
+        reprises un enregistrement spécifique.</entry>
+      </row>
+      <row>
+       <entry>REPEATABLE READ CLASS with READ UNCOMMITTED INSTANCES (3)</entry>
+       <entry>Niveau d'isolation par défaut. Une transaction T2 ne peut
+        pas mettre à jour le schéma de la table A alors qu'une transaction
+        T1 lit la table A. La transaction T1 peut rencontrer des données
+        non mises à jour pour l'enregistrement qui a été mis à jour
+        mais non encore validé par la transaction T2.</entry>
+      </row>
+      <row>
+       <entry>READ COMMITTED CLASS with READ COMMITTED INSTANCES (2)</entry>
+       <entry>La transaction T1 peut rencontrer des lectures répétées de données
+        pour la table qui a été mise à jour et validée par la transaction T2
+        alors qu'elle lit plusieurs fois la table A. La transaction T1 peut
+        rencontrer des lectures répétées de données pour l'enregistrement qui
+        a été mis à jour et validé par la transaction T2 alors qu'elle récupère
+        à plusieurs reprises l'enregistrement R.</entry>
+      </row>
+      <row>
+       <entry>READ COMMITTED CLASS with READ UNCOMMITTED INSTANCES (1)</entry>
+       <entry>La transaction T1 peut rencontrer des lectures répétées
+        de données pour la table qui a été mise à jour et validée par la
+        transaction T2 alors qu'elle lit à plusieurs reprises la table A.
+        La transaction T1 peut rencontrer des données non mises à jour pour
+        l'enregistrement qui a été mise à jour mais non validé par la transaction
+        T2.</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
   </para>
  </refsect1>
  
@@ -62,21 +162,55 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-    $link = cubrid_connect("localhost", 30000, "demodb2", "dba", "");
-    if (!$link)
-    {
-        die('Connexion impossible.');
-    }
-    echo "CUBRID parameters:<br>";
-    print_r(cubrid_get_db_parameter($link));
+printf("%-30s %s\n", "CUBRID PHP Version:", cubrid_version());
+
+printf("\n");
+
+$conn = cubrid_connect("localhost", 33088, "demodb");
+
+if (!$conn) {
+    die('Connect Error ('. cubrid_error_code() .')' . cubrid_error_msg());
+}
+
+$db_params = cubrid_get_db_parameter($conn);
+
+while (list($param_name, $param_value) = each($db_params)) {
+    printf("%-30s %s\n", $param_name, $param_value);
+}
+
+printf("\n");
+
+$server_info = cubrid_get_server_info($conn);
+$client_info = cubrid_get_client_info();
+
+printf("%-30s %s\n", "Server Info:", $server_info);
+printf("%-30s %s\n", "Client Info:", $client_info);
+
+printf("\n");
+
+$charset = cubrid_get_charset($conn);
+
+printf("%-30s %s\n", "CUBRID Charset:", $charset);
+
+cubrid_disconnect($conn);
+
 ?>
 ]]>
    </programlisting>
    &example.outputs;
    <screen>
 <![CDATA[
-CUBRID parameters:
-Array ( [PARAM_ISOLATION_LEVEL] => 3 [LOCK_TIMEOUT] => -1 [MAX_STRING_LENGTH] => 1073741823 )
+CUBRID PHP Version:            8.3.1.0005
+
+PARAM_ISOLATION_LEVEL          3
+LOCK_TIMEOUT                   -1
+MAX_STRING_LENGTH              1073741823
+PARAM_AUTO_COMMIT              0
+
+Server Info:                   8.3.1.0173
+Client Info:                   8.3.1
+
+CUBRID Charset:                iso8859-1
 ]]>
    </screen>
   </example>

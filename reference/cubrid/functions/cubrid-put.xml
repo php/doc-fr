@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 9b785467c8cb0e8bf704b2a08e0a6bd4ec235ecd Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3c08ec64aebb60e9d3163aa56711ccac9d2d0f05 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-put" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>cubrid_put</refname>
-  <refpurpose>Met à jour un attribut</refpurpose>
+  <refpurpose>Met à jour une colonne suivant son OID</refpurpose>
  </refnamediv>
  
  <refsect1 role="description">
@@ -28,10 +28,6 @@
    virgule flottante, ou une &string; comme <parameter>value</parameter>. Pour mettre à jour
    plusieurs attributs, vous devez ignorer le paramètre <parameter>attr</parameter> et
    définir l'argument <parameter>value</parameter> en utilisant un tableau associatif.
-   Cependant, vous ne pouvez pas utiliser cette méthode pour un attribut de type collection.
-   Vous devez utiliser l'API associée au type collection (<function>cubrid_set_add</function>,
-   <function>cubrid_set_drop</function>, etc) lorsque vous voulez utiliser la fonction
-   <function>cubrid_put</function> sur les attributs de type collection.
   </para>
  </refsect1>
  
@@ -45,7 +41,7 @@
     </varlistentry>
     <varlistentry>
      <term><parameter>oid</parameter></term>
-     <listitem><para>Oid de l'instance que vous voulez mettre à jour.</para></listitem>
+     <listitem><para>OID de l'instance que vous voulez mettre à jour.</para></listitem>
     </varlistentry>
     <varlistentry>
      <term><parameter>attr</parameter></term>
@@ -76,14 +72,52 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-$attrarray = cubrid_get ($con, $oid);
-$attrarray["name"] = "New Name";
-cubrid_put ($con, $oid, $attrarray);
-cubrid_put ($con, $oid, "name", "New Name2");
-cubrid_put ($con, $oid, "hobbies", array("aa", "bb"));
+$conn = cubrid_connect("localhost", 33000, "demodb");
+
+@cubrid_execute($conn, "DROP TABLE foo");
+cubrid_execute($conn, "CREATE TABLE foo(a int AUTO_INCREMENT, b set(int), c list(int), d char(10))");
+cubrid_execute($conn, "INSERT INTO foo(a, b, c, d) VALUES(1, {1,2,3}, {11,22,33,333}, 'a')");
+cubrid_execute($conn, "INSERT INTO foo(a, b, c, d) VALUES(2, {4,5,7}, {44,55,66,666}, 'b')");
+
+$req = cubrid_execute($conn, "SELECT * FROM foo", CUBRID_INCLUDE_OID);
+
+cubrid_move_cursor($req, 1, CUBRID_CURSOR_FIRST);
+$oid = cubrid_current_oid($req);
+
+$attr = cubrid_col_get($conn, $oid, "b");
+var_dump($attr);
+
+cubrid_put($conn, $oid, "b", array(2, 4, 8));
+
+$attr = cubrid_col_get($conn, $oid, "b");
+var_dump($attr);
+
+cubrid_close_request($req);
+cubrid_disconnect($conn);
 ?>
 ]]>
    </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+array(3) {
+  [0]=>
+  string(1) "1"
+  [1]=>
+  string(1) "2"
+  [2]=>
+  string(1) "3"
+}
+array(3) {
+  [0]=>
+  string(1) "2"
+  [1]=>
+  string(1) "4"
+  [2]=>
+  string(1) "8"
+}
+]]>
+   </screen>
   </example>
  </refsect1>
  
