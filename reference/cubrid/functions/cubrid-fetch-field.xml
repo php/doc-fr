@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 35d7bcbee5eb664e54829509d0564703a9995152 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3c08ec64aebb60e9d3163aa56711ccac9d2d0f05 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-fetch-field" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>cubrid_fetch_field</refname>
-  <refpurpose>Retourne un objet avec certaines propriétés</refpurpose>
+  <refpurpose>Récupère des informations sur une colonne et les retourne sous la forme d'un objet</refpurpose>
  </refnamediv>
  
  <refsect1 role="description">
@@ -51,7 +51,7 @@
      <listitem><para>1 si la colonne est une clé non-unique</para></listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>numeri</parameter></term>
+     <term><parameter>numeric</parameter></term>
      <listitem><para>1 si la colonne est de type numérique</para></listitem>
     </varlistentry>
     <varlistentry>
@@ -101,50 +101,55 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-    $link = cubrid_connect("localhost", 30000, "demodb2", "dba", "");
-    if (!$link)
-    {
-        die('Connexion impossible.');
-    }
-    $query = 'SELECT name, address, salary FROM employees';
-    $result = cubrid_execute($link, $query);
-    if ($result) 
-    {
-        echo "Récupération des champs de la colonne 0 : ";
-        $meta = cubrid_fetch_field($result, 0);
-        if (!$meta) 
-        {
-            echo "Aucune information disponible<br />\n";
-        }
-        echo "<pre>
-        Longueur maximale :        $meta->max_length
-        Clés multiples :        $meta->multiple_key
-        Nom :            $meta->name
-        Est non NULL ?        $meta->not_null
-        Numérique :        $meta->numeric
-        Table :            $meta->table
-        Type :            $meta->type
-        Défaut :        $meta->def
-        Clé unique :        $meta->unique_key
-        </pre>";
-        cubrid_close_request($result); 
-    }
+$conn = cubrid_connect("localhost", 33000, "demodb");
+$req = cubrid_execute($conn, "SELECT event_code,athlete_code,nation_code,game_date FROM game WHERE host_year=1988 and event_code=20001;");
+
+var_dump(cubrid_fetch_row($req));
+
+cubrid_field_seek($req, 1);
+$field = cubrid_fetch_field($req);
+
+printf("\n--- Field Properties ---\n");
+printf("%-30s %s\n", "name:", $field->name);
+printf("%-30s %s\n", "table:", $field->table);
+printf("%-30s \"%s\"\n", "default value:", $field->def);
+printf("%-30s %d\n", "max lenght:", $field->max_length);
+printf("%-30s %d\n", "not null:", $field->not_null);
+printf("%-30s %d\n", "unique key:", $field->unique_key);
+printf("%-30s %d\n", "multiple key:", $field->multiple_key);
+printf("%-30s %d\n", "numeric:", $field->numeric);
+printf("%-30s %s\n", "type:", $field->type);
+
+cubrid_close_request($req);
+
+cubrid_disconnect($conn);
 ?>
 ]]>
    </programlisting>
    &example.outputs;
    <screen>
 <![CDATA[
-Récupération des champs de la colonne 0 : 
-        Longueur maximale :        13
-        Clés multiples :    1
-        Nom :            name
-        Est non NULL ?        1
-        Numérique :        0
-        Table :        employees
-        Type :            STRING
-        Défaut :        [noname]
-        Clé unique :        0
+array(4) {
+  [0]=>
+  string(5) "20001"
+  [1]=>
+  string(5) "16681"
+  [2]=>
+  string(3) "KOR"
+  [3]=>
+  string(9) "1988-9-30"
+}
+
+--- Field Properties ---
+name:                          athlete_code
+table:                         game
+default value:                 ""
+max lenght:                    5
+not null:                      1
+unique key:                    1
+multiple key:                  0
+numeric:                       1
+type:                          integer
 ]]>
    </screen>
   </example>

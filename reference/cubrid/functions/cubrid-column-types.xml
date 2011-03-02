@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 9b785467c8cb0e8bf704b2a08e0a6bd4ec235ecd Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3c08ec64aebb60e9d3163aa56711ccac9d2d0f05 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-column-types" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>cubrid_column_types</refname>
-  <refpurpose>Récupère les types de colonnes</refpurpose>
+  <refpurpose>Récupère les types de colonnes du résultat</refpurpose>
  </refnamediv>
  
  <refsect1 role="description">
@@ -58,19 +58,35 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-$req = cubrid_execute ($con, "select * from person");
-if ($req) {
-   $coltypes = cubrid_column_types ($req);
-   $colnames = cubrid_column_names ($req);
-   while (list ($key, $coltype) = each ($coltypes))
-      echo $coltype;
-   while (list ($key, $colname) = each ($colnames))
-      echo $colname;
-   cubrid_close_request ($req);
+$conn = cubrid_connect("localhost", 33000, "demodb");
+$result = cubrid_execute($conn, "SELECT * FROM game WHERE host_year=2004 AND nation_code='AUS' AND medal='G'");
+
+$column_names = cubrid_column_names($result);
+$column_types = cubrid_column_types($result);
+
+printf("%-30s %-30s %-15s\n", "Column Names", "Column Types", "Column Maxlen");
+for($i = 0, $size = count($column_names); $i < $size; $i++) {
+    $column_len = cubrid_field_len($result, $i);
+    printf("%-30s %-30s %-15s\n", $column_names[$i], $column_types[$i], $column_len);
 }
+
+cubrid_disconnect($conn);
 ?>
 ]]>
    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Column Names                   Column Types                   Column Maxlen  
+host_year                      integer                        11             
+event_code                     integer                        11             
+athlete_code                   integer                        11             
+stadium_code                   integer                        11             
+nation_code                    char(3)                        3              
+medal                          char(1)                        1              
+game_date                      date                           10             
+]]>
+   </screen>
   </example>
  </refsect1>
  

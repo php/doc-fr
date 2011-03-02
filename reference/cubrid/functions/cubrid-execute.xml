@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 098c69bbf2a1bc7c6ec0044d59ad89f729b82463 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3c08ec64aebb60e9d3163aa56711ccac9d2d0f05 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-execute" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>cubrid_execute</refname>
-  <refpurpose>Exécute une requête SQL</refpurpose>
+  <refpurpose>Exécute une requête SQL préparée</refpurpose>
  </refnamediv>
  
  <refsect1 role="description">
@@ -92,44 +92,37 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-$con = cubrid_connect ("dbsvr.cubrid.com", 33000, "demodb"); 
-if ($con) {
- 
-    echo "connected successfully"; 
-    $req = cubrid_execute ($con, "select * from members", CUBRID_INCLUDE_OID | CUBRID_ASYNC);
- 
-    if ($req) {
-        while (list ($id, $name) = cubrid_fetch ($req)) {
-            echo $id;
-            echo $name;
-        }
-        cubrid_close_request ($req);
-    }
+$conn = cubrid_connect("localhost", 33000, "demodb");
 
-    cubrid_disconnect ($con);
+$result = cubrid_execute($conn, "SELECT code FROM event WHERE name='100m Butterfly' and gender='M'", CUBRID_ASYNC);
+$row = cubrid_fetch_array($result, CUBRID_ASSOC);
+$event_code = $row["code"];
+
+cubrid_close_request($result);
+
+$history_req = cubrid_prepare($conn, "SELECT * FROM history WHERE event_code=?");
+cubrid_bind($history_req, 1, $event_code, "number");
+cubrid_execute($history_req);
+
+printf("%-20s %-9s %-10s %-5s\n", "athlete", "host_year", "score", "unit");
+while ($row = cubrid_fetch_array($history_req, CUBRID_ASSOC)) {
+    printf("%-20s %-9s %-10s %-5s\n",
+        $row["athlete"], $row["host_year"], $row["score"], $row["unit"]);
 }
 
-   
-$con = cubrid_connect ("dbsvr.cubrid.com", 33000, "demodb"); 
-if ($con) {
- 
-    echo "Connexion réussie"; 
-    $sql = "insert into tbl values (?, ?, ?)";
- 
-    $req = cubrid_prepare($con, $sql, CUBRID_INCLUDE_OID); 
+cubrid_close_request($history_req);
 
-    $i = 0;
-    while ( $i < 2 ) {
-        $res = cubrid_bind($req, 1, "1", "NUMBER");
-        $res = cubrid_bind($req, 2, "2");
-        $res = cubrid_bind($req, 3, "04:22:34 PM 08/07/2007");
-        $res = cubrid_execute($req);
-        $i = $i + 1;
-    }
-}
+cubrid_disconnect($conn);
 ?>
 ]]>
    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+athlete              host_year score      unit
+Phelps Michael       2004      51.25      time
+]]>
+   </screen>
   </example>
  </refsect1>
  
