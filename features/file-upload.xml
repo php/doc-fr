@@ -38,7 +38,7 @@
    navigateur <productname>Netscape Composer</productname>
    et <productname>Amaya</productname> du W3C. Reportez-vous au chapitre sur le
    <link linkend="features.file-upload.put-method">support de la
-   méthode PUT</link>.
+    méthode PUT</link>.
   </para>
   
   <para>
@@ -64,7 +64,6 @@
      <literal>_URL_</literal> dans l'exemple précédent doit être remplacé et
      pointé vers un fichier PHP.
     </para>
-    
     <para>
      Le champ caché <literal>MAX_FILE_SIZE</literal> (mesuré en octets) doit
      précéder le champ input de type file et sa valeur représente la taille
@@ -90,7 +89,10 @@
   </note>
   
   <para>
-   La variable globale <varname>$_FILES</varname> devrait contenir toutes les informations du
+   La variable globale <varname>$_FILES</varname> existe depuis
+   PHP 4.1.0 (utilisez <varname>$HTTP_POST_FILES</varname> à la place
+   si vous utilisez une version plus ancienne).
+   Ces tableaux devraient contenir toutes les informations du
    fichier téléchargé.
   </para>
   
@@ -159,14 +161,16 @@
    <example>
     <title>Validation de téléchargement de fichiers</title>
     <para>
-     Voyez aussi les fonctions
-     <function>is_uploaded_file</function> et
+     Voyez aussi les fonctions <function>is_uploaded_file</function> et
      <function>move_uploaded_file</function> pour plus d'informations.
      L'exemple suivant va télécharger un fichier venant d'un formulaire.
     </para>
     <programlisting role="php">
 <![CDATA[
 <?php
+// Dans les versions de PHP antiéreures à 4.1.0, la variable $HTTP_POST_FILES
+// doit être utilisée à la place de la variable $_FILES.
+
 $uploaddir = '/var/www/uploads/';
 $uploadfile = $uploaddir . basename($_FILES['userfile']['name']);
 
@@ -198,7 +202,7 @@ echo '</pre>';
    les fichiers qui n'ont pas le bon type, mais l'utiliser uniquement pour une série de
    vérifications, car cette valeur est complètement sous le contrôle du client
    et n'est pas vérifiée du côté de PHP.
-   Vous pouvez utiliser l'information dans
+   Depuis PHP 4.2.0, vous pouvez utiliser l'information dans
    <varname>$_FILES['userfile']['error']</varname> et adapter votre politique
    en fonction des <link linkend="features.file-upload.errors">codes d'erreur</link>.
    Quelle que soit votre politique, vous devriez soit effacer le fichier du
@@ -254,7 +258,7 @@ foreach ($_FILES["pictures"]["error"] as $key => $error) {
  <sect1 xml:id="features.file-upload.errors">
   <title>Explication sur les messages d'erreurs de chargement de fichiers</title>
   <simpara>
-   PHP retourne un code d'erreur approprié dans le
+   Depuis PHP 4.2.0, PHP retourne un code d'erreur approprié dans le
    tableau de fichiers. Ce code d'erreur est accessible à l'index
    <literal>['error']</literal> du tableau, qui est créé durant
    le téléchargement par PHP. En d'autres termes, le message d'erreur
@@ -334,6 +338,11 @@ foreach ($_FILES["pictures"]["error"] as $key => $error) {
     </varlistentry>
    </variablelist>
   </para>
+  <note>
+   <para>
+    Ces valeurs deviennent des constantes PHP en version 4.3.0.
+   </para>
+  </note>
  </sect1>
  
  <sect1 xml:id="features.file-upload.common-pitfalls">
@@ -383,14 +392,14 @@ foreach ($_FILES["pictures"]["error"] as $key => $error) {
    de définir <literal>post_max_size</literal> avec une taille suffisante.
   </simpara>
   <simpara>
-    Depuis PHP 5.2.12, la configuration de
-    <link linkend="ini.max-file-uploads">max_file_uploads</link> contrôle le nombre
-    maximum de fichiers qui peuvent être envoyés en une requête. Si le nombre de fichiers
-    envoyés dépasse cette limite, alors <varname>$_FILES</varname> arrêtera la réception.
-    Par exemple, si <link linkend="ini.max-file-uploads">max_file_uploads</link> vaut
-    <literal>10</literal>, alors <varname>$_FILES</varname> ne contiendra jamais plus de
-    10 entités.
-   </simpara>
+   Depuis PHP 5.2.12, la configuration de
+   <link linkend="ini.max-file-uploads">max_file_uploads</link> contrôle le nombre
+   maximum de fichiers qui peuvent être envoyés en une requête. Si le nombre de fichiers
+   envoyés dépasse cette limite, alors <varname>$_FILES</varname> arrêtera la réception.
+   Par exemple, si <link linkend="ini.max-file-uploads">max_file_uploads</link> vaut
+   <literal>10</literal>, alors <varname>$_FILES</varname> ne contiendra jamais plus de
+   10 entités.
+  </simpara>
   <simpara>
    Ne pas valider les fichiers que vous manipulez peut donner l'accès
    aux utilisateurs à des fichiers sensibles dans d'autres dossiers !
@@ -447,9 +456,10 @@ foreach ($_FILES["pictures"]["error"] as $key => $error) {
    Lorsque le formulaire ci-dessus a été envoyé, les
    tableaux <varname>$_FILES['userfile']</varname>,
    <varname>$_FILES['userfile']['name']</varname>, et
-   <varname>$_FILES['userfile']['size']</varname> seront initialisés.
-   Lorsque
-   <link linkend="ini.register-globals">register_globals</link>
+   <varname>$_FILES['userfile']['size']</varname> seront initialisés
+   (tout comme <varname>$HTTP_POST_FILES</varname> pour les versions PHP
+   antérieures à 4.1.0).
+   Lorsque <link linkend="ini.register-globals">register_globals</link>
    est activé, les variables
    globales concernant les fichiers téléchargés sont aussi
    initialisées. Chacune d'entre elles contiendra un tableau
@@ -475,14 +485,14 @@ foreach ($_FILES["pictures"]["error"] as $key => $error) {
    créées.
   </simpara>
   <warning>
-    <simpara>
-     Depuis PHP 5.2.12, le paramètre
-     <link linkend="ini.max-file-uploads">max_file_uploads</link> limite le nombre
-     de fichiers qui peuvent être envoyés en une requête. Vous devrez vérifier que
-     votre formulaire ne tente pas d'envoyer plus de fichier dans la requête que ne
-     le tolère cette limite.
-    </simpara>
-   </warning>
+   <simpara>
+    Depuis PHP 5.2.12, le paramètre
+    <link linkend="ini.max-file-uploads">max_file_uploads</link> limite le nombre
+    de fichiers qui peuvent être envoyés en une requête. Vous devrez vérifier que
+    votre formulaire ne tente pas d'envoyer plus de fichier dans la requête que ne
+    le tolère cette limite.
+   </simpara>
+  </warning>
  </sect1>
  
  <sect1 xml:id="features.file-upload.put-method">
@@ -537,7 +547,7 @@ Script PUT /put.php
   </simpara>
   <simpara>
    Avec PHP, vous voudriez faire quelque chose comme ce qui suit
-   dans votre <filename>put.php</filename>. Ceci va copier le contenu
+   dans votre put.php. Ceci va copier le contenu
    du fichier téléchargé dans le fichier 
    <filename>myputfile.ext</filename> sur le serveur.
    Vous devez probablement vouloir effectuer quelques vérifications et/ou
