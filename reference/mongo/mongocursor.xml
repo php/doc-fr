@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7214d04a66fb2e93d8156f8995b01b858e12e3f8 Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: cc40e134d2ccc2269fd0e59f589037da99e4970b Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
 
 <phpdoc:classref xml:id="class.mongocursor" xmlns:phpdoc="http://php.net/ns/phpdoc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
@@ -14,22 +14,69 @@
   <section xml:id="mongocursor.intro">
    &reftitle.intro;
    <para>
-    L'objet de résultat d'une requête de base de données.
+    Un curseur est utiliser pour itérer les résultats d'une requête.
+    Par exemple regarder tous les résultats d'une requête quelconque :
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$cursor = $collection->find();
+var_dump(iterator_to_array($cursor));
+
+?>
+]]>
+    </programlisting>
    </para>
    <para>
+    En général, vous ne créez pas de
+    <classname>MongoCursor</classname> en utilisant le constructeur mais en 
+    appelant <function>MongoCollection::find</function> (comme ci-dessus).
+   </para>
+   <para>
+    Supposons que, dans l'exemple ci-dessus, <literal>$collection</literal> pèse
+    50Go. On ne voudra certainement pas tout charger en mémoire, c'est ce que permet
+    un curseur : permettre au client d'accéder aux données au fur et à mesure. 
+   </para>
+   <para>
+    Si nous avons des jeux de résultats très grands, nous pouvons itérer dessus, ceci chargera
+    seulement quelques méga-octets dans la mémoire. Par exemple :
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$cursor = $collection->find();
+
+foreach ($cursor as $doc) {
+    // faire quelque chose avec chaque document $doc
+}
+
+?>
+]]>
+    </programlisting>
+    Les documents ici sont crées puis détruits au fur et à mesure de l'itération.
+   </para>
+   <para>
+    Notez que cela signifie qu'un curseur ne contient pas les données du jeu de résultats,
+    il ne fait que les piloter. Ainsi si vous affichez un curseur (par exemple, avec
+    <function>var_dump</function> ou <function>print_r</function>), vous n'obtiendrez que l'objet
+    curseur, pas les documents. Pour obtenir les documents, vous pouvez utiliser une des techniques
+    ci-dessus.
+   </para>
+  </section>
+
+  <section>
+   <title>Etats des curseurs</title>
+   <para>
+   <para>
     Un <classname>MongoCursor</classname> a 2 états différents : Avant et après
-    la requête. Un curseur peut être créé manuellement en appelant le constructeur,
-    mais il est générallement créé en appelant la fonction
-    <function>MongoCollection::find</function>. Lorsqu'un curseur est créé,
-    il n'a pas encore contacté la base de données, il est dans l'état "avant requête".
-    Dans cet état, le client peut spécifier les paramètres de sa requête,
-    comme les limitations, les exceptions, l'ordre de tri ainsi que d'autres
-    options avancées.
+    la requête. Lorsqu'un curseur est crée, il n'a pas encore contacté la base de données,
+    il est en état pré-requête et le client peut toujours préciser ce qu'il attend de la requête,
+    par exemple ajouter des limites, des tris ou encore des options avancées.
    </para>
    <para>
     Lorsque le client tente de récupérer un résultat (en appelant la fonction
     <function>MongoCursor::next</function>, directement ou indirectement),
-    le curseur passe à l'état "après requête". À ce moment là, la requête a été
+    le curseur passe à l'état post-requête. À ce moment-là, la requête a été
     exécutée par la base et ne peut plus être modifiée.
    </para>
    <para>
