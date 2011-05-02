@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 244029a89a510a653e0d551be896c995d7c2ea23 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 6370ba265fe77d5c37c6e7d1b49242e6757d985b Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-bind" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -14,20 +14,23 @@
   <methodsynopsis>
    <type>bool</type><methodname>cubrid_bind</methodname>
    <methodparam><type>resource</type><parameter>req_identifier</parameter></methodparam>
-   <methodparam><type>int</type><parameter>bind_index</parameter></methodparam>
-   <methodparam><type>string</type><parameter>bind_value</parameter></methodparam>
+   <methodparam><type>mixed</type><parameter>bind_param</parameter></methodparam>
+   <methodparam><type>mixed</type><parameter>bind_value</parameter></methodparam>
    <methodparam choice="opt"><type>string</type><parameter>bind_value_type</parameter></methodparam>
   </methodsynopsis>
   <para>
-   La fonction <function>cubrid_bind</function> est utilisée pour lier des valeurs
-   dans une variable <function>cubrid_prepare</function>, de divers types PHP avec
-   une correspondance de types SQL. Si bind_value_type n'est pas fourni, le type &string;
-   sera le type par défaut.
+   La fonction <function>cubrid_bind</function> est utilisée pour lier
+   les valeurs à un marqueur correspondant, nommé ou non d'une requête SQL
+   qui a été passée à la fonction <function>cubrid_prepare</function>.
+   Si le paramètre <parameter>bind_value_type</parameter> n'est pas fourni,
+   le type &string; sera le type par défaut.
   </para>
   <note>
    <para>
-    Erreur connue : si le type de la colonne de données est CLOB, le liage
-    échouera. Ce bogue sera résolu ultérieurement.
+    Si le type de données à lier est BLOB/CLOB, CUBRID tentera de lier
+    les données comme un flux PHP. Si le type de la valeur à lier n'est
+    pas un flux, CUBRID la convertira en chaîne, et l'utilisera comme
+    chemin complet et nom de fichier sur le système de fichier client.
    </para>
   </note>
   <para>
@@ -142,17 +145,22 @@
      <listitem>
       <para>
        Identifiant de requête, retourné par la fonction
-      <function>cubrid_prepare</function>.
+       <function>cubrid_prepare</function>.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
      <term>
-      <parameter>bind_index</parameter>
+      <parameter>bind_param</parameter>
      </term>
      <listitem>
       <para>
-       Indexe du liage.
+       Identifiant de paramètre. Pour une requête préparée utilisant
+       un marqueur nommé, ce sera un nom de paramètre sous la forme :nom
+       (Notez que le nom ne peut contenir que des nombres, des lettres et des underscores,
+       et ne peut pas commencer par un nombre. La longueur du nom ne peut dépasser
+       les 32 caractères). Pour une requête préparée utilisant un marqueur joker,
+       ce sera la position (les indexes commençant à 1) du paramètre.
       </para>
      </listitem>
     </varlistentry>
@@ -168,7 +176,7 @@
     </varlistentry>
     <varlistentry>
      <term>
-      <parameter>bind_index</parameter>
+      <parameter>bind_value_type</parameter>
      </term>
      <listitem>
       <para>
@@ -205,6 +213,13 @@
       </row>
      </thead>
      <tbody>
+      <row>
+       <entry>8.4.0</entry>
+       <entry>
+        Ajout du support des paramètres nommés ; Lors d'un liage d'un type de
+        données BLOB, on peut directement lier le chemin du fichier.
+       </entry>
+      </row>
       <row>
        <entry>8.3.1</entry>
        <entry>
@@ -252,8 +267,8 @@ cubrid_disconnect($conn);
 ?>
 ]]>
    </programlisting>
-&example.outputs;
-    <screen>
+   &example.outputs;
+   <screen>
 <![CDATA[
 --- Dream Team (1992 United States men's Olympic basketball team) ---
 Stockton John
@@ -273,6 +288,53 @@ Barkley Charles
   </example>
   
   <example>
+   <title>Exemple avec <function>cubrid_bind</function> et les paramètres nommés</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$conn = cubrid_connect("localhost", 33000, "demodb");
+
+$sql_stmt = <<<EOD
+SELECT s.name FROM stadium s, game g
+WHERE s.code = g.stadium_code AND g.medal = :medal_type
+GROUP BY g.stadium_code ORDER BY count(medal) DESC LIMIT 1;
+EOD;
+
+$req = cubrid_prepare($conn, $sql_stmt);
+printf("%-30s %s\n", "Medal Type", "Stadium where most medals were ever won");
+
+cubrid_bind($req, ":medal_type", "G");
+cubrid_execute($req);
+$row = cubrid_fetch_assoc($req);
+printf("%-30s %s\n", "Gold", $row["name"]);
+
+cubrid_bind($req, ":medal_type", "S");
+cubrid_execute($req);
+$row = cubrid_fetch_assoc($req);
+printf("%-30s %s\n", "Silver", $row["name"]);
+
+cubrid_bind($req, ":medal_type", "B");
+cubrid_execute($req);
+$row = cubrid_fetch_assoc($req);
+printf("%-30s %s\n", "Bronze", $row["name"]);
+
+cubrid_close_request($req);
+cubrid_disconnect($conn);
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Medal Type                     Stadium where most medals were ever won
+Gold                           Olympic Aquatic Centre
+Silver                         Olympic Aquatic Centre
+Bronze                         Sydney Convention and Exhibition Centre
+]]>
+   </screen>
+  </example>
+  
+  <example>
    <title>Exemple avec <function>cubrid_bind</function> et les types BLOB/CLOB</title>
    <programlisting role="php">
 <![CDATA[
@@ -284,7 +346,25 @@ if ($con) {
 
     $fp = fopen("book.txt", "rb");
 
-    cubrid_bind($req, 1, $fp, "blob"); 
+    cubrid_bind($req, 1, $fp, "clob");
+    cubrid_execute($req);  
+}
+?>
+]]>
+   </programlisting>
+  </example>
+
+  <example>
+   <title>Exemple avec <function>cubrid_bind</function> et BLOB/CLOB</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$con = cubrid_connect("localhost", 33000, "foo");
+if ($con) {
+    $sql = "INSERT INTO php_cubrid_lob_test(image) VALUES(?)";
+    $req = cubrid_prepare($con, $sql);
+
+    cubrid_bind($req, 1, "cubrid_logo.png", "blob");
     cubrid_execute($req);  
 }
 ?>
