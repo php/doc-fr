@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 244029a89a510a653e0d551be896c995d7c2ea23 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 87e4a943628b61abd54f5e657957b7237c5bf95e Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-execute" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -34,12 +34,34 @@
    <parameter>request_identifier</parameter> et <parameter>option</parameter>.
   </para>
   <para>
-   Vous pouvez utiliser l'argument <parameter>option</parameter> pour indiquer
-   si vous souhaitez recevoir l'OID de la ligne après l'exécution, et, si
-   vous souhaitez exécuter la requête en mode asynchrone, ceci en définissant
-   CUBRID_INCLUDE_OID et CUBRID_ASYNC à l'aide de l'opérateur OR.
-   Si les 2 variables ne sont pas explicitement fournies, elles ne seront
-   pas sélectionnées par défaut.
+   L'<parameter>option</parameter> est utilisé pour déterminer si l'on doit
+   récupérer l'IOD après l'exécution de la requête, et si l'on doit exécuter
+   la requête en mode asynchrone ou non. CUBRID_INCLUDE_OID et CUBRID_ASYNC 
+   (ou CUBRID_EXEC_QUERY_ALL si vous voulez exécuter plusieurs requêtes SQL)
+   peuvent être spécifiés en utilisant l'opérateur OR. Si l'opérateur n'est
+   pas spécifié, aucun des deux ne sera sélectionné. Si le drapeau
+   CUBRID_EXEC_QUERY_ALL est défini, le mode synchrone (sync_mode) sera
+   utilisé pour récupérer les résultats de la requête, et dans un tel cas,
+   les règles suivantes seront appliquées :
+  </para>
+  <para>
+   <simplelist>
+    <member>La valeur retournée sera le résultat de la première requête.</member>
+    <member>
+     Si une erreur survient dans une des requêtes, l'exécution sera vu comme
+     étant un échec.
+    </member>
+    <member>
+     Pour une requête composée de q1 q2 et q3, si une erreur survient dans q2
+     alors que q1 a été exécutée avec succès, le résultat de q1 reste valide.
+     Ainsi, l'exécution avec succès d'une précédente requête ne sera pas annulée
+     lorsqu'une erreur survient.
+    </member>
+    <member>
+     Si une requête est exécutée avec succès, le résultat de la seconde requête
+     peut être obtenu en utilisant la fonctionc <function>cubrid_next_result</function>.
+    </member>
+   </simplelist>
   </para>
   <para>
    Si le premier paramètre est <parameter>request_identifier</parameter> pour
@@ -62,7 +84,7 @@
     </varlistentry>
     <varlistentry>
      <term><parameter>option</parameter></term>
-     <listitem><para>Option d'exécution de la requête : CUBRID_INCLUDE_OID, CUBRID_ASYNC.</para></listitem>
+     <listitem><para>Option d'exécution de la requête : CUBRID_INCLUDE_OID, CUBRID_ASYNC, CUBRID_EXEC_QUERY_ALL.</para></listitem>
     </varlistentry>
     <varlistentry>
      <term><parameter>request_identifier</parameter></term>
@@ -84,6 +106,31 @@
    &false;, si une erreur survient.
   </para>
  </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>8.4.0</entry>
+       <entry>
+        Ajout d'une nouvelle option : CUBRID_EXEC_QUERY_ALL.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
+ </refsect1>
+
  
  <refsect1 role="examples">
   &reftitle.examples;
@@ -116,8 +163,8 @@ cubrid_disconnect($conn);
 ?>
 ]]>
    </programlisting>
-    &example.outputs;
-    <screen>
+   &example.outputs;
+   <screen>
 <![CDATA[
 athlete              host_year score      unit
 Phelps Michael       2004      51.25      time
@@ -130,11 +177,12 @@ Phelps Michael       2004      51.25      time
   &reftitle.seealso;
   <para>
    <simplelist>
-    <member><function>cubrid_close_request</function></member>
-    <member><function>cubrid_commit</function></member>
-    <member><function>cubrid_rollback</function></member>
-    <member><function>cubrid_prepare</function></member>
-    <member><function>cubrid_bind</function></member>
+   <member><function>cubrid_prepare</function></member>
+   <member><function>cubrid_bind</function></member>
+   <member><function>cubrid_next_result</function></member>
+   <member><function>cubrid_close_request</function></member>
+   <member><function>cubrid_commit</function></member>
+   <member><function>cubrid_rollback</function></member>
    </simplelist>
   </para>
  </refsect1>
