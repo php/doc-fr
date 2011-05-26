@@ -38,12 +38,116 @@
   </para>
 
   <para>
+   Notez que ce type d'attaque peut être utilisée avec chaque itération de bases de
+   données qui tente de localiser un document, y compris les mises à jour, les
+   recherches/remplacements, et les effacement.
+  </para>
+
+  <para>
    Merci à <link xlink:href="&url.mongodb.injection;">Phil</link> d'avoir mis le doigt sur ces possibilités.
   </para>
 
   <para>
    Reportez-vous à <link xlink:href="&url.mongodb.dochub.security;">la documentation
    principale</link> pour plus d'informations sur les injections SQL avec MongoDB.
+  </para>
+ </section>
+
+ <section>
+  <title>Attaques par injection</title>
+  <para>
+   Si vous utilisez Javascript, assurez-vous que toutes les variables qui
+   passent par le lien PHP-vers-Javascript sont passées dans le champ
+   <literal>scope</literal> de la classe <classname>MongoCode</classname>
+   sans être interpolées dans la chaîne Javascript. Ceci peut survenir lors
+   de l'utilisation de la méthode <function>MongoDB::execute</function>,
+   des clauses <literal>$where</literal>, MapReduces, group-bys, et à chaque
+   fois que vous pouvez passer du Javascript dans la base de données.
+  </para>
+  <note>
+   <para>
+    MapReduce ignore le champ <literal>scope</literal> de la méthode
+    <classname>MongoCode</classname>, mais il y a une option <literal>scope</literal>
+    sur la commande qui peut être utilisée à la place.
+   </para>
+  </note>
+  <para>
+   Par exemple, supposons que nous avons du Javascript qui salut un
+   utilisateur dans la base de données. Nous pouvons faire :
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+// Ne faîtes pas ceci !
+
+$username = $_POST['username'];
+$db->execute("print('Hello, $username!');");
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Cependant, que se passe-t-il si un utilisateur passe le Javascript suivant ?
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+// Ne faîtes pas ceci !
+
+// $username vaut : "'); db.users.drop(); print('"
+$db->execute("print('Hello, $username!');");
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Alors, MongoDB exécute le chaîne Javascript
+   <literal>"print('Hello, '); db.users.drop(); print('!');"</literal>.
+   Ce type d'attaque est facile à contrer : utilisez
+   <literal>scope</literal> pour passe les variables de PHP à Javascript :
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$scope = array("user" => $username);
+$db->execute(new MongoCode("print('Hello, user!');", $scope));
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Ceci permet d'ajout une variable <literal>user</literal> au scope JavaScript.
+   Maintenant, si quelqu'un tente d'envoyer du code malicieux, MongoDB
+   affichera <literal>Hello, '); db.dropDatabase(); print('!</literal>.
+  </para>
+
+  <para>
+   L'utilisation de <literal>scope</literal> permet de prévenir d'exécution de
+   code malicieux dans la base de données. Cependant, vous devez vous assurer
+   que votre code ne tourne pas en rond et finisse par, au final, exécuter l'entrée
+   utilisateur ! Par exemple, n'utilisez jamais la fonction Javascript
+   <literal>eval</literal> sur des entrées utilisateurs :
+  </para>
+  <programlisting>
+<![CDATA[
+<?php
+
+// Ne faîtes pas ceci !
+
+// $jsShellInput vaut : "db.users.drop();"
+$scope = array("input" => $jsShellInput);
+$db->execute(new MongoCode("eval(input);", $scope));
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Utilisez toujours <literal>scope</literal> et n'autorisez jamais
+   la base de données à exécuter des entrées utilisateurs sous forme de
+   code.
   </para>
  </section>
 </section>
