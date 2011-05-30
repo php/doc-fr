@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7214d04a66fb2e93d8156f8995b01b858e12e3f8 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 4f1556e4e30db2647573ea21291795e945459860 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <part xml:id="mongo.types" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -8,104 +8,205 @@
  <title>Les types</title>
  
  <partintro>
-  
   <section>
-   <title>Changement dans la gestion des nombres</title>
    <para>
-    <emphasis>
-     Le comportement par défaut des nombres a changé en version 1.1.0. Pour la plupart
-     des programmeurs, la gestion des nombres au niveau du pilote est plus souple et
-     plus naturelle, mais cela peut demander des modifications du code pour assurer
-     le fonctionnement.
-    </emphasis>
-   </para>
-   <para>
-    Les changements qui cassent concernent la sérialisation et la désérialisation des
-    entiers. Vous pouvez tester comment ces changements affectent vote code en précisant
-    un paramètre .ini: mongo.native_int et mongo.long_as_object, par défaut à &true;.
-   </para>
-   <para>
-    Sérialisation: par défaut avant 1.1.0, tous les entiers PHP sont sérialisés comme des
-    entiers 32-bits même sur les machines 64-bits. Ceci signifie que les grands nombres
-    sont tronqués silencieusement. Depuis 1.1.0, les machines 64-bits sauvegarderont par défaut
-    les entiers comme des entiers 64-bits. Les machines 32-bits continueront de suaver les entiers
-    sous forme d'entiers 32-bits (vous pouvez aussi utiliser les classes <classname>MongoInt32</classname>
-    et <classname>MongoInt64</classname> pour manipuler explicitement ces types respectifs).
-   </para>
-   <para>
-    Desérialisation: par défaut, avant 1.1.0, les entiers 64-bits seront desérialisés
-    en doubles. Ce n'est pas une correspondance parfaite et cela signifie qu'ils seront
-    re-sauvegardés dans un mauvais type (doubles au lieu d'entiers 64-bit). En 1.1.0, les
-    entiers 64-bits seront retournés comme des <classname>MongoInt64</classname> sur les
-    machines 32-bits.
+    MongoDB permet aux développeurs de sauvegarder et de rechercher
+    des données exprimées dans tous les types PHP basiques, les types
+    composés (tableaux, tableaux associatifs, et objets), ainsi qu'une
+    demi-douzaine de classes fournies par le driver MongoDB (pour
+    les expressions rationnelles, les dates, et les autres applications
+    spécialisées).
    </para>
   </section>
+  
+  <section>
+   <title>Booléens et &null;</title>
+   <para>
+    &true;, &false;, et &null; peuvent également être utilisés.
+   </para>
+  </section>
+  
+  <section>
+   <title>Les nombres</title>
+   <para>
+    Les nombres sont distincts des chaînes en MongoDB : "123" ne correspond
+    pas à 123. Aussi, si vous voulez vous assurer que les nombres soient correctement
+    triés et correspondent parfaitement, vous devez vous assurer qu'ils sont
+    bien sauvegardés comme des nombres.
+   </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
 
-  <section>
+$doc = array("a" => 123, "b" => "123");
+$collection->insert($doc);
+
+$doc->find(array("a" => 123));   // correspond
+$doc->find(array("a" => "123")); // Ne correspond pas
+$doc->find(array("a" => 123.0)); // correspond
+$doc->find(array("b" => 123));   // Ne correspond pas
+$doc->find(array("b" => "123")); // correspond
+
+?>
+]]>
+   </programlisting>
    <para>
-    MongoDB permet aux développeurs de sauvegarder et de requérir des données
-    en utilisant tous les types basiques de PHP, comme les tableaux, les tableaux
-    associatifs, les objets mais aussi en utilisant toutes les classes fournies
-    par le driver PHP MongoDB (pour les expressions rationnelles, les dates
-    et les autres applications spécialisées).
+    Comme vous pouvez le constater ci-dessus, les nombres
+    à virgule flottante peuvent être comparés et correspondre
+    à des nombres entiers.
+   </para>
+   <section>
+    <title>Les grands nombres</title>
+    <para>
+     Par défaut, sur un système 32-bits, les nombres sont envoyés à la base
+     de données sous la forme d'entiers 32-bits. Sur les système 64-bits,
+     ils sont envoyés sous la forme d'entiers 64-bits. En raison de compatibilité
+     ascendante, tous les systèmes linéarisent les entiers 64-bits sous la forme
+     de nombres à virgule flottante. Les nombres à virgule flottante ne sont 
+     pas exacts. Si vous avez besoin de nombres exacts, vous devez personnaliser
+     votre fichier de configuration <link xlink:href="mongo.configure;">php.ini</link>.
+    </para>
+    <para>
+     Sur les systèmes 32-bits, si l'option <literal>mongo.long_as_object</literal>
+     est définie, les entiers 64-bits seront retournés sous la forme d'objets
+     <classname>MongoInt64</classname>. Les entiers seront stockés dans le champ
+     <literal>value</literal> avec une précision parfaite (comme les chaînes).
+     Vous pouvez également utiliser la méthode <classname>MongoInt64</classname>
+     pour sauvegarder des entiers 64-bits sur des machines 32-bits.
+    </para>
+    <para>
+     Sur les systèmes 64-bits, vous pouvez définir soit l'option
+     <literal>mongo.long_as_object</literal>, soit l'option
+     <literal>mongo.native_long</literal>. <literal>mongo.native_long</literal>
+     retournera des entiers 64-bits et des entiers PHP "normaux". Vous pouvez
+     utiliser la méthode <classname>MongoInt32</classname> pour sauvegarder
+     des entiers 32-bits sur des machines 64-bits.
+    </para>
+    <para>
+     Vous devriez définir les options <literal>mongo.long_as_object</literal> et
+     <literal>mongo.native_long</literal> si vous comptez les utiliser,
+     même si c'est le comportement par défaut (et ce, afin de vous protéger
+     contre de futures modifications sur les valeurs par défaut).
+    </para>
+    <para>
+     Voir aussi : <link xlink:href="mongo.configure;">php.ini Options</link>,
+     <classname>MongoInt32</classname>, <classname>MongoInt64</classname>.
+    </para>
+   </section>
+  </section>
+  
+  <section>
+   <title>Les chaînes</title>
+   <para>
+    Les chaînes doivent être en UTF-8. Les chaînes qui ne le sont pas
+    doivent soit être converties en UTF-8 avant l'envoi à la base de données,
+    soit sauvegardées comme données binaires.
+   </para>
+   <para>
+    Les expressions rationnelles peuvent être utilisées pour chercher une chaîne,
+    et elles sont exprimées en utilisant la classe <classname>MongoRegex</classname>.
    </para>
   </section>
   
   <section>
-   <title>Types simples</title>
+   <title>Les données binaires</title>
    <para>
-    Les types internes sont :
-   </para>
-   <para>
-    <informaltable>
-     <tgroup cols="3">
-      <thead>
-       <row>
-        <entry>Type</entry>
-        <entry>Description</entry>
-        <entry>Taille dans MongoDB (en octets)</entry>
-       </row>
-      </thead>
-      <tbody>
-       <row>
-        <entry>&null;</entry>
-        <entry>La classique valeur NULL</entry>
-        <entry>0</entry>
-       </row>
-       <row>
-        <entry>boolean</entry>
-        <entry>&true; et &false;</entry>
-        <entry>1</entry>
-       </row>
-       <row>
-        <entry>int</entry>
-        <entry>Valeurs entières</entry>
-        <entry>4</entry>
-       </row>
-       <row>
-        <entry>float</entry>
-        <entry>Valeurs doubles</entry>
-        <entry>8</entry>
-       </row>
-       <row>
-        <entry>string</entry>
-        <entry>&string; en UTF-8</entry>
-        <entry>longueur de la chaîne + 1</entry>
-       </row>
-      </tbody>
-     </tgroup>
-    </informaltable>
+    Les chaînes non-UTF-8, les images ainsi que toutes autres données binaires
+    doivent être envoyées à la base de données en utilisant le type
+    <classname>MongoBinData</classname>.
    </para>
   </section>
   
   <section>
-   <title>Les tableaux et les objets</title>
+   <title>Dates</title>
+   <para>
+    Les dates peuvent être créées en utilisant la classe
+    <classname>MongoDate</classname>. Elles sont stockées sous la forme
+    du nombre de milliseconde depuis l'époque Unix.
+   </para>
+   <para>
+    <classname>MongoTimestamp</classname> n'a pas pour but de sauvegarder des dates
+    ou des timestamps, elle est utilisée en interne par MongoDB.  Sauf si vous
+    créez un outil qui interagit avec la réplication ou le partage interne,
+    vous devriez utiliser <classname>MongoDate</classname>, <emphasis>et non</emphasis>
+    <classname>MongoTimestamp</classname>.
+   </para>
+  </section>
+  
+  <section>
+   <title>Identifiants uniques</title>
+   <para>
+    Le driver créera automatiquement un champ <literal>_id</literal> avant
+    d'insérer un document (sauf si un tel champ est spécifié par l'utilisateur).
+    Ce champ est une instance de <classname>MongoId</classname> (appelée "ObjectId"
+    dans la plupart des autres langages).
+   </para>
+   <para>
+    Ces identifiants sont sur 12 octets et composés de :
+    <itemizedlist>
+     <listitem>
+      <para>4 octets pour le timestamp</para>
+      <para>
+       Deux enregistrements ne peuvent pas avoir le même identifiant s'ils sont
+       insérés à des moments différents.
+      </para>
+     </listitem>
+     <listitem>
+      <para>3 octets pour l'identifiant de la machine</para>
+      <para>
+       Deux enregistrements ne peuvent pas avoir le même identifiant
+       s'ils ont été insérés sur des machines différentes.
+      </para>
+     </listitem>
+     <listitem>
+      <para>2 octets pour l'identifiant du thread</para>
+      <para>
+       Deux enregistrement ne peuvent pas avoir le même identifiant s'ils
+       ont été enregistrés par des threads différents s'exécutant sur la
+       même machine.
+      </para>
+     </listitem>
+     <listitem>
+      <para>3 octets pour une valeur incrémentée</para>
+      <para>
+       Chaque fois qu'un identifiant est créé, un compteur global est incrémenté
+       et utilisé comme valeur d'incrémentation pour le prochain identifiant.
+      </para>
+     </listitem>
+    </itemizedlist>
+    Ainsi, deux enregistrements ne peuvent avoir le même identifiant tant qu'un
+    seul processus, sur une seule machine, n'arrivera à insérer 256^3 (plus de 16
+    millions) de documents en une seconde, pouvant ainsi écraser le champ
+    d'incrémentation.
+   </para>
+  </section>
+  
+  <section>
+   <title>JavaScript</title>
+   <para>
+    MongoDB est fourni avec un moteur Javascript, ainsi, vous pouvez embarquer
+    du Javascript dans une requête (en utilisant une clause $where), et l'envoyer
+    directement à la base de données pour exécution, et l'utiliser pour effectuer
+    des agrégations.
+   </para>
+   <para>
+    Pour des raisons de sécurité, utilisez le champ <literal>scope</literal>
+    de <classname>MongoCode</classname> pour utiliser les variables PHP dans
+    Javascript. Le code qui ne requière pas de valeurs externes peut soit
+    utiliser <classname>MongoCode</classname>, soit être juste une chaîne.
+    Voir la <link xlink:href="mongo.security;">section sur la sécurité</link>
+    pour plus d'informations sur l'envoi de javascript à la base de données.
+   </para>
+  </section>
+  
+  <section>
+   <title>Tableaux et objets</title>
    
    <para>
-    Les tableaux et les objets peuvent également être sauvegardés dans
-    la base de données. Un tableau possédant des clés numériques sera
-    sauvegardé sous la forme d'un tableau, tous les autres seront sauvegardés
-    sous la forme d'objets.
+    Les tableaux et les objets peuvent également être sauvegardés dans la base
+    de données. Un tableau avec des clés numériques ascendantes sera sauvegardé
+    sous la forme d'un tableau, tout le reste sera sauvegardé sous la forme
+    d'un objet.
    </para>
    
    <programlisting role="php">
@@ -125,8 +226,8 @@ $collection->insert(array("scores" => $scores));
    </programlisting>
    
    <para>
-    Si vous interrogeais ces objets en utilisant la console de base de données,
-    elles ressembleront à ceci :
+    Si votre requête pour ces objets utilise le shell de la base de données,
+    elle ressemblera à :
     <programlisting>
 <![CDATA[
 > db.students.find()
@@ -137,15 +238,15 @@ $collection->insert(array("scores" => $scores));
    </para>
    
    <para>
-    La base de données peut également être sauvegardé sous forme d'objets PHP
-    (malgré le fait qu'elle soit en réalité retourné sous la forme d'un tableau
-    associatif). Ces champs sont utilisés pour les paires clé/valeurs.
-    Par exemple, un billet de blog peut ressembler à ceci :
+    La base de données peut aussi sauvegarder des objets PHP arbitraires (même si
+    ils seront retournés sous la forme de tableaux associatifs). Les champs
+    sont utilisés pour les paires clés/valeurs. Par exemple, un article de
+    blog peut ressembler à ceci :
     <programlisting role="php">
 <![CDATA[
 <?php
 
-  // La classe permettant de gérer le billet d'un blog
+  // la classe d'articles de blog
   class Post {
 
   var $author;
@@ -164,17 +265,18 @@ $this->content = $content;
   }
 }
 
-// Crée un billet simple et l'insère dans la base de données
+// Crée un simple article de blog et on l'insère dans la base de données
 $post1 = new Post("Adam", "This is a blog post");
 
 $blog->insert($post1);
 
-// Rien ne restreint le type du champ "author", nous pouvons donc en faire
-// un objet imbriqué
+
+// Il n'y a rien qui restreint le type du champ "author", il peut donc être un objet
+// imbriqué
 $author = array("name" => "Fred", "karma" => 42);
 $post2 = new Post($author, "This is another blog post.");
 
-// Nous créons un champ supplémentaire pour y définir le titre
+// Nous créons un champ supplémentaire en définissant le titre
 $post2->setTitle("Second Post");
 
 $blog->insert($post2);
@@ -185,7 +287,7 @@ $blog->insert($post2);
    </para>
    
    <para>
-    Depuis la console de la base de données, les données ressembleront à ceci :
+    Depuis le shell de la base de données, cela va ressembler à :
     <programlisting>
 <![CDATA[
 > db.blog.find()
@@ -197,7 +299,7 @@ $blog->insert($post2);
    
    <para>
     Le driver ne détectera pas les boucles de référence dans les tableaux
-    et les objets. Par exemple, ceci produira une erreur fatale :
+    et les objets. Par exemple, ceci donnera une erreur fatale :
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -214,157 +316,17 @@ Fatal error: Nesting level too deep - recursive dependency?
 
 ]]>
     </programlisting>
-    Si vous devez insérer des documents qui possèdent des dépendances récursives,
-    vous devez les vérifier vous même avant de les passer aux drivers.
+    Si vous avez besoin d'insérer des documents qui peuvent avoir des
+    dépendances récursives, vous devez les vérifier vous-même avant
+    de les passez dans le driver.
    </para>
   </section>
-  
-  <section>
-   <title>Les types MongoDB</title>
-   
-   <para>
-    Le driver MongoDB définit également quelques nouveaux types à utiliser avec
-    la base de données. Reportez-vous à la documentation de la classe correspondante
-    pour plus de détails ainsi que des exemples.
-   </para>
-   <para>
-    <informaltable>
-     <tgroup cols="3">
-      <thead>
-       <row>
-        <entry>Type</entry>
-        <entry>Description</entry>
-        <entry>Taille dans MongoDB (en octets)</entry>
-       </row>
-      </thead>
-      <tbody>
-       <row>
-        <entry><classname>MongoBinData</classname></entry>
-        <entry>Donnée binaire</entry>
-        <entry>Nombre d'octets des données binaires + 5</entry>
-       </row>
-       <row>
-        <entry><classname>MongoCode</classname></entry>
-        <entry>Code Javascript</entry>
-        <entry>Longueur du code Javascript + taille de l'objet de contexte</entry>
-       </row>
-       <row>
-        <entry><classname>MongoDate</classname></entry>
-        <entry>Dates et heures. Stocké sous forme de timestamp</entry>
-        <entry>8</entry>
-       </row>
-       <row>
-        <entry><classname>MongoId</classname></entry>
-        <entry>Identifiant unique du document :
-         <itemizedlist>
-          <listitem>
-           <para>4 octets du timestamp</para>
-           <para>
-            2 documents ne peuvent pas avoir le même identifiant s'ils ont été
-            insérés à des moments différents.
-           </para>
-          </listitem>
-          <listitem>
-           <para>3 octets de l'identifiant de la machine</para>
-           <para>
-            2 documents ne peuvent pas avoir le même identifiant s'ils ont été
-            insérés sur des machines différentes.
-           </para>
-          </listitem>
-          <listitem>
-           <para>2 octets de l'identifiant du processus</para>
-           <para>
-            2 documents ne peuvent pas avoir le même identifiant s'ils ont été
-            insérés par des processus différents tournant sur la même machine.
-           </para>
-          </listitem>
-          <listitem>
-           <para>3 octets d'incrément</para>
-           <para>
-            Chaque fois qu'un identifiant est créé, un compteur global est incrémenté
-            et utilisé comme valeur d'incrémentation pour le prochaine identifiant.
-           </para>
-          </listitem>
-         </itemizedlist>
-         Ainsi, 2 enregistrements peuvent avoir le même identifiant si un processus
-         unique, sur une seule machine, utilisée pour insérer 256^3 (plus de
-         16 millions) documents en une seconde, débordant ainsi la valeur d'incrémentation.
-        </entry>
-        <entry>12</entry>
-       </row>
-       <row>
-        <entry><classname>MongoMinKey</classname></entry>
-        <entry>Toujours plus petite que n'importe quelle autre valeur</entry>
-        <entry>Longueur du code + taille de l'objet de contexte</entry>
-       </row>
-       <row>
-        <entry><classname>MongoMaxKey</classname></entry>
-        <entry>Code JavaScript</entry>
-        <entry>Toujours plus grande que n'importe quelle autre valeur</entry>
-       </row>
-       <row>
-        <entry><classname>MongoRegex</classname></entry>
-        <entry>Expressions rationnelles</entry>
-        <entry>
-         Nombre de caractères de l'expression rationnelle + nombre de drapeaux utilisés
-        </entry>
-       </row>
-       <row>
-        <entry><classname>MongoTimestamp</classname></entry>
-        <entry>Timestamp de réplication</entry>
-        <entry>8</entry>
-       </row>
-      </tbody>
-     </tgroup>
-    </informaltable>
-   </para>
-  </section>
-  
-  <section>
-   <title>BSON</title>
-   <para>
-    MongoDB utilise un format de stoquage appelé "BSON" (<literal>Binary
-    Serializable Object Notation</literal>) qui est similaire à JSON mais en
-    plus compact et est plus riche en types. Ci-dessous, nous avons listés
-    la taille exacte en octets de chaque type (ou les informations nécessaires
-    pour calculer leurs tailles, dans le cas de types variables en longueur).
-    Gardez à l'esprit que ces tailles n'incluent pas les noms des champs.
-    La taille d'un objet peut être calculée manuellement, mais c'est plus facile
-    pour un développeur d'appeler la fonction <function>bson_encode</function>
-    et de prendre la longueur de la chaîne résultante.
-   </para>
-   <para>
-    Exemple de calcul manuel d'un taille BSON pour sauvegarder l'objet
-    array("x" => null, "y" => 40) :
-    <programlisting>
-<![CDATA[
-4 bytes (object size)
-
-1 byte  (type of "x" field)
-2 bytes ("x" and "\0")
-0 bytes (for null)
-
-1 byte  (type of "y" field)
-2 bytes ("y" and "\0")
-4 bytes (for an integer)
-
-1 byte  (end-of-object byte)
------------------------
-15 bytes
-]]>
-    </programlisting>
-   </para>
-  </section>
-  
  </partintro>
- 
  &reference.mongo.mongoid;
  &reference.mongo.mongocode;
  &reference.mongo.mongodate;
  &reference.mongo.mongoregex;
  &reference.mongo.mongobindata;
- &reference.mongo.mongoint32;
- &reference.mongo.mongoint64;
  &reference.mongo.mongodbref;
  &reference.mongo.mongominkey;
  &reference.mongo.mongomaxkey;
