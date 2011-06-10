@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ --> 
+<!-- EN-Revision: 57236796d184a3fe3de1f226accd92fa603018c1 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<book xml:id="book.mysqlnd-ms" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Plugin de réplication Mysqlnd et de balance de charge</title>
+ <titleabbrev>mysqlnd_ms</titleabbrev>
+
+ <preface xml:id="intro.mysqlnd-ms">
+  &reftitle.intro;
+  <para>
+   Le plugin de réplication mysqlnd et de balance de charge mysqlnd
+   (<literal>mysqlnd_ms</literal>) ajoute la possibilité d'utiliser facilement
+   la réplication MySQL pour toutes les extensions PHP MySQL qui utilisent
+   <link linkend="book.mysqlnd">mysqlnd</link>.
+  </para>
+  <para>
+   Depuis la version 5.3.3 de PHP, le driver natif MySQL pour PHP
+   (<literal>mysqlnd</literal>) utilise un plugin interne C API.
+   Les plugins C, comme le plugin de réplication et de balance de charge,
+   peuvent étendre la fonctionnalité de
+   <link linkend="book.mysqlnd">mysqlnd</link>.
+  </para>
+  <para>
+   Le driver MySQL natif de PHP est une bibliothèque C qui est livré
+   avec PHP depuis la version 5.3.0. Il agit en remplacement de la
+   bibliothèque cliente MySQL (AKA libmysql/libmysqlclient).
+   L'utilisation de mysqlnd a plusieurs avantages : aucun téléchargement
+   supplémentaire car elle est fournie avec PHP, avec la licence PHP,
+   consomme moins de mémoire dans certains cas, et fournie de nouvelles
+   fonctionnalités comme les requêtes asynchrones.
+  </para>
+  <para>
+   Les plugins mysqlnd comme le plugin de réplication et de balance de charge
+   opère de façon transparente d'un point de vue utilisateur. Il supporte
+   toutes les applications PHP et toutes les extensions PHP MySQL (
+   <link linkend="ref.mysqli">mysqli</link>,
+   <link linkend="ref.mysql">mysql</link>,
+   <link linkend="ref.pdo-mysql">PDO_MYSQL</link>).
+   Il ne modifie pas les APIs existantes. Toutefois, il peut être utilisé
+   très facilement avec les applications PHP existantes.
+  </para>
+  <note>
+   <para>
+    Le plugin de réplication et de balance de charge est au stade ALPHA.
+    Ces fonctionnalités ne sont pas encore complètes.
+   </para>
+  </note>
+  <section xml:id="mysqlnd-ms.key_features">
+   <title>Fonctionnalités clés</title>
+   <para>
+    <itemizedlist>
+     <listitem>
+      <para>
+       Transparent et facile d'utilisation
+      </para>
+      <para>
+       <itemizedlist>
+        <listitem>
+         <para>
+          supporte toutes les extensions PHP MySQL
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          aucune modification de l'API
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          très légère modification de l'application nécessaire, suivant le scénario d'utilisation
+         </para>
+        </listitem>
+       </itemizedlist>
+      </para>
+     </listitem>
+
+     <listitem>
+      <para>
+       Stratégies de séparation de la lecture et de l'écriture
+      </para>
+      <para>
+       <itemizedlist>
+        <listitem>
+         <para>
+          Détection automatique des SELECT, supporte les astuces SQL pour écraser l'automatisme
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          définit par l'utilisateur
+         </para>
+        </listitem>
+       </itemizedlist>
+      </para>
+     </listitem>
+
+     <listitem>
+      <para>
+       Stratégies de balance de charge
+      </para>
+      <para>
+       <itemizedlist>
+        <listitem>
+         <para>
+          Round Robin : choisit un esclave différent à la façon round robin pour chaque
+          sélection d'esclave.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          Aléatoire : choisit de façon aléatoire un esclave pour chaque requête dirigée vers un esclave.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          Aléatoire unitaire : choisit un esclave aléatoirement, une seule fois pour toutes les
+          requêtes dirigées vers un esclave le temps de la requête web.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          Définit par l'utilisateur. L'application peut enregistrer des fonctions
+          de rappel avec mysqlnd_ms.
+         </para>
+        </listitem>
+       </itemizedlist>
+      </para>
+     </listitem>
+    </itemizedlist>
+   </para>
+  </section>
+
+  <section xml:id="mysqlnd-ms.limitations">
+   <title>Limitations</title>
+   <para>
+    Le plugin ne supporte pas la configuration de réplication MySQL
+    avec plus d'un serveur maître.
+   </para>
+   <para>
+    Le mécanisme interne de séparation lecture/écriture est très basique.
+    Chaque requête qui commence par <literal>SELECT</literal> est considérée
+    comme une requête en lecture à envoyer à un serveur esclave MySQL.
+    Toutes les autres requêtes, y compris, par exemple, les requêtes
+    <literal>SHOW</literal>, sont considérées comme des requêtes en écriture
+    à envoyer vers le serveur maître MySQL. Le comportement interne peut être
+    écraser en utilisant
+    <link linkend="mysqlnd-ms.constants">les astuces SQL</link> ou une
+    <link linkend="function.mysqlnd-ms-set-user-pick-server">fonction de rappel</link>
+    définie par l'utilisateur.
+   </para>
+   <para>
+    La séparation lecture/écriture ne prend pas en considération les requêtes
+    multiples. Elles sont considérées comme une seule et unique requête.
+    La décision de l'endroit où doit être exécutée la requête sera prise
+    suivant le début de la chaîne de requête.
+   </para>
+   <para>
+    Le plugin ne supporte pas nativement les requêtes préparées. Veuillez noter
+    que <link linkend="ref.pdo-mysql">PDO_MySQL</link> utilise une émulation
+    côté client de requêtes préparées par défaut. Cette émulation est totalement
+    supportée par le plugin de réplication et de balance de charge
+    car elle n'utilise pas nativement les requêtes préparées. Si vous utilisez PHP
+    basé sur l'abstraction de base de données, veuillez consulter le manuel utilisateur
+    pour savoir si l'émulation côté client de requêtes préparées est utilisée.
+   </para>
+   <note>
+    <para>
+     Les applications doivent tenir compte des conséquences des commutations
+     de connexion effectuées pour la balance de charge. Veuillez vous rapporter
+     à la documentation sur
+     <link linkend="mysqlnd-ms.pooling">la file de connexion et la commutation</link>,
+     <link linkend="mysqlnd-ms.transaction">la gestion des transactions</link>,
+     <link linkend="mysqlnd-ms.failover">la bascule</link>, 
+     <link linkend="mysqlnd-ms.loadbalancing">la balance de charge</link> et
+     <link linkend="mysqlnd-ms.rwsplit">la séparation lecture/écriture</link> avec attention.
+    </para>
+   </note>
+  </section>
+  
+  <section xml:id="mysqlnd-ms.name">
+   <title>A propos du nom</title>
+   <para>
+    Le raccourci <literal>mysqlnd_ms</literal> provient de
+    <literal>mysqlnd master slave plugin</literal>. Le nom a été choisi
+    pour une démonstration rapide du concept. Au début, les développeurs
+    n'avaient pas prévus de continuer à utiliser le code de base.
+   </para>
+  </section>
+ </preface>
+
+ &reference.mysqlnd-ms.quickstart;
+ &reference.mysqlnd-ms.concepts;
+ &reference.mysqlnd-ms.setup;
+ &reference.mysqlnd-ms.constants; 
+ &reference.mysqlnd-ms.reference; 
+
+</book>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
