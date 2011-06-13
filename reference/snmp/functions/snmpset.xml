@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: e1d6988ceec0f2cfa44e6eef3ab48bb045469a88 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 8e6a3c47769a7087c651bc369e73c879609f0061 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.snmpset" xmlns="http://docbook.org/ns/docbook">
@@ -21,14 +21,14 @@
    <methodparam choice="opt"><type>int</type><parameter>timeout</parameter><initializer>1000000</initializer></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>retries</parameter><initializer>5</initializer></methodparam>
   </methodsynopsis>
-
+  
   <para>
    <function>snmpset</function> sert à définir la valeur de l'objet <acronym>SNMP</acronym>
    spécifié par <parameter>object_id</parameter>.
   </para>
-
+  
  </refsect1>
-
+ 
  <refsect1 role="parameters">
   &reftitle.parameters;
   <para>
@@ -60,76 +60,10 @@
     <varlistentry>
      <term><parameter>type</parameter></term>
      <listitem>
-      <para>
-       Le <acronym>MIB</acronym> définit le type de chaque identifiant
-       d'objet. Il doit être spécifié sous la forme d'un seul caractère, depuis
-       la liste suivante.
-      </para>
-      <table>
-       <title>types</title>
-       <tgroup cols="2">
-        <tbody>
-         <row><entry>=</entry><entry>Le type est pris depuis le MIB</entry></row>
-         <row><entry>i</entry><entry>INTEGER</entry> </row>
-         <row><entry>u</entry><entry>INTEGER</entry></row>
-         <row><entry>s</entry><entry>STRING</entry></row>
-         <row><entry>x</entry><entry>HEX STRING</entry></row>
-         <row><entry>d</entry><entry>DECIMAL STRING</entry></row>
-         <row><entry>n</entry><entry>NULLOBJ</entry></row>
-         <row><entry>o</entry><entry>OBJID</entry></row>
-         <row><entry>t</entry><entry>TIMETICKS</entry></row>
-         <row><entry>a</entry><entry>IPADDRESS</entry></row>
-         <row><entry>b</entry><entry>BITS</entry></row>
-        </tbody>
-       </tgroup>
-      </table>
-      <para>
-       Si OPAQUE_SPECIAL_TYPES a été défini lors de la compilation de la
-       bibliothèque SNMP, les types suivants sont aussi valides :
-      </para>
-      <table>
-       <title>types</title>
-       <tgroup cols="2">
-        <tbody>
-         <row><entry>U</entry><entry>int64 non signé</entry></row>
-         <row><entry>I</entry><entry>int64 signé</entry></row>
-         <row><entry>F</entry><entry>float</entry></row>
-         <row><entry>D</entry><entry>double</entry></row>
-        </tbody>
-       </tgroup>
-      </table>
-      <para>
-       La plupart de ces types utilise le type correspondant ASN.1.
-       's', 'x', 'd', et 'b' sont tous des façons différentes de spécifier
-       une valeur OCTET STRING , et le type non signé 'u' est également
-       utilisé pour gérer les valeurs Gauge32.
-      </para>       
-      <para>
-       Si les MIB-Files sont chargés dans l'arbre MIB avec "snmp_read_mib"
-       ou en le spécifiant dans la configuration libsnmp, '=' pourra être utilisé
-       comme paramètre <parameter>type</parameter> pour tous les identifiants d'objets
-       et pourront être lus automatiquement depuis le MIB.
-      </para>
-      <para>
-       Notez qu'il y a 2 façons de définir une variable de type BITS :
-       "SYNTAX    BITS {telnet(0), ftp(1), http(2), icmp(3), snmp(4), ssh(5), https(6)}"
-      </para>
-      <itemizedlist>
-       <listitem>
-        <para>
-         Utilisez le type "b" et une liste de numéros d'octets, comme :
-         <programlisting role="php">snmpset('FOO-MIB::bar.42', 'b', '0 1 2 3 4');</programlisting>
-         avec le désavantage que la vérification du succès de l'opération ne sera
-         pas facilement vérifiable sachant que snmpget() pour un même OID retournera, i.e. 0xF8.
-        </para>
-       </listitem>
-       <listitem>
-        <para>
-         Utilisez le type "x" et un nombre hexadécimal mais sans (!) le préfixe "0x" habituel :
-         <programlisting role="php">snmpset('FOO-MIB::bar.42', 'x', 'F0');</programlisting>
-        </para>
-       </listitem>
-      </itemizedlist>
+      &snmp.set.type.values;
+      &snmp.set.type.values.asn.mapping;
+      &snmp.set.type.values.equal.note;
+      &snmp.set.type.values.bitset.note;
      </listitem>
     </varlistentry>
     <varlistentry>
@@ -159,7 +93,7 @@
    </variablelist>
   </para>
  </refsect1>
-
+ 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
@@ -177,20 +111,30 @@
  
  <refsect1 role="examples">
   &reftitle.examples;
-  <para>
-   <example>
-    <title>Exemple avec <function>snmpset</function></title>
-    <programlisting role="php">
+  <example>
+   <title>Exemple avec <function>snmpset</function></title>
+   <programlisting role="php">
 <![CDATA[
 <?php
   snmpset("localhost", "public", "IF-MIB::ifAlias.3", "s", "foo");
 ?>
  ]]>
-    </programlisting>
-   </example>
-  </para>
+   </programlisting>
+  </example>
+  <example>
+   <title>Exemple avec <function>snmpset</function> pour configurer l'identifiant de l'objet <acronym>SNMP</acronym> BITS</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+  snmpset("localhost", "public", 'FOO-MIB::bar.42', 'b', '0 1 2 3 4');
+// or
+  snmpset("localhost", "public", 'FOO-MIB::bar.42', 'x', 'F0');
+?>
+ ]]>
+   </programlisting>
+  </example>
  </refsect1>
-
+ 
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
@@ -199,7 +143,7 @@
    </simplelist>
   </para>
  </refsect1>
-
+ 
 </refentry>
 
 <!-- Keep this comment at the end of the file
