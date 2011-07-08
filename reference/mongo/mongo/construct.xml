@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8836adc4976bdad0a2f94f7915189f034111b9dd Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 377da021f611e6ed70485f244fa3669a3c03580a Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongo.construct" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -84,20 +84,6 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
         </listitem>
         <listitem>
          <para>
-          <literal>"persist"</literal>
-         </para>
-         <para>
-          Si la connexion doit être persistante. La chaine représentant la valeur est
-          utilisée comme identifiant de connexion, ainsi deux instances de
-          <classname>Mongo</classname> qui sont initialisées avec
-          <literal>array("persist" => "foobar")</literal> vont partager la même
-          connection à la base, alors que une instance initialisée avec
-          <literal>array("persist" => "barbaz")</literal> utilisera une connexion
-          différente.
-         </para>
-        </listitem>
-        <listitem>
-         <para>
           <literal>"timeout"</literal>
          </para>
          <para>
@@ -109,7 +95,7 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
           <literal>"replicaSet"</literal>
          </para>
          <para>
-          Si les hôtes listés sont compris dans un pool réplicat. Si c'est le cas, le maitre
+          Nom du pool de réplicats sur lequel se connecter. Si fourni, le maitre
           sera déterminé en utilisant la commande <literal>ismaster</literal> sur les
           serveurs, ainsi le pilote peut se connecter à un serveur qui n'était même pas
           listé. Voyez l'exemple après pour plus de détails.
@@ -173,6 +159,35 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
      </thead>
      <tbody>
       <row>
+       <entry>1.2.0</entry>
+       <entry>
+        <para>
+         Suppression de l'option persist, toutes les connexions sont desormais persistantes.
+         Le paramètre peut tout de même être utilisé, il sera simplement ignoré.
+         <variablelist>
+          <varlistentry>
+           <term>
+            <parameter>"persist"</parameter>
+           </term>
+           <listitem>
+            <para>
+            Si la connexion doit être persistante. La chaine représentant la valeur est
+            utilisée comme identifiant de connexion, ainsi deux instances de
+            <classname>Mongo</classname> qui sont initialisées avec
+            <literal>array("persist" => "foobar")</literal> vont partager la même
+            connection à la base, alors que une instance initialisée avec
+            <literal>array("persist" => "barbaz")</literal> utilisera une connexion
+            différente.
+            </para>
+           </listitem>
+          </varlistentry>
+         </variablelist>
+        </para>
+        <para>
+         Le paramètre "replicaSet" accepte maintenant une chaine, pas un booléen (même si
+         le booléen est toujours accépté).
+        </para>
+       </entry>
        <entry>1.0.2</entry>
        <entry>
         Le constructeur a changé pour accepter une tableau. Avant 1.0.2, le constructeur
@@ -254,11 +269,11 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
 <?php
 
 // Passer une liste séparée par une virgule de noms de serveurs au constructeur
-$m1 = new Mongo("mongodb://sf2.example.com,ny1.example.com", array("replicaSet" => true));
+$m1 = new Mongo("mongodb://sf2.example.com,ny1.example.com", array("replicaSet" => "myReplSet"));
 
 // Vous ne passez qu'un seul serveur, le pilote récupèrera la liste complète et trouvera
 // le maitre depuis ce serveur
-$m2 = new Mongo("mongodb://ny1.example.com", array("replicaSet" => true));
+$m2 = new Mongo("mongodb://ny1.example.com", array("replicaSet" => "myReplSet"));
 
 ?>
 ]]>
@@ -310,42 +325,6 @@ $m = new Mongo("mongodb:///tmp/mongodb-20000.sock");
 
 // Essaye la connexion socket UNIX, utilise localhost sinon
 $m = new MongoDB("mongodb:///tmp/mongodb-27017.sock,localhost:27017");
-
-?>
-]]>
-   </programlisting>
-  </example>
-  <example>
-   <title>Exemple avec <function>Mongo::__construct</function> et une connexion persistante</title>
-   <para>
-    Une connexion persistante est utilisée lorsque vous devez faire plus d'une requête.
-    Elle permet de réduire significativement le temps dû aux reconnections.
-   </para>
-   <para>
-    Une connexion persistante est identifiée par la chaîne du serveur et une chaine
-    représentant un identifiant.
-   </para>
-   <programlisting role="php">
-<![CDATA[
-<?php
-
-// Crée une connexion persistante
-$m1 = new Mongo("mongodb://localhost", array("persist" => ""));
-
-// Utilise la même connection que $m1
-$m2 = new Mongo("mongodb://localhost", array("persist" => ""));
-
-// Crée une nouvelle connection
-$m3 = new Mongo("mongodb://127.0.0.1", array("persist" => ""));
-
-// Crée une nouvelle connection
-$m4 = new Mongo("mongodb://127.0.0.1:27017", array("persist" => ""));
-
-// Crée une nouvelle connection
-$m5 = new Mongo("mongodb://localhost", array("persist" => "foo"));
-
-// Utilise la connexion $m5
-$m6 = new Mongo("mongodb://localhost", array("persist" => "foo"));
 
 ?>
 ]]>
