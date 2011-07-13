@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 0640e024d4b8a9400d457143ccd0ea66e5f98ead Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: f6580b6a63f1a578a14de64ac6e4a34f56b7e9ec Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
 
 <sect1 xml:id="language.oop5.patterns" xmlns="http://docbook.org/ns/docbook">
@@ -64,74 +64,91 @@ $sqlite = Example::factory('SQLite');
  <sect2 xml:id="language.oop5.patterns.singleton">
   <title>Singleton</title>
   <para>
-   Le pattern singleton est utilisé dans les situations où l'on a besoin
-   qu'il y ait une unique instance d'une certaine classe.
-   L'exemple le plus commun est une connexion à une base de données.
-   L'implémentation de ce pattern permet au développeur de rendre
-   cette unique instance facilement accessible par beaucoup d'autres objets.
+   Le pattern singleton permet de s'assurer qu'il n'existe qu'une seule instance d'un objet, et propose
+   un point d'accès global à cet objet. Il s'agit d'un pattern du "Gang of Four".
+  </para>
+   <para>
+   Le pattern singleton est souvent implémenté pour des classes de bases de données, des journaliseurs, des objets
+    de requête, de réponse ou encore des contrôleurs frontaux.
   </para>
   <example>
-   <title>Pattern Singleton</title>
-   <programlisting role="php">
-<![CDATA[
+   <title xml:id="language.oop5.patterns.singleton.examples.basic">Exemple de Singleton</title>
+   <programlisting role="php"><![CDATA[
 <?php
 class Example
 {
-    // instance de la classe
     private static $instance;
+    private $count = 0;
 
-    // Un constructeur privé ; empêche la création directe d'objet
     private function __construct() 
     {
-        echo 'Je suis construit';
     }
 
-    // La méthode singleton
     public static function singleton() 
     {
         if (!isset(self::$instance)) {
-            self::$instance = new self;
+            echo "création de l'instance";
+            $className = __CLASS__;
+            self::$instance = new $className;
         }
-
         return self::$instance;
     }
 
-    // Exemple d'une méthode
-    public function bark()
+    public function increment()
     {
-        echo 'Woof!';
+        return $this->count++;
     }
 
-    // Prévient les utilisateurs sur le clônage de l'instance
+    public function __wakeup()
+    {
+        trigger_error('Désérialiser est interdit.', E_USER_ERROR);
+    }
+
     public function __clone()
     {
         trigger_error('Le clônage n\'est pas autorisé.', E_USER_ERROR);
     }
 }
-
 ?>
 ]]>
    </programlisting>
-   <para>
-    Ceci autorise une unique instance de la classe <literal>Example</literal>.
-   </para>
-   <programlisting role="php">
-<![CDATA[
+   <para>Illustration du comportement du Singleton</para>
+   <programlisting role="php"><![CDATA[
 <?php
-// Ceci échoue car le constructeur est privé
-$test = new Example;
+$singleton = Example::singleton(); // Affiche "création de l'instance."
+echo $singleton->increment(); // 0
+echo $singleton->increment(); // 1
 
-// Ceci récupère toujours une seule instance de la classe
-$test = Example::singleton();
-$test->bark();
+$singleton = Example::singleton(); // Réutilise l'instance existante
+echo $singleton->increment(); // 2
+echo $singleton->increment(); // 3
 
-// Ceci provoque une erreur E_USER_ERROR.
-$test_clone = clone $test;
-
+// Tout cela lève des Fatal Error
+$singleton2 = new Example;
+$singleton3 = clone $singleton;
+$singleton4 = unserialize(serialize($singleton));
 ?>
 ]]>
    </programlisting>
   </example>
+  <warning xml:id="warn.singleton.controversy">
+   <para>
+    Le pattern Singleton est l'un des plus controversés. Les critiques indiquent que le singleton crée un
+    contexte global dans l'application et couple fortement le singleton à d'autres classes. Ceci mène vers
+    des dépendances cachées et des effets de bord désagréables, le code devient ainsi plus difficile à
+    maintenir et à tester.
+   </para>
+   <para>
+    Les critiques pointent aussi l'inutilité d'un singleton dans un environnement isolé comme PHP où les
+    objets ne sont pas persistents entre les requêtes. Il est plus simple et propre de créer son graphe
+    d'objets en utilisant des monteurs ou des fabriques, en début de requête.
+   </para>
+   <para>
+    Les singletons violent aussi plusieurs principes "SOLID" et la loi de Demeter.
+    Les singletons ne peuvent être sérialisés. Il ne peuvent être surchargés (avant PHP 5.3) et ne seront pas
+    nettoyés par le collecteur car une instance est toujours présente en mémoire, dans le singleton lui-même.
+   </para>   
+  </warning>
  </sect2>
 
 </sect1>
