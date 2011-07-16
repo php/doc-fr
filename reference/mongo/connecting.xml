@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: bb68ae3b245112cca18cdcd0dba4bcc8218ce389 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 63c5351f883b8b5f9961590aca7944c0ee7afd09 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <section xml:id="mongo.connecting" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -17,9 +17,28 @@
  <section>
   <title>Identification sur une connexion</title>
   <para>
-   Si MongoDB est en fonctionnement avec l'option <literal>--auth</literal>,
-   les connexions doivent être authentifiées avant d'être utilisées.
-   Vous pouvez le faire grâce à la méthode <function>MongoDB::authenticate</function> :
+   Si MongoDB est en fonctionnement avec l'option <literal>--auth</literal>
+   ou avec l'option <literal>--keyFile</literal>, vous devez vous connecter
+   avant de faire une quelconque opération avec le driver. Vous pouvez vous
+   identifier sur la connexion en fournissant le nom d'utilisateur et son
+   mot de passe directement dans l'URI de connexion :
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$m = new Mongo("mongodb://${username}:${password}@localhost");
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Si la connexion à la base de données est interrompue, le driver tentera
+   automatiquement de se re-connecter et de vous ré-identifier.
+  </para>
+  <para>
+   Vous pouvez aussi vous identifier au niveau de chaque base de données
+   avec la fonction <function>MongoDB::authenticate</function> :
   </para>
   <programlisting role="php">
 <![CDATA[
@@ -34,34 +53,15 @@ $db->authenticate($username, $password);
 ]]>
   </programlisting>
   <para>
-   Mais cela implique un inconvénient majeur : si la connexion à la base de
-   données est interrompue et recréée, la connexion ne sera plus
+   Il y a un inconvénient majeur à cette méthode : si la connexion à la base
+   de données est interrompue puis, rétablie, la connexion ne sera plus
    authentifiée.
   </para>
   <para>
-   Si vous utilisez le format de connexion décrit dans la méthode
-   <function>Mongo::__construct</function>, la base de données authentifiera
-   à la connexion et ré-authentifiera si la connexion est à nouveau établie.
-  </para>
-  <para>
-   Ceci est équivalent au code ci-dessus, mise à part que les reconnexions
-   à la base de données seront automatiquement authentifiées :
-  </para>
-  <programlisting role="php">
-<![CDATA[
-<?php
-
-$m = new Mongo("mongodb://${username}:${password}@localhost");
-
-?>
-]]>
-  </programlisting>
-  <para>
-   Par défaut, le driver authentifiera l'utilisateur suivant la base de
-   données d'administration. Pour effectuer une identification via une
-   base de données différente, vous devez spécifier le nom de la
-   base de données après avoir spécifié l'hôte. Cet exemple identifiera
-   un utilisateur via la base de données "blog" :
+   Si vous utilisez le format URI, le driver identifiera l'utilisateur sur la
+   base de données admin. Pour s'authentifier en utilisant une autre base de données,
+   spécifiez le nom de la base de données après l'hôte. Cet exemple authentifiera
+   l'utilisateur sur la base de données "blog" :
   </para>
   <programlisting role="php">
 <![CDATA[
@@ -84,7 +84,7 @@ $m = new Mongo("mongodb://${username}:${password}@localhost/blog");
 <![CDATA[
 <?php
 
-$m = new Mongo("mongodb://localhost:27017", array("replicaSet" => true));
+$m = new Mongo("mongodb://localhost:27017", array("replicaSet" => "myReplSetName"));
 
 ?>
 ]]>
@@ -96,7 +96,7 @@ $m = new Mongo("mongodb://localhost:27017", array("replicaSet" => true));
   </para>
   <para>
    Le pilote PHP requêtera le(s) serveur(s) de base de données listé(s) pour vérifier qui
-   est le maitre. Dès qu'il peut se connecter à au moins un hôte listé, et trouver un maitre,
+   est le maître. Dès qu'il peut se connecter à au moins un hôte listé, et trouver un maitre,
    la connexion sera réussie. Dans le cas contraire, une
    <classname>MongoConnectionException</classname> est envoyée.
   </para>
@@ -107,8 +107,8 @@ $m = new Mongo("mongodb://localhost:27017", array("replicaSet" => true));
    effectuer des lectures) et une exception sera levée.
   </para>
   <para>
-   Une fois le maitre trouvé, essayer des lectures ou écritures permettra au pilote de
-   détecter le nouveau maitre. Le pilote en fera alors sa connexion principale et continuera
+   Une fois le maître trouvé, essayer des lectures ou écritures permettra au pilote de
+   détecter le nouveau maître. Le pilote en fera alors sa connexion principale et continuera
    les opérations normalement.
   </para>
   <para>
@@ -118,7 +118,72 @@ $m = new Mongo("mongodb://localhost:27017", array("replicaSet" => true));
  </section>
 
  <section>
-  <title>Les connexions persistantes </title>
+  <title>Support des Domain Socket</title>
+
+  <para>
+   Si vous utilisez MongoDB localement et que vous avez une version 1.0.9 ou supérieure du
+   pilote, vous pouvez vous connecter au travers d'un fichier. MongoDB ouvre automatiquement
+   un fichier de socket au démarrage: /tmp/mongodb-&lt;port&gt;.sock.
+  </para>
+
+  <para>
+   Pour vous connecter au fichier de socket, specifiez le chemin dans la chaine de connexion
+   MongoDB:
+  </para>
+
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$m = new Mongo("mongodb:///tmp/mongo-27017.sock");
+
+?>
+]]>
+  </programlisting>
+
+  <para>
+   Si vous voulez utiliser une authentification sur la connexion avec un fichier de socket,
+   vous devez alors préciser un port égal à 0 comme cela l'analyseur sait où trouver la fin
+   de la chaine de connexion.
+  </para>
+
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+$m = new Mongo("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
+
+?>
+]]>
+  </programlisting>
+
+ </section>
+
+ <section>
+  <title>File d'attente de connexion</title>
+  <para>
+   En version 1.2.0+, le driver gérera automatiquement la file d'attente
+   de connexion pour l'utilisateur.
+  </para>
+  <para>
+   Lorsqu'un utilisateur crée une nouvelle instance de la clase
+   <classname>Mongo</classname>, toutes les connexions nécessaires seront
+   prises depuis leurs files d'attente (les connexions pour le jeu de réplication
+   peuvent nécessiter plusieurs connexions). Lorsque l'instance de la classe
+   <classname>Mongo</classname> sort du scope, les connexions seront remises
+   dans la file d'attente.
+  </para>
+ </section>
+ 
+ <section>
+  <title>Les connexions persistantes</title>
+  <note>
+   <para>
+    Cette section n'est pas pertinente pour les versions 1.2.0+. En 1.2.0+,
+    les connexions sont toujours persistantes et gérées automatiquement
+    par le driver.
+   </para>
+  </note>
 
   <para>
    La création de nouvelles connexions à la base de données est une opération lente.
@@ -184,48 +249,6 @@ for ($i=0; $i<1000; $i++) {
    connexion non-persistante, vous devez passer <literal>"persist" =&gt; false</literal> à
    <function>Mongo::__construct</function>.
   </para>
- </section>
- 
- <section>
-  <title>Support des Domain Socket</title>
-
-  <para>
-   Si vous utilisez MongoDB localement et que vous avez une version 1.0.9 ou supérieure du
-   pilote, vous pouvez vous connecter au travers d'un fichier. MongoDB ouvre automatiquement
-   un fichier de socket au démarrage: /tmp/mongodb-&lt;port&gt;.sock.
-  </para>
-
-  <para>
-   Pour vous connecter au fichier de socket, specifiez le chemin dans la chaine de connexion
-   MongoDB:
-  </para>
-
-  <programlisting role="php">
-<![CDATA[
-<?php
-
-$m = new Mongo("mongodb:///tmp/mongo-27017.sock");
-
-?>
-]]>
-  </programlisting>
-
-  <para>
-   Si vous voulez utiliser une authentification sur la connexion avec un fichier de socket,
-   vous devez alors préciser un port égal à 0 comme cela l'analyseur sait où trouver la fin
-   de la chaine de connexion.
-  </para>
-
-  <programlisting role="php">
-<![CDATA[
-<?php
-
-$m = new Mongo("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
-
-?>
-]]>
-  </programlisting>
-
  </section>
 
 </section>
