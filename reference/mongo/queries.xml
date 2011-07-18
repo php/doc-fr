@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: d0146aabde81aaa681bdbf5c37ed5563f31df448 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 895044720bab9d18442d116bfb796ea5a7f7ec64 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <section xml:id="mongo.queries" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -55,22 +55,24 @@ $cursor = $c->find();
    <title>Comment les esclaves sont choisis ?</title>
 
    <para>
-    Chaque instance de <classname>Mongo</classname> prend son propre esclave,
-    choisi de façon aléatoire depuis les esclaves disponibles. Il en est de
-    même si vous utilisez des connexions persistantes. Aussi, si vous
-    faîtes quelque chose comme :
+    Chaque instance de <classname>Mongo</classname> choisit son esclave
+    en utilisant l'esclave ayant le ping le moins élevé. Ainsi, si nous
+    avons un client PHP en Europe et un en Australie et que nous
+    avons un esclave dans chacun de ces data-centers, nous pouvons faire :
    </para>
    <programlisting role="php">
 <![CDATA[
 <?php
+// P est le primaire
 
-// connexion à un jeu de réplication avec les membres ip0, ip1 et ip2
-// ip0 est le principal, ip1 et ip2 sont les secondaires
-$m1 = new Mongo("mongodb://ip0", array("replicaSet" => true, "persist" => "x"));
+// sur un client Australien
+$m1 = new Mongo("mongodb://P", array("replicaSet" => true));
+$m1->foo->bar->find()->slaveOkay()->getNext();
 echo "L'esclave m1 est : ".$m1->getSlave()."\n";
 
-// utilisation de la même connexion que $m1
-$m2 = new Mongo("mongodb://ip0", array("replicaSet" => true, "persist" => "x"));
+// sur un client européen
+$m2 = new Mongo("mongodb://P", array("replicaSet" => true));
+$m2->foo->bar->find()->slaveOkay()->getNext();
 echo "L'esclave m2 est : ".$m2->getSlave()."\n";
 
 ?>
@@ -80,29 +82,19 @@ echo "L'esclave m2 est : ".$m2->getSlave()."\n";
     nous pourrions constater quelque chose comme :
    </para>
    <screen>
-L'esclave m1 est : ip2
-L'esclave m2 est : ip1
+L'esclave m1 est : australianHost
+L'esclave m2 est : europeanHost
    </screen>
 
    <para>
-    Si nous continuons de créer de nouvelles instances de la classe
-    <classname>Mongo</classname>, nous constaterions toujours une distribution
-    entre ip1 et ip2. Gardez à l'esprit que tous les secondaires listés par
-    la commande <function>isMaster</function> seront dans la réserve de serveurs
-    pouvant être utilisés pour la lecture (y compris ceux dont la priorité est de 0
-    ou ceux dont slaveDelay est défini). Si vous avez des serveurs pour lesquels
-    vous ne voulez pas y effectuer de lecture, soit vous devez redirigez
-    manuellement la lecture, soit vous devez ajouter les cacher via l'option
-    de configuration du jeu de réplications des serveurs.
+    Notez que nous devons exécuter une requête avant qu'un esclave
+    ne soit choisi : les esclaves sont choisis par le driver.
+    <function>Mongo::getSlave</function> retournera &false;
+    tant qu'une esclave n'est pas utilisé.
    </para>
 
    <para>
-    Les esclaves sont choisis pour chaque instante et ne changent pas
-    (tant qu'aucune erreur n'intervient à votre jeux de réplication).
-   </para>
-
-   <para>
-    Le driver connait le statut courant de ces membres
+    Le driver connaît le statut courant de ces membres
     en exécutant la méthode <function>Mongo::getHosts</function>.
    </para>
 
@@ -111,54 +103,14 @@ L'esclave m2 est : ip1
     la lecture vers le serveur principal (y compris si "slaveOkay" est défini).
     Un serveur est considéré comme accessible si son statut vaut 2 (SECONDARY)
     et sa santé, 1. Vous pouvez vérifier ces valeurs avec la méthode
-    <function>Mongo::getHosts</function> (quelques champs ont été volontairement
-    supprimés pour plus de lisibilité) :
-   </para>
-   <programlisting>
-<![CDATA[
-Array
-(
-    [ubuntu:27017] => Array
-        (
-            [_id] => 0
-            [name] => ip0
-            [health] => 1
-            [state] => 1
-            [stateStr] => PRIMARY
-        )
-
-    [ubuntu:27019] => Array
-        (
-            [_id] => 2
-            [name] => ip1
-            [health] => 1
-            [state] => 2
-            [stateStr] => SECONDARY
-        )
-
-    [ubuntu:27018] => Array
-        (
-            [_id] => 1
-            [name] => ip2
-            [health] => 1
-            [state] => 2
-            [stateStr] => SECONDARY
-        )
-
-)
-]]>
-   </programlisting>
-   <para>
-    Le jeu ci-dessus contient 2 serveurs accessibles, "ip1" et "ip2".
-    Si ces 2 serveurs deviennent inaccessibles ou obsolètes, les
-    lectures seront dirigées vers "ip0".
+    <function>Mongo::getHosts</function> :
    </para>
 
    <para>
     Si vous aimez toucher à ce que vous ne devriez pas, vous pouvez
     forcer le driver à utiliser un esclave différent en appelant la
     méthode <function>Mongo::switchSlave</function>. Ceci choisira
-    alternativement un nouvel esclave à utiliser et ne devrait pas
+    un nouvel esclave (s'il y en a un de disponible) et ne devrait pas
     être utilisé sauf si vous savez ce que vous faîtes.
    </para>
 
@@ -176,8 +128,6 @@ Array
     La santé et le statut d'un esclave est vérifié toutes les 5 secondes ou bien
     lorsque la prochaine opération intervient après 5 secondes. La configuration
     est également re-vérifiée lorsque le driver a un problème à atteindre un serveur.
-    Vous pouvez manuellement forcer le driver à mettre à jour le statut
-    en appelant la méthode <function>Mongo::getHosts</function>.
    </para>
    
    <para>
