@@ -1,0 +1,658 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: da0b7d5ee3788000e4f2dcf5cfd6a2cd89c4147a Maintainer: jpauli Status: ready -->
+<!-- Reviewed: no -->
+
+<chapter xml:id="mysqlnd-ms.quickstart" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Exemples et démarrage rapide</title>
+ <para>
+  Le plugin d'équilibrage de charge mysqlnd est simple d'utilisation.
+  Le guide de démarrage rapide va présenter des cas d'utilisation classiques et donner
+  des exemples pratiques. 
+ </para>
+ <para>
+  Il est fortement recommandé de lire la manuel de référence en plus du guide de
+  démarrage rapide. Le guide évite de parler des limites et des aspects théoriques.
+  Avant d'utiliser le plugin dans des cas critiques, veillez à bien lire les autres
+  sections. 
+ </para>
+ <section xml:id="mysqlnd-ms.quickstart.configuration">
+  <title>Configuration</title>
+  <para>
+   Le plugin est une extension PHP. Veuillez lire
+   <link linkend="mysqlnd-ms.installation">les instructions d'installation</link> pour
+   installer l'extension
+   <link xlink:href="&url.pecl.package;mysqlnd_ms">PECL/mysqlnd_ms</link>.
+   Ensuite, chargez l'extension dans PHP et activez le plugin en utilisant la directive
+   de configuration <link linkend="ini.mysqlnd-ms.enable">mysqlnd_ms.enable</link>. 
+  </para>
+  <para>
+   Le plugin utilise son propre fichier de configuration. Utilisez la directive de
+   configuration <link linkend="ini.mysqlnd-ms.ini-file">mysqlnd_ms.ini_file</link>
+   pour préciser le chemin complet vers le fichier de configuration du plugin. Ce fichier
+   doit être accessible en lecture par PHP.
+  </para>
+  <para>
+   <example>
+    <title>Activer le plugin (php.ini)</title>
+    <programlisting role="ini">
+<![CDATA[
+mysqlnd_ms.enable=1
+mysqlnd_ms.ini_file=/path/to/mysqlnd_ms_plugin.ini
+]]>
+    </programlisting>
+    </example>
+  </para>
+  <para>
+   Créez un fichier de configuration pour le plugin. Indiquez son chemin complet dans
+   <link linkend="ini.mysqlnd-ms.ini-file">mysqlnd_ms.ini_file</link>.
+  </para>
+  <para>
+   Le fichier de configuration du plugin se divise en plusieurs sections. Chacune a un nom,
+   par exemple, <literal>myapp</literal>. Chaque section possède ses propres caractéristiques
+   de configuration.
+  </para>
+  <para>
+    Une section doit au minimum définir un maitre de réplication MySQL. Le plugin ne supporte
+   l'utilisation que d'un seul maitre. Utilisez la directive
+    <link linkend="ini.mysqlnd-ms-plugin-config.master">master[]</link>
+    pour renseigner le nom d'hôte et le port ou la socket MySQL du serveur maitre.
+  </para>
+  <para>
+   <example>
+    <title>Configuration minimale du plugin (mysqlnd_ms_plugin.ini)</title>
+    <programlisting role="ini">
+<![CDATA[
+[myapp]
+master[]=localhost:/tmp/mysql.sock
+]]>
+    </programlisting>
+    </example>
+  </para>
+  <para>
+   Vous pouvez ne préciser aucun esclave MySQL, mais ce n'est pas recommandé. Vous devriez
+   toujours configurer au moins un esclave, en utilisant la directive
+   <link linkend="ini.mysqlnd-ms-plugin-config.slave">slave[]</link>.
+   Une section de configuration peut donc contenir aucune ou plusieurs directives
+   <literal>slave[]</literal> pour configurer zéro ou plusieurs serveurs esclaves de
+   réplication MySQL.
+  </para>
+  <para>
+   <example>
+    <title>Configuration minimale recommandée pour le plugin (mysqlnd_ms_plugin.ini)</title>
+    <programlisting role="ini">
+<![CDATA[
+[myapp]
+master[]=localhost:/tmp/mysql.sock
+slave[]=192.168.2.27:3306
+]]>
+    </programlisting>
+    </example>
+  </para>
+  <para>
+   S'il existe au moins deux serveurs déclarés en configuration, le plugin peut commencer
+   à équilibrer la charge entre les connections. La bascule entre les connections n'est
+   pas tout le temps transparente et peut générer des problèmes. Voyez les références sur
+   <link linkend="mysqlnd-ms.pooling">les pools de connections et les bascules</link>,
+   <link linkend="mysqlnd-ms.transaction">la gestion des transactions</link>,
+   <link linkend="mysqlnd-ms.failover">la reprise sur incident</link> 
+   <link linkend="mysqlnd-ms.loadbalancing">l'équilibre de la charge</link> et 
+   <link linkend="mysqlnd-ms.rwsplit">la découpe des lectures-écritures</link> pour les détails.
+   Vous pouvez désormais continuer de lire ce guide démarrage. Les astuces
+   et problèmes éventuels du plugin vont être détaillées par la suite.
+  </para>
+  <para>   
+   Il est de la responsabilité de l'application de gérer les éventuels problèmes dûs à
+   la bascule entre les connections. En configurant au moins un maitre et un esclave,
+   vous vous assurez que le plugin basculera les connections, et vous détecterez les
+   problèmes plus tôt.
+  </para>
+  <para>
+   Les serveurs maitre et esclave que vous configurez peuvent être la même machine.
+   Cela peut aider à détecter les erreurs dûes à la bascule entre les conneections,
+   mais pas les erreurs dûes à la latence de la réplication. 
+  </para>
+  <para>
+   <example>
+    <title>Utiliser un seul serveur comme maitre et esclave (test seulement!)</title>
+    <programlisting role="ini">
+<![CDATA[
+[myapp]
+master[]=localhost:/tmp/mysql.sock
+slave[]=127.0.0.1:3306
+]]>
+    </programlisting>
+    </example>
+  </para>
+  
+ </section>
+ 
+ <section xml:id="mysqlnd-ms.quickstart.usage">
+  <title>Exécuter des requêtes</title>
+  <para>
+   Le plugin peut être utilisé avec n'importe quelle extension PHP pour MySQL 
+   (<link linkend="ref.mysqli">mysqli</link>,
+   <link linkend="ref.mysql">mysql</link>,
+   <link linkend="ref.pdo-mysql">PDO_MYSQL</link>) 
+   compilée avec le support <link linkend="book.mysqlnd">mysqlnd</link>.
+   PECL/mysqlnd_ms se branche sur la bibliothèque <link linkend="book.mysqlnd">mysqlnd</link>.
+   Ceci ne change pas les API des extensions de PHP pour MySQL.
+  </para>
+  <para>
+   Dès lors qu'une connection à MySQL est ouverte, le plugin compare l'hôte aux sections
+   déclarées dans le fichier de configuration. Par exemple une section
+   <literal>myapp</literal> sera chargée si une connection MySQL à l'hôte
+   <literal>myapp</literal> est effectuée.
+  </para>
+  <para>
+   <example>
+    <title>Fichier de configuration du plugin (mysqlnd_ms_plugin.ini)</title>
+    <programlisting role="ini">
+<![CDATA[
+[myapp]
+master[]=localhost:/tmp/mysql.sock
+slave[]=192.168.2.27:3306
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Ouvrir une connection sujette à équilibrage</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/* La section "myapp" du fichier de configuration du plugin sera chargée */
+$mysqli = new mysqli("myapp", "username", "password", "database");
+$pdo = new PDO('mysql:host=myapp;dbname=database', 'username', 'password');
+$mysql = mysql_connect("myapp", "username", "password");
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Les trois connections ouvertes dans l'exemple seront équilibrées en charge. Le plugin
+   enverra les requêtes en lecture au serveur ayant l'IP <literal>192.168.2.27</literal>
+   sur le port<literal>3306</literal>. Toutes les autres requêtes seront dirigées vers
+   l'hôte maitre à <literal>localhost</literal> sur sa socket
+   <literal>/tmp/mysql.sock</literal>. Le plugin utilisera le nom
+   <literal>username</literal> et le mot de passe <literal>password</literal> pour se
+   connecter à tout hôte déclaré dans la section <literal>myapp</literal>.
+   Une fois connecté, le plugin va sélectionner <literal>database</literal> comme nom
+   de base de données. Le nom d'utilisateur, le mot de passe et le nom de la base de
+   données sont utilisés depuis les appels à l'API et utilisés pour tous les serveurs.
+   En d'autres termes, vous devez utiliser les mêmes nom d'utilisateur et mot de passe
+   pour tout serveur MySQL listé dans une section du fichier de configuration du plugin.
+  </para>
+  <para>
+   Le plugin ne change pas l'API pour les requêtes en cours.
+   <link linkend="mysqlnd-ms.rwsplit">la découpe des lectures-écritures</link>
+   fonctionne par défaut. L'exemple suivant suppose qu'il y a peu de latence entre le
+   maitre et l'esclave.
+  </para>
+  <para>
+   <example>
+    <title>Exécuter des requêtes</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/* Equilibré selon la section "myapp" du fichier de configuration du plugin */
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (!$mysqli)
+  /* Evidemment, votre propre gestion des erreurs serait meilleure... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+/* Requêtes lancées sur le maitre */
+if (!$mysqli->query("DROP TABLE IF EXISTS test")) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+if (!$mysqli->query("CREATE TABLE test(id INT)")) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+if (!$mysqli->query("INSERT INTO test(id) VALUES (1)")) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+
+/* lecture seule: requêtes lancées sur un esclave */
+if (!($res = $mysqli->query("SELECT id FROM test")) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+} else {
+ $row = $res->fetch_assoc(); 
+ $res->close();
+ printf("Slave returns id = '%s'\n", $row['id'];
+}
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Slave returns id = '1'
+]]>
+    </screen>
+   </example>
+  </para>  
+  <note>
+   <para>
+    Le plugin ne supporte pas les requêtes préparées natives. Les requêtes
+    préparées ne sont pas équilibrées en charge. La plupart des utilisateurs de
+    <link linkend="ref.pdo-mysql">PDO_MYSQL</link>
+    ne seront pas affectés par cette restriction, car
+    <link linkend="ref.pdo-mysql">PDO_MYSQL</link> utilise une émulation des requêtes
+    préparées côté client, par défaut.
+   </para>
+  </note>
+ </section>
+ 
+ <section xml:id="mysqlnd-ms.quickstart.connectionpooling">
+  <title>Etat de la connection</title>
+  <para>
+   Le plugin change la sémantique d'une connection MySQL pour PHP. Une connection n'est
+   plus liée à un serveur MySQL unique, mais à un pool de connections. Le pool est
+   représenté par au moins une connection maitre et zéro ou plusieurs connections esclaves.
+  </para>
+  <para>
+   Chaque connection dans le pool possède son propre état.Par exemple, les variables SQL
+   utilisateurs, les tables temporaires et les transactions font partie de l'état.
+   Voyez la liste complète dans
+   <link linkend="mysqlnd-ms.pooling">pools de connections et bascule</link>.
+   Si le plugin décide de basculer de connection pour l'équilibre de la charge, l'application
+   pourrait se retrouver avec des connections d'états différents. Les applications doivent
+   faire attention à ce point !
+  </para>
+  <para>
+   <example>
+    <title>Config du plugin avec un maitre et un esclave</title>
+    <programlisting role="ini">
+<![CDATA[
+[myapp]
+master[]=localhost:/tmp/mysql.sock
+slave[]=192.168.2.27:3306
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Problème possible: Etat de la connection et variables SQL utilisateurs</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (!$mysqli)
+  /* Evidemment, votre propre gestion des erreurs serait meilleure... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+/* Connection 1, la connection a utilisé des variables SQL, pas de SELECT, donc maitre utilisé */
+if (!$mysqli->query("SET @myrole='master'")) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+
+/* Connection 2, sur un esclave car de type SELECT */
+if (!($res = $mysqli->query("SELECT @myrole AS _role"))) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+} else {
+ $row = $res->fetch_assoc();
+ $res->close();
+ printf("@myrole = '%s'\n", $row['_role']);
+}
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+&example.outputs;
+    <screen>
+<![CDATA[
+@myrole = ''
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   L'exemple ouvre une connection équilibrée et exécute deux requêtes. La première
+   <literal>SET @myrole='master'</literal> n'est pas de type <literal>SELECT</literal>,
+   elle est donc exécutée sur une connection à un maitre (ici il n'y en a qu'un seul).
+   La requête change une variable SQL qui est donc liée à la connection. L'état de
+   la connection au maitre vient donc de changer.
+  </para>
+  <para>
+   La requête suivante, <literal>SELECT @myrole AS _role</literal> est lancée sur un
+   esclave car elle est de type lecture seule (select). La connection à l'esclave ne possède
+   elle, aucune variable SQL affectée, son état est donc différent de celui de la
+   connection au maitre. Le script affiche donc en réponse
+   <literal>@myrole = ''</literal>.
+  </para>
+  <para>
+   Il est de la responsabilité du développeur de l'application de prendre garde aux états 
+   des connections balancées. Le plugin ne surveille pas toutes les activités des connections,
+   ceci serait beaucoup trop couteux en temps CPU.
+  </para>
+  <para>
+   Ces problèmes peuvent être contournés grâce aux astuces SQL.
+  </para>
+  </section>
+ 
+ <section xml:id="mysqlnd-ms.quickstart.sqlhints">
+  <title>Astuces SQL</title>
+  <para>
+   Les astuces SQL peuvent être utilisées pour forcer le plugin à choisir un serveur particulier
+   dans le pool. Ceci peut aider à palier aux problèmes de bascule entre les connections
+   oude changement d'état des connections.
+  </para>
+  <para>
+   Les astuces SQL sont des commentaires de la syntaxe SQL. Comme ils sont supposés être ignorés,
+   ils n'interfèrent pas avec les serveurs MySQL, le proxy MySQL ou même un pare-feu.
+  </para>
+  <para>
+   Trois astuces SQL sont supportées par le plugin : 
+   <constant>MYSQLND_MS_MASTER_SWITCH</constant>,
+   <constant>MYSQLND_MS_SLAVE_SWITCH</constant> et
+   <constant>MYSQLND_MS_LAST_USED_SWITCH</constant>. 
+   <constant>MYSQLND_MS_MASTER_SWITCH</constant> indique au plugin d'exécuter une requête sur le
+   maitre, <constant>MYSQLND_MS_SLAVE_SWITCH</constant> force l'utilisation de l'esclave
+   et <constant>MYSQLND_MS_MASTER_SWITCH</constant> exécutera la requête sur le même serveur
+   que celui utilisé pour exécuter la requête précédente.
+  </para>
+  <para>
+   Le plugin scanne le début de la requête pour rechercher une astuce SQL en commentaires.
+   Les astuces SQL ne doivent être écrites qu'au tout début d'une requête pour être
+   reconnues.
+  </para>
+   <para>
+   <example>
+    <title>Configuration du plugin avec un esclave et un maitre</title>
+    <programlisting role="ini">
+<![CDATA[
+[myapp]
+master[]=localhost:/tmp/mysql.sock
+slave[]=192.168.2.27:3306
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Astuces SQL pour éviter les bascules de connection</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (!$mysqli)
+  /* Evidemment, votre propre gestion des erreurs serait meilleure... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+/* Connection 1, la connection a utilisé des variables SQL, pas de SELECT, donc maitre utilisé */
+if (!$mysqli->query("SET @myrole='master'")) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+
+/* Connection 1, exécutée sur le maitre à cause de l'astuce SQL présente */
+if (!($res = $mysqli->query(sprintf("/*%s*/SELECT @myrole AS _role", MYSQLND_MS_LAST_USED_SWITCH)))) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+} else {
+ $row = $res->fetch_assoc();
+ $res->close();
+ printf("@myrole = '%s'\n", $row['_role']);
+}
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+&example.outputs;
+    <screen>
+<![CDATA[
+@myrole = 'master'
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   Dans l'exemple, la récupération des variables de la session précédente est résolue en
+   utilisant <constant>MYSQLND_MS_LAST_USED_SWITCH</constant> pour éviter la bascule du maitre
+   vers un esclave lors de l'exécution de la requête <literal>SELECT</literal>.
+  </para>
+  <para>
+   Les astuces SQL peuvent aussi être utilisée pour lancer une requête <literal>SELECT</literal>
+   sur le maitre. Par exemple, lorsque les esclaves sont derrière le maitre et que vous
+   voulez selectionner des données fraiches.
+  </para>
+  <para>
+   <example>
+    <title>Latence de réplication</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (!$mysqli)
+  /* Evidemment, votre propre gestion des erreurs serait meilleure... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+/* Force l'utilisation du maitre, le maitre a toujours des données fraiches */
+if (!$mysqli->query(sprintf("/*%s*/SELECT critical_data FROM important_table", MYSQLND_MS_MASTER_SWITCH))) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+?>
+]]>
+    </programlisting>    
+   </example>
+  </para>
+  <para>
+   Autre exemple concrêt : créer des tables sur un esclave. Si aucune astuce SQL n'est fournie,
+   le plugin va envoyer les <literal>CREATE</literal> et <literal>INSERT</literal>
+   vers le maitre. L'astuce <constant>MYSQLND_MS_SLAVE_SWITCH</constant> peut alors être
+   utilisée pour forcer l'utilisation d'un esclave.
+  </para>
+  <para>
+   <example>
+    <title>Création de table sur un esclave</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (!$mysqli)
+  /* Evidemment, votre propre gestion des erreurs serait meilleure... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+/* Force l'utilisation d'un esclave */
+if (!$mysqli->query(sprintf("/*%s*/CREATE TABLE slave_reporting(id INT)", MYSQLND_MS_SLAVE_SWITCH))) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+/* Continue en utilisant cette connection à l'esclave */
+if (!$mysqli->query(sprintf("/*%s*/INSERT INTO slave_reporting(id) VALUES (1), (2), (3)", MYSQLND_MS_LAST_USED_SWITCH))) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+/* N'utilisez pas MYSQLND_MS_SLAVE_SWITCH qui autoriserait la bascule vers un autre esclave ! */
+if ($res = $mysqli->query(sprintf("/*%s*/SELECT COUNT(*) AS _num FROM slave_reporting", MYSQLND_MS_LAST_USED_SWITCH))) {
+  $row = $res->fetch_assoc();
+  $res->close();
+  printf("There are %d rows in the table 'slave_reporting'", $row['_num']);
+} else {
+  printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+$mysqli->close();
+?>
+]]>
+    </programlisting>    
+   </example>
+  </para>
+  <para>
+   L'astuce SQL <constant>MYSQLND_MS_LAST_USED</constant> interdit la bascule de connection
+   et force l'utilisation de la connection de la requête précédente.   
+  </para>
+ </section>
+  
+ <section xml:id="mysqlnd-ms.quickstart.transactions">
+  <title>Transactions</title>
+  <para>
+   La version actuelle du plugin ne gère pas les trasactions. Les transactions SQL sont
+   des opérations atomiques exécutées sur un seul et même serveur. Le plugin ne sait
+   pas quand l'opération atomique commence et quand elle prend fin. Ainsi, il peut
+   décider de basculer de connection au milieu d'une transaction.
+  </para>
+  <para>
+   Vous devez utiliser des astuces SQL pour éviter un tel comportement.
+  </para>
+  <para>
+   <example>
+    <title>Configuration du plugin avec un esclave et un maitre</title>
+    <programlisting role="ini">
+<![CDATA[
+[myapp]
+master[]=localhost:/tmp/mysql.sock
+slave[]=192.168.2.27:3306
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Utilisation des astuces SQL pour les transactions</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (!$mysqli)
+  /* Evidemment, votre propre gestion des erreurs serait meilleure... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+  
+/* Pas un SELECT, utilisera le maitre */
+if (!$mysqli->query("START TRANSACTION")) {
+ /* Please use better error handling in your code */
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+}
+
+/* Empêche le changement de connection! */
+if (!$mysqli->query(sprintf("/*%s*/INSERT INTO test(id) VALUES (1)", MYSQLND_MS_LAST_USED_SWITCH)))) { 
+ /* Utilisez un ROLLBACK dans votre code, pas juste un die() */
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error)); 
+}
+if ($res = $mysqli->query(sprintf("/*%s*/SELECT COUNT(*) AS _num FROM test", MYSQLND_MS_LAST_USED_SWITCH)))) {
+  $row = $res->fetch_assoc();
+  $res->close();
+  if ($row['_num'] > 1000) {
+   if (!$mysqli->query(sprintf("/*%s*/INSERT INTO events(task) VALUES ('cleanup')", MYSQLND_MS_LAST_USED_SWITCH)))) {
+     die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+   }
+  }  
+} else {
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+}
+if (!$mysqli->query(sprintf("/*%s*/UPDATE log SET last_update = NOW()", MYSQLND_MS_LAST_USED_SWITCH)))) {
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+}
+if (!$mysqli->query(sprintf("/*%s*/COMMIT", MYSQLND_MS_LAST_USED_SWITCH)))) {
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+}
+
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Depuis PHP 5.3.99 la bibliothèque <literal>mysqlnd</literal> permet au plugin de
+   surveiller le statut de l'<literal>autocommit</literal>, si celui-ci est utilisé via
+   des appels à l'API plutot que via une requête du type <literal>SET AUTOCOMMIT=0</literal>.
+   Ceci rend le plugin sensible et réactif aux transactions.
+  </para>
+  <para>
+    Si vous utilisez PHP 5.3.99, les appels de l'API pour gérer l'<literal>autocommit</literal>
+    et le paramètre expérimental
+    <link linkend="ini.mysqlnd-ms-plugin-config.trx_stickiness"><literal>trx_stickiness=master</literal></link>
+    permettent au plugin de désactiver l'équilibrage de charge et la bascule entre les
+    connections si <literal>autocommit</literal> est désactivé, et de diriger les requêtes vers
+    le maitre. Ceci évite la bascule de connection au milieu d'une transaction. Une fois que
+    <literal>autocommit</literal> est réactivé, le plugin reprend l'équilibrage de charge.
+  </para>
+  <para>
+   <example>
+    <title>Paramètre expérimental trx_stickiness</title>
+    <programlisting role="ini">
+<![CDATA[
+[myapp]
+master[]=localhost:/tmp/mysql.sock
+slave[]=192.168.2.27:3306
+trx_stickiness=master
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Gestion propre des transactions</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+if (version_compare(PHP_VERSION, "5.3.99", "<"))
+  die("This feature requires PHP 5.3.99, you are using " . PHP_VERSION);
+  
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (!$mysqli)
+  /* Evidemment, votre propre gestion des erreurs serait meilleure... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+/* Désactive autocommit, le plugin utilisera le maitre pour toutes les requêtes */
+$mysqli->autocommit(FALSE);
+
+if (!$mysqli->query("INSERT INTO test(id) VALUES (1)")) { 
+ /* Utilisez un ROLLBACK dans votre code, pas juste un die() */
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error)); 
+}
+if ($res = $mysqli->query("SELECT COUNT(*) AS _num FROM test")) {
+  $row = $res->fetch_assoc();
+  $res->close();
+  if ($row['_num'] > 1000) {
+   if (!$mysqli->query("INSERT INTO events(task) VALUES ('cleanup')")) {
+     die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+   }
+  }  
+} else {
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+}
+if (!$mysqli->query("UPDATE log SET last_update = NOW()")) {
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+}
+if (!$mysqli->commit()) {
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+}
+
+/* Le plugin sait que la trasaction est terminée, il reprend l'équilibrage de charge */
+$mysqli->autocommit(TRUE);
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <note>
+   <para>
+    La directive de configuration du plugin
+    <link linkend="ini.mysqlnd-ms-plugin-config.trx_stickiness"><literal>trx_stickiness=master</literal></link>
+    est expérimentale. Elle requiert PHP 5.3.99.
+   </para>
+  </note>
+ </section>
+</chapter>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
