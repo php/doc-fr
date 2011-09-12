@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 5b4bd92b042b75f536056056e4116d30770630a0 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: fa1ad00f0059f3a33252a6921079eb40319f16e2 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="amqpqueue.ack" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -55,6 +55,76 @@
    &return.success;
   </para>
  </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title><methodname>AMQPQueue::ack</methodname> example with <methodname>AMQPQueue::get</methodname></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+/* Create a connection using all default credentials: */
+$connection = new AMQPConnection();
+$connection->connect();
+
+/* create a queue object */
+$queue = new AMQPQueue($connection);
+
+//declare the queue
+$queue->declare('myqueue');
+
+//get the next message, but don't mark it as delivered
+$message = $queue->get(AMQP_NOACK);
+
+echo $message['msg'];
+
+//acknowledge the message as received
+$queue->ack($message['delivery_tag']);
+
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Exemple avec <methodname>AMQPQueue::ack</methodname> et <methodname>AMQPQueue::consume</methodname></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+/* Crée une connexion en utilisant les identifiants de connexion par défaut : */
+$connection = new AMQPConnection();
+$connection->connect();
+
+/* Création d'un objet de file d'attente */
+$queue = new AMQPQueue($connection);
+
+// déclaration de la file d'attente
+$queue->declare('myqueue');
+
+$options = array(
+    'min' => 1,
+    'max' => 10,
+    'ack' => false
+);
+
+// récupère les messages, sans les marquer comme délivrés
+$messages = $queue->consume($options);
+
+foreach ($messages as $message) {
+    echo $message['message_body'];
+    // accusé de réception du message, tel que reçu
+    $queue->ack($message['delivery_tag']);
+}
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+ 
 </refentry>
 
 <!-- Keep this comment at the end of the file
