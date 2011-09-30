@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: d1c7b2d2bbe6851689a047a79dacb989a0ebe94c Maintainer: jpauli Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 9fa2d6307cf18d533584eea85d204ddf3a383160 Maintainer: jpauli Status: ready -->
+<!-- Reviewed: no -->
 
 <sect1 xml:id="language.types.string">
  <title>Les chaînes de caractères</title>
@@ -12,8 +12,9 @@
   la même chose qu'un octet. De ce fait, PHP ne supporte que les jeux de
   caractères comportant exactement 256 caractères différents.
   Ainsi, PHP n'a pas de support natif pour l'Unicode.
-  Voir les fonctions <function>utf8_encode</function> et <function>utf8_decode</function>
-  pour des fonctionnalités Unicode simples.
+  Reportez-vous aux
+  <link linkend="language.types.string.details">chapitres sur les types
+   de chaînes de caractères</link> pour plus de détails.
  </para>
  
  <note>
@@ -1000,6 +1001,114 @@ echo "Le type de \$foo==$foo; est " . gettype ($foo) . "<br />\n";
    pour convertir les caractères en codes ASCII.
   </para>
   
+ </sect2>
+
+ <sect2 xml:id="language.types.string.details">
+  
+  <title>Détails sur le type "chaîne de caractères"</title>
+  
+  <para>
+   Le type <type>string</type> en PHP est implémenté sous la forme d'un tableau
+   d'octets ainsi que d'un entier indiquant la longueur du buffer. Il n'a aucune
+   information sur la traduction octet/caractère, laissant cette tâche au programmeur.
+   Il n'y a aucune limitation sur les valeurs pouvant être présentes dans une chaîne ;
+   en particulier, les octets dont la valeur est <literal>0</literal> (“NUL bytes”)
+   sont autorisés à n'importe quel endroit de la chaîne (cependant, quelques fonctions
+   de ce manuel indiquées comme n'étant pas “sécurisée au niveau binaire”, peuvent
+   ignorer tous les octets après un octet nul.)
+  </para>
+  <para>
+   De part la nature même du type "chaîne de caractères", cela explique le fait
+   qu'il n'existe pas de type “byte” en PHP - la chaîne de caractères prend ce rôle.
+   Les fonctions qui ne retournent pas de données textuelles - par exemple, des données
+   arbitraires lues depuis un socket réseau - continueront de retourner des chaînes
+   de caractères.
+  </para>
+  <para>
+   Ceci étant dit, PHP ne dicte aucun encodage spécifique pour les chaînes
+   de caractères ; aussi, on pourrait se demander comment les chaînes littérales
+   sont codés. Par exemple, est-ce que la chaîne
+   <literal>"á"</literal> équivaut à la chaîne <literal>"\xE1"</literal> (ISO-8859-1),
+   <literal>"\xC3\xA1"</literal> (UTF-8, C form),
+   <literal>"\x61\xCC\x81"</literal> (UTF-8, D form) ou toutes autres représentations ?
+   La réponse est que la chaîne sera encodée suivant l'encodage courant du script.
+   Aussi, si le script est écrit en ISO-8859-1, la chaîne sera encodée en
+   ISO-8859-1 et ainsi de suite. Cependant, ceci n'est pas vrai si Zend Multibyte est
+   actif ; dans ce cas, le script peut être écrit dans n'importe quel encodage (explicitement
+   déclaré ou bien détecté) puis, sera convertis en un encodage interne, qui sera
+   utilisé pour les chaînes littérales. Notez qu'il existe des contraintes sur
+   l'encodage du script (ou sur l'encodage interne, si Zend Multibyte est activé) -
+   cela signifie que l'encodage utilisé doit être un sous-ensemble compatible
+   d'ASCII, comme UTF-8 ou ISO-8859-1. Notez, cependant, que les encodages dépendant
+   de l'état, où les mêmes valeurs de l'octet peuvent être utilisées dans le
+   statut du décalage initial et non-initial, peuvent devenir problématiques.
+  </para>
+  <para>
+   Bien évidemment, les fonctions qui opèrent sur du texte peuvent devoir
+   faire des hypothèses sur la façon dont est encodé la chaîne de caractères.
+   Malheureusement, ces hypothèses ne sont pas les mêmes suivants les fonctions
+   PHP :
+  </para>
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     Quelques fonctions supposent que la chaîne est encodée en utilisant un encodage
+     multi-octets, mais n'ont pas besoin d'interpréter ces octets sous la forme
+     de caractères. C'est actuellement le cas pour les fonctions
+     <function>substr</function>, <function>strpos</function>,
+     <function>strlen</function> et <function>strcmp</function>.
+     Une autre façon de voir ces fonctions est qu'elles opèrent sur les buffers
+     mémoires, i.e. elles fonctionnent avec les octets et leurs positions.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     D'autres fonctions demandent à ce que soit passé l'encodage de la chaîne,
+     assumant un encodage par défaut si ce n'est pas le cas. C'est le cas des fonctions
+     <function>htmlentities</function> ainsi que la majorité des fonctions de l'extension
+     <link linkend="book.mbstring">mbstring</link>.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     D'autres utilisent la locale courante (voir la fonction <function>setlocale</function>),
+     mais opèrent octets par octets. C'est le cas des fonctions
+     <function>strcasecmp</function>, <function>strtoupper</function>
+     <function>ucfirst</function>. Cela signifie qu'elles ne peuvent être utilisées
+     qu'avec les encodages sur un seul octet, et si l'encodage correspond à la locale.
+     Actuellement, <literal>strtoupper("á")</literal> peut retourner
+     <literal>"Á"</literal> si la locale est correctement positionnée, et
+     <literal>á</literal> si l'encodage est sur un seul octet. Si la chaîne est encodée
+     en UTF-8, le résultat correct ne sera pas retourné, et la chaîne résultante peut
+     (ou pas) être corrompue, suivant la locale courante.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Et enfin, elles peuvent juste émettre l'hypothèse que la chaîne utilise
+     un encodage spécifique, comme UTF-8. C'est le cas des fonctions de l'extension
+     <link linkend="book.intl">intl</link> ainsi que celles de l'extension
+     <link linkend="book.pcre">PCRE</link>
+     (dans le dernier cas, uniquement lorsque le modificateur
+     <literal>u</literal> est utilisé). Bien que ceci soit du en raison d'un but
+     spécifique, la fonction <function>utf8_decode</function> assume un encodage UTF-8
+     et la fonction <function>utf8_encode</function>, un encodage ISO-8859-1.
+    </simpara>
+   </listitem>
+  </itemizedlist>
+
+  <para>
+   Pour conclure, le fait d'écrire un programme correct en utilisant Unicode
+   dépend de l'utilisation ou non de fonctions qui ne fonctionnent pas en Unicode,
+   et qui corrompront les données ; il conviendra donc d'utiliser des fonctions
+   qui fonctionnent correctement, comme celles des extensions
+   <link linkend="book.intl">intl</link> et <link linkend="book.mbstring">mbstring</link>.
+   Cependant, l'utilisation de fonctions qui peuvent gérer des encodages Unicode
+   n'est que le commencement. Quelques soient les fonctions fournies par le langage,
+   il est essentiel de connaître les spécifications de l'Unicode. Par exemple, un
+   programme qui assume qu'il n'y a que des caractères en majuscule et en minuscule
+   fait une mauvaise hypothèse.
+  </para>
  </sect2>
 </sect1><!-- end string -->
 
