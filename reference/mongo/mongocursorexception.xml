@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7214d04a66fb2e93d8156f8995b01b858e12e3f8 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 172e7cec9a3dff032e1e53529ba3f17e7fb30735 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <phpdoc:classref xml:id="class.mongocursorexception" xmlns:phpdoc="http://php.net/ns/phpdoc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
@@ -15,15 +15,54 @@
    &reftitle.intro;
    <para>
     Émise lors d'un accès incorrect à un curseur ou lors de la réception
-    d'une erreur au moment de la réponse.
+    d'une erreur au moment de la réponse. Notez que cette exception peut être
+    émise par n'importe quelle requête de base de données qui reçoit une réponse,
+    et pas uniquement les requêtes. Les commandes d'écriture, et toutes les autres
+    opérations qui envoient des informations à la base de données et attendent une
+    réponse peuvent émettre une exception de type <classname>MongoCursorException</classname>.
+    La seule exception à ce principe est <literal>new Mongo()</literal> (création d'une
+    nouvelle connexion), qui n'émet que des exceptions de type
+    <classname>MongoConnectionException</classname>.
    </para>
 
    <para>
-    Si une erreur est reçue au moment de la réponse, il y aura également
-    un message d'erreur spécifique pour aider à analyser le problème.
-    Vu qu'il est difficile pour un programme d'analyser un message reçu d'une
-    exception, il y a également un code d'erreur associé à chaque cause de
-    l'exception.
+    Cette exception retourne un message d'erreur spécifique pour aider dans le diagnostique
+    du problème ainsi qu'un code erreur numérique associé avec la cause de l'exception.
+   </para>
+
+   <para>
+    Par exemple, supposez que vous tentiez d'insérer 2 documents avec le même _id :
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+try {
+    $collection->insert(array("_id" => 1), array("safe" => true));
+    $collection->insert(array("_id" => 1), array("safe" => true));
+}
+catch (MongoCursorException $e) {
+    echo "message d'erreur : ".$e->getMessage()."\n";
+    echo "code de l'erreur : ".$e->getCode()."\n";
+}
+
+?>
+]]>
+    </programlisting>
+    Ceci affichera quelque chose comme :
+    <programlisting>
+<![CDATA[
+message d'erreur : E11000 duplicate key error index: foo.bar.$_id_  dup key: { : 1 }
+code de l'erreur : 11000
+]]>
+    </programlisting>
+    Notez que le code erreur MongoDB (11000) est utilisé pour le code erreur PHP. Le driver
+    PHP utilise le code erreur natif lorsque c'est possible.
+   </para>
+
+   <para>
+    Voici une liste des erreurs, codes et causes survenant le plus fréquemment.
+    Les erreurs exactes sont en italiquue, les erreurs dont le message varie 
+    sont décrites en oblique.
    </para>
 
    <itemizedlist>
@@ -37,6 +76,33 @@
      <para>
       Vous appelez une méthode qui affecte la requête après l'exécuter. Remettez à zéro
       le curseur et rééssayez.
+     </para>
+     <para>
+      Un exemple :
+      <programlisting role="php">
+<![CDATA[
+<?php
+
+try {
+    $cursor = $collection->find();
+    var_dump($cursor->getNext());
+
+    // getNext() requête la base de données, il est trop tard pour définir une limite
+    $cursor->limit(1);
+}
+catch (MongoCursorException $e) {
+    echo "message d'erreur : ".$e->getMessage()."\n";
+    echo "code de l'erreur : ".$e->getCode()."\n";
+}
+
+// Ceci fonctionnera :
+$cursor->getNext();
+$cursor->reset();
+$cursor->limit(1);
+
+?>
+]]>
+      </programlisting>
      </para>
     </listitem>
     
@@ -65,27 +131,44 @@
       après quelques minutes d'inactivité, la base va détruire un curseur. (Voyez
       <function>MongoCursor::immortal</function> pour plus d'informations).
      </para>
-    </listitem>
-    
-    <listitem>
      <para>
-      Couldn't get response header.
-     </para>
-     <para>
-      Code : 4
+      Un exemple :
+      <programlisting role="php">
+<![CDATA[
+<?php
+
+try {
+    $cursor = $collection->find();
+    $cursor->getNext();
+
+    // attendre pendant 15 minutes
+    sleep(60*15);
+
+    while ($cursor->hasNext()) {
+        $cursor->getNext();
+    }
+}
+catch (MongoCursorException $e) {
+    echo "message d'erreur : ".$e->getMessage()."\n";
+    echo "code de l'erreur : ".$e->getCode()."\n";
+}
+
+?>
+]]>
+      </programlisting>
      </para>
     </listitem>
- 
+
     <listitem>
      <para>
       <literal>cursor->buf.pos is null</literal>
      </para>
      <para>
-      Code: 3
+      Code : 3
      </para>
      <para>
-      Ceci pourrait indiquer que vous n'avez plus d'espace disponible sur le disque
-      ou une autre erreur relativement peu commune.
+      Ceci peut indiquer que vous n'avez plus de RAM de disponible ou
+      bien d'autres circonstances extraordinaires.
      </para>
     </listitem>
 
@@ -94,11 +177,11 @@
       <literal>couldn't get response header</literal>
      </para>
      <para>
-      Code: 4
+      Code : 4
      </para>
      <para>
-      Le pilote n'a pas pu obtenir les en-têtes de la réponse depuis la base, il a donc
-      abandonné. Vérifiez l'état du serveur et du réseau.
+      Une erreur commune si la base de données ou le réseau n'est plus disponible.
+      Cela signifie que le driver ne peut récupérer une réponse depuis la connexion.
      </para>
     </listitem>
 
@@ -107,7 +190,7 @@
       <literal>no db response</literal>
      </para>
      <para>
-      Code: 5
+      Code : 5
      </para>
      <para>
       Ceci n'est pas toujours une erreur, par exemple, la commande
@@ -119,18 +202,15 @@
     
     <listitem>
      <para>
-      <literal>bad response length: %d, max: %d, did the db assert?</literal>
+      <literal>bad response length: %d, did the db assert?</literal>
      </para>
      <para>
-      Code: 6
+      Code : 6
      </para>
      <para>
-      Ceci signifie que la base de données dit que sa réponse est plus
-      grande que 4Mo ou bien, inférieure à 0. Générallement, 
-      un nombre plus grand que 5Mo doit être rapporté aux développeurs
-      comme un bogue potentiel (la taille maximale de la réponse est 4Mo).
-      Une réponse inférieure à 0 signifie générallement qu'une assertion
-      est survenue sur la base de données.
+      Ceci signifie que la base de données dit que sa réponse est 
+      inférieure à 0. Cela signifie généralement qu'une erreur
+      réseau ou une corruption de la base de données est survenue.
      </para>
     </listitem>
     
@@ -139,7 +219,7 @@
       <literal>incomplete header</literal>
      </para>
      <para>
-      Code: 7
+      Code : 7
      </para>
      <para>
       Très peu commun. Apparait si la réponse de la base commence de manière correcte, mais
@@ -152,7 +232,7 @@
       <literal>incomplete response</literal>
      </para>
       <para>
-      Code: 8
+      Code : 8
      </para>
      <para>
       Très rare. Survient si la réponse de la base de données a commencé avec succès,
@@ -165,7 +245,7 @@
       <literal>couldn't find a response</literal>
      </para>
      <para>
-      Code: 9
+      Code : 9
      </para>
      <para>
       Si la réponse est en cache mais ne peut être trouvée.
@@ -177,7 +257,7 @@
       <literal>error getting socket</literal>
      </para>
      <para>
-      Code: 10
+      Code : 10
      </para>
      <para>
       La socket a été fermée ou a rencontré un problème. Le pilote devrait se reconnecter
@@ -190,7 +270,7 @@
       <literal>couldn't find reply, please try again</literal>
      </para>
      <para>
-      Code: 11
+      Code : 11
      </para>
      <para>
       Le pilote sauvegarde toutes les réponses de la base qu'il ne peut associer immédiatement
@@ -217,7 +297,7 @@
       <literal>Timeout error</literal>
      </para>
      <para>
-      Code: 13
+      Code : 13
      </para>
      <para>
       Erreur lors de l'attente qu'une requête s'exécute.
@@ -229,10 +309,32 @@
       <literal>couldn't send query: &lt;various&gt;</literal>
      </para>
      <para>
-      Code: 14
+      Code : 14
      </para>
      <para>
       Erreur de socket C à l'envoi.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      <literal>max number of retries exhausted, couldn't send query</literal>
+     </para>
+     <para>
+      Code : 19
+     </para>
+     <para>
+      Le driver retentera automatiquement les requêtes (et non les commandes)
+      un nombre de fois défini si la première tentative échoue pour certaines raisons.
+      Ceci peut produire quelques exceptions lors du jeu de réplication (alors que d'autres
+      passeront normalement), ainsi que quelques erreurs réseaux.
+     </para>
+     <para>
+      Ceci peut aussi survenir en raison du driver qui n'arrive pas à se reconnecter
+      à la base de données (si, par exemple, la base de données n'est plus joignable).
+     </para>
+     <para>
+      Version 1.2.2+.
      </para>
     </listitem>
    </itemizedlist>
@@ -241,7 +343,8 @@
   <section>
    <title>Erreur de la base de données</title>
    <para>
-    Les erreurs de la base devraient toujours déclencher une MongoCursorException. Les
+    Les erreurs de la base devraient toujours déclencher une
+    <classname>MongoCursorExceptions</classname>. Les
     messages d'erreur et les codes sont envoyés directement depuis la base et devraient se
     retrouver dans le journal de la base de données.
    </para>

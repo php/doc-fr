@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 63c5351f883b8b5f9961590aca7944c0ee7afd09 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 06c28576dfb94c76e1a0b18b686207bab70b6978 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <section xml:id="mongo.connecting" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -53,15 +53,15 @@ $db->authenticate($username, $password);
 ]]>
   </programlisting>
   <para>
-   Il y a un inconvénient majeur à cette méthode : si la connexion à la base
-   de données est interrompue puis, rétablie, la connexion ne sera plus
-   authentifiée.
+   Il y a un inconvénient majeur à cette méthode : si la connexion
+   est interrompue puis, rétablie, la nouvelle connexion ne sera plus
+   authentifiée. Si vous utilisez le format URI, le driver PHP authentifiera
+   automatiquement l'utilisateur lorsqu'une nouvelle connexion est créée.
   </para>
   <para>
-   Si vous utilisez le format URI, le driver identifiera l'utilisateur sur la
-   base de données admin. Pour s'authentifier en utilisant une autre base de données,
-   spécifiez le nom de la base de données après l'hôte. Cet exemple authentifiera
-   l'utilisateur sur la base de données "blog" :
+   Pour s'authentifier sur une base de données différente, vous devez spécifier
+   le nom de la base de données après l'hôte. Cet exemple identifiera l'utilisateur
+   dans la base de données "blog" :
   </para>
   <programlisting role="php">
 <![CDATA[
@@ -160,19 +160,113 @@ $m = new Mongo("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
  </section>
 
  <section>
-  <title>File d'attente de connexion</title>
+  <title>File d'attente de connexion (version 1.2.0+)</title>
   <para>
-   En version 1.2.0+, le driver gérera automatiquement la file d'attente
-   de connexion pour l'utilisateur.
+   La création de connexions est une des actions les plus lourdes réalisées
+   par le driver. Cela peut prendre plusieurs millisecondes pour définir correctement
+   une connexion, y compris sur un réseau rapide. Aussi, le driver tente de
+   minimiser le nombre de nouvelles connexions créées en réutilisant les connexions
+   depuis la file d'attente.
   </para>
   <para>
    Lorsqu'un utilisateur crée une nouvelle instance de la clase
    <classname>Mongo</classname>, toutes les connexions nécessaires seront
    prises depuis leurs files d'attente (les connexions pour le jeu de réplication
-   peuvent nécessiter plusieurs connexions). Lorsque l'instance de la classe
-   <classname>Mongo</classname> sort du scope, les connexions seront remises
-   dans la file d'attente.
+   peuvent nécessiter plusieurs connexions, une pour chaque membre du jeu).
+   Lorsque l'instance de la classe <classname>Mongo</classname> sort du scope,
+   les connexions seront remises dans la file d'attente. Lorsque le processus PHP
+   existe, toutes les connexions de la file d'attente seront fermées.
   </para>
+  <section>
+   <title>"Pourquoi dois-je avoir autant de connexions ouvertes ?"</title>
+   <para>
+    La file d'attente de connexions peut générer un nombre important de connexions.
+    Ceci est voulu, et, en utilisant un peu d'arithmétique, vous pouvez trouver
+    le nombre de connexions qui sera créée. Il y a 3 facteurs qui affectent le
+    nombre de connexions :
+   </para>
+   <itemizedlist>
+    <listitem>
+     <para>
+      <literal>
+       connections_per_pool
+      </literal>
+     </para>
+     <para>
+      Chaque file d'attente de connexions, créera, par défaut, un nombre illimité
+      de connexions. Cela peut poser quelques soucis : si la file peut créer un
+      nombre illimité de connexions, peut-elle en créer des centaines et ainsi,
+      dépasser les descripteurs de fichiers du serveur ? En pratique, ceci est
+      peu probable, sachant que chaque connexion inutilisée est replacée dans
+      la file d'attente pour une réutilisation ultérieure, aussi, les futures
+      connexions utiliseront la même connexion au lieu d'en créer une nouvelle.
+      Sauf si vous créez volontairement des milliers de connexions à la fois
+      sans les laisser sortir du scope, le nombre de connexions ouvertes devrait
+      rester à un niveau raisonnable.
+     </para>
+     <para>
+      Vous pouvez voir le nombre de connexions présentes dans la file d'attente
+      en utilisant la méthode <function>MongoPool::info</function>.
+      Ajouter les champs "in use" et "in pool" pour un serveur donné.
+      Ce sera le nombre total de connexions pour cette file d'attente.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      <literal>
+       pools_per_process
+      </literal>
+     </para>
+     <para>
+      Chaque adresse de serveur MongoDB sur lequel vous vous connectez
+      utilise sa propre file d'attente de connexions. Par exemple, si votre nom
+      d'hôte local est "example.net", une connexion à "example.net:27017", "localhost:27017",
+      et "/tmp/mongodb-27017.sock" créera 3 files d'attente de connexions. Vous pouvez voir
+      le nombre de files d'attentes de connexions ouvertes en utilisant la méthode
+      <function>MongoPool::info</function>.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      <literal>
+       processes
+      </literal>
+     </para>
+     <para>
+      Chaque processus PHP a un jeu de files d'attente séparées. PHP-FPM et Apache
+      créent généralement entre 6 et une douzaine de fils. Vérifiez votre configuration
+      pour voir le nombre maximal de processus PHP pouvant être engendrés.
+     </para>
+     <para>
+      Si vous utilisez PHP-FPM, le fait d'estimer le nombre de connexions peut être
+      délicat car le processus va engendrer encore plus de fils à forte charge.
+      Pour rester dans un contexte sécurisé, regardez le paramètre max_children
+      et ajoutez-y spare_servers+start_servers (choisissez le nombre le plus important).
+      Le résultat sera le nombre de processus PHP (et donc, le nombre de jeux de files
+      d'attente) dont vous pourrez vous attendre.
+     </para>
+    </listitem>
+   </itemizedlist>
+   <para>
+    Les trois variables ci-dessus peuvent être multipliés ensemble pour fournir
+    le nombre maximal de connexions attendues :
+    <literal>connections_per_pool*pools_per_process*processes</literal>.  Notez
+    que <literal>connections_per_pool</literal> peut être différent suivant les files
+    d'attente, aussi, <literal>connections_per_pool</literal> devrait être le maximal.
+   </para>
+   <para>
+    Par exemple, supposez que vous avez 30 connexions par files d'attentes,
+    10 files d'attente par processus PHP, et 128 processus PHP. Alors, vous pouvez
+    vous attendre à 38400 connexions depuis cette machine. Aussi, vous devriez
+    définir la limite des descripteurs de fichiers de cette machine à une valeur
+    suffisante pour gérer toutes ces connexions, ou alors les descripteurs de fichiers
+    ne seront pas suffisants.
+   </para>
+   <para>
+    Voir la méthode <classname>MongoPool</classname> pour plus d'informations sur les
+    files d'attente de connexions.
+   </para>
+  </section>
  </section>
  
  <section>
@@ -181,7 +275,8 @@ $m = new Mongo("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
    <para>
     Cette section n'est pas pertinente pour les versions 1.2.0+. En 1.2.0+,
     les connexions sont toujours persistantes et gérées automatiquement
-    par le driver.
+    par le driver. Voir la méthode <classname>MongoPool</classname>
+    pour plus d'informations sur les files d'attente de connexions.
    </para>
   </note>
 
@@ -243,11 +338,6 @@ for ($i=0; $i<1000; $i++) {
    devraient être systématiquement utilisées en production sauf si une très bonne raison
    indique le contraire. La plupart des raisons qui font qu'elles ne sont pas recommandées
    dans le cas des bases de données relationnelles ne sont pas applicables pour MongoDB.
-  </para>
-  <para>
-   Les connexions persistantes sont utilisées par défaut depuis 1.0.12. Pour créer une
-   connexion non-persistante, vous devez passer <literal>"persist" =&gt; false</literal> à
-   <function>Mongo::__construct</function>.
   </para>
  </section>
 
