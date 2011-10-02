@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 38bc312a17120963ffed8b6f660d1af53e91ae28 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 1028f91a84abc152343a2be003b9fbf617bacea5 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="wrappers.php" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" role="noversion">
@@ -9,94 +9,178 @@
   <refpurpose>Accès aux divers flux I/O</refpurpose>
  </refnamediv>
 
- <refsect1 role="description"><!-- {{{ -->
+ <refsect1 role="description">
   &reftitle.description;
   <para>
-   <filename>php://stdin</filename>, <filename>php://stdout</filename>
-   et <filename>php://stderr</filename> donnent un accès direct aux flux correspondants
-   d'entrée ou de sortie du processus PHP. Le flux représente un descripteur dupliqué
-   du fichier, donc, si vous ouvrez <filename>php://stdin</filename> et que vous le
-   fermez plus tard, vous fermez uniquement le descripteur, le flux référencé par
-   <constant>STDIN</constant> ne sera pas affecté. Notez que le comportement de PHP
-   à ce sujet est relativement instable dans les versions antérieures à 5.2.1. Il est recommandé
-   d'utiliser simplement les constantes <constant>STDIN</constant>, <constant>STDOUT</constant>
-   et <constant>STDERR</constant> au lieu d'ouvrir manuellement les flux en utilisant ces gestionnaires.
+   PHP fournit un nombre important de flux I/O qui permettent d'accéder
+   aux flux d'entrée et de sortie de Php, à l'entrée standart, à l'entrée
+   et la sortie des descripteurs de fichiers, aux flux représentant les fichiers
+   temporaires en mémoire vive ou sur le disque, ainsi qu'aux filtres qui peuvent
+   manipuler d'autres ressources de fichiers en lecture ou en écriture.
   </para>
-  <simpara>
-   <filename>php://output</filename> vous permet d'écrire dans le
-   buffer de sortie, de la même manière que
-   <function>print</function> et <function>echo</function>.
-  </simpara>
-  <simpara>
-   <filename>php://input</filename> permet de lire les données brutes de la requête.
-   Pour les requêtes POST, cette méthode est préférable à <varname>$HTTP_RAW_POST_DATA</varname> car
-   elle ne dépend pas d'une directive de &php.ini;. De plus, cette solution est moins
-   consomatrice en mémoire que l'activation de <varname>$HTTP_RAW_POST_DATA</varname> via la directive
-   <link linkend="ini.always-populate-raw-post-data">always_populate_raw_post_data</link>.
-   <filename>php://input</filename> n'est pas disponible avec
-   <literal>enctype="multipart/form-data"</literal>.
-  </simpara>
-  <note>
+
+  <refsect2>
+   <title>php://stdin, php://stdout et php://stderr</title>
    <simpara>
-    Un flux ouvert au moyen de <filename>php://input</filename> ne peut être lu
-    qu'une seule fois, le flux ne supporte pas les opérations de déplacement. En
-    revanche, en fonction de la SAPI considérée, il peut être possible de réouvrir
-    un deuxième flux sur <filename>php://input</filename> et recommencer la lecture.
-    Ceci n'est possible que si le corps de la requête a été sauvegardé. C'est le cas
-    typiquement pour les requêtes de type POST mais pas pour celles d'autres types comme
-    PUT ou PROPFIND.
+    <filename>php://stdin</filename>, <filename>php://stdout</filename> et
+    <filename>php://stderr</filename> permettent des accès directs aux flux d'entrée
+    ou de sortie correspondant du processus PHP. Le flux représente une copie
+    du descripteur de fichier, aussi, si vous ouvrez <filename>php://stdin</filename>
+    et le fermez plus tard, vous ne fermez que votre copie du descripteur ; le
+    flux actuel, référencé par <constant>STDIN</constant> n'est pas affecté. Notez
+    que PHP avez un comportement relativement bogué jusqu'à la version PHP 5.2.1.
+    Il est recommandé d'utiliser uniquement les constantes <constant>STDIN</constant>,
+    <constant>STDOUT</constant> et <constant>STDERR</constant> au lieu
+    d'ouvrir manuellement les flux en utilisant ces gestionnaires.
    </simpara>
-  </note>
-  <simpara>
-   <filename>php://stdin</filename> et
-   <filename>php://input</filename> sont en lecture seule, tandis que
-   <filename>php://stdout</filename>,
-   <filename>php://stderr</filename> et
-   <filename>php://output</filename> sont en écriture seule.
-  </simpara>
+   <simpara>
+    <filename>php://stdin</filename> est en lecture seule, alors que
+    <filename>php://stdout</filename> et <filename>php://stderr</filename> sont
+    en écriture seule.
+   </simpara>
+  </refsect2>
 
-  <simpara>
-   <filename>php://fd</filename> permet des accès directs au descripteur
-   de fichier fourni. Par exemple, <filename>php://fd/3</filename>
-   permet d'accéder au descripteur 3 du fichier.
-  </simpara>
+  <refsect2>
+   <title>php://input</title>
+   <simpara>
+    <filename>php://input</filename> est un flux en lecture seule qui permet
+    de lire des données brutes depuis la requête. Dans le cas de requêtes POST,
+    il est préférable d'utiliser la variable <varname>$HTTP_RAW_POST_DATA</varname>
+    vu qu'elle ne dépend d'aucune directive de configuration du &php.ini;.
+    De plus, dans les cas où <varname>$HTTP_RAW_POST_DATA</varname> n'est pas
+    peuplé par défaut, il est potentiellement plus intéressant en terme
+    de mémoire d'activer la directive <link
+    linkend="ini.always-populate-raw-post-data">always_populate_raw_post_data</link>.
+    <filename>php://input</filename> n'est pas disponible avec
+    <literal>enctype="multipart/form-data"</literal>.
+   </simpara>
+   <note>
+    <simpara>
+     Un flux ouvert avec <filename>php://input</filename> ne peut être lu qu'une
+     seule fois ; le flux ne supporte pas les opérations de rembobinage. Cependant,
+     suivant l'implémentation du SAPI, il peut être possible d'ouvrir un autre flux
+     <filename>php://input</filename> et recommencer à lire. Ceci n'est possible que
+     si la requête des données a été sauvegardée. Typiquement, c'est le cas pour les
+     requêtes POST, mais pas pour les autres méthodes comme PUT ou PROPFIND.
+    </simpara>
+   </note>
+  </refsect2>
 
-  <simpara>
-   <filename>php://filter</filename> est une sorte de méta-gestionnaire,
-   qui permet l'utilisation de filtre avec les données d'entrée
-   au moment du démarrage du script. C'est pratique avec des fonctions
-   compactes comme <function>readfile</function>, <function>file</function> et
-   <function>file_get_contents</function> où il n'y a pas d'opportunité d'appliquer
-   un filtre aux données lues.
-  </simpara>
-  <simpara>
-   Le gestionnaire de <filename>php://filter</filename> prend les 'paramètres'
-   suivants dans le 'chemin'.
-  </simpara>
- </refsect1><!-- }}} -->
+  <refsect2>
+   <title>php://output</title>
+   <para>
+    <filename>php://output</filename> est un flux en écriture seule qui permet d'écrire
+    dans le mécanisme de buffer de sortie de la même façon que les fonctions
+    <function>print</function> et <function>echo</function>.
+   </para>
+  </refsect2>
 
- <refsect1 role="usage"> <!-- {{{ -->
-  &reftitle.options;
-  <itemizedlist>
-   <listitem><simpara><filename>php://stdin</filename></simpara></listitem>
-   <listitem><simpara><filename>php://stdout</filename></simpara></listitem>
-   <listitem><simpara><filename>php://stderr</filename></simpara></listitem>
-   <listitem><simpara><filename>php://output</filename></simpara></listitem>
-   <listitem><simpara><filename>php://input</filename></simpara></listitem>
-   <listitem><simpara><filename>php://filter</filename> (disponible depuis PHP 5.0.0)</simpara></listitem>
-   <listitem><simpara><filename>php://memory</filename> (disponible depuis PHP 5.1.0)</simpara></listitem>
-   <listitem><simpara><filename>php://temp</filename> (disponible depuis PHP 5.1.0)</simpara></listitem>
-   <listitem><simpara><filename>php://fd</filename> (disponible depuis PHP 5.3.6)</simpara></listitem>
-  </itemizedlist>
- </refsect1> <!-- }}} -->
+  <refsect2>
+   <title>php://fd</title>
+   <simpara>
+    <filename>php://fd</filename> permet un accès direct au descripteur de fichier
+    fourni. Par exemple, <filename>php://fd/3</filename> correspond aux
+    descripteurs 3 du fichier.
+   </simpara>
+  </refsect2>
+
+  <refsect2>
+   <title>php://memory et php://temp</title>
+   <simpara>
+    <filename>php://memory</filename> et <filename>php://temp</filename>
+    sont des flux en lecture/écriture qui permet de sauvegarder des données
+    temporaires dans un gestionnaire de fichiers. La seule différence entre
+    ces deux flux est que <filename>php://memory</filename> autorise la sauvegarde
+    des données en mémoire, alors que <filename>php://temp</filename> utilisera un
+    fichier temporaire une fois que la quantité de données sauvegardées aura dépassée
+    une limite prédéfinie (par défaut, 2 Mo).
+   </simpara>
+   <simpara>
+    La limite mémoire de <filename>php://temp</filename> peut être contrôlé
+    en ajoutant <literal>/maxmemory:NN</literal>, où <literal>NN</literal> est
+    la quantité de mémoire maximale à conserver en mémoire avant d'utiliser
+    un fichier temporaire, en octets.
+   </simpara>
+  </refsect2>
+
+  <refsect2>
+   <title>php://filter</title>
+   <simpara>
+    <filename>php://filter</filename> est une sorte de gestionnaire prévu
+    pour permettre l'application de <link linkend="filters">filtres</link>
+    sur un flux au moment de l'ouverture. Ceci est très pratique avec
+    des fonctions sur des fichiers toutes-en-un comme les fonctions
+    <function>readfile</function>, <function>file</function> et
+    <function>file_get_contents</function> où il n'est pas opportun
+    d'appliquer un filtre au flux avant d'avoir lu le contenu.
+   </simpara>
+   <para>
+    La cible de <filename>php://filter</filename> prend les paramètres suivants
+    sous la forme de partie du chemin. Reportez-vous aux exemples spécifiques
+    pour une utilisation correcte de ces paramètres.
+   </para>
+   <para>
+    <table>
+     <title>php://filter parameters</title>
+     <tgroup cols="2">
+      <thead>
+       <row>
+        <entry>Nom</entry>
+        <entry>Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry>
+         <literal>resource=&lt;flux à filtrer&gt;</literal>
+        </entry>
+        <entry>
+         Ce paramètre est requis. Il spécifie le flux que vous souhaitez
+         filtrer.
+        </entry>
+       </row>
+       <row>
+        <entry>
+         <literal>read=&lt;liste des filtres à appliquer à la lecture&gt;</literal>
+        </entry>
+        <entry>
+         Ce paramètre est optionnel. Un ou plusieurs noms de filtres
+         peuvent être fournis ici, séparés par un caractère pipe (<literal>|</literal>).
+        </entry>
+       </row>
+       <row>
+        <entry>
+         <literal>write=&lt;liste des filtres à appliquer à l'écriture&gt;</literal>
+        </entry>
+        <entry>
+         Ce paramètre est optionnel. Un ou plusieurs noms de filtres
+         peuvent être fournis ici, séparés par un caractère pipe (<literal>|</literal>).
+        </entry>
+       </row>
+       <row>
+        <entry>
+         <literal>&lt;liste de filtre à appliquer à la fois lors de la lecture et de l'écriture&gt;</literal>
+        </entry>
+        <entry>
+         Tous les filtres fournis sans être préfixés par <literal>read=</literal>
+         ou <literal>write=</literal> seront appliqués à la fois lors de la
+         lecture et lors de l'écriture.
+        </entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+   </para>
+  </refsect2>
+ </refsect1>
 
  <refsect1 role="options"><!-- {{{ -->
   &reftitle.options;
   <para>
    <table>
     <title>
-     Résumé des gestionnaires (pour <literal>php://filter</literal>,
-     voyez le résumé du filtre)
+     Résumé du gestionnaire (pour <literal>php://filter</literal>, reportez-vous
+     au résumé du gestionnaire à filtrer)
     </title>
     <tgroup cols="2">
      <thead>
@@ -152,7 +236,7 @@
        </entry>
       </row>
       <row>
-       <entry>Autorise la lecture et l'écriture simultanément</entry>
+       <entry>Autorise à la fois la lecture et l'écriture</entry>
        <entry>
         <literal>php://fd</literal>,
         <literal>php://memory</literal> et
@@ -198,21 +282,81 @@
   </para>
  </refsect1> <!-- }}} -->
 
+ <refsect1 role="changelog"><!-- {{{ -->
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>5.3.6</entry>
+       <entry>
+        <filename>php://fd</filename> a été ajouté.
+       </entry>
+      </row>
+      <row>
+       <entry>5.1.0</entry>
+       <entry>
+        <filename>php://memory</filename> et <filename>php://temp</filename>
+        ont été ajoutés.
+       </entry>
+      </row>
+      <row>
+       <entry>5.0.0</entry>
+       <entry>
+        <filename>php://filter</filename> a été ajouté.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
+ </refsect1><!-- }}} -->
+
  <refsect1 role="examples"><!-- {{{ -->
   &reftitle.examples;
   <example><!-- {{{ -->
-   <title>/ressource=&lt;flux à filtrer&gt; (<emphasis>obligatoire</emphasis>)</title>
+   <title>php://temp/maxmemory</title>
    <para>
-    Ce paramètre doit être situé à la fin
-    de votre chaîne <filename>php://filter</filename> et doit pointer sur le
-    flux à filtrer.
+    Le paramètre optionnel autorise la configuration de la limitation
+    mémoire avant que <filename>php://temp</filename> commence à utiliser
+    un fichier temporaire.
    </para>
    <programlisting role="php">
 <![CDATA[
 <?php
-/* Ceci est équivalent à :
-   readfile("http://www.example.com");
-   tant qu'aucun filtre n'est spécifié */
+// Définit la limite à 5 Mo.
+$fiveMBs = 5 * 1024 * 1024;
+$fp = fopen("php://temp/maxmemory:$fiveMBs", 'r+');
+
+fputs($fp, "hello\n");
+
+// Lit ce que nous venons d'écrire.
+rewind($fp);
+echo stream_get_contents($fp);
+?>
+]]>
+   </programlisting>
+  </example><!-- }}} -->
+  <example><!-- {{{ -->
+   <title>php://filter/resource=&lt;flux à filtrer&gt;</title>
+   <para>
+    Ce paramètre doit se situer à la fin de votre spécification
+    de <filename>php://filter</filename> et doit pointer sur le flux
+    que vous souhaitez filtrer.
+   </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+/* Ceci est équivalent à
+  readfile("http://www.example.com");
+  vu qu'aucun filtre n'est spécifié */
 
 readfile("php://filter/resource=http://www.example.com");
 ?>
@@ -220,85 +364,43 @@ readfile("php://filter/resource=http://www.example.com");
    </programlisting>
   </example><!-- }}} -->
   <example><!-- {{{ -->
-   <title>/read=&lt;liste de filtres de la chaîne de lecture&gt; (<emphasis>optionnel</emphasis>)</title>
+   <title>php://filter/read=&lt;liste de filtres à appliquer lors de la lecture&gt;</title>
    <para>
-    Ce paramètre prend un ou plusieurs noms de filtre, séparé par
-    le caractère pipe <literal>|</literal>.
+    Ce paramètre prend un ou plusieurs noms de filtres séparés par
+    un caractère pipe <literal>|</literal>.
    </para>
    <programlisting role="php">
 <![CDATA[
 <?php
-/* Ceci affichera le contenu de
-   www.example.com entièrement en majuscule */
+/* Ceci affichera le contenu complet de
+  www.example.com en majuscule */
 readfile("php://filter/read=string.toupper/resource=http://www.example.com");
 
-/* Ceci fera la même chose que ci-dessus
-   mais en plus, encodera le contenu en ROT13 */
+/* Ceci fera la même chose que le précédent,
+  mais encodera en ROT13 le résultat */
 readfile("php://filter/read=string.toupper|string.rot13/resource=http://www.example.com");
 ?>
 ]]>
    </programlisting>
   </example><!-- }}} -->
   <example><!-- {{{ -->
-   <title>/write=&lt;liste de filtres de la chaîne d'écriture&gt; (<emphasis>optionnel</emphasis>)</title>
+   <title>php://filter/write=&lt;liste des filtres à appliquer lors de l'écriture&gt;</title>
    <para>
-    Ce paramètre prendre un ou plusieurs noms de filtre, séparé par
-    le caractère pipe <literal>|</literal>.
+    Ce paramètre prend un ou plusieurs noms de filtres séparés par
+    un caractère pipe <literal>|</literal>.
    </para>
    <programlisting role="php">
 <![CDATA[
 <?php
-/* Ceci filtrera la chaîne "Hello World"
-   via le filtre rot13, puis, l'écrit dans le
-   fichier example.txt du dossier courant */
+/* Ceci va filtrer la chaîne "Hello World"
+  via le filtre rot13, puis, écrit le résultat
+  dans le fichier example.txt du dossier courant */
 file_put_contents("php://filter/write=string.rot13/resource=example.txt","Hello World");
 ?>
 ]]>
    </programlisting>
   </example><!-- }}} -->
-  <!-- {{{ -->
-  <simpara>
-   <literal>/&lt;liste de filtres des deux chaînes&gt;</literal> (<emphasis>optionnel</emphasis>)
-   Tous les filtres qui ne sont pas
-   préfixés avec <literal>read=</literal> ou
-   <literal>write=</literal> seront appliqués aux deux chaînes de filtres,
-   en lecture et en écriture.
-  </simpara>
-
-  <simpara>
-   Le gestionnaire <filename>php://memory</filename> stocke les données en
-   mémoire. <filename>php://temp</filename> fonctionne de la même façon,
-   mais utilise des fichiers temporaires pour stocker les données lorsqu'une certaine
-   limite mémoire est atteinte (par défaut, 2 Mo).
-  </simpara>
-  <simpara>
-   Le gestionnaire <filename>php://temp</filename> prend les paramètres suivants,
-   qui sont les parties du chemin :
-  </simpara>
-  <!-- }}} -->
-  <example><!-- {{{ -->
-   <title>/maxmemory:&lt;nombre d'octets&gt; (<emphasis>optionnel</emphasis>)</title>
-   <para>
-    Ce paramètre permet de changer la valeur
-    de la limite mémoire (lorsque les données sont déplacées vers un fichier temporaire).
-   </para>
-   <programlisting role="php">
-<![CDATA[
-<?php
-$fiveMBs = 5 * 1024 * 1024;
-$fp = fopen("php://temp/maxmemory:$fiveMBs", 'r+');
-
-fputs($fp, "hello\n");
-
-// Lit ce que nous venons d'écrire
-rewind($fp);
-echo stream_get_contents($fp);
-?>
-]]>
-   </programlisting>
-  </example><!-- }}} -->
  </refsect1><!-- }}} -->
-
 </refentry>
 
 <!-- Keep this comment at the end of the file
