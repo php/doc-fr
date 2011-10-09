@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ --> 
-<!-- EN-Revision: 57236796d184a3fe3de1f226accd92fa603018c1 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: d30ee932d639c68abbed4b8e04134631031461cd Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <book xml:id="book.mysqlnd-ms" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -29,47 +29,64 @@
    L'utilisation de mysqlnd a plusieurs avantages : aucun téléchargement
    supplémentaire car elle est fournie avec PHP, avec la licence PHP,
    consomme moins de mémoire dans certains cas, et fournie de nouvelles
-   fonctionnalités comme les requêtes asynchrones.
+   fonctionnalités comme les requêtes asynchrones. Depuis PHP 5.4.0, mysqlnd
+   est la bibliothèque par défaut utilisée par toutes les extensions MySQL de
+   PHP (<link linkend="ref.mysqli">mysqli</link>, <link linkend="ref.mysql">mysql</link>,
+   <link linkend="ref.pdo-mysql">PDO_MYSQL</link>).
   </para>
   <para>
    Les plugins mysqlnd comme le plugin de réplication et de balance de charge
    opère de façon transparente d'un point de vue utilisateur. Il supporte
-   toutes les applications PHP et toutes les extensions PHP MySQL (
-   <link linkend="ref.mysqli">mysqli</link>,
-   <link linkend="ref.mysql">mysql</link>,
-   <link linkend="ref.pdo-mysql">PDO_MYSQL</link>).
+   toutes les applications PHP et toutes les extensions PHP MySQL.
    Il ne modifie pas les APIs existantes. Toutefois, il peut être utilisé
    très facilement avec les applications PHP existantes.
   </para>
   <note>
    <para>
-    Le plugin de réplication et de balance de charge est au stade ALPHA.
+    Le plugin de réplication et de balance de charge est au stade BETA.
     Ces fonctionnalités ne sont pas encore complètes.
    </para>
   </note>
   <section xml:id="mysqlnd-ms.key_features">
    <title>Fonctionnalités clés</title>
    <para>
+    Les fonctionnalités clés de PECL/mysqlnd_ms sont les suivantes.
+   </para>
+   <para>
     <itemizedlist>
      <listitem>
       <para>
-       Transparent et facile d'utilisation
+       Transparent et facile d'utilisation.
       </para>
       <para>
        <itemizedlist>
         <listitem>
          <para>
-          supporte toutes les extensions PHP MySQL
+          supporte toutes les extensions PHP MySQL.
          </para>
         </listitem>
         <listitem>
          <para>
-          aucune modification de l'API
+          Une <acronym>API</acronym> cohérente.
          </para>
         </listitem>
         <listitem>
          <para>
-          très légère modification de l'application nécessaire, suivant le scénario d'utilisation
+          très légère (voire aucun) modification de l'application nécessaire,
+          suivant le scénario d'utilisation.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          Connexions paresseuses : les connexions entre le maître et les
+          esclaves ne sont pas ouvertes avant qu'une requête SQL n'est exécutée.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          Optionnel : utilisation automatique du maître après la première écriture
+          dans une requête web, afin de réduire tant que possible l'impact du lag
+          de la réplication.
          </para>
         </listitem>
        </itemizedlist>
@@ -84,12 +101,17 @@
        <itemizedlist>
         <listitem>
          <para>
-          Détection automatique des SELECT, supporte les astuces SQL pour écraser l'automatisme
+          Détection automatique des SELECT.
          </para>
         </listitem>
         <listitem>
          <para>
-          définit par l'utilisateur
+          Support des astuces SQL permettant d'écraser le comportement courant.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          Définie par l'utilisateur.
          </para>
         </listitem>
        </itemizedlist>
@@ -136,7 +158,10 @@
    <title>Limitations</title>
    <para>
     Le plugin ne supporte pas la configuration de réplication MySQL
-    avec plus d'un serveur maître.
+    avec plus d'un serveur maître. Une directive de configuration
+    expérimentale <link linkend="ini.mysqlnd-ms.multi_master"><literal>mysqlnd_ms.multi_master</literal></link>
+    a été introduite en version 1.1.0-beta pour trouver une façon de
+    contourner cette limitation.
    </para>
    <para>
     Le mécanisme interne de séparation lecture/écriture est très basique.
@@ -147,23 +172,31 @@
     à envoyer vers le serveur maître MySQL. Le comportement interne peut être
     écraser en utilisant
     <link linkend="mysqlnd-ms.constants">les astuces SQL</link> ou une
-    <link linkend="function.mysqlnd-ms-set-user-pick-server">fonction de rappel</link>
+    <link linkend="ini.mysqlnd-ms-plugin-config-v2.filter_user">fonction de rappel</link>
     définie par l'utilisateur.
    </para>
    <para>
     La séparation lecture/écriture ne prend pas en considération les requêtes
     multiples. Elles sont considérées comme une seule et unique requête.
     La décision de l'endroit où doit être exécutée la requête sera prise
-    suivant le début de la chaîne de requête.
+    suivant le début de la chaîne de requête. Par exemple, si
+    <link linkend="mysqli.multi-query"><function>mysqli_multi_query</function></link>
+    est utilisé pour exécuter une requête multiple comme
+    <literal>SELECT id FROM test ; INSERT INTO test(id) VALUES (1)</literal>,
+    la requête sera redirigée vers un serveur esclave car elle commence
+    par <literal>SELECT</literal>. La requête <literal>INSERT</literal>,
+    qui fait également partie de la requête multiple, ne sera pas redirigée
+    vers le serveur maître.
    </para>
    <para>
-    Le plugin ne supporte pas nativement les requêtes préparées. Veuillez noter
-    que <link linkend="ref.pdo-mysql">PDO_MySQL</link> utilise une émulation
-    côté client de requêtes préparées par défaut. Cette émulation est totalement
-    supportée par le plugin de réplication et de balance de charge
-    car elle n'utilise pas nativement les requêtes préparées. Si vous utilisez PHP
-    basé sur l'abstraction de base de données, veuillez consulter le manuel utilisateur
-    pour savoir si l'émulation côté client de requêtes préparées est utilisée.
+    Avant la version 1.1.0-beta, le plugin ne supporte pas nativement les requêtes
+    préparées. Veuillez noter que <link linkend="ref.pdo-mysql">PDO_MySQL</link>
+    utilise une émulation côté client de requêtes préparées par défaut. Cette
+    émulation est totalement supportée par toutes les versions du plugin de 
+    réplication et de balance de charge car elle n'utilise pas nativement les
+    requêtes préparées. Si vous utilisez PHP basé sur l'abstraction de base de
+    données, veuillez consulter le manuel utilisateur pour savoir si l'émulation
+    côté client de requêtes préparées est utilisée.
    </para>
    <note>
     <para>
@@ -193,8 +226,9 @@
  &reference.mysqlnd-ms.quickstart;
  &reference.mysqlnd-ms.concepts;
  &reference.mysqlnd-ms.setup;
- &reference.mysqlnd-ms.constants; 
- &reference.mysqlnd-ms.reference; 
+ &reference.mysqlnd-ms.constants;
+ &reference.mysqlnd-ms.reference;
+ &reference.mysqlnd-ms.changes;
 
 </book>
 
