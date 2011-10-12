@@ -1,38 +1,138 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8b6d169424ff189bb563ef4c3f35f8adff3f42c5 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 8f22cae0086d4e9280961f313a8e74a877ab8329 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <phpdoc:classref xml:id="class.yaf-router" xmlns:phpdoc="http://php.net/ns/phpdoc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
-
+ 
  <title>La classe Yaf_Router</title>
  <titleabbrev>Yaf_Router</titleabbrev>
-
+ 
  <partintro>
-
-<!-- {{{ Yaf_Router intro -->
+  
+  <!-- {{{ Yaf_Router intro -->
   <section xml:id="yaf-router.intro">
    &reftitle.intro;
    <para>
-
+    <classname>Yaf_Router</classname> est le framework standard pour le routage.
+    Le routage est le fait de prendre la partie finale d'une URI (la partie
+    de l'URI qui vient après l'URI de base), et la décompose en paramètres pour
+    déterminer quel module, contrôleur, et action de ce contrôleur doivent
+    recevoir la requête. Cette valeur de module, de contrôleur, d'action
+    et d'autres paramètres sont empaquetés dans un objet <classname>Yaf_Request_Abstract</classname>
+    qui sera ensuite analysé par <classname>Yaf_Dispatcher</classname>. Le routage
+    intervient uniquement lorsqu'une requête est initialement reçue et avant l'envoi
+    au premier contrôleur. <classname>Yaf_Router</classname> est prévu pour autoriser
+    les fonctionnalités similaires au mod_rewrite en utilisant des structures PHP.
+    Ces structures sont basés sur le routage en Ruby on Rails et ne nécessitent
+    aucun connaissance en ré-écriture d'URL de serveur web. Elles sont prévues pour fonctionner
+    avec une seule règle Apache mod_rewrite (une parmis) :
+    <programlisting role="conf">
+<![CDATA[
+RewriteEngine on
+RewriteRule !\.(js|ico|gif|jpg|png|css|html)$ index.php
+]]>
+    </programlisting>
+    ou (préféré) :
+    <programlisting role="conf">
+<![CDATA[
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} -s [OR]
+RewriteCond %{REQUEST_FILENAME} -l [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^.*$ - [NC,L]
+RewriteRule ^.*$ index.php [NC,L]
+]]>
+    </programlisting>
+    Si vous utilisez Lighttpd, la règle suivante est valide :
+    <programlisting role="conf">
+<![CDATA[
+url.rewrite-once = (
+  ".*\?(.*)$" => "/index.php?$1",
+  ".*\.(js|ico|gif|jpg|png|css|html)$" => "$0",
+  "" => "/index.php"
+)
+]]>
+    </programlisting>
    </para>
   </section>
-<!-- }}} -->
+  <!-- }}} -->
+  
+  <section xml:id="yaf-router.default">
+   <title>Routage par défaut</title>
+   <para>
+    Yaf_Router est fourni préconfiguré avec un routage par défaut, qui
+    décompose les URIs en forme de contrôleur/action. De lpus, un nom
+    de module peut être spécifié comme premier élément du chemin, autorisant
+    ainsi les URIs sous la forme module/contrôleur/action. Et finalement,
+    les paramètres ajoutés à l'URI seront détectés aussi par défaut -
+    contrôleur/action/var1/value1/var2/value2.
+    <note>
+     <para>
+      Le nom du module doit être défini comme application.module="Index,Foo,Bar"
+      dans ce cas, seuls index, foo et bar peuvent être considérés comme
+      un nom de module, et par défaut, il n'y a qu'un seul nom de module
+      préconfiguré ("Index").
+     </para>
+    </note>
+    Voici quelques exemples sur la façon dont ces routages sont détectés :
+    <programlisting role="conf">
+<![CDATA[
+// Supposons la configuration suivante :
+$conf = array(
+   "application" => array(
+      "modules" => "Index,Blog",
+   ),
+);
 
+Que le contrôleur :
+http://example/news
+    controller == news
+Qu'une action (lorsqu'on définit yaf.action_prefer=1 en php.ini)
+    action  == news
+ 
+Module invalide lié à un nom de contrôleur :
+http://example/foo
+    controller == foo
+ 
+Module + contrôleur :
+http://example/blog/archive
+    module     == blog
+    controller == archive
+ 
+Module + contrôleur + action :
+http://example/blog/archive/list
+    module     == blog
+    controller == archive
+    action     == list
+ 
+Module + contrôleur + action + paramètres :
+http://example/blog/archive/list/sort/alpha/date/desc
+    module     == blog
+    controller == archive
+    action     == list
+    sort       == alpha
+    date       == desc
+]]>
+    </programlisting>
+    
+   </para>
+  </section>
+  
   <section xml:id="yaf-router.synopsis">
    &reftitle.classsynopsis;
-
-<!-- {{{ Synopsis -->
+   
+   <!-- {{{ Synopsis -->
    <classsynopsis>
     <ooclass><classname>Yaf_Router</classname></ooclass>
-
-<!-- {{{ Class synopsis -->
+    
+    <!-- {{{ Class synopsis -->
     <classsynopsisinfo>
      <ooclass>
       <classname>Yaf_Router</classname>
      </ooclass>
     </classsynopsisinfo>
-<!-- }}} -->
+    <!-- }}} -->
     <classsynopsisinfo role="comment">&Properties;</classsynopsisinfo>
     <fieldsynopsis>
      <modifier>protected</modifier>
@@ -42,17 +142,17 @@
      <modifier>protected</modifier>
      <varname linkend="yaf-router.props.current">_current</varname>
     </fieldsynopsis>
-
+    
     
     <classsynopsisinfo role="comment">&Methods;</classsynopsisinfo>
     <xi:include xpointer="xmlns(db=http://docbook.org/ns/docbook) xpointer(id('class.yaf-router')/db:refentry/db:refsect1[@role='description']/descendant::db:methodsynopsis[1])" />
    </classsynopsis>
-<!-- }}} -->
-
+   <!-- }}} -->
+   
   </section>
-
   
-<!-- {{{ Yaf_Router properties -->
+  
+  <!-- {{{ Yaf_Router properties -->
   <section xml:id="yaf-router.props">
    &reftitle.properties;
    <variablelist>
@@ -70,14 +170,15 @@
     </varlistentry>
    </variablelist>
   </section>
-<!-- }}} -->
-
-
+  <!-- }}} -->
+  
+  
  </partintro>
-
+ 
  &reference.yaf.entities.yaf-router;
-
+ 
 </phpdoc:classref>
+
 
 <!-- Keep this comment at the end of the file
 Local variables:
