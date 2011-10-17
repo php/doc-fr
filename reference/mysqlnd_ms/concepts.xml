@@ -1,10 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: c0c6ee30a79fca3474f98fc653875e2fb532a751 Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: d30ee932d639c68abbed4b8e04134631031461cd Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.concepts" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Concepts</title>
+ <para>
+  La section sur les concepts explique l'architecture globale ainsi que les
+  concepts importants du plugin. Elle devrait vous permettre de mieux comprendre
+  l'impact de la réplication MySQL et d'utiliser le plugin pour vos
+  tâches de développement. Toutes les applications utilisant la réplication
+  MySQL doivent tenir compte de certaines tâches qui peuvent survenir lors
+  de l'utilisation d'un cluster de base de données.
+ </para>
+ <para>
+  Il est vivement recommandé de travailler avec les matériaux afin d'être capable
+  d'utiliser le plugin correctement. Ceci est particulièrement vrai si vous
+  êtes novice dans l'utilisation de la réplication MySQL.
+ </para>
  <section xml:id="mysqlnd-ms.architecture">
   <title>Architecture</title>
   <para>
@@ -21,17 +34,23 @@
    par <literal>SELECT</literal>, au moyen de l'astuce SQL <literal>/*ms=slave*/</literal> ou alors
    si un esclave a été choisi pour exécuter la requête précédente et qu'elle utilisait l'astuce
    SQL <literal>/*ms=last_used*/</literal>. Dans tous les autres cas, la requête sera envoyée au
-   serveur maitre.
+   serveur maitre. Les applications doivent utiliser les 
+   <link linkend="mysqlnd-ms.constants">constantes prédéfinies</link>
+   <constant>MYSQLND_MS_MASTER_SWITCH</constant>,
+   <constant>MYSQLND_MS_SLAVE_SWITCH</constant> et
+   <constant>MYSQLND_MS_LAST_USED_SWITCH</constant>
+   au lieu de leurs valeurs littérales, comme
+   <literal>/*ms=slave*/</literal>, et ce, dans un souci de portabilité.
   </para>
   <para>
    Le plugin se charge en interne d'ouvrir et fermer des connexions au maitre et aux esclaves.
    Du point de vue de l'application, il n'y a qu'une seule connexion visible. Cependant, en interne,
-   cette connexion est représentée par un groupe de connexions gérées par le plugin.
+   cette connexion est représentée par un groupe de connexions réseaux gérées par le plugin.
    Le plugin aiguille les requêtes vers le maitre ou les esclaves en utilisant de multiples
    connexions.
   </para>
   <para>
-    Les connexions aux bases de données ont des états, par exemple, le statut des transactions,
+   Les connexions aux bases de données ont des états, par exemple, le statut des transactions,
    lejeu de caractères, les tables temporaires. Le plugin va tenter de garder les états des
    connexions de manière transparente pour les requêtes qu'il traite, lorsque cela lui est
    possible. Dans les cas contraires, comme par exemple via l'utilisation de
@@ -40,15 +59,15 @@
   </para>
   
  </section>
-
+ 
  <section xml:id="mysqlnd-ms.pooling">
   <title>Groupe de connexions et bascule entre les connexions</title>
   <para>
    Le plugin de réplication et répartition de charge change la sémantique d'une
    connexion MySQL de PHP. Les API existantes des extensions PHP pour MySQL
    (<link linkend="ref.mysqli">mysqli</link>,
-  <link linkend="ref.mysql">mysql</link>,
-  <link linkend="ref.pdo-mysql">PDO_MYSQL</link>) sont inchangées, mais leur
+   <link linkend="ref.mysql">mysql</link>,
+   <link linkend="ref.pdo-mysql">PDO_MYSQL</link>) sont inchangées, mais leur
    comportement est modifié lorsque le plugin est utilisé. Les applications
    existantes n'ont pas de changement à opérer pour utiliser la nouvelle API,
    mais elles devront peut-être être modifiées en ce qui concerne le comportement
@@ -58,7 +77,7 @@
    Le plugin casse la relation un-à-un entre une connexion
    <link linkend="ref.mysqli">mysqli</link>,
    <link linkend="ref.mysql">mysql</link>,
-   <link linkend="ref.pdo-mysql">PDO_MYSQL</link> et la connexion physique à
+   <link linkend="ref.pdo-mysql">PDO_MYSQL</link> et la connexion réseau à
    MySQL. Lorsque le plugin est utilisé, la connexion de
    <link linkend="ref.mysqli">mysqli</link>,
    <link linkend="ref.mysql">mysql</link>,
@@ -66,7 +85,9 @@
    de connexions vers un serveur maitre MySQL et des serveurs esclaves.
    Le plugin aiguille les requêtes vers le serveur maitre ou un des esclaves.
    A un moment donné, une connexion vue depuis PHP peut pointer vers le maitre
-   et juste après vers un esclave, ou alors toujours le maitre.
+   et juste après vers un esclave, ou alors toujours le maitre. La manipulation
+   et le remplacement d'une connexion réseau référencée par un gestionnaire
+   de connexion PHP MySQL n'est pas une opération transparente.
   </para>
   <para>
    Chaque connexion MySQL possède un état, et les différentes connexions, gérées dans
@@ -76,74 +97,267 @@
   </para>
   <para>
    La liste suivante indique ce qui est caractérisé par un état de connexion.
+   Cette liste peut ne pas être totalement complète.
   </para>
   <para>
-    <itemizedlist>
-     <listitem>
-      <simpara>
-       Les statuts des transactions
-      </simpara>
-     </listitem>
-     <listitem>
-      <simpara>
-       Les tables temporaires
-      </simpara>
-    </listitem>
-    <listitem>
-      <simpara>
-       Les verrous des tables
-      </simpara>
-    </listitem>
+   <itemizedlist>
     <listitem>
      <simpara>
-      Les variables de session (MySQL) système ou utilisateur
+      Les statuts des transactions
      </simpara>
     </listitem>
     <listitem>
-      <simpara>
-       Les requêtes préparées
-      </simpara>
+     <simpara>
+      Les tables temporaires
+     </simpara>
     </listitem>
     <listitem>
-      <simpara>
-       Les variables <literal>HANDLER</literal>
-      </simpara>
+     <simpara>
+      Les verrous des tables
+     </simpara>
     </listitem>
     <listitem>
-      <simpara>
-       Les verrous retournés par <literal>GET_LOCK()</literal>
-      </simpara>
+     <simpara>
+      Les variables de session système ou utilisateur
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Le jeu de bases de données courantes, utilisant
+      <literal>USE</literal> ainsi que d'autres commandes de statut SQL
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Les requêtes préparées
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Les variables <literal>HANDLER</literal>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Les verrous retournés par <literal>GET_LOCK()</literal>
+     </simpara>
     </listitem>
    </itemizedlist>
   </para>
   <para>
-   Le plugin va tenter de conserver l'intégrité des états de connexions dans le groupe
-   uniquement si ces connexions sont totalement sous son contrôle ou pour des raisons
-   de sécurité. Quelques actions changeant l'état d'une connexion entrent dans cette catégorie.
-   Le plugin répercute les appels clients suivants sur toutes les connexions ouvertes dans
-   le groupe: <literal>change_user</literal>,
-   <literal>select_db</literal>, <literal>set_charset</literal>,
-   <literal>set_server_option</literal>, <literal>set_client_option</literal>,
-   <literal>autocommit</literal>. 
-  </para>
-  <para>
-   Le plugin <quote>ne se souvient pas</quote> des paramètres, et ne les applique pas aux futures
-   connexions. C'est important de s'en souvenir, notamment dans le cas de l'utilisation de
-   <link linkend="ini.mysqlnd-ms-plugin-config.lazy_connections">connexions économes</link> (lazy).
-   Les connexions économes ("lazy") sont uniquement effectuées lorsque nécessaire, et ce type de
-   connexions est utilisé par défaut par le plugin.
-  </para>
-  <para>
-   La bascule entre les connexions se passe juste avant l'exécution des requêtes. Le plugin ne bascule
-   pas la connexion courante jusqu'à ce qu'une autre requête arrive à exécution.
+   Le changement de connexions intervient juste avant l'exécution de la requête.
+   Le plugin ne change la connexion courante qu'au moment où la prochaine
+   requête est exécutée.
   </para>
   <para>
    S'il vous plait, documentez vous correctement sur le manuel de référence de MySQL concernant
    la réplications et ses incidences. Vous pouvez rencontrer des restrictions qui ne sont pas dûes
    à PHP ni au plugin, mais qui sont des caractéristiques du système de réplication de MySQL.
   </para>
+  <para>Messages diffusés</para>
+  <para>
+   La philosophie du plugin est d'aligner le statut des connexions dans la file
+   d'attente uniquement si le statut est sous le contrôle total du plugin,
+   ou si c'est nécessaire d'un point de vue de la sécurité. Seulement quelques
+   actions modifiants le statut de la connexion rentrent dans cette catégorie.
+  </para>
+  <para>
+   Voici la liste des appels diffusés de la bibliothèques clientes qui modifient
+   le statut de toutes les connexions contenus dans la file d'attente.
+  </para>
+  <informaltable>
+   <tgroup cols="3">
+    <colspec colwidth="10%"/>
+    <colspec colwidth="70%"/>
+    <colspec colwidth="20%"/>
+    <thead>
+     <row>
+      <entry>Appel de la bibliothèque</entry>
+      <entry>Notes</entry>
+      <entry>Version</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>
+       <literal>change_user()</literal>
+      </entry>
+      <entry>
+       Appelé par l'appel de l'API utilisateur <function>mysqli_change_user</function>.
+       Également émise lors de la réutilisation d'une connexion
+       <literal>mysqli</literal> persistante.
+      </entry>
+      <entry>Depuis la version 1.0.0.</entry>
+     </row>
+     <row>
+      <entry>
+       <literal>select_db</literal>
+      </entry>
+      <entry>
+       Appelé par les appels de l'API utilisateur suivants :
+       <function>mysql_select_db</function>,
+       <function>mysql_list_tables</function>,
+       <function>mysql_db_query</function>,
+       <function>mysql_list_fields</function>,
+       <function>mysqli_select_db</function>.
+       Notez que <literal>USE</literal> n'est pas surveillé.
+      </entry>
+      <entry>Depuis la version 1.0.0.</entry>
+     </row>
+     <row>
+      <entry>
+       <literal>set_charset()</literal>
+      </entry>
+      <entry>
+       Appelé par les appels de l'API utilisateur suivants :
+       <function>mysql_set_charset</function>.
+       <function>mysqli_set_charset</function>.
+       Notez que <literal>SET NAMES</literal> n'est pas surveillé.
+      </entry>
+      <entry>Depuis la version 1.0.0.</entry>
+     </row>
+     <row>
+      <entry>
+       <literal>set_server_option()</literal>
+      </entry>
+      <entry>
+       Appelé par les appels de l'API utilisateur suivants :
+       <function>mysqli_multi_query</function>,
+       <function>mysqli_real_query</function>,
+       <function>mysqli_query</function>,
+       <function>mysql_query</function>.
+      </entry>
+      <entry>Depuis la version 1.0.0.</entry>
+     </row>
+     <row>
+      <entry>
+       <literal>set_client_option()</literal>
+      </entry>
+      <entry>
+       Appelé par les appels de l'API utilisateur suivants :
+       <function>mysqli_options</function>,
+       <function>mysqli_ssl_set</function>,
+       <function>mysqli_connect</function>,
+       <function>mysql_connect</function>,
+       <function>mysql_pconnect</function>.
+      </entry>
+      <entry>Depuis la version 1.0.0.</entry>
+     </row>
+     <row>
+      <entry>
+       <literal>set_autocommit()</literal>
+      </entry>
+      <entry>
+       Appelé par les appels de l'API utilisateur suivants :
+       <function>mysqli_autocommit</function>,
+       <literal>PDO::setAttribute(PDO::ATTR_AUTOCOMMIT)</literal>.
+      </entry>
+      <entry>Depuis la version 1.0.0. PHP &gt;= 5.4.0.</entry>
+     </row>
+     <row>
+      <entry>
+       <literal>ssl_set()</literal>
+      </entry>
+      <entry>
+       Appelé par les appels de l'API utilisateur suivants :
+       <function>mysqli_ssl_set</function>.
+      </entry>
+      <entry>Depuis la version 1.1.0.</entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
+  <para>
+   Si un des appels listés ci-dessus est exécuté, le plugin
+   parcourt toutes les connexions actuellement ouvertes vers
+   le maître et les esclaves. Le parcourt continue tant que tous
+   les serveurs n'ont pas été contactés. Le parcourt ne s'interrompt
+   pas lorsqu'un des serveurs indique une erreur. Si possible, l'erreur
+   sera propagée pour appeler la fonction de l'API utilisateur. Suivant
+   cette fonction, qui a été lancée par la fonction de la bibliothèque
+   sous-jacente, l'utilisateur peut être capable de détecter l'erreur.
+  </para>
+  <para>Les connexions diffusées et paresseuses</para>
+  <para>
+   Le plugin n'utilise pas de proxy ou bien ne se "souvient" pas de
+   toutes les configurations à appliquer aux futures connexions.
+   Il est important de se rappeler de cela lors de l'utilisation des
+   <link linkend="ini.mysqlnd-ms-plugin-config-v2.lazy_connections">connexions paresseuses</link>.
+   Les connexions paresseuses sont des connexions qui ne sont pas ouvertes
+   tant que le client n'envoie pas la première connexion.
+   Le plugin utilise par défaut de telles connexions.
+  </para>
+  <para>
+   Les appels de la bibliothèque modifiant la configuration et le statut des connexions
+   suivantes sont enregistrées pour être utilisées lors de l'ouverture
+   d'une connexion paresseuse pour s'assurer que le statut de cette connexion
+   est comparable avec le statut de toutes les connexions de la file d'attente.
+  </para>
+  <informaltable>
+   <tgroup cols="3">
+    <colspec colwidth="10%"/>
+    <colspec colwidth="70%"/>
+    <colspec colwidth="20%"/>
+    <thead>
+     <row>
+      <entry>Appel de la bibliothèque</entry>
+      <entry>Notes</entry>
+      <entry>Version</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>
+       <literal>change_user()</literal>
+      </entry>
+      <entry>
+       Utilisateur, mot de passe et base de données sont enregistrés
+       pour une utilisation ultérieure.
+      </entry>
+      <entry>Depuis la version 1.1.0.</entry>
+     </row>
+     <row>
+      <entry>
+       <literal>select_db</literal>
+      </entry>
+      <entry>
+       Base de données enregistré pour utilisation ultérieure.
+      </entry>
+      <entry>Depuis la version 1.1.0.</entry>
+     </row>
+     <row>
+      <entry>
+       <literal>set_charset()</literal>
+      </entry>
+      <entry>
+       Appel <literal>set_client_option(MYSQL_SET_CHARSET_NAME, charset)</literal>
+       sur les connexions paresseuses pour s'assurer que
+       <literal>charset</literal> sera utilisé lors de l'ouverture d'une connexion
+       paresseuse.
+      </entry>
+      <entry>Depuis la version 1.1.0.</entry>
+     </row>
+     <row>
+      <entry>
+       <literal>set_autocommit()</literal>
+      </entry>
+      <entry>
+       Ajoute <literal>SET AUTOCOMMIT=0|1</literal> à la liste des commandes
+       d'initialisation pour une connexion paresseuse utilisant
+       <literal>set_client_option(MYSQL_INIT_COMMAND, &quot;SET AUTOCOMMIT=...%quot;)</literal>.
+      </entry>
+      <entry>Depuis la version 1.1.0. PHP &gt;= 5.4.0.</entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
+  <para>
+   Notez que le statut de la connexion n'est pas changé que par des appels
+   API. Aussi, même si PECL mysqlnd_ms surveille tous les appels API, l'application
+   a toujours besoin de maintenir le statut de la connexion, si besoin.
+  </para>
  </section>
-
+ 
  <section xml:id="mysqlnd-ms.transaction">
   <title>Gestion des transactions</title>
   <para>
@@ -151,33 +365,251 @@
    lancée par le serveur. Cette unité peut se composer d'une ou plusieurs requêtes.
   </para>
   <para>
-    Par défaut, le plugin ne se soucie pas des transactions SQL. Il est donc possible qu'il
-    décide de basculer de connexions dans le cadre de la répartition de charge, et ceci peut
+   Par défaut, le plugin ne se soucie pas des transactions SQL. Il est donc possible qu'il
+   décide de basculer de connexions dans le cadre de la répartition de charge, et ceci peut
    arriver au milieu d'une transaction. C'est contre la nature même d'une transaction SQL, le
    plugin n'est donc pas au courant des transactions par défaut.
   </para>
   <para>
-    Les applications qui utilisent des transactions SQL avec le plugin doivent utiliser des
+   Les applications qui utilisent des transactions SQL avec le plugin doivent utiliser des
    astuces SQL (artefacts) pour désactiver la bascule automatique de connexion effectuée par
    le plugin. Voyez les détails dans les sections d'exemple.
   </para>
   <para>
-    La dernière version de <literal>mysqlnd</literal>, dans
-    PHP 5.4.0, permet au plugin de redéfinir l'appel C
-    <literal>trx_autocommit()</literal> pour détecter le statut du mode
-    <literal>autocommit</literal>. Les extensions MySQL de PHP
-    envoient une requête de type <literal>SET AUTOCOMMIT=0|1</literal>
-    ou utilisent l'appel <literal>trx_autcommit()</literal> pour contrôler le paramètre
-    <literal>autocommit</literal>. Si une extension utilise l'appel
-    <literal>trx_autocommit()</literal>, alors le plugin peut être au courant de l'état
-    des transactions. Ce n'est pas le cas si du SQL est utilisé pour changer le mode
-    autocommit. 
+   La dernière version de <literal>mysqlnd</literal>, dans
+   PHP 5.4.0, permet au plugin de redéfinir l'appel C
+   <literal>set_autocommit()</literal> pour détecter le statut du mode
+   <literal>autocommit</literal>. Les extensions MySQL de PHP
+   envoient une requête de type <literal>SET AUTOCOMMIT=0|1</literal>
+   ou utilisent l'appel <literal>set_autcommit()</literal> pour contrôler le paramètre
+   <literal>autocommit</literal>. Si une extension utilise l'appel
+   <literal>set_autocommit()</literal>, alors le plugin peut être au courant de l'état
+   des transactions. Ce n'est pas le cas si du SQL est utilisé pour changer le mode
+   autocommit. La fonction <literal>set_autocommit()</literal> de la bibliothèque
+   est appelée par l'appel de l'API utilisateur <function>mysqli_autocommit</function>
+   et <literal>PDO::setAttribute(PDO::ATTR_AUTOCOMMIT)</literal>.
   </para>
   <para>
-    L'option de configuration du plugin expérimentale <literal>trx_stickiness=master</literal>
-    peut être utilisée pour rendre le plugin sensible aux transactions, en PHP 5.4.0.
-    Grâce à ça, le plugin arrête la répartition de charge si l'autocommit est désactivé,
-    et la réactive dans le cas contraire.
+   L'option de configuration du plugin expérimentale <literal>trx_stickiness=master</literal>
+   peut être utilisée pour rendre le plugin sensible aux transactions, en PHP 5.4.0.
+   Grâce à ça, le plugin arrête la répartition de charge si l'autocommit est désactivé,
+   et la réactive dans le cas contraire.
+  </para>
+ </section>
+ 
+ <section xml:id="mysqlnd-ms.errorhandling">
+  <title>Gestion des erreurs</title>
+  <para>
+   Les applications utilisant PECL/mysqlnd_ms doivent gérer proprement
+   les erreurs pouvant survenir de tous les appels API utilisateur.
+   En raison du fait que le plugin modifie la sémantique d'un gestionnaire
+   de connexion, les appels API peuvent retourner des erreurs inattendues.
+   Si vous utilisez le plugin, un gestionnaire de connexion ne représente
+   plus une connexion réseau individuelle mais un groupe de connexions.
+   Un code erreur et un message d'erreur peuvent être définis sur le gestionnaire
+   de connexion, que l'erreur survienne sur n'importe quelle connexion
+   réseau du groupe.
+  </para>
+  <para>
+   Si vous utilisez les connexions paresseuses, (ce qui est le comportement
+   par défaut), les connexions ne sont pas ouvertes tant qu'elle n'est pas
+   nécessaire pour l'exécution d'une requête. Toutefois, il peut survenir
+   qu'un appel API pour l'exécution d'une requête retourne une erreur
+   de connexion. Dans l'exemple suivant, une erreur est provoquée lorsque
+   l'on tente d'exécuter une requête sur un esclave. L'ouverture de la
+   connexion esclave échoue car le fichier de configuration du plugin
+   liste un nom d'hôte invalide pour l'esclave.
+  </para>
+  <para>
+   <example>
+    <title>On provoque une erreur de connexion</title>
+    <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost",
+                "socket": "\/tmp\/mysql.sock"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "invalid_host_name",
+            }
+        },
+        "lazy_connections": 1
+    }
+}
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   L'activation explicite des connexions paresseuses est effectuée ici
+   que dans un but de démonstration.
+  </para>
+  <para>
+   <example>
+    <title>Erreur de connexion sur l'exécution d'une requête</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (mysqli_connect_errno())
+  /* Bien sûr, votre gestion des erreurs est bien meilleure... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+/* Connexion 1, la connexion lie la variable SQL ; ce n'est pas un SELECT, la requête sera donc exécuté sur le maître */
+if (!$mysqli->query("SET @myrole='master'")) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+
+/* Connexion 2, exécution sur l'esclave car SELECT provoque une erreur de connexion */
+if (!($res = $mysqli->query("SELECT @myrole AS _role"))) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+} else {
+ $row = $res->fetch_assoc();
+ $res->close();
+ printf("@myrole = '%s'\n", $row['_role']);
+}
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+PHP Warning:  mysqli::query(): php_network_getaddresses: getaddrinfo failed: Name or service not known in %s on line %d
+PHP Warning:  mysqli::query(): [2002] php_network_getaddresses: getaddrinfo failed: Name or service not known (trying to connect via tcp://invalid_host_name:3306) in %s on line %d
+[2002] php_network_getaddresses: getaddrinfo failed: Name or service not known
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   Les applications se doivent d'être capable de gérer les erreurs de connexions.
+   Dans la plupart des cas, cela ne nécessite aucune modification du code,
+   si l'application a déjà un gestionnaire d'erreurs correct.
+  </para>
+  <para>
+   Suivant le cas rencontré, les applications peuvent vouloir gérer les erreurs
+   de connexions différemment des autres erreurs. Typiquement, les erreurs
+   de connexions sont
+   <literal>2002 (CR_CONNECTION_ERROR) - Can't connect to local MySQL server through socket '%s' (%d)</literal>,
+   <literal>2003 (CR_CONN_HOST_ERROR) - Can't connect to MySQL server on '%s' (%d)</literal> et
+   <literal>2005 (CR_UNKNOWN_HOST) - Unknown MySQL server host '%s' (%d)</literal>.
+   Par exemple, l'application doit tester les codes erreurs et manuellement exécuter
+   une fonction appropriée. La philosophie du plugin n'est pas d'offrir
+   de fonction adéquate lors d'un échec du maître, car ces échecs ne sont
+   pas des opérations transparentes.
+  </para>
+  <para>
+   <example>
+    <title>On provoque une erreur de connexion</title>
+    <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "invalid_host_name"
+            },
+            "slave_1": {
+                "host": "192.168.78.136"
+            }
+        },
+        "lazy_connections": 1,
+        "filters": {
+            "roundrobin": [
+
+            ]
+        }
+    }
+}
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   L'activation explicite des connexions paresseuses est effectuée ici
+   uniquement dans un but démonstratif. Notez que la balance de charge
+   round robin est utilisée en lieu et place de la méthode par défaut.
+  </para>
+  <para>
+   <example>
+    <title>Échec les plus courants</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (mysqli_connect_errno())
+  /* Évidemment, votre gestionnaire d'erreur est bien meilleur... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+/* Connexion 1, la connexion lie la variable SQL user ; pas de SELECT, la requête peut se faire sur le maître */
+if (!$mysqli->query("SET @myrole='master'")) {
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+
+/* Connexion 2, d'abord, sur l'esclave */
+$res = $mysqli->query("SELECT VERSION() AS _version");
+/* Échec manuel */
+if (2002 == $mysqli->errno || 2003 == $mysqli->errno || 2004 == $mysqli->errno) {
+  /* Connexion 3, la première connexion à l'esclave échoue, tentative du prochain esclave */
+  $res = $mysqli->query("SELECT VERSION() AS _version");
+}
+
+if (!$res) {
+  printf("ERROR, [%d] '%s'\n", $mysqli->errno, $mysqli->error);
+} else {
+ /* Les messages d'erreur sont récupérés de la connexion 3, et donc, aucune erreur */
+ printf("SUCCESS, [%d] '%s'\n", $mysqli->errno, $mysqli->error);
+ $row = $res->fetch_assoc();
+ $res->close();
+ printf("version = %s\n", $row['_version']);
+}
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+[1045] Access denied for user 'username'@'localhost' (using password: YES)
+PHP Warning:  mysqli::query(): php_network_getaddresses: getaddrinfo failed: Name or service not known in %s on line %d
+PHP Warning:  mysqli::query(): [2002] php_network_getaddresses: getaddrinfo failed: Name or service not known (trying to connect via tcp://invalid_host_name:3306) in %s on line %d
+SUCCESS, [0] ''
+version = 5.6.2-m5-log
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   Dans quelques cas, il n'est pas possible facilement de récupérer toutes
+   les erreurs qui surviennent sur toutes les connexions réseaux via le gestionnaire
+   de connexions. Supposons qu'un groupe de connexions contient 3 connexions ; une
+   vers le maître et deux autres vers des esclaves. L'application modifie la base
+   de données courante en utilisant l'appel API <function>mysqli_select_db</function>,
+   qui appelle la fonction de la bibliothèque mysqlnd pour modifier le schéma.
+   PECL/mysqlnd_ms surveille la fonction et tente de changer la base de données
+   courante sur toutes les connexions afin d'harmoniser leurs statuts.
+   Supposons que le maître arrive à changer la base de données, mais que les
+   esclaves échouent. Lors de la première erreur depuis le premier esclave,
+   le plugin définira une erreur appropriée sur le gestionnaire de connexions.
+   La même chose est effectuée lorsque le second esclave échoue. Le message
+   d'erreur depuis le premier esclave est alors perdu.
+  </para>
+  <para>
+   Un tel cas peut être débogué soit en vérifiant les erreurs de type
+   <literal>E_WARNING</literal> (voir ci-dessus), ou soit, s'il n'y a
+   pas d'autres options, en investiguant les
+   <link linkend="mysqlnd-ms.debugging">traces et l'historique de déboguage</link>.
   </para>
  </section>
  
@@ -202,28 +634,42 @@
    n'est implémentée à l'intérieur du plugin.
   </para>
   <para>
-    Un utilisateur ne changeant pas le statut d'une connexion après l'avoir ouverte peut activer
-    la gestion des incidents pour le maitre. 
+   Un utilisateur ne changeant pas le statut d'une connexion après l'avoir ouverte peut activer
+   la gestion des incidents pour le maitre. 
   </para>
   <para>
-    Cette gestion des incidents se configure dans le fichier de configuration du plugin au moyen
-    de la directive
-    <literal><link linkend="ini.mysqlnd-ms-plugin-config.failover">failover</link></literal>.
+   Cette gestion des incidents se configure dans le fichier de configuration du plugin au moyen
+   de la directive
+   <literal><link linkend="ini.mysqlnd-ms-plugin-config-v2.failover">failover</link></literal>.
+  </para>
+  <para>
+   Un exemple d'échec manuel est fourni dans la section sur les
+   <link linkend="mysqlnd-ms.errorhandling">gestionnaires d'erreurs</link>.
   </para>
  </section>
  
  <section xml:id="mysqlnd-ms.loadbalancing">
   <title>Répartition de charge</title>
   <para>
-    Il existe quatre stratégies de répartition pour distribuer les requêtes de
+   Il existe quatre stratégies de répartition pour distribuer les requêtes de
    type lecture-seule aux serveurs MySQL esclaves: 
-    <literal>random</literal>, <literal>random_once</literal> (défaut),
-    <literal>roundrobin</literal>, <literal>user</literal>.
+   random, random once, roundrobin, et définie par l'utilisateur via une fonction
+   de rappel. Random prend un serveur aléatoirement où la requête sera exécutée.
+   Random once prend un serveur aléatoirement qui sera utilisé pour la
+   première requête mais aussi pour le reste des requêtes PHP. Ce mode est le mode
+   par défaut, si rien d'autre n'est configuré, car il a l'impact le plus faible
+   sur le statut de la connexion. Round robine itère sur la liste des serveurs
+   configurés. Une fonction de rappel utilisateur peut être utilisée pour
+   implémenter toute autre stratégie.
   </para>
   <para>
-    La stratégie à adopter peut se configurer au moyen de la directive de configuration
-    du plugin 
-    <link linkend="ini.mysqlnd-ms-plugin-config.pick">pick[]</link>.
+   La stratégie de balance de charge est configurée dans le fichier
+   de configuration du plugin en utilisant les filtres
+   <link linkend="ini.mysqlnd-ms-plugin-config-v2.filter_random">random</link>,
+   <link linkend="ini.mysqlnd-ms-plugin-config-v2.filter_roundrobin">roundrobin</link>
+   et <link linkend="ini.mysqlnd-ms-plugin-config-v2.filter_user">user</link>.
+   Voir ci-dessous pour en apprendre plus sur les
+   <link linkend="mysqlnd-ms.filter">filtres</link>.
   </para>
  </section>
  
@@ -235,7 +681,11 @@
    lecture seule si elle commencent par <literal>SELECT</literal>, si elles comportent
    l'astuce SQL <literal>/*ms=slave*/</literal> ou si un esclave a été choisi lors de la
    dernière requête et que l'astuce SQL <literal>/*ms=last_used*/</literal> est employée.
-   Dans tous les autres cas, la requête sera aiguillée vers le serveur maitre.
+   Dans tous les autres cas, la requête sera aiguillée vers le serveur maitre. Il est
+   recommandé d'utiliser les constantes <literal>MYSQLND_MS_SLAVE_SWITCH</literal>,
+   <literal>MYSQLND_MS_MASTER_SWITCH</literal> et <literal>MYSQLND_MS_LAST_USED_SWITCH</literal>
+   au lieu de <literal>/*ms=slave*/</literal>. Reportez-vous aux
+   <link linkend="mysqlnd-ms.constants">constantes</link>.
   </para>  
   <para>
    Les astuces SQL représentent des commentaires SQL spéciaux. Le plugin vérifie toutes les
@@ -247,11 +697,13 @@
   </para>
   <para>
    L'implémentation interne du séparateur de requêtes lecture/écriture peut être remplacée
-   par la votre, voyez <function>mysqlnd_ms_set_user_pick_server</function>.
+   par la votre, voyez le filtre
+   <link linkend="ini.mysqlnd-ms-plugin-config-v2.filter_user"><literal>user</literal></link>.
   </para>
   <para>
    Une implémentation personnalisée du séparateur de requêtes lecture/écriture peut demander
-   au plugin où envoyer la requête, en appelant <function>mysqlnd_ms_is_select</function>.
+   au plugin où envoyer la requête, en appelant
+   <link linkend="function.mysqlnd-ms-query-is-select"><function>mysqlnd_ms_is_select</function></link>.
   </para>
   <note>
    <para>
@@ -263,6 +715,199 @@
    </para>
   </note> 
  </section>
+ 
+ <section xml:id="mysqlnd-ms.filter">
+  <title>Les filtres</title>
+  <note>
+   <para>
+    La description suivante s'entend avec PECL/mysqlnd_ms &gt;= 1.1.0-beta.
+    Elle n'est pas valide pour les versions antérieures.
+   </para>
+  </note>
+  <para>
+   PECL/mysqlnd 1.1.0-beta introduit le concept de
+   <link linkend="mysqlnd-ms.plugin-ini-json">filtres</link>.
+   Toutes les applications PHP utilisant un type de cluster de réplication MySQL
+   ont besoin d'abord d'identifier un groupe de serveurs dans le cluster qui pourront
+   exécuter une requête donnée avant que la requête ne soit exécutée sur un
+   des candidats. En d'autres termes, une liste donnée de serveurs doit être filtrée
+   pour n'en faire sortir d'un.
+  </para>
+  <para>
+   Le processus de filtrage peut inclure l'utilisation d'un ou plusieurs filtres.
+   Les filtres peuvent être chaînés. Ils sont exécutés dans l'ordre de leurs
+   apparitions dans le fichier de configuration du plugin. Le concept de chaînage
+   des filtres peut être comparé à l'utilisation des pipes des utilitaires de ligne
+   de commande d'un shell d'un système d'exploitation : un flux entrant est passé
+   au processus, et transféré à la sortie. Puis, la sortie est passé comme
+   entrée à la prochaine commande qui est connectée à la précédente en utilisant
+   un opérateur pipe.
+  </para>
+  <para>
+   Les filtres suivants sont disponibles avec la version 1.1.0-beta.
+   <itemizedlist>
+    <listitem>
+     <simpara>
+      Filtre de balance de charge :
+      <link linkend="ini.mysqlnd-ms-plugin-config-v2.filters"><literal>random</literal></link>,
+      <link linkend="ini.mysqlnd-ms-plugin-config-v2.filters"><literal>roundrobin</literal></link>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Filtre de sélection :
+      <link linkend="ini.mysqlnd-ms-plugin-config-v2.filters"><literal>user</literal></link>.
+     </simpara>
+    </listitem>
+   </itemizedlist>
+  </para>
+  <para>
+   Les filtres <literal>random</literal> et <literal>roundrobin</literal> remplacent
+   la directive de configuration
+   <link linkend="ini.mysqlnd-ms-plugin-config.pick"><literal>pick[]</literal></link>
+   des anciennes versions. Le filtre <literal>random</literal> implémente les
+   stratégies random et random once. Round robin peut être configuré via le
+   filtre <literal>roundrobin</literal>. La définition d'une fonction de rappel utilisateur
+   peut être utilisée pour la sélection des serveurs avec le filtre
+   <literal>user</literal>. La fonction
+   <link linkend="function.mysqlnd-ms-set-user-pick-server">
+    <function>mysqlnd_ms_set_user_pick_server</function></link> précédemment utilisée
+   pour cette tâche a été supprimée.
+  </para>
+  <para>
+   Les filtres peuvent accepter des paramètres pour changer leurs comportements.
+   Le filtre <literal>random</literal> accepte un paramètre optionnel
+   <literal>sticky</literal>. Si définit à &true;, le filtre modifie la balance
+   de charge de random à random once. Random sélectionne un serveur aléatoirement
+   à chaque fois qu'une requête est exécutée. Random once sélectionne un serveur
+   aléatoirement lors de la première requête et le ré-utilise pour toutes les
+   autres requêtes PHP.
+  </para>
+  <para>
+   Une des plus grosses particularités des filtres est la possibilité de
+   chaîner les filtres. La puissance de ce concept n'est pas immédiatement
+   visible avec les filtres fournis par la version 1.1.0-beta car tous les
+   filtres ci-dessous sont supposés sortir pas plus d'un serveur. Si un
+   filtre réduit la liste des candidats pour l'exécution d'une requête
+   sur un seul serveur, il prend un sens limité en utilisant un serveur
+   comme sortie pour les autres filtres pour une réduction future
+   de la liste des candidats.
+  </para>
+  <para>
+   Une séquence de filtre :
+   <itemizedlist>
+    <listitem>
+     <simpara>
+      Requête à exécuter : <literal>SELECT 1 FROM DUAL</literal>.
+      Passé à tous les filtres.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Tous les noeuds configurés sont passés comme entrée au premier filtre.
+      Nœuds maîtres : <literal>master_0</literal>.
+      Nœuds esclaves : <literal>slave_0</literal>, <literal>slave_1</literal>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Filtre : <literal>random</literal>, argument <literal>sticky=1</literal>.
+      Sélectionne un esclave aléatoire à utiliser pour le reste des requêtes PHP.
+      Sortie : <literal>slave_0</literal>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Sortie de <literal>slave_0</literal> et la requête à exécuter
+      est passée comme entrée pour le prochain filtre. Ici : <literal>roundrobin</literal>,
+      liste de serveurs passé au filtre est : <literal>slave_0</literal>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Filtre : <literal>roundrobin</literal>. La liste des serveurs consiste
+      en un seul serveur, round robin retourne toujours le même serveur.
+     </simpara>
+    </listitem>
+   </itemizedlist>
+   Si vous tentez d'utiliser de telles séquences de filtres, le plugin
+   peut émettre une alerte comme <literal>(mysqlnd_ms) Error while creating
+   filter '%s' . Non-multi filter '%s' already created. Stopping in %s on
+   line %d</literal>. Par la suite, une erreur appropriée sur le gestionnaire
+   de connexion devrait être définie.
+  </para>
+  <para>
+   Dans les futures versions, il devrait avoir des filtres qui retournent
+   plus d'un candidat pour l'exécution des requêtes. Par exemple, il devrait
+   exister un filtre <literal>table</literal> pour supporter le filtrage
+   de réplication MySQL. Le filtre de réplication MySQL vous autorise de définir
+   des règles où la base de données ou la table sera répliquée vers un noeud
+   précis d'un cluster de réplication. Supposons que votre cluster de
+   réplication consiste en 4 esclaves (<literal>slave_0</literal>, <literal>slave_1</literal>,
+   <literal>slave_2</literal>, <literal>slave_3</literal>), 2 d'entre eux répliquent
+   une base de données nommée <literal>sales</literal> (<literal>slave_0</literal>,
+   <literal>slave_1</literal>). Si l'application requête la base de données
+   <literal>slaves</literal>, l'hypothétique filtre <literal>table</literal>
+   réduit la liste des serveurs possibles à <literal>slave_0</literal>,
+   <literal>slave_1</literal>. En raison du fait que la sortie et que la liste
+   des serveurs candidats contient plus d'un serveur, il est nécessaire et possible
+   aux futures filtres de filtrer la liste des candidats, par exemple,
+   en utilisant le filtre de balance de charge pour identifier un serveur
+   pour l'exécution de la requête.
+  </para>
+  <para>
+   Une séquence de filtres hypothétiques, supposant l'existence d'un filtre
+   <literal>table</literal> pour supporter le filtrage de la réplication MySQL
+   (partitionnement côté client).
+   <itemizedlist>
+    <listitem>
+     <simpara>
+      Requête à exécuter : <literal>SELECT col FROM sales.reports</literal>.
+      Passé à tous les filtres.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Tous les noeuds configurés sont passés comme entrée au premier filtre.
+      Noeud maître : <literal>master_0</literal>.
+      Noeuds esclave : <literal>slave_0</literal>, <literal>slave_1</literal>,
+      <literal>slave_2</literal>, <literal>slave_3</literal>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Filtre : <literal>table</literal>, jeu de règles pour la base de données
+      <literal>sales</literal>.
+      Sortie : <literal>slave_0</literal>, <literal>slave_1</literal>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Sortie de <literal>slave_0</literal>, <literal>slave_1</literal>
+      et la requête à exécuter est passée comme entrée au prochain
+      filtre, qui est <literal>roundrobin</literal>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Filtre : <literal>roundrobin</literal>. La liste de serveurs 
+      est composée de 2 serveurs. Round robin sélectionne <literal>slave_0</literal>.
+      Après l'exécution de la sous-séquence, si la même liste de serveurs
+      est fournie en tant qu'entrée, le filtre retournera <literal>slave_1</literal>
+      suivi par <literal>slave_0</literal>, <literal>slave_1</literal>,
+      <literal>slave_0</literal> et ainsi de suite.
+     </simpara>
+    </listitem>
+   </itemizedlist>
+   <note>
+    <para>
+     L'exemple a été conçu pour illustrer la puissance du concept
+     des filtres. Il ne fait aucune promesse quant aux futures fonctionnalités.
+    </para>
+   </note>
+  </para>
+ </section>
+ 
 </chapter>
 
 <!-- Keep this comment at the end of the file
