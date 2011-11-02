@@ -1,32 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ --> 
-<!-- EN-Revision: 720fc763ed468b16dfcb9a985b41a8de5da2db7d Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: d30ee932d639c68abbed4b8e04134631031461cd Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.setup" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  &reftitle.setup;
-
+ 
  <section xml:id="mysqlnd-ms.requirements">
   &reftitle.required;
   <para>
-    <literal>PHP 5.3.6</literal> ou plus récent.
+   <literal>PHP 5.3.6</literal> ou plus récent.
   </para>
   <para>
    Le plugin de balance de charge et réplication <literal>mysqlnd_ms</literal>
    est compatible avec toutes les applications PHP et toutes les extensions PHP pour MySQL
    (<link linkend="ref.mysqli">mysqli</link>,
-   <link linkend="ref.mysql">mysql</link>, <link linkend="ref.pdo-mysql">PDO_MYSQL</link>).
+   <link linkend="ref.mysql">mysql</link>,
+   <link linkend="ref.pdo-mysql">PDO_MYSQL</link>).
    L'extension PHP pour MySQL doit être configurée pour utiliser la couche
    <link linkend="book.mysqlnd">mysqlnd</link>  afin de pouvoir utiliser le plugin
    <literal>mysqlnd_ms</literal> de <link linkend="book.mysqlnd">mysqlnd</link>.
   </para>
  </section>
-
+ 
  &reference.mysqlnd-ms.configure;
  &reference.mysqlnd-ms.ini;
-
- <section xml:id="mysqlnd-ms.plugin-ini">
-  <title xmlns="http://docbook.org/ns/docbook">Fichier de configuration du Plugin</title>
+ 
+ <section xml:id="mysqlnd-ms.plugin-ini-json">
+  <title xmlns="http://docbook.org/ns/docbook">Fichier de configuration du plugin (&gt;=1.1.x)</title>
+  <note>
+   <para>
+    La description ci-dessous s'applique pour PECL/mysqlnd_ms &gt;= 1.1.0-beta.
+    Elle n'est pas valide pour les versions antérieures.
+   </para>
+  </note>
   <para>
    Le plugin utilise un fichier de configuration propre, qui contient les informations
    sur le maitre de réplication MySQL, les escalves, la politique de bascule et la stratégie
@@ -38,21 +45,1331 @@
    est utilisée pour indiquer le fichier de configuration des plugins.
   </para>
   <para>
-   Le fichier de configuration reprend le format de <literal>php.ini</literal>.
-   Une ou plusieurs sections, chacune définissant ses propres paramètres. Il n'y a pas
-   de section globale.
+   Depuis mysqlnd 1.1.0-beta, le format JavaScript Object Notation (<literal>JSON</literal>)
+   est utilisé pour le fichier de configuration du plugin.
+   Les structures <literal>JSON</literal> sont rapides à analyser par le plugin,
+   merci au support JSON de PHP. Le format <literal>JSON</literal> rend simple
+   la définition de structures hiérarchiques. Elles sont utilisées, par exemple,
+   pour permettre la définition des filtres chaînés. L'expression de structures hiérarchiques
+   avec le format <literal>php.ini</literal> standard n'est pas simple.
   </para>
   <para>
-   Le nom des sections est utilisé dans les applications comme noms de serveurs
-   pour <link linkend="ref.mysqli">mysqli</link>, <link linkend="ref.mysql">mysql</link> et
-   <link linkend="ref.pdo-mysql">PDO_MYSQL</link>. A la connection, le plugin
-   <link linkend="book.mysqlnd">mysqlnd</link> compare les noms d'hôtes aux noms de sections
-   depuis le fichier de configuration des plugins. Si un hôte correspond, sa configuration
-   sera chargée.
+   Si vous n'êtes pas familier avec le format <literal>JSON</literal>, vous pouvez convertir
+   le fichier de configuration en un hash PHP, puis, l'éditer, et enfin, le convertir de
+   nouveau vers le format <literal>JSON</literal>.
   </para>
   <para>
    <example>
-    <title>Exemple avec les sections</title>
+    <title>Conversion d'un hash PHP en frmat JSON</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$config = array(
+  "myapp" => array(
+    "master" => array(
+      "master_0" => array(
+        "host"   => "localhost",
+        "socket" => "/tmp/mysql.sock",
+      ),
+    ),
+    "slave" => array(),
+  ),
+);
+
+file_put_contents("mysqlnd_ms.ini", json_encode($config, JSON_PRETTY_PRINT));
+printf("Fichier mysqlnd_ms.ini créé...\n");
+printf("Affichage du contenu...\n");
+printf("%s\n", str_repeat("-", 80));
+echo file_get_contents("mysqlnd_ms.ini");
+printf("\n%s\n", str_repeat("-", 80));
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Fichier mysqlnd_ms.ini créé...
+Affichage du contenu...
+--------------------------------------------------------------------------------
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost",
+                "socket": "\/tmp\/mysql.sock"
+            }
+        },
+        "slave": [
+
+        ]
+    }
+}
+--------------------------------------------------------------------------------
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   Un fichier de configuration de plugin consiste en une ou plusieurs sections.
+   Les sections sont représentées par des propriétés d'objet haut-niveau
+   de l'objet encodé dans le fichier <literal>JSON</literal>. Les sections
+   peuvent aussi être appelées des noms de configuration.
+  </para>
+  <para>
+   Les applications font références aux sections par leurs noms. Les applications
+   utilisent les noms de sections comme paramètre hôte (serveur) dans les 
+   méthodes de connexions des extensions
+   <link linkend="ref.mysqli">mysqli</link>,
+   <link linkend="ref.mysql">mysql</link> et
+   <link linkend="ref.pdo-mysql">PDO_MYSQL</link>. Une fois connectée, le plugin
+   <link linkend="book.mysqlnd">mysqlnd</link> compare le nom de l'hôte avec tous
+   les noms de sections du fichier de configuration du plugin. Si le nom d'hôte et
+   le nom de la section correspondent, le plugin chargera les paramètres de cette
+   section.
+  </para>
+  <para xml:id="mysqlnd-ms.plugin-ini-json.using_section">
+   <example>
+    <title>Exemple d'utilisation des noms de section</title>
+    <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.2.27"
+            },
+            "slave_1": {
+                "host": "192.168.2.27",
+                "port": 3306
+            }
+        }
+    },
+    "localhost": {
+        "master": [
+            {
+                "host": "localhost",
+                "socket": "\/path\/to\/mysql.sock"
+            }
+        ],
+        "slave": [
+            {
+                "host": "192.168.3.24",
+                "port": "3305"
+            },
+            {
+                "host": "192.168.3.65",
+                "port": "3309"
+            }
+        ]
+    }
+}
+]]>
+    </programlisting>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/* Toutes les connexions suivantes seront en balance de charge */
+$mysqli = new mysqli("myapp", "username", "password", "database");
+$pdo = new PDO('mysql:host=myapp;dbname=database', 'username', 'password');
+$mysql = mysql_connect("myapp", "username", "password");
+
+$mysqli = new mysqli("localhost", "username", "password", "database");
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Les noms de section sont des chaînes de caractères. Il est valide d'utiliser
+   un nom de section comme
+   <literal>192.168.2.1</literal>, <literal>127.0.0.1</literal> ou
+   <literal>localhost</literal>. Si, par exemple, une application se connecte à
+   <literal>localhost</literal> et que la section de configuration
+   <literal>localhost</literal> existe pour ce plugin, la sémantique de l'opération
+   de connexion change. L'application n'utilise plus que le serveur MySQL sur l'hôte
+   <literal>localhost</literal> mais le plugin commence à effectuer un balance de
+   charge en suivant les règles issues de la section de configuration
+   <literal>localhost</literal>. De cette façon, vous pouvez effectuer de la
+   balance de charge des requêtes depuis l'application sans aucune modification
+   du code source de l'application. Garder à l'esprit qu'une telle configuration
+   ne contribue pas à une meilleure lisibilité de votre code source.
+   L'utilisation de noms de section qui peuvent être utilisés comme noms d'hôte
+   doit être de dernier recours.
+  </para>
+  <para xml:id="mysqlnd-ms.plugin-ini-json.server_list_syntax">
+   Chaque section de configuration contient au moins une liste de serveurs maîtres,
+   et une liste de serveurs esclaves. La liste des maîtres est configurée avec
+   le mot clé <literal>master</literal>, alors que la liste des esclaves est configurée
+   avec le mot clé <literal>slave</literal>. Le fait de ne pas fournir de liste
+   d'esclaves produit une erreur de type <literal>E_ERROR</literal> (erreur fatale).
+   Malgré le fait que vous ne pouvez pas omettre de liste d'esclaves, elle peut être vide.
+  </para>
+  <para>
+   Les listes de maîtres et d'esclaves peuvent être optionnellement indexées
+   par le nom symbolique du serveur qu'elles décrivent.
+   <example>
+    <title>Liste des esclaves anonymes</title>
+    <programlisting role="ini">
+<![CDATA[
+"slave": [
+    {
+        "host": "192.168.3.24",
+        "port": "3305"
+    },
+    {
+        "host": "192.168.3.65",
+        "port": "3309"
+    }
+]
+]]>
+    </programlisting>
+   </example>
+   Une liste de serveurs anonymes est encodée en <literal>JSON array</literal>.
+   Vous pouvez optionnellement utiliser les noms symboliques pour indexer
+   les serveurs esclaves ou maîtres de la liste des serveurs. Dans un dernier ressort,
+   vous pouvez utiliser le type <literal>JSON object</literal>.
+   <example>
+    <title>Liste Maître en utilisant les noms symboliques</title>
+    <programlisting role="ini">
+<![CDATA[
+"master": {
+    "master_0": {
+        "host": "localhost"
+    }
+}
+]]>
+    </programlisting>
+   </example>
+   Il est recommandé d'indexer la liste des serveurs avec les noms symboliques
+   des serveurs. Les noms d'alias seront affichés dans les messages d'erreur.
+  </para>
+  <para>
+   L'ordre des serveurs est préservé et pris en compte par mysqlnd_ms.
+   Si, par exemple, vous configurez la stratégie de balance de charge round robin,
+   la première requête <literal>SELECT</literal> sera exécutée sur l'esclave
+   qui apparaît en premier dans la liste des serveurs esclaves.
+  </para>
+  <para>
+   Un serveur configuré peut être décrit avec les paramètres <literal>host</literal>,
+   <literal>port</literal>, <literal>socket</literal>, <literal>db</literal>,
+   <literal>user</literal>, <literal>password</literal> et <literal>connect_flags</literal>.
+   Il est obligatoire de définir l'hôte du serveur de base de données en utilisant le
+   mot clé <literal>host</literal>. Tous les autres paramètres de configuration sont optionnels.
+   <example>
+    <title>Mot clé pour configurer un serveur</title>
+    <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "db_server_host",
+                "port": "db_server_port",
+                "socket": "db_server_socket",
+                "db": "database_resp_schema",
+                "user": "user",
+                "password": "password",
+                "connect_flags": 0
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "db_server_host",
+                "port": "db_server_port",
+                "socket": "db_server_socket"
+            }
+        }
+    }
+}
+]]>
+    </programlisting>
+   </example>
+   Si une configuration est omise, le plugin utilisera la valeur fournie par l'appel API
+   de l'utilisateur pour ouvrir la connexion. Reportez-vous à l'exemple ci-dessus
+   sur l'<link linkend="mysqlnd-ms.plugin-ini-json.using_section">utilisation des noms de section</link>.
+  </para>
+  <para>
+   Le format du fichier de configuration a été modifié en version 1.1.0-beta
+   pour permettre les filtres chaînés. Les filtres sont responsables du filtrage de la
+   liste de serveurs configurés afin d'identifier un serveur pour l'exécution de la
+   requête donnée. Les filtres sont configurés avec le mot clé <literal>filter</literal>.
+   Les filtres sont exécutés par mysqlnd_ms dans l'ordre de leur apparence.
+   La définition de filtres est optionnel. Une section de configuration dans le
+   fichier de configuration du plugin n'a pas besoin d'avoir d'entrée
+   <literal>filters</literal>.
+  </para>
+  <para>
+   Les filtres remplacent la configuration
+   <link linkend="ini.mysqlnd-ms-plugin-config.pick"><literal>pick[]</literal></link>
+   des précédentes versions. <literal>random</literal> et <literal>roundrobin</literal>
+   fournissent la même fonctionnalité.
+   <example>
+    <title>Nouveau filtre <literal>roundrobin</literal>, ancienne fonctionnalité</title>
+    <programlisting role="ini">
+<![CDATA[
+   {
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            },
+            "slave_1": {
+                "host": "192.168.78.137",
+                "port": "3306"
+            }
+        },
+        "filters": {
+            "roundrobin": [
+
+            ]
+        }
+    }
+}
+]]>
+    </programlisting>
+   </example>
+   La fonction <link linkend="function.mysqlnd-ms-set-user-pick-server">
+   <function>mysqlnd_ms_set_user_pick_server</function></link> a été supprimée.
+   La définition d'une fonction de rappel est maintenant possible avec le filtre
+   <literal>user</literal>. Quelques filtres acceptent des paramètres.
+   Le filtre <literal>user</literal> requière et accepte obligatoirement le paramètre
+   <literal>callback</literal> pour définir la fonction de rappel précédemment
+   définie via la fonction <function>mysqlnd_ms_set_user_pick_server</function>.
+   <example>
+    <title>Le filtre <literal>user</literal> remplace la fonction <function>mysqlnd_ms_set_user_pick_server</function></title>
+    <programlisting role="ini">
+<![CDATA[
+"filters": {
+    "user": {
+        "callback": "pick_server"
+    }
+}
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Voici une court explication sur les directives de configuration qui peuvent être utilisées.
+  </para>
+  <para>
+   <variablelist>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.master">
+     <term>
+      <parameter>master</parameter>
+      <type>tableau ou object</type>
+     </term>
+     <listitem>
+      <para>
+       Liste de serveurs maîtres de réplication MySQL. La liste est au
+       format <literal>JSON type array</literal> pour déclarer une liste
+       anonyme de serveurs ou au format <literal>JSON type object</literal>.
+       Reportez-vous aux <link linkend="mysqlnd-ms.plugin-ini-json.server_list_syntax">exemples
+       ci-dessous</link>.
+      </para>
+      <para>
+       La définition d'au moins un serveur maître est obligatoire. Le plugin
+       émettra une erreur de type <literal>E_ERROR</literal> si l'utilisateur
+       n'a pas fourni de liste de serveurs maîtres dans une section
+       de configuration. L'erreur fatale ressemble à ceci :
+       <literal>(mysqlnd_ms) Section [master] doesn't exist for host
+        [name_of_a_config_section] in %s on line %d</literal>.
+      </para>
+      <para>
+       Un serveur est décrit avec les paramètres
+       <literal>host</literal>, <literal>port</literal>,
+       <literal>socket</literal>, <literal>db</literal>,
+       <literal>user</literal>, <literal>password</literal> et
+       <literal>connect_flags</literal>.
+       Il est obligatoire de fournir une valeur pour le paramètre
+       <literal>host</literal>. Si n'importe quel autre paramètre
+       n'est pas fourni, il sera récupéré depuis l'appel API de
+       connexion. Reportez-vous aux
+       <link linkend="mysqlnd-ms.plugin-ini-json.using_section">exemples d'utilisation
+        des noms de section</link>.
+      </para>
+      <para xml:id="mysqlnd-ms.plugin-ini-json.server_config_keywords">
+       Tableau de mot clé pour les serveurs dans la configuration.
+      </para>
+      <informaltable>
+       <tgroup cols="3">
+        <colspec colwidth="10%"/>
+        <colspec colwidth="70%"/>
+        <colspec colwidth="20%"/>
+        <thead>
+         <row>
+          <entry>Mot clé</entry>
+          <entry>Description</entry>
+          <entry>Version</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry>
+           <literal>host</literal>
+          </entry>
+          <entry>
+           <para>
+            Hôte du serveur de base de données. Cette donnée est obligatoire.
+            Le fait de ne pas le fournir émettra une erreur de type
+            <literal>E_RECOVERABLE_ERROR</literal> lorsque le plugin tentera
+            de se connecter au serveur. Le message d'erreur ressemblera à ceci : 
+            <literal>(mysqlnd_ms) Cannot find [host] in [%s] section in config in %s on line %d</literal>.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>port</literal>
+          </entry>
+          <entry>
+           <para>
+            Port TCP/IP du serveur de base de données.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>socket</literal>
+          </entry>
+          <entry>
+           <para>
+            Socket du domaine Unix du serveur de base de données.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>db</literal>
+          </entry>
+          <entry>
+           <para>
+            Base de données.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>user</literal>
+          </entry>
+          <entry>
+           <para>
+            Utilisateur de la base de données MySQL.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>password</literal>
+          </entry>
+          <entry>
+           <para>
+            Mot de passe pour l'utilisateur de la base de données MySQL.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>connect_flags</literal>
+          </entry>
+          <entry>
+           <para>
+            Drapeaux de connexion.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </informaltable>
+      <para>
+       Le plugin supporte l'utilisation d'un seul serveur maître.
+       Une configuration expérimentale existe pour activer le support
+       multi-maître. Les détails ne sont pas actuellement documentés.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.slave">
+     <term>
+      <parameter>slave</parameter>
+      <type>tableau ou object</type>
+     </term>
+     <listitem>
+      <para>
+       Liste un ou plusieurs serveurs esclaves de réplication MySQL. La syntaxe
+       est identique à la configuration des serveurs maîtres. Reportez-vous au
+       <link linkend="ini.mysqlnd-ms-plugin-config-v2.master"><literal>master</literal></link>
+       ci-dessus pour plus de détails.
+      </para>
+      <para>
+       Le plugin supporte l'utilisation d'un ou plusieurs esclaves.
+      </para>
+      <para>
+       Le fait de définit une liste de serveurs esclaves est obligatoire. Le plugin
+       émettra une erreur de type <literal>E_ERROR</literal> si <literal>slave</literal>
+       n'est pas fourni dans une section de configuration. Le message d'erreur fatale
+       devrait afficher quelque chose comme
+       <literal>(mysqlnd_ms) Section [slave] doesn't exist for host [%s] in %s on line %d</literal>.
+       Notez qu'il est valide d'utiliser une liste de serveur esclave vide. L'erreur
+       a été introduite pour prévenir une configuration accidentelle des esclaves
+       en oubliant la configuration <literal>slave</literal> setting.
+       Une configuration de maîtres uniquement est toujours possible en utilisant
+       une liste d'esclave vide.
+      </para>
+      <para>
+       Si une liste d'esclave vide est configuré et une tentative est faîte
+       d'exécuter une requête sur un esclave, le plugin émettra une alerte du
+       type <literal>mysqlnd_ms) Couldn't find the appropriate slave connection.
+        0 slaves to choose from.</literal> lors de l'exécution. Il est possible
+       qu'une autre alerte suive, comme ceci
+       <literal>(mysqlnd_ms) No connection selected by the last filter</literal>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.filters">
+     <term>
+      <parameter>filters</parameter>
+      <type>object</type>
+     </term>
+     <listitem>
+      <para>
+       Liste des filtres. Un filtre est prévu pour filtrer la liste des serveurs disponibles
+       pour l'exécution d'une requête donnée. Ils peuvent être chaînés.
+       Le filtre <literal>random</literal> et le filtre <literal>roundrobin</literal>
+       remplacent la directive
+       <link linkend="ini.mysqlnd-ms-plugin-config.pick"><literal>pick[]</literal></link>
+       utilisée dans les versions précédantes pour sélectionner une politique de balance
+       de charge. le filtre <literal>user</literal> remplace la fonction
+       <link linkend="function.mysqlnd-ms-set-user-pick-server">
+        <function>mysqlnd_ms_set_user_pick_server</function></link>.
+      </para>
+      <para>
+       Les filtres peuvent accepter des paramètres pour redéfinir leurs actions.
+      </para>
+      <para>
+       Si aucune politique de balance de charge n'est définie, le plugin
+       prendra par défaut le filtre <literal>random_once</literal>.
+       Le filtre <literal>random_once</literal> sélectionne un serveur esclave
+       aléatoire lors de l'exécution de la première requête de lecture. Le serveur
+       esclave sera ensuite utilisé pour exécuter toutes les requêtes de
+       lecture seule jusqu'à la fin du script PHP. Aucune politique de balance de
+       charge n'est définie et ainsi, le mode par défaut prend place si
+       ni le filtre <literal>random</literal>, ni le filtre <literal>roundrobin</literal>
+       n'est présent dans une section de configuration.
+      </para>
+      <para>
+       Si un filtre chaîné est configuré de tel façon qu'un filtre qui
+       affiche en sortie pas plus d'un serveur utilisé comme entrée pour un
+       filtre dont on doit passer plus d'un serveur en entrée, le plugin peut
+       émettre une alerte lors de l'ouverture de la connexion. L'alerte
+       ressemblera à quelque chose comme : <literal>(mysqlnd_ms) Error while creating
+       filter '%s' . Non-multi filter '%s' already created.
+       Stopping in %s on line %d</literal>. En plus une erreur de code
+       <literal>2000</literal>, un statut sql <literal>HY000</literal>
+       et un message d'erreur similaire à l'alerte peuvent être définis
+       sur le gestionnaire de connexion.
+       <example>
+        <title>Séquence de filtres invalide</title>
+        <programlisting role="ini">
+<![CDATA[
+       {
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+        },
+        "filters": [
+            "roundrobin",
+            "random"
+        ]
+    }
+}
+]]>
+        </programlisting>
+        <programlisting role="php">
+<![CDATA[
+<?php
+$link = new mysqli("myapp", "root", "", "test");
+printf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error());
+$link->query("SELECT 1 FROM DUAL");
+?>
+]]>
+        </programlisting>
+        &example.outputs;
+        <screen>
+<![CDATA[
+PHP Warning:  mysqli::mysqli(): (HY000/2000): (mysqlnd_ms) Error while creating filter 'random' . Non-multi filter 'roundrobin' already created. Stopping in filter_warning.php on line 1
+[2000] (mysqlnd_ms) Error while creating filter 'random' . Non-multi filter 'roundrobin' already created. Stopping
+PHP Warning:  mysqli::query(): Couldn't fetch mysqli in filter_warning.php on line 3
+]]>
+        </screen>
+       </example>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.filter_random">
+     <term>
+      Filtre : <parameter>random</parameter>
+      <type>object</type>
+     </term>
+     <listitem>
+      <para>
+       Le filtre <literal>random</literal> fournit les fonctionnalités de
+       sélection aléatoire et de sélection aléatoire unique pour
+       la politique de balance de charge, équivalent à la directive
+       <link linkend="ini.mysqlnd-ms-plugin-config.pick"><literal>pick[]</literal></link>
+       dans les précédentes versions.
+      </para>
+      <para>
+       La politique de sélection aléatoire va prendre un serveur aléatoirement
+       lorsqu'une requête en lecture seule est exécutée. La stratégie de sélection
+       aléatoire unique va sélectionner un serveur esclave aléatoirement et va
+       continuer de l'utiliser pour le reste des requêtes PHP. La sélection aléatoire
+       unique est le mode par défaut, si la balance de charge n'est pas configurée
+       via un filtre.
+      </para>
+      <para>
+       Si le filtre <literal>random</literal> ne fournit aucun argument,
+       la politique de balance de charge sera la sélection aléatoire.
+       <example>
+        <title>Balance de charge aléatoire avec le filtre <literal>random</literal></title>
+        <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            },
+            "slave_1": {
+                "host": "192.168.78.137",
+                "port": "3306"
+            }
+        },
+        "filters": [
+            "random"
+        ]
+    }
+}
+
+]]>
+        </programlisting>
+       </example>
+       Optionnellement, l'argument <literal>sticky</literal> peut être passé au filtre.
+       Si l'argument <literal>sticky</literal> est défini en la chaîne de caractère
+       <literal>1</literal>, le filtre suit la stratégie de sélection aléatoire unique.
+       <example>
+        <title>Balance de charge avec sélection aléatoire unique avec le filtre <literal>random</literal></title>
+        <programlisting role="ini">
+<![CDATA[
+{
+    "filters": {
+        "random": {
+            "sticky": "1"
+        }
+    }
+}
+]]>
+        </programlisting>
+       </example>
+       Les arguments inconnus sont ignorés. Aucune alerte ni erreur ne sont fournies.
+      </para>
+      
+      <para>
+       Attends un ou plusieurs serveurs en entrée. Sort un seul serveur.
+       Une séquence de filtre comme
+       <literal>random</literal>, <literal>roundrobin</literal> peut
+       émettre une alerte et un message d'erreur définis sur le
+       gestionnaire de connexion lors de l'exécution d'une requête.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.filter_roundrobin">
+     <term>
+      Filtre : <parameter>roundrobin</parameter>
+      <type>object</type>
+     </term>
+     <listitem>
+      <para>
+       Lors de l'utilisation du filtre <literal>roundrobin</literal>,
+       le plugin parcourt la liste des serveurs esclaves configurés pour
+       y sélectionner un serveur à utiliser pour l'exécution d'une requête.
+       Si le plugin atteint la fin de la liste, il se replace au début
+       et prend le premier serveur esclave configuré.
+       <example>
+        <title>Filtre <literal>roundrobin</literal></title>
+        <programlisting role="ini">
+<![CDATA[
+       {
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+        },
+        "filters": [
+            "roundrobin"
+        ]
+    }
+}
+]]>
+        </programlisting>
+       </example>
+      </para>
+      <para>
+       Attends un ou plusieurs serveurs en entrée. Sort un seul serveur.
+       Une séquence de filtres comme
+       <literal>roundrobin</literal>, <literal>random</literal> peut émettre
+       une alerte et un message d'erreur définis sur le gestionnaire de connexion
+       lors de l'exécution d'une requête.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.filter_user">
+     <term>
+      Filtre : <parameter>user</parameter>
+      <type>object</type>
+     </term>
+     <listitem>
+      <para>
+       Le filtre <literal>user</literal> remplace la fonction <link linkend="function.mysqlnd-ms-set-user-pick-server">
+       <function>mysqlnd_ms_set_user_pick_server</function></link>,
+       qui a été supprimée en version 1.1.0-beta. Le filtre définit une fonction
+       de rappel pour la séparation définie par l'utilisateur des lectures et des écritures
+       ainsi que la sélection de serveurs.
+      </para>
+      <para>
+       Le mécanisme interne du plugin de décisions de séparation des lectures
+       et des écritures peut être surchargé de deux façons. La façon la plus simple
+       est d'ajouter en début de requête l'astuce SQL <constant>MYSQLND_MS_MASTER_SWITCH</constant>,
+       <constant>MYSQLND_MS_SLAVE_SWITCH</constant> ou
+       <constant>MYSQLND_MS_LAST_USED_SWITCH</constant>. L'utilisation des astuces SQL
+       permet de contrôler, par exemple, si une requête doit être envoyée au serveur maître
+       de réplication SQL ou à un des serveurs esclaves. Avec les astuces SQL,
+       il n'est pas possible de sélectionner un serveur esclave en particulier pour
+       l'exécution d'une requête.
+      </para>
+      <para>
+       Le contrôle total de la sélection des serveurs peut être atteint en utilisant
+       une fonction de rappel. Son utilisation est recommandée aux utilisateurs experts
+       uniquement, tout simplement par la fonction de rappel doit couvrir tous les
+       cas que doit normalement gérer le plugin.
+      </para>
+      <para>
+       Le plugin invoquera la fonction de rappel pour la sélection d'un serveur
+       depuis la liste des serveurs maîtres et esclaves configurés. La fonction
+       de rappel inspecte la requête à exécuter, sélectionne un serveur pour son
+       exécution en retourner l'URI de l'hôte, tel que trouvé dans la liste des
+       serveurs maîtres et esclaves.
+      </para>
+      <para>
+       Si les connexions paresseuses sont actives et que la fonction de rappel
+       choisit un serveur esclave dont aucune connexion n'a été établie, et que
+       la connexion échoue, le plugin retournera une erreur lors de la prochaine action
+       sur la connexion échouée, par exemple, lors de l'exécution d'une requête.
+       Il en est de la responsabilité du développeur de l'application de gérer cette
+       erreur. Par exemple, l'application peut ré-exécuter la requête pour lancer
+       la sélection d'un nouveau serveur et invoquer à nouveau la fonction de rappel.
+       Ainsi, la fonction de rappel doit s'assurer de sélectionner un serveur différent,
+       ou de vérifier la disponibilité de l'esclave, avant de retourner au plugin
+       et ce, afin de ne pas entrer dans une boucle infinie.
+      </para>
+      <para>
+       <example>
+        <title>Définition d'une fonction de rappel</title>
+        <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+        },
+        "filters": {
+            "user": {
+                "callback": "pick_server"
+            }
+        }
+    }
+}
+]]>
+        </programlisting>
+       </example>
+      </para>
+      <para>
+       La fonction de rappel est supposée retourner un hôte sur lequel
+       la requête sera exécutée. L'URI de l'hôte doit être récupérée depuis
+       la liste des connexions aux serveurs maîtres et esclaves. Si la fonction
+       de rappel retourne une valeur ni trouvée dans la liste des connexions
+       aux serveurs maîtres, ni trouvée dans la liste des connexions esclaves,
+       le plugin émettra une erreur de type <literal>E_RECOVERABLE_ERROR</literal>.
+       L'erreur sera quelque chose comme :
+       <literal>  (mysqlnd_ms) User filter callback has returned an unknown server.
+        The server 'server that is not in master or slave list' can neither be found
+        in the master list nor in the slave list</literal>.
+       Si l'application attrape l'erreur afin de l'ignirer, les erreurs suivantes
+       seront définies sur le gestionnaire de connexion, par exemple,
+       <literal>(mysqlnd_ms) No connection selected by the last filter</literal> avec
+       le code erreur <literal>2000</literal> ainsi que le statut sql <literal>HY000</literal>.
+       Et enfin, une alerte peut être émise.
+      </para>
+      <para>
+       Le fait de référencer une fonction inexistante comme fonction de rappel
+       résultera en une erreur de type <literal>E_RECOVERABLE_ERROR</literal>
+       lorsque le plugin tentera d'utiliser la fonction de rappel. Le message
+       d'erreur sera quelque chose comme :
+       <literal>(mysqlnd_ms) Specified callback (pick_server) is
+        not a valid callback</literal>. Si l'application attrape l'erreur afin
+       de l'ignorer, les erreurs peuvent être définies sur le gestionnaire de connexion,
+       par exemple,
+       <literal>(mysqlnd_ms) Specified callback (pick_server) is
+        not a valid callback</literal> avec le code erreur <literal>2000</literal>
+       ainsi que le statut sql <literal>HY000</literal>. De plus, une alerte sera émise.
+      </para>
+      <para>
+       Les paramètres suivants sont passés depuiq le plugin à la fonction de rappel.
+      </para>
+      <informaltable>
+       <tgroup cols="3">
+        <colspec colwidth="10%"/>
+        <colspec colwidth="70%"/>
+        <colspec colwidth="20%"/>
+        <thead>
+         <row>
+          <entry>Paramètre</entry>
+          <entry>Description</entry>
+          <entry>Version</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry>
+           <literal>connected_host</literal>
+          </entry>
+          <entry>
+           <para>
+            URI du serveur de base de données actuellement connecté.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>query</literal>
+          </entry>
+          <entry>
+           <para>
+            La requête pour laquelle un serveur doit être sélectionné.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>masters</literal>
+          </entry>
+          <entry>
+           <para>
+            Liste des serveurs maîtres depuis lequel le choix sera fait.
+            Notez que la liste des serveurs maîtres peut ne pas être identiques
+            à la liste des serveurs maîtres configurés, si le filte n'est
+            pas le premier dans la chaîne des filtres. Les filtres précédemment
+            configurés peuvent avoir réduit cette liste.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>slaves</literal>
+          </entry>
+          <entry>
+           <para>
+            Liste des serveurs esclaves depuis lequel le choix sera fait.
+            Notez que la liste des serveurs esclaves peut ne pas être identiques
+            à la liste des serveurs esclaves configurés, si le filte n'est
+            pas le premier dans la chaîne des filtres. Les filtres précédemment
+            configurés peuvent avoir réduit cette liste.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>last_used_connection</literal>
+          </entry>
+          <entry>
+           <para>
+            URI du serveur de la connexion utilisée pour exécuter
+            la précédente requête.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>in_transaction</literal>
+          </entry>
+          <entry>
+           <para>
+            Drapeau booléen indiquant si la requête fait partie d'une
+            transaction ouverte. Si le mode autocommit est désactivé,
+            il sera définit à <literal>TRUE</literal>, <literal>FALSE</literal>
+            sinon.
+           </para>
+           <para>
+            La détection de la transaction est basée sur la surveillance
+            de l'appel de <literal>set_autocommit</literal> sur la bibliothèque mysqlnd.
+            La surveillance n'est pas possible avant PHP 5.4.0. Reportez-vous à la
+            <link linkend="mysqlnd-ms.pooling">pile et au changement de connexion</link>
+            pour plus de détails.
+           </para>
+          </entry>
+          <entry>Depuis la version 1.1.0.</entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </informaltable>
+      <para>
+       <example>
+        <title>Utilisation d'une fonction de rappel</title>
+        <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.2.27",
+                "port": "3306"
+            },
+            "slave_1": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+        },
+        "filters": {
+            "user": {
+                "callback": "pick_server"
+            }
+        }
+    }
+}
+]]>
+        </programlisting>
+        <programlisting role="php">
+<![CDATA[
+<?php
+function pick_server($connected, $query, $masters, $slaves, $last_used_connection, $in_transaction)
+{
+ static $slave_idx = 0;
+ static $num_slaves = NULL;
+ if (is_null($num_slaves))
+  $num_slaves = count($slaves);
+
+ /* défaut : retour à la logique interne du plugin */
+ $ret = NULL;
+
+ printf("L'utilisation s'est connecté sur '%s'...\n", $connected);
+ printf("... décision du serveur pour exécuter '%s'\n", $query);
+
+ $where = mysqlnd_ms_query_is_select($query);
+ switch ($where)
+ {
+  case MYSQLND_MS_QUERY_USE_MASTER:
+   printf("... utilisation du maître\n");
+   $ret = $masters[0];
+   break;
+  case MYSQLND_MS_QUERY_USE_SLAVE:
+   /* SELECT ou astuce SQL pour l'utilisation d'un esclave */
+   if (stristr($query, "FROM table_on_slave_a_only"))
+   {
+    /* une table qui est uniquement sur le premier esclave configuré  */
+    printf("... accès à la table disponible uniquement sur l'esclave A détectée\n");
+    $ret = $slaves[0];
+   }
+   else
+   {
+    /* round robin */
+    printf("... quelques requêtes en lecture seul pour un esclave\n");
+    $ret = $slaves[$slave_idx++ % $num_slaves];
+   }
+   break;
+  case MYSQLND_MS_QUERY_LAST_USED:
+   printf("... utilisation du dernier serveur utilisé\n");
+   $ret = $last_used_connection;
+   break;
+ }
+
+ printf("... ret = '%s'\n", $ret);
+ return $ret;
+}
+
+$mysqli = new mysqli("myapp", "root", "", "test");
+
+if (!($res = $mysqli->query("SELECT 1 FROM DUAL")))
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+else
+ $res->close();
+
+if (!($res = $mysqli->query("SELECT 2 FROM DUAL")))
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+else
+ $res->close();
+
+
+if (!($res = $mysqli->query("SELECT * FROM table_on_slave_a_only")))
+ printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+else
+ $res->close();
+
+$mysqli->close();
+?>
+]]>
+        </programlisting>
+        &example.outputs;
+        <screen>
+<![CDATA[
+L'utilisation s'est connecté sur 'myapp'...
+... décision du serveur pour exécuter 'SELECT 1 FROM DUAL'
+... quelques requêtes en lecture seul pour un esclave
+... ret = 'tcp://192.168.2.27:3306'
+L'utilisation s'est connecté sur 'myapp'...
+... décision du serveur pour exécuter 'SELECT 2 FROM DUAL'
+... quelques requêtes en lecture seul pour un esclave
+... ret = 'tcp://192.168.78.136:3306'
+L'utilisation s'est connecté sur 'myapp'...
+... décision du serveur pour exécuter 'SELECT * FROM table_on_slave_a_only'
+... accès à la table disponible uniquement sur l'esclave A détectée
+... ret = 'tcp://192.168.2.27:3306'
+]]>
+        </screen>
+       </example>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.failover">
+     <term>
+      <parameter>failover</parameter>
+      <type>string</type>
+     </term>
+     <listitem>
+      <para>
+       Politique de basculement. Politiques supportées :
+       <literal>disabled</literal> (défaut), <literal>master</literal>.
+      </para>
+      <para>
+       Si aucune politique de basculement n'est définie, le plugin
+       ne procèdera à aucun basculement automatique
+       (<literal>failover=disabled</literal>). À chaque fois que le
+       plugin échoue lors de la connexion à un serveur, il émettra
+       une alerte et définira le code et le message d'erreur sur la
+       connexion. Par la suite, c'est à l'application de gérer l'erreur
+       et, par exemple, relancera la dernière requête afin de
+       déclencher la sélection d'un autre serveur.
+      </para>
+      <para>
+       Lors de l'utilisation de <literal>failover=master</literal>,
+       le plugin basculera implicitement vers un esclave, si disponible.
+       Reportez-vous à la documentation de ce concept pour en apprendre
+       plus sur les risques de l'utilisation de <literal>failover=master</literal>.
+       <example>
+        <title>Basculement optionnel vers un maître lors d'un échec de connexion sur un esclave</title>
+        <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+        },
+        "failover": "master"
+    }
+}
+]]>
+        </programlisting>
+       </example>
+      </para>
+      <para>
+       Le fait de définir <literal>failover</literal> à une valeur
+       autre que <literal>disabled</literal> ou <literal>master</literal>
+       n'émettra aucune alerte ni erreur.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.lazy_connections">
+     <term>
+      <parameter>lazy_connections</parameter>
+      <type>bool</type>
+     </term>
+     <listitem>
+      <para>
+       Contrôle l'utilisation des connexions paresseuses. Les connexions
+       paresseuses sont des connexions qui ne sont pas ouvertes tant que le client
+       n'envoie pas la première connexion. Les connexions paresseuses sont activées
+       par défaut.
+      </para>
+      <para>
+       Il est vivement recommandé d'utiliser les connexions paresseuses. Elles vous
+       aident à conserver un nombre très faible de connexions ouvertes.
+       Si vous les désactivez, et, par exemple, vous configurez un serveur MySQL
+       maître de réplication et 2 serveurs MySQL esclaves de réplication,
+       le plugin ouvrira trois connexions lors du premier appel à la fonction
+       de connexion, malgré le fait que l'application n'utilise que la connexion
+       maître.
+      </para>
+      <para>
+       Les connexions paresseuses représentent un risque si vous réalisez des actions
+       qui changent le statut d'une connexion. Le plugin ne répercutera pas toutes
+       les actions de modification du statut à toutes les connexions de la pile
+       de connexions. Les actions répercutées seront appliquées seulement à toutes
+       les connexions ouvertes. Les connexions paresseuses ouvertes dans le futur
+       ne seront pas affectées. Seules quelques configurations seront
+       &quot;retenues&quot; et appliquées lorsqu'une connexion paresseuse
+       sera ouverte.
+       <example>
+        <title>Désactivation des connexions paresseuses</title>
+        <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+        },
+        "lazy_connections": 0
+    }
+}
+]]>
+        </programlisting>
+       </example>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.master_on_write">
+     <term>
+      <parameter>master_on_write</parameter>
+      <type>bool</type>
+     </term>
+     <listitem>
+      <para>
+       Si définit, le plugin utilisera le serveur maître uniquement
+       après que la première requête ait été exécutée sur le maître.
+       Les applications peuvent toujours envoyer les requêtes aux esclaves
+       en utilisant les astuces SQL pour écraser la décision automatique.
+      </para>
+      <para>
+       Cette configuration permet de corriger le lag dans la réplication.
+       Si une application exécute une requête <literal>INSERT</literal>,
+       le plugin utilisera, par défaut, le maître pour exécuter les requêtes suivantes,
+       y compris les requêtes <literal>SELECT</literal>.
+       Ceci permet d'éviter les problèmes de lecture depuis les esclaves
+       qui n'ont pas encore répliqués les requêtes
+       <literal>INSERT</literal>.
+       <example>
+        <title>Utilisation du maître lors d'une écriture pour consolider les lectures</title>
+        <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+        },
+        "master_on_write": 1
+    }
+}
+]]>
+        </programlisting>
+       </example>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.trx_stickiness">
+     <term>
+      <parameter>trx_stickiness</parameter>
+      <type>string</type>
+     </term>
+     <listitem>
+      <para>
+       Politique des transactions colantes. Les politiques supportées
+       sont <literal>disabled</literal> (défaut), <literal>master</literal>.
+      </para>
+      <para>
+       Fonctionnalité expérimentale.
+      </para>
+      <para>
+       Cette configuration nécessaure PHP 5.4.0 ou supérieure. Si utilisée sur
+       des versions de PHP plus anciennes, le plugin émettra une alerte de type
+       <literal>(mysqlnd_ms) trx_stickiness strategy is not supported before PHP 5.3.99</literal>.
+      </para>
+      <para>
+       Si aucune politique de transaction colante n'est défini, ou bien si la
+       configuration <literal>trx_stickiness=disabled</literal> est utilisée,
+       le plugin ne tiendra pas compte des transactions. Ainsi, le plugin
+       peut effectuer un balance de charge des connexions, et changer de connexions
+       en plein milieu d'une transaction. Le plugin n'est ainsi pas sécurisé sur
+       les transactions. Les astuces SQL peuvent être utilisées pour empécher les
+       changements de connexions durant une transaction.
+      </para>
+      <para>
+       Depuis PHP 5.4.0, la bibliothèque mysqlnd autorise le plugin à surveiller
+       la définition du mode <literal>autocommit</literal> par appel à la fonction
+       <literal>set_autocommit()</literal> de la bibliothèque.
+       Si <literal>set_stickiness=master</literal> et
+       <literal>autocommit</literal> a été désactivé par une extension PHP MySQL
+       en invoquant la fonction <literal>set_autocommit()</literal> de la bibliothèque
+       interne <literal>mysqlnd</literal>, le plugin tiendra compte d'un début de transaction.
+       Ainsi, le plugin arrêtera les balances de charge et dirigera toutes les requêtes
+       vers le maître tant que <literal>autocommit</literal> est actif.
+       Dans ce cas, aucune astuce SQL n'est nécessaire.
+      </para>
+      <para>
+       Un exemple de fonction de l'API PHP MySQL appelant la fonction interne
+       <literal>set_autocommit()</literal> de la bibliothèque <literal>mysqlnd</literal>
+       est la fonction <function>mysqli_autocommit</function>.
+      </para>
+      <para>
+       Malgré la configuration <literal>ser_stickiness=master</literal>, le plugin
+       ne tiendra pas compte d'une modification du mode <literal>autocommit</literal>
+       réalisée par une requête SQL comme <literal>SET AUTOCOMMIT=0</literal>.
+       <example>
+        <title>Utilisation du maître pour l'exécution des transactions</title>
+        <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+        },
+        "trx_stickiness": "master"
+    }
+}
+]]>
+        </programlisting>
+       </example>
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </section>
+ 
+ <section xml:id="mysqlnd-ms.plugin-ini-v1">
+  <title xmlns="http://docbook.org/ns/docbook">Fichier de configuration du plugin (&lt;= 1.0.x)</title>
+  <note>
+   <para>
+    La description suivante s'applique à PECL/mysqlnd_ms &lt; 1.1.0-beta.
+    Elle n'est pas valide pour les versions supérieures.
+   </para>
+  </note>
+  <para>
+   Le plugin utilise son propre fichier de configuration. Ce fichier contient
+   les informations sur les serveurs maîtres de réplication MySQL, les serveurs
+   esclaves de réplication MySQL, la politique de sélection de serveur (balance de charge),
+   la stratégie de basculement ainsi que l'utilisation des connexions paresseuses.
+  </para>
+  <para>
+   La directive de configuration PHP
+   <link linkend="ini.mysqlnd-ms.ini-file"><literal>mysqlnd_ms.ini_file</literal></link>
+   est utilisée pou définir le fichier de configuration du plugin.
+  </para>
+  <para>
+   Le fichier de configuration reprend le standard du format <literal>php.ini</literal>.
+   Il contient un ou plusieurs sections. Chaque section définit sa propre unité
+   de configuration. Il n'y a pas de section globale pour la configuration
+   par défaut.
+  </para>
+  <para>
+   Les applications se réfèrent aux sections par leurs noms. Les applications
+   utilisent les noms de section comme paramètre de l'hôte (serveur) dans les
+   différentes méthodes de connexion des extensions comme
+   <link linkend="ref.mysqli">mysqli</link>,
+   <link linkend="ref.mysql">mysql</link> et
+   <link linkend="ref.pdo-mysql">PDO_MYSQL</link>. Lors de la connexion,
+   le plugin <link linkend="book.mysqlnd">mysqlnd</link> compare le nom
+   de l'hôte avec tous les noms de section depuis le fichier de configuration
+   du plugin. Si le nom d'hôte et le nom de section correspondent, le
+   plugin chargera la configuration depuis cette section.
+  </para>
+  <para>
+   <example>
+    <title>Exemple d'utilisation des noms de section</title>
     <programlisting role="ini">
 <![CDATA[
 [myapp]
@@ -68,7 +1385,7 @@ slave[] = 192.168.3.65:3309
     <programlisting role="php">
 <![CDATA[
 <?php
-/* Toutes les connections qui suivent seront réparties */
+/* Toutes les sections suivantes seront soumises à la balance de charge */
 $mysqli = new mysqli("myapp", "username", "password", "database");
 $pdo = new PDO('mysql:host=myapp;dbname=database', 'username', 'password');
 $mysql = mysql_connect("myapp", "username", "password");
@@ -80,33 +1397,39 @@ $mysqli = new mysqli("localhost", "username", "password", "database");
    </example>
   </para>
   <para>
-   Les noms de sections sont des chaines. Utiliser des noms comme
+   Les noms de section sont des chaînes de caractères. Il est valide d'utiliser
+   un nom de section comme
    <literal>192.168.2.1</literal>, <literal>127.0.0.1</literal> ou
-   <literal>localhost</literal> est valide. SI, par exemple, une application
-   se connecte à <literal>localhost</literal> et qu'une section de configuration
-   de plugin <literal>[localhost]</literal> existe, la sémantique de la connection
-   est modifiée. L'application ne se connectera plus au serveur MySQL tournant sur
-   <literal>localhost</literal>, car le plugin commencera l'équilibrage de charge des
-   requêtes MySQL en fonction des règles décrites dans la section <literal>[localhost]</literal>
-   de la configuration. De cette manière, vous pouvez équilibrer des requêtes d'applications
-   sans en changer leur code source.
+   <literal>localhost</literal>. Si, par exemple, une application se
+   connecte à <literal>localhost</literal> et une section de configuration
+   du plugin <literal>[localhost]</literal> existe, la sémantique de l'opération
+   de connexion change. L'application n'utilisera plus seulement le serveur MySQL
+   fonctionnant sur l'hôte <literal>localhost</literal>, mais le plugin
+   commencera à balancer la charge des requêtes MySQL en suivant les règles
+   depuis la section de configuration <literal>[localhost]</literal>.
+   De cette façon, vous pouvez effectuer un balance de charge depuis une
+   application sans aucune modification du code source de l'application.
   </para>
   <para>
-   Les directives <literal>master[]</literal>, <literal>slave[]</literal>
-   et <literal>pick[]</literal> utilisent une syntaxe à crochets (listes). Elles peuvent apparaitre
-   plusieurs fois dans la configuration, le plugin maintient l'ordre dans lequel
-   elles apparaissent. Par exemple, l'exemple ci-dessous montre deux configurations
-   <literal>slave[]</literal> dans <literal>[myapp]</literal>.
-   En balance de charge à tourniquet pour des requêtes en lecture, le plugin dirigera
-   la première requête en lecture vers le serveur <literal>mysql_slave_1</literal>
-   car il apparait en premier dans la liste. La seconde requête en lecture sera dirigée
-   sur <literal>mysql_slave_2</literal> qui apparait en deuxième dans la liste.
-   Les directives qui supportent une syntaxe à crochets sont lues de haut en bas dans leurs
-   sections respectives.
+   Les directives de configuration <literal>master[]</literal>, <literal>slave[]</literal>
+   et <literal>pick[]</literal> utilisent une syntaxe sous forme de liste.
+   Ces directives peuvent apparaître à plusieurs reprises dans une section de configuration.
+   Le plugin maintient l'ordre dans laquelle les entrées apparaîssent au moment
+   de leurs interprétations. Par exemple, l'exemple ci-dessous montre
+   les directives de configuration pour 2 <literal>slave[]</literal> dans la
+   section de configuration <literal>[myapp]</literal>. Si vous utilisez la balance
+   de charge round-robin pour les requêtes en lecture seule, le plugin enverra
+   la premère requête en lecture seule au serveur MySQLL
+   <literal>mysql_slave_1</literal> parce qu'il est premier dans la liste.
+   La seconde requête en lecture seule sera envoyée au serveur MySQL
+   <literal>mysql_slave_2</literal> parce qu'il est second sur la liste.
+   Les directives de configuration supportant la syntaxe sous forme de liste
+   sont ordonnées depuis le haut vers le bas, dans l'ordre de leurs apparissions
+   dans la section de configuration.
   </para>
   <para>
    <example>
-    <title>Syntaxe à liste</title>
+    <title>Syntaxe sous forme de liste</title>
     <programlisting role="ini">
 <![CDATA[
 [myapp]
@@ -115,14 +1438,14 @@ slave[] = mysql_slave_1
 slave[] = mysql_slave_2
 ]]>
     </programlisting>
-    </example>
+   </example>
   </para>
   <para>
-   Voici une explication des directives de configuration qui peuvent être utilisées.
+   Voici une explication brève sur les directives de configuration pouvant être utilisées.
   </para>
   <para>
-  <variablelist>
-   <varlistentry xml:id="ini.mysqlnd-ms-plugin-config.master">
+   <variablelist>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config.master">
      <term>
       <parameter>master[]</parameter>
       <type>string</type>
@@ -136,9 +1459,9 @@ slave[] = mysql_slave_2
        Le plugin ne supporte que l'utilisation d'un seul maitre à la fois.
       </para>
       <para>
-       Déclarer un maitre est obligatoire. Le plugin renverra un warning à la connection
+       Déclarer un maitre est obligatoire. Le plugin renverra une alerte à la connection
        si il ne trouve pas de maitre dans la configuration.
-       Ce message warning peut ressembler à
+       Ce message d'alerte peut ressembler à
        <literal>(mysqlnd_ms) Cannot find master section in config</literal>.
        Aussi, le plugin renseignera sur un code d'erreur pour la connection
        <literal>HY000/2000 (CR_UNKNOWN_ERROR)</literal>. Le message dépend de la langue
@@ -147,7 +1470,7 @@ slave[] = mysql_slave_2
      </listitem>
     </varlistentry>
     <varlistentry xml:id="ini.mysqlnd-ms-plugin-config.slave">
-    <term>
+     <term>
       <parameter>slave[]</parameter>
       <type>string</type>
      </term>
@@ -160,9 +1483,9 @@ slave[] = mysql_slave_2
        Le plugin supporte l'utilisation d'un ou plusieurs esclaves.
       </para>
       <para>
-       Déclarer au moins un esclave est obligatoire. Le plugin renverra un warning à la connection
+       Déclarer au moins un esclave est obligatoire. Le plugin renverra une alerte à la connection
        s'il ne trouve pas au moins un esclave dans la configuration.
-       Ce message warning peut ressembler à
+       Ce message d'alerte peut ressembler à
        <literal>(mysqlnd_ms) Cannot find slaves section in config</literal>.
        Aussi, le plugin renseignera sur un code d'erreur pour la connection
        <literal>HY000/2000 (CR_UNKNOWN_ERROR)</literal>.Le message dépend de la langue
@@ -187,14 +1510,14 @@ slave[] = mysql_slave_2
        lors de la première requête en lecture. Le serveur esclave sera alors utilisé pour toutes
        les requêtes en lecture jusqu'à l'extinction de PHP.
       </para>
-     <para>
+      <para>
        La politique <literal>random</literal> choisira un serveur esclave au hasard pour chaque
        requête de lecture.
-     </para>
-     <para>
+      </para>
+      <para>
        Avec <literal>roundrobin</literal> le plugin parcourt la liste des esclaves déclarés
        et les choisit un-à-un pour chaque requête. Si le plugin atteint la fin de la liste,
-       il recommence.
+       il prendra le premier serveur esclave configuré.
       </para>
       <para>
        Utiliser plus d'une politique d'équilibrage par section de configuration n'est effectif
@@ -212,8 +1535,8 @@ slave[] = mysql_slave_2
      </term>
      <listitem>
       <para>
-       Politique de gestion des incidents (failover). Sont supportées:
-       <literal>disabled</literal> (defaut), <literal>master</literal>.
+       Politique de gestion des incidents (failover). Sont supportées :
+       <literal>disabled</literal> (défaut), <literal>master</literal>.
       </para>
       <para>
        Si aucune politique de gestion d'incident (failover) n'est utilisée, le plugin n'effectuera
@@ -244,7 +1567,7 @@ slave[] = mysql_slave_2
        aident à réduire le nombre de connections simultanées ouvertes. Si vous les
        désactivez, et que par exemple, vous configurez un maitre de réplication et
        deux esclaves, le plugin ouvrira alors 3 connections dès le premier appel
-       alors que l'application pourrait ne vouloir utiliser que le maitre. 
+       alors que l'application pourrait ne vouloir utiliser que le maitre.
       </para>
       <para>
        Les connections parresseuses représentent par contre un problème si vous changez
@@ -286,14 +1609,14 @@ slave[] = mysql_slave_2
      </term>
      <listitem>
       <para>
-       Politique d'accrochage des transactions. Sont supportées:
-       <literal>disabled</literal> (default), <literal>master</literal>.
+       Politique d'accrochage des transactions. Sont supportées :
+       <literal>disabled</literal> (défaut), <literal>master</literal>.
       </para>
       <para>
        Fonctionnalité expérimentale.
       </para>
       <para>
-       Cette fonctionnalité requiert 5.3.99 ou plus récent. Si vous utilisez PHP avant 5.3.99,
+       Cette fonctionnalité requiert 5.3.99 ou plus récent. Si vous utilisez PHP avant 5.4.0,
        le plugin va emettre un warning comme
        <literal>(mysqlnd_ms) trx_stickiness strategy is not supported before PHP 5.3.99</literal>.
       </para>
@@ -305,7 +1628,7 @@ slave[] = mysql_slave_2
        Des astuces SQL devraient être utilisées pour éviter de tels cas.
       </para>
       <para>
-       Depuis PHP 5.3.99, la bibliothèque mysqlnd permet au plugin de surveiller le mode
+       Depuis PHP 5.4.0, la bibliothèque mysqlnd permet au plugin de surveiller le mode
        <literal>autocommit</literal> en appelant la fonction
        <literal>trx_autocommit()</literal>. Si <literal>trx_stickiness=master</literal> et
        <literal>autocommit</literal> que les transactions sont désactivées suite à un appel
@@ -329,7 +1652,226 @@ slave[] = mysql_slave_2
    </variablelist>
   </para>
  </section>
+ 
+ <section xml:id="mysqlnd-ms.testing">
+  <title xmlns="http://docbook.org/ns/docbook">Testing</title>
+  <note>
+   <para>
+    Cette section s'applique pour myslqnd_ms 1.1.0 ou supérieure, et non pour
+    la série 1.0.
+   </para>
+  </note>
+  <para>
+   La suite de test PECL/mysqlnd_ms se trouve dans le dossier
+   <filename>tests/</filename> des sources de la distribution.
+   La suite de test consiste en des tests standards phpt, qui sont décrits
+   sur le site d'assurance qualité de PHP.
+  </para>
+  <para>
+   Avant d'effectuer ces tests, éditez le fichier <filename>tests/config.inc</filename>
+   pour configurer les serveurs MySQL à utiliser lors des tests. Vous devez avoir
+   au moins un serveur MySQL en fonctionnement pour les réaliser. Cependant,
+   le fait de définit deux serveurs MySQL distincts est bien meilleur. Si
+   vous en configurez deux, les tests peuvent en utiliser un comme maître logique
+   et l'autre, comme esclave logique. Ces deux serveurs ne doivent pas faire
+   obligatoirement partis d'un cluster de réplication MySQL. Les tests sont écrits
+   de telle façon qu'ils peuvent être exécutés avec succès sans avoir à configurer
+   un cluster de réplication MySQL. Si deux serveurs sont configurés, ils doivent
+   autoriser l'identification à une base de données test en utilisant le même
+   nom utilisateur et mot de passe sur les deux serveurs.
+  </para>
+  <para>
+   Voici la configuration habituellement utilisée :
+   <programlisting>
+<![CDATA[
+ putenv("MYSQL_TEST_HOST=localhost");
+ putenv("MYSQL_TEST_PORT=3306");
+ putenv("MYSQL_TEST_USER=root");
+ putenv("MYSQL_TEST_PASSWD=");
+ putenv("MYSQL_TEST_DB=test");
+ putenv("MYSQL_TEST_ENGINE=MyISAM");
+ putenv("MYSQL_TEST_SOCKET=");
 
+ putenv("MYSQL_TEST_SKIP_CONNECT_FAILURE=1");
+ putenv("MYSQL_TEST_CONNECT_FLAGS=0");
+ putenv("MYSQL_TEST_EXPERIMENTAL=0");
+
+ putenv("MYSQL_TEST_MASTER_HOST=". getenv("MYSQL_TEST_HOST"));
+ putenv("MYSQL_TEST_SLAVE_HOST=". getenv("MYSQL_TEST_HOST"));
+]]>
+   </programlisting>
+  </para>
+  <para>
+   <literal>MYSQL_TEST_HOST</literal>, <literal>MYSQL_TEST_PORT</literal> et
+   <literal>MYSQL_TEST_SOCKET</literal> définissent le nom de l'hôte,
+   le port TCP/IP et le socket du domaine Unix pour le serveur de base de données
+   par défaut.
+   <literal>MYSQL_TEST_USER</literal> et <literal>MYSQL_TEST_PASSWD</literal>
+   contiennent le nom de l'utilisateur et le mot de passe nécessaires pour la connexion
+   à la base de données/schéma configurée avec <literal>MYSQL_TEST_DB</literal>.
+   Si vous utilisez 2 serveurs distincts, un serveur maître logique et un serveur
+   esclave logique, ils doivent avoir le même nom d'utilisateur de base de données
+   de configuré pour donner accès à la base de données test.
+  </para>
+  <para>
+   Quelques tests requièrent la disponibilité de 2 serveurs MySQL distincts.
+   Ces tests seront ignorés si un seul serveur est configuré. Pour configurer
+   un serveur esclave logique s'exécutant sur un hôte différent et/ou écoutant sur
+   un port/socket différent, définissez <literal>MYSQL_TEST_SLAVE_HOST</literal>.
+   L'utilisation de la syntaxe <literal>host</literal>, <literal>host:port</literal> ou
+   <literal>host:/path/to/socket</literal> pour <literal>MYSQL_TEST_SLAVE_HOST</literal>
+   permet de définir un hôte, un port et un hôte, et un socket différent pour le
+   serveur esclave logique. La même syntaxe peut être utilisée pour définir
+   <literal>MYSQL_TEST_MASTER_HOST</literal>.
+   <programlisting>
+<![CDATA[
+putenv("MYSQL_TEST_SLAVE_HOST=192.168.78.136:3307"));
+putenv("MYSQL_TEST_SLAVE_HOST=myserver_hostname:/path/to/socket"));
+]]>
+   </programlisting>
+  </para>
+ </section>
+ 
+ <section xml:id="mysqlnd-ms.debugging">
+  <title xmlns="http://docbook.org/ns/docbook">Débogage et surveillance</title>
+  <para>
+   Les logs de débogage mysqlnd peuvent être utilisées pour le débogage et la surveillance
+   de l'activité de PECL/mysqlnd_ms, vu que mysqlnd PECL/mysqlnd_ms ajoute des informations
+   de surveillance dans le fichier de débogage de la bibliothèque mysqlnd.
+   Reportez-vous à la documentation sur la directive de configuration PHP 
+   <link linkend="mysqlnd.debug"><literal>mysqlnd.debug</literal></link>
+   pour plus d'informations détaillées sur la façon dont doit être
+   configurer les logs de débogage.
+  </para>
+  <para>
+   Exemple de configuration de cette directive pour activer les logs de débogage :
+   <programlisting>
+<![CDATA[
+mysqlnd.debug=d:t:x:O,/tmp/mysqlnd.trace
+]]>
+   </programlisting>
+   <note>
+    <para>
+     Cette fonctionnalité n'est disponible qu'avec une compilation de PHP en
+     mode débogage. Elle fonctionne sous Microsoft Windows si l'on utilise
+     PHP en mode débogage et que PHP a été compilé en utilisant
+     Microsoft Visual C version 9 et supérieure.
+    </para>
+   </note>
+  </para>
+  <para>
+   Les logs de débogage montrent les appels fonctions à la bibliothèque
+   mysqlnd et PECL/mysqlnd_ms. Les appels à mysqlnd sont habituellement préfixés
+   avec <literal>mysqlnd_</literal>. Les appels internes PECL/mysqlnd commencent avec
+   <literal>mysqlnd_ms</literal>.
+  </para>
+  <para>
+   Exemple attendu depuis les logs de débogage (connexion) :
+   <programlisting>
+<![CDATA[
+[...]
+>mysqlnd_connect
+| info : host=myapp user=root db=test port=3306 flags=131072
+| >mysqlnd_ms::connect
+| | >mysqlnd_ms_config_json_section_exists
+| | | info : section=[myapp] len=[5]
+| | | >mysqlnd_ms_config_json_sub_section_exists
+| | | | info : section=[myapp] len=[5]
+| | | | info : ret=1
+| | | <mysqlnd_ms_config_json_sub_section_exists
+| | | info : ret=1
+| | <mysqlnd_ms_config_json_section_exists
+[...]
+]]>
+   </programlisting>
+  </para>
+  <para>
+   Les logs de débogage ne sont pas uniquement utiles pour les développeurs
+   du plugin, mais aussi pour trouver la cause d'erreurs utilisateurs.
+   Par exemple, si votre application ne gère pas correctement les erreurs,
+   et échoue dans l'enregistrement des messages d'erreur, le fait de vérifier
+   les logs de débogage et de surveillance peut aider dans la recherche de la
+   cause. L'utilisation des logs de débogage pour déboguer l'application
+   ne doit être considérée que si aucune autre option n'est disponible.
+   Le fait d'écrire les logs de débogage sur le disque est une opération
+   lente et peut avoir des impacts négatifs dans les performances de l'application.
+  </para>
+  <para>
+   Exemple attendu depuis les logs de débogage (échec de connexion) :
+   <programlisting>
+<![CDATA[
+[...]
+| | | | | | | info : adding error [Access denied for user 'root'@'localhost' (using password: YES)] to the list
+| | | | | | | info : PACKET_FREE(0)
+| | | | | | | info : PACKET_FREE(0x7f3ef6323f50)
+| | | | | | | info : PACKET_FREE(0x7f3ef6324080)
+| | | | | | <mysqlnd_auth_handshake
+| | | | | | info : switch_to_auth_protocol=n/a
+| | | | | | info : conn->error_info.error_no = 1045
+| | | | | <mysqlnd_connect_run_authentication
+| | | | | info : PACKET_FREE(0x7f3ef63236d8)
+| | | | | >mysqlnd_conn::free_contents
+| | | | | | >mysqlnd_net::free_contents
+| | | | | | <mysqlnd_net::free_contents
+| | | | | | info : Freeing memory of members
+| | | | | | info : scheme=unix:///tmp/mysql.sock
+| | | | | | >mysqlnd_error_list_pdtor
+| | | | | | <mysqlnd_error_list_pdtor
+| | | | | <mysqlnd_conn::free_contents
+| | | | <mysqlnd_conn::connect
+[...]
+]]>
+   </programlisting>
+  </para>
+  <para>
+   Les logs de surveillance peuvent également être utilisés pour vérifier
+   le comportement correct de PECL/mysqlnd_ms, par exemple, pour vérifier
+   quel serveur a été sélectionné pour l'exécution de la requête et pourquoi
+   celui-là.
+  </para>
+  <para>
+   Exemple attendu depuis les logs de débogage (décision du plugin) :
+   <programlisting>
+<![CDATA[
+[...]
+>mysqlnd_ms::query
+| info : query=DROP TABLE IF EXISTS test
+| >_mysqlnd_plugin_get_plugin_connection_data
+| | info : plugin_id=5
+| <_mysqlnd_plugin_get_plugin_connection_data
+| >mysqlnd_ms_pick_server_ex
+| | info : conn_data=0x7fb6a7d3e5a0 *conn_data=0x7fb6a7d410d0
+| | >mysqlnd_ms_select_servers_all
+| | <mysqlnd_ms_select_servers_all
+| | >mysqlnd_ms_choose_connection_rr
+| | | >mysqlnd_ms_query_is_select
+[...]
+| | | <mysqlnd_ms_query_is_select
+[...]
+| | | info : Init the master context
+| | | info : list(0x7fb6a7d3f598) has 1
+| | | info : Using master connection
+| | | >mysqlnd_ms_advanced_connect
+| | | | >mysqlnd_conn::connect
+| | | | | info : host=localhost user=root db=test port=3306 flags=131072 persistent=0 state=0
+]]>
+   </programlisting>
+  </para>
+  <para>
+   Dans ce cas, la requête <literal>DROP TABLE IF EXISTS test</literal>
+   a été exécutée. Notez que la chaîne de requête est affichée directement
+   dans le fichier de logs. Aussi, vous devriez restreindre l'accès à ce fichier
+   suivant vos contraintes de sécurité.
+  </para>
+  <para>
+   La requête a été soumis à la balance de charge en utilisant la politique round robin,
+   comme vous pouvez facilement le deviner depuis le nom de la fonction
+   <literal>mysqlnd_ms_choose_connection_rr</literal>.
+   Elle a été envoyée au serveur maître s'exécutant sur
+   <literal>host=localhost user=root db=test port=3306 flags=131072 persistent=0 state=0</literal>.
+  </para>
+ </section>
+ 
 </chapter>
 
 <!-- Keep this comment at the end of the file
