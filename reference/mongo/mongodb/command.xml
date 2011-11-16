@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 53ed52ed2220d2881861bcf5693f47dde1f5746f Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: b290e3e418fb4c634b1f7ed862a6b8f8736e61d6 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongodb.command" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -13,6 +13,7 @@
   <methodsynopsis>
    <modifier>public</modifier> <type>array</type><methodname>MongoDB::command</methodname>
    <methodparam><type>array</type><parameter>command</parameter></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>options</parameter><initializer>array()</initializer></methodparam>
   </methodsynopsis>
   <para>
    Tout ce qui n'est pas une opération CRUD peut être effectué avec une commande
@@ -47,6 +48,33 @@ public function command($data) {
      <listitem>
       <para>
        La requête à envoyer.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term>
+      <parameter>options</parameter>
+     </term>
+     <listitem>
+      <para>
+       Ce paramètre est un tableau associatif sous la forme
+       <literal>array("optionname" => &lt;boolean&gt;, ...)</literal>.
+       Actuellement, les options supportées sont :
+       <itemizedlist>
+        <listitem>
+         <para>
+          <literal>"timeout"</literal>
+         </para>
+         <para>
+          Entier, par défaut, <literal>Mongo::$timeout</literal>.
+          Si "safe" est défini, ce sera le délai d'attente (en millisecondes)
+          du client d'une réponse de la base de données. Si la base
+          de données ne répond pas dans ce délai, une exception
+          de type <classname>MongoCursorTimeoutException</classname>
+          sera émise.
+         </para>
+        </listitem>
+       </itemizedlist>
       </para>
      </listitem>
     </varlistentry>
@@ -116,6 +144,44 @@ foreach ($ages['values'] as $age) {
    &example.outputs.similar;
    <screen>
 4
+22
+87
+   </screen>
+  </example>
+  <example>
+   <title>Exemple avec <function>MongoDB::command</function> et "distinct"</title>
+   <para>
+    Récupère toutes les valeurs distinctes pour une clé, pour laquelle
+    la valeur est supérieure ou égale à 18.
+   </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$people = $db->people;
+
+$people->insert(array("name" => "Joe", "age" => 4));
+$people->insert(array("name" => "Sally", "age" => 22));
+$people->insert(array("name" => "Dave", "age" => 22));
+$people->insert(array("name" => "Molly", "age" => 87));
+
+$ages = $db->command(
+    array(
+        "distinct" => "people",
+        "key" => "age",
+        "query" => array("age" => array('$gte' => 18))
+    )
+);  
+
+foreach ($ages['values'] as $age) {
+    echo "$age\n";
+}
+
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
 22
 87
    </screen>
