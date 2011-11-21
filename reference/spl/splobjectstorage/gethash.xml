@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8b6d169424ff189bb563ef4c3f35f8adff3f42c5 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: c5d8fbe414363c954e5113cf0b7d142753346d80 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="splobjectstorage.gethash" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>SplObjectStorage::getHash</refname>
-  <refpurpose>Retourne la valeur de hachage d'un objet</refpurpose>
+  <refpurpose>Calcule un identifiant unique pour les objets contenus</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -16,10 +16,20 @@
    <methodparam><type>string</type><parameter>object</parameter></methodparam>
   </methodsynopsis>
   <para>
-
+   Cette fonction calcule un identifiant pour les objets ajoutés
+   dans l'objet <classname>SplObjectStorage</classname>.
   </para>
-
-  &warn.undocumented.func;
+  <para>
+   L'implémentation dans <classname>SplObjectStorage</classname> retourne
+   la même valeur que <function>spl_object_hash</function>.
+  </para>
+  <para>
+   Cet identifiant doit être unique parmi les objets contenus. Cela signifie
+   que cet objet ne doit pas contenir plus d'un objet avec le même identifiant.
+   Aussi, il peut être utilisé pour implémenter un jeu (une collection de valeurs uniques)
+   où la qualité d'un objet unique est déterminé par la valeur retournée par
+   cette fonction.
+  </para>
 
  </refsect1>
 
@@ -30,7 +40,7 @@
     <term><parameter>object</parameter></term>
     <listitem>
      <para>
-      
+      L'objet dont nous devons calculer l'identifiant.
      </para>
     </listitem>
    </varlistentry>
@@ -40,10 +50,55 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-
+   Une &string; représentant l'identifiant calculé. Une exception sera lancée
+   si tout autre type est retourné.
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>SplObjectStorage::getHash</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class OneSpecimenPerClassStorage extends SplObjectStorage {
+    public function getHash($o) {
+        return get_class($o);
+    }
+}
+class A {}
+
+$s = new OneSpecimenPerClassStorage;
+$o1 = new stdClass;
+$o2 = new stdClass;
+$o3 = new A;
+
+$s[$o1] = 1;
+//$o2 est considéré comme égal à $o1, et donc, la valeur est remplacée
+$s[$o2] = 2;
+$s[$o3] = 3;
+
+//ceci est considéré comme égal aux objets précédents
+// aussi, ils peuvent être utilisés pour accéder aux valeurs y étant stockées
+$p1 = new stdClass;
+$p2 = new A;
+echo $s[$p1], "\n";
+echo $s[$p2], "\n";
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+2
+3
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
 
 </refentry>
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: bb07a3195b898ce2b47c2dfc072b5d92c7e499ee Maintainer: yannick Status: ready -->
+<!-- EN-Revision: b410ecb36793290f9ade670844381c3ff769e112 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="transliterator.transliterate" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -14,23 +14,23 @@
   &reftitle.description;
   <para>&style.oop;</para>
   <methodsynopsis>
-   <modifier>public</modifier> <type>void</type><methodname>Transliterator::transliterate</methodname>
+   <modifier>public</modifier> <type>string</type><methodname>Transliterator::transliterate</methodname>
    <methodparam><type>string</type><parameter>subject</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>start</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>end</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>start</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>end</parameter></methodparam>
   </methodsynopsis>
   <para>&style.procedural;</para>
   <methodsynopsis>
    <methodname>transliterator_transliterate</methodname>
+   <methodparam><type>mixed</type><parameter>transliterator</parameter></methodparam>
    <methodparam><type>string</type><parameter>subject</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>start</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>end</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>start</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>end</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Translittère une &string;.
+   Transforme une &string; ou seulement une partie en utilisant
+   un translittérateur ICU.
   </para>
-
-  &warn.undocumented.func;
 
  </refsect1>
 
@@ -38,10 +38,20 @@
   &reftitle.parameters;
   <variablelist>
    <varlistentry>
+    <term><parameter>transliterator</parameter></term>
+    <listitem>
+     <para>
+      Dans la version procédurale, soit un <classname>Transliterator</classname>
+      soit une &string; depuis laquelle un <classname>Transliterator</classname>
+      peut être construit.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
     <term><parameter>subject</parameter></term>
     <listitem>
      <para>
-      La &string; à translittérer.
+      La &string; à transformer.
      </para>
     </listitem>
    </varlistentry>
@@ -49,7 +59,9 @@
     <term><parameter>start</parameter></term>
     <listitem>
      <para>
-      
+      L'index de départ (en unité UTF-16) depuis lequel la chaîne
+      commencera à être transformée, inclusif. Les indexes commencent à 0.
+      Le texte avant cet index restera inchangé.
      </para>
     </listitem>
    </varlistentry>
@@ -57,7 +69,9 @@
     <term><parameter>end</parameter></term>
     <listitem>
      <para>
-      
+      L'index de fin (en unité UTF-16) indiquant la fin de la transformation,
+      exclusif. Les indexes commencent à 0. Le texte après cet index restera
+      inchangé.
      </para>
     </listitem>
    </varlistentry>
@@ -67,8 +81,43 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   La &string; translittérée en cas de succès,
+   La &string; transformée en cas de succès,
    &return.falseforfailure;.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Conversion des échappements en unité UTF-16</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$s = "\u304A\u65E9\u3046\u3054\u3056\u3044\u307E\u3059";
+echo transliterator_transliterate("Hex-Any/Java", $s), "\n";
+
+//maintenant, l'opération inverse avec un caractère supplémentaire
+$supplChar = html_entity_decode('&#x1D11E;');
+echo mb_strlen($supplChar, "UTF-8"), "\n";
+$encSupplChar = transliterator_transliterate("Any-Hex/Java", $supplChar);
+//affiche 2 unités UTF-16 encodés
+echo $encSupplChar, "\n";
+//et le retour...
+echo transliterator_transliterate("Hex-Any/Java", $encSupplChar), "\n";
+]]>
+     </programlisting>
+     &example.outputs.similar;
+     <screen>
+<![CDATA[
+お早うございます
+1
+\uD834\uDD1E
+𝄞
+
+]]>
+    </screen>
+   </example>
   </para>
  </refsect1>
 
