@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8b6d169424ff189bb563ef4c3f35f8adff3f42c5 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 6250dd610e0e4f4e797a1a206ce8fb7d27ef33c7 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-close-request" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -18,7 +18,7 @@
   <para>
    La fonction <function>cubrid_close_request</function> ferme le gestionnaire de requête
    fourni par l'argument <parameter>req_identifier</parameter> et libère
-   la mémoire associée.
+   la mémoire associée. C'est un alias de la fonction <function>cubrid_close_prepare</function>.
   </para>
  </refsect1>
  
@@ -57,36 +57,23 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-$conn = cubrid_connect("localhost", 33000, "demodb");
-$req = cubrid_prepare ($conn, "SELECT * FROM olympic WHERE host_year=?");
-
-$host_year = 2004;
-cubrid_bind($req, 1, $host_year, "number");
-cubrid_execute($req);
-
-printf("%-9s %-11s %-9s %-12s %-12s %-15s %-15s\n",
-    "host_year", "host_nation", "host_city", "opening_date",
-    "closing_date", "mascot", "slogan");
-
-while ($row = cubrid_fetch_assoc($req)) {
-    printf("%-9s %-11s %-9s %-12s %-12s %-15s %-15s\n",
-        $row["host_year"], $row["host_nation"], $row["host_city"],
-        $row["opening_date"], $row["closing_date"], $row["mascot"], $row["slogan"]);
+$con = cubrid_connect ("dbsvr.cubrid.com", 12345, "demodb");
+if ($con) {
+   echo "connected successfully";
+   $req = cubrid_execute ( $con, "select * from members", 
+                           CUBRID_INCLUDE_OID | CUBRID_ASYNC);
+   if ($req) {
+      while ( list ($id, $name) = cubrid_fetch ($req) ){
+         echo $id;
+         echo $name;
+      } 
+      cubrid_close_requst($req); // ou vous pouvez utiliser cubrid_close_prepare($req)
+   }
+   cubrid_disconnect($con);
 }
-
-cubrid_close_request($req);
-
-cubrid_disconnect($conn);
 ?>
 ]]>
    </programlisting>
-    &example.outputs;
-    <screen>
-<![CDATA[
-host_year host_nation host_city opening_date closing_date mascot          slogan         
-2004      Greece      Athens    2004-8-13    2004-8-29    Athena  Phevos  Welcome Home   
-]]>
-   </screen>
   </example>
  </refsect1>
  
@@ -94,7 +81,7 @@ host_year host_nation host_city opening_date closing_date mascot          slogan
   &reftitle.seealso;
   <para>
    <simplelist>
-    <member><function>cubrid_execute</function></member>
+    <member><function>cubrid_close_prepare</function></member>
    </simplelist>
   </para>
  </refsect1>
