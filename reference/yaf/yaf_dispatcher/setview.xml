@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8b6d169424ff189bb563ef4c3f35f8adff3f42c5 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: f30546412b9224fe4236c894caf90909d477701c Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="yaf-dispatcher.setview" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Yaf_Dispatcher::setView</refname>
-  <refpurpose>Le but de setView</refpurpose>
+  <refpurpose>Définit un moteur de visualisation personnalisé</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -16,7 +16,9 @@
    <methodparam><type>Yaf_View_Interface</type><parameter>view</parameter></methodparam>
   </methodsynopsis>
   <para>
-
+   Cette méthode fournit une solution si vous souhaitez utiliser
+   un moteur de visualisation personnalisé au lieu de celui proposé par
+   <classname>Yaf_View_Simple</classname>
   </para>
 
   &warn.undocumented.func;
@@ -30,7 +32,7 @@
     <term><parameter>view</parameter></term>
     <listitem>
      <para>
-      
+      Une instance de la classe Yaf_View_Interface.
      </para>
     </listitem>
    </varlistentry>
@@ -44,7 +46,193 @@
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <function>Yaf_Dispatcher::setView</function></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+require "/path/to/smarty/Smarty.class.php";
 
+class Smarty_Adapter implements Yaf_View_Interface
+{
+    /**
+     * Objet Smarty
+     * @var Smarty
+     */
+    public $_smarty;
+ 
+    /**
+     * Constructeur
+     *
+     * @param string $tmplPath
+     * @param array $extraParams
+     * @return void
+     */
+    public function __construct($tmplPath = null, $extraParams = array()) {
+        $this->_smarty = new Smarty;
+ 
+        if (null !== $tmplPath) {
+            $this->setScriptPath($tmplPath);
+        }
+ 
+        foreach ($extraParams as $key => $value) {
+            $this->_smarty->$key = $value;
+        }
+    }
+ 
+    /**
+     * Définit le chemin vers les templates
+     *
+     * @param string $path Le dossier à définir comme chemin.
+     * @return void
+     */
+    public function setScriptPath($path)
+    {
+        if (is_readable($path)) {
+            $this->_smarty->template_dir = $path;
+            return;
+        }
+ 
+        throw new Exception('Chemin invalide fourni');
+    }
+ 
+    /**
+     * Assigne une variable à une template
+     *
+     * @param string $key Le nom de la variable.
+     * @param mixed $val La valeur de la variable.
+     * @return void
+     */
+    public function __set($key, $val)
+    {
+        $this->_smarty->assign($key, $val);
+    }
+ 
+    /**
+     * Autorise l'utilisation de empty() et isset()
+     *
+     * @param string $key
+     * @return boolean
+     */
+    public function __isset($key)
+    {
+        return (null !== $this->_smarty->get_template_vars($key));
+    }
+ 
+    /**
+     * Autorise unset() sur des proporiétés d'objet
+     *
+     * @param string $key
+     * @return void
+     */
+    public function __unset($key)
+    {
+        $this->_smarty->clear_assign($key);
+    }
+ 
+    /**
+     * Assigne les variables au template
+     *
+     * Autorise la définition d'une clé spécifique à une valeur spécifique,
+     * OU le passage d'un tableau de clé=> valeur pour une définition en masse.
+     *
+     * @see __set()
+     * @param string|array $spec La stratégie d'assignement à utiliser (clé our
+     * tableau de clé=>valeur)
+     * @param mixed $value (Optionnel) Si on assigne une variable nommée, utilise ce paramètre comme valeur.
+     * @return void
+     */
+    public function assign($spec, $value = null) {
+        if (is_array($spec)) {
+            $this->_smarty->assign($spec);
+            return;
+        }
+ 
+        $this->_smarty->assign($spec, $value);
+    }
+ 
+    /**
+     * Efface toutes les variables assignées
+     *
+     * Efface toutes les variables assignées à Yaf_View via
+     * {@link assign()} ou en surchargeant la propriété
+     * ({@link __get()}/{@link __set()}).
+     *
+     * @return void
+     */
+    public function clearVars() {
+        $this->_smarty->clear_all_assign();
+    }
+ 
+    /**
+     * Exécute un template et retourne le résultat.
+     *
+     * @param string $name The template to process.
+     * @return string The output.
+     */
+    public function render($name, $value = NULL) {
+        return $this->_smarty->fetch($name);
+    }
+
+    public function display($name, $value = NULL) {
+        echo $this->_smarty->fetch($name);
+    }
+
+}
+?>
+]]>
+   </programlisting>
+  </example>
+  <example>
+   <title>Exemple avec <function>Yaf_Dispatcher::setView</function></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Bootstrap extends Yaf_Bootstrap_Abstract {
+
+    /**
+     * il y a quelques options de configuration pour smarty dans
+     * la configuration :
+     *
+     * smarty.left_delimiter   = "{{"
+     * smarty.right_delimiter  = "}}"
+     * smarty.template_dir     = APPLICATION_PATH "/views/scripts/"
+     * smarty.compile_dir      = APPLICATION_PATH "/views/templates_c/"
+     * smarty.cache_dir        = APPLICATION_PATH "/views/templates_d/"
+     *
+     */
+    public function _initConfig() {
+        $config = Yaf_Application::app()->getConfig();
+        Yaf_Registry::set("config", $config);
+    }
+
+    public function _initLocalName() {
+        /** nous plaçons la classe Smarty_Adapter dans le dossier local de bibliothèques */
+        Yaf_Loader::getInstance()->registerLocalNamespace('Smarty');
+    }
+
+    public function _initSmarty(Yaf_Dispatcher $dispatcher) {
+        $smarty = new Smarty_Adapter(null, Yaf_Registry::get("config")->get("smarty"));
+        $dispatcher->setView($smarty);
+        /* maintenant, le moteur de rendu Smarty devient le moteur de visualisation
+           par défaut de Yaf */
+    }
+}
+?>
+]]>
+   </programlisting>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><classname>Yaf_View_Interface</classname></member>
+   <member><classname>Yaf_View_Simple</classname></member>
+  </simplelist>
+ </refsect1>
 </refentry>
 
 <!-- Keep this comment at the end of the file
