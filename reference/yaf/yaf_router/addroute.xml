@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 0b917f688e2018f571a0d028cb5c7cd3d7bb68c2 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: a6eeefbc0a9fb7c0a1426e47f6e52bae5ed60ebc Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="yaf-router.addroute" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Yaf_Router::addRoute</refname>
-  <refpurpose>Le but de addRoute</refpurpose>
+  <refpurpose>Ajoute une nouvelle route dans un routeur</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -17,7 +17,14 @@
    <methodparam><type>Yaf_Route_Abstract</type><parameter>route</parameter></methodparam>
   </methodsynopsis>
   <para>
-
+   Par défaut, Yaf_Router utilise une instance de la classe <classname>Yaf_Route_Static</classname>
+   comme route par défaut. Vous pouvez ajouter de nouvelles routes dans la pile
+   des routes du routeur en appelant cette méthode.
+  </para>
+  <para>
+   La nouvelle route sera appelé avant l'ancien de la pile de routes, et si la nouvelle
+   route retourne &true;, le processus du routeur s'arrêtera. Sinon, la ou les anciennes
+   anciennes routes de la pile seront appelées.
   </para>
 
   &warn.undocumented.func;
@@ -36,6 +43,69 @@
   </para>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <function>Yaf_Dispatcher::autoRender</function></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Bootstrap extends Yaf_Bootstrap_Abstract{
+    public function _initConfig() {
+        $config = Yaf_Application::app()->getConfig();
+        Yaf_Registry::set("config", $config);
+    }
+
+    public function _initRoute(Yaf_Dispatcher $dispatcher) {
+        $router = $dispatcher->getRouter();
+        /**
+         * Nous pouvons ajouter des routes définies dans le fichier de
+         * configuration application.ini
+         */
+        $router->addConfig(Yaf_Registry::get("config")->routes);
+        /**
+         * ajoute une route de réécriture, matchant la requête
+         * http://***/product/list/22/foo et dont le résultat sera :
+         *
+         *  [module] => 
+         *  [controller] => product
+         *  [action] => info
+         *  [method] => GET
+         *  [params:protected] => Array
+         *      (
+         *          [id] => 22
+         *          [name] => foo
+         *      )
+         * 
+         */
+        $route  = new Yaf_Route_Rewrite(
+            "/product/list/:id/:name",
+            array(
+                "controller" => "product",
+                "action"     => "info",
+            )
+        ); 
+        
+        $router->addRoute('dummy', $route);
+    }
+?>
+]]>
+   </programlisting>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><methodname>Yaf_Router::addConfig</methodname></member>
+   <member><classname>Yaf_Route_Static</classname></member>
+   <member><classname>Yaf_Route_Supervar</classname></member>
+   <member><classname>Yaf_Route_Simple</classname></member>
+   <member><classname>Yaf_Route_Regex</classname></member>
+   <member><classname>Yaf_Route_Rewrite</classname></member>
+   <member><classname>Yaf_Route_Map</classname></member>
+  </simplelist>                       
+ </refsect1>  
 
 </refentry>
 
