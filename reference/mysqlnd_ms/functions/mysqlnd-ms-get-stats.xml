@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ --> 
-<!-- EN-Revision: 4728692c64602d2a2f4b40d28f02086b3ab37974 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 97bc4a37632ab603436068dcbed0d015663d21ca Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.mysqlnd-ms-get-stats" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -56,9 +56,9 @@
   </para>
   <informaltable>
    <tgroup cols="3">
-    <colspec colwidth="10%"/>
-    <colspec colwidth="70%"/>
-    <colspec colwidth="20%"/>
+    <colspec colwidth="1*"/>
+    <colspec colwidth="7*"/>
+    <colspec colwidth="2*"/>
     <thead>
      <row>
       <entry>Statistique</entry>
@@ -72,13 +72,39 @@
        <literal>use_slave</literal>
       </entry>
       <entry>
-       Nombre de requêtes considérées comme étant en lecture seule par l'analyseur
-       interne de requête. Ni les requêtes commençant par une astuce SQL pour forcer
-       l'utilisation d'un esclave, ni les requêtes dirigées vers un esclave via
-       une fonction de rappel définie par l'utilisateur ne sont inclues. Le nombre
-       total de requêtes envoyées aux esclaves correspond à
-       <literal>use_slave</literal> + <literal>use_slave_sql_hint</literal> +
-       <literal>use_slave_callback</literal>.
+       <para>
+        La sémantique de cette statistique a changé entre les versions
+        1.0.1 et 1.1.0.
+       </para>
+       <para>
+        La signification pour la version 1.0.1 est la suivante.
+        Nombre de requêtes considérées comme en lecture seule par 
+        l'analyseur de requête interne. Ni les requêtes commençant par une
+        astuce SQL pour forcer l'utilisation d'un esclave, ni les requêtes
+        dirigées vers un esclave par une fonction de rappel définie par les
+        utilisateurs ne sont inclus dans ce chiffre. Le nombre total de requêtes
+        envoyées aux esclaves correspond à
+         <literal>use_slave</literal> + <literal>use_slave_sql_hint</literal> +
+         <literal>use_slave_callback</literal>.
+        </para>
+        <para>
+         PECL/mysqlnd_ms 1.1.0 introduit un nouveau concept de filtres chaînés.
+         Le statistique est maintenant définie par le filtre interne de balance
+         de charge. Avec la version 1.1.0, le filtre de balance de charge est
+         toujours le dernier dans un filtre chaîné, si utilisé. Dans les versions
+         futures, un filtre de balance de charge pourra être suivi d'autres filtres,
+         faisant ainsi une nouvelle fois évoluée la signification de cette statistique.
+         Si, dans le futur, un filtre de balance de charge est suivi par un
+         autre filtre, il ne sera plus garanti que la requête, qui incrémente
+         <literal>use_slave</literal>, sera belle et bien exécutée sur un esclave.
+        </para>
+        <para>
+         La signification pour la version 1.1.0 est la suivante. Nombre de
+         requêtes envoyées aux esclabes. Les requêtes dirigées vers un esclave
+         par un filtre utilisateur (une fonction de rappel définie par l'utilisateur)
+         ne sont pas incluses. Elles le seront par la statistique
+         <literal>use_slave_callback</literal>.
+        </para>
       </entry>
       <entry>Depuis la version 1.0.0.</entry>
      </row>
@@ -87,15 +113,74 @@
        <literal>use_master</literal>
       </entry>
       <entry>
-       Nombre de requêtes qui ne sont pas considérées comme étant en lecture seule
-       par l'analyseur interne de requête. Ni les requêtes commençant par une astuce
-       SQL pour forcer l'utilisation du maître, ni les requêtes dirigées vers le maître
-       via une fonction de rappel définie par l'utilisateur ne sont inclues. Le nombre
-       total de requêtes envoyées au maître correspond à
-       <literal>use_master</literal> + <literal>use_master_sql_hint</literal> +
-       <literal>use_master_callback</literal>.
+       <para>
+        La sémantique de cette statistique a changée entre les versions
+        1.0.1 et 1.1.0.
+       </para>
+       <para>
+        La signification pour la version 1.0.1 est la suivante.
+        Nombre de requêtes considérées comme n'étant pas en lecture seule
+        par l'analyseur interne de requêtes. Ni les requêtes commençant par une
+        astuce SQL pour forcer l'utilisation d'un maître, ni les requêtes
+        redirigées vers un maître par une fonction de rappel définie par l'utilisateur
+        ne sont incluses dans cette statistique. Le nombre total de requêtes
+        envoyées vers le maître correspond à
+        <literal>use_master</literal> + <literal>use_master_sql_hint</literal> +
+        <literal>use_master_callback</literal>.
+       </para>
+       <para>
+        PECL/mysqlnd_ms 1.1.0 introduit un nouveau concept de filtres chaînés. La
+        statistique est maintenant défini par le filtre de balance de charge
+        interne. Avec la version 1.1.0, le filtre de balance de charge est toujours
+        le dernier filtre d'un filtre chaîné, si utilisé. Dans les versions
+        futures, un filtre de balance de charge pourra être suivi par d'autres
+        filtres, faisant ainsi une nouvelle modification dans la signification
+        de cette statistique. Si, dans le futur, un filtre de balance de charge
+        est suivi par un autre filtre, il ne sera plus garanti que la requête,
+        qui incrémente <literal>use_master</literal>, sera belle et bien exécutée
+        sur un esclave.
+        </para>
+        <para>
+         La signification pour la version 1.1.0 est la suivante. Nombre
+         de requêtes envoyées aux maîtres. Les requêtes dirigées vers un maître
+         par un filtre utilisateur (une fonction de rappel définie par l'utilisateur)
+         ne sont pas incluses. Mais elles le seront dans la statistique
+         <literal>use_master_callback</literal>.
+        </para>
       </entry>
       <entry>Depuis la version 1.0.0.</entry>
+     </row>
+     <row>
+      <entry>
+       <literal>use_slave_guess</literal>
+      </entry>
+      <entry>
+       Nombre de requêtes dont l'analyseur de requêtes recommande d'envoyer
+       vers un esclave car la requête ne contient aucune astuce SQL pour forcer
+       l'utilisation d'un serveur en particulier. Cette recommandation
+       peut être modifiée par la suite. Il n'est pas garanti que la requête
+       soit bien exécutée sur un esclave. Cela signifie juste
+       que la fonction <literal>is_select</literal> interne a indiqué qu'un
+       esclave devrait être utilisé. Rapportez-vous à la fonction
+       <function>mysqlnd_ms_query_is_select</function> de l'espace utilisateur.
+      </entry>
+      <entry>Depuis la version 1.1.0.</entry>
+     </row>
+     <row>
+      <entry>
+       <literal>use_master_guess</literal>
+      </entry>
+      <entry>
+       Nombre de requêtes dont l'analyseur interne recommande d'envoyer
+       vers un maître car la requête ne contient aucune astuce SQL pour
+       forcer l'utilisation d'un serveur en particulier. Cette recommandation
+       peut être modifiée par la suite. Il n'est pas garanti que la requête
+       soit bien exécutée sur un esclave. Cela signifie juste
+       que la fonction <literal>is_select</literal> interne a indiqué qu'un
+       maître devrait être utilisé. Rapportez-vous à la fonction
+       <function>mysqlnd_ms_query_is_select</function> de l'espace utilisateur.
+      </entry>
+      <entry>Depuis la version 1.1.0.</entry>
      </row>
      <row>
       <entry>
@@ -157,7 +242,7 @@
       <entry>
        Nombre de connexions ouvertes avec succès vers un esclave
        avec une configuration n'utilisant pas les
-       <literal><link linkend="ini.mysqlnd-ms-plugin-config.lazy_connections">lazy connections</link></literal>.
+       <literal><link linkend="ini.mysqlnd-ms-plugin-config-v2.lazy_connections">lazy connections</link></literal>.
        Le nombre total de connexions ouvertes avec succès vers un
        esclave correspond à
        <literal>non_lazy_connections_slave_success</literal> + 
@@ -172,7 +257,7 @@
       <entry>
        Nombre de connexions échouées vers un esclave avec une
        configuration n'utilisant pas les
-       <literal><link linkend="ini.mysqlnd-ms-plugin-config.lazy_connections">lazy connections</link></literal>.
+       <literal><link linkend="ini.mysqlnd-ms-plugin-config-v2.lazy_connections">lazy connections</link></literal>.
        Le nombre total de connexions échouées vers un
        esclave correspond à <literal>non_lazy_connections_slave_failure</literal> + 
        <literal>lazy_connections_slave_failure</literal>
@@ -186,7 +271,7 @@
       <entry>
        Nombre de connexions ouvertes avec succès vers un maître
        avec une configuration n'utilisant pas les
-       <literal><link linkend="ini.mysqlnd-ms-plugin-config.lazy_connections">lazy connections</link></literal>.
+       <literal><link linkend="ini.mysqlnd-ms-plugin-config-v2.lazy_connections">lazy connections</link></literal>.
        Le nombre total de connexions ouvertes avec succès vers un
        maître correspond à <literal>non_lazy_connections_master_success</literal> + 
        <literal>lazy_connections_master_success</literal>
@@ -200,7 +285,7 @@
       <entry>
        Nombre de connexions échouées vers un maître avec une
        configuration n'utilisant pas les
-       <literal><link linkend="ini.mysqlnd-ms-plugin-config.lazy_connections">lazy connections</link></literal>.
+       <literal><link linkend="ini.mysqlnd-ms-plugin-config-v2.lazy_connections">lazy connections</link></literal>.
        Le nombre total de connexions échouées vers un
        maître correspond à  <literal>non_lazy_connections_master_failure</literal> + 
        <literal>lazy_connections_master_failure</literal>
@@ -214,7 +299,7 @@
       <entry>
        Nombre de connexions ouvertes avec succès vers un esclave
        avec une configuration utilisant les
-       <literal><link linkend="ini.mysqlnd-ms-plugin-config.lazy_connections">lazy connections</link></literal>.
+       <literal><link linkend="ini.mysqlnd-ms-plugin-config-v2.lazy_connections">lazy connections</link></literal>.
       </entry>
       <entry>Depuis 1.0.0.</entry>
      </row>
@@ -225,7 +310,7 @@
       <entry>
        Nombre de connexions échouées vers un esclave
        avec une configuration utilisant les
-       <literal><link linkend="ini.mysqlnd-ms-plugin-config.lazy_connections">lazy connections</link></literal>.
+       <literal><link linkend="ini.mysqlnd-ms-plugin-config-v2.lazy_connections">lazy connections</link></literal>.
       </entry>
       <entry>Depuis 1.0.0.</entry>
      </row>
@@ -236,7 +321,7 @@
       <entry>
        Nombre de connexions ouvertes avec succès vers un maître
        avec une configuration utilisant les
-       <literal><link linkend="ini.mysqlnd-ms-plugin-config.lazy_connections">lazy connections</link></literal>.
+       <literal><link linkend="ini.mysqlnd-ms-plugin-config-v2.lazy_connections">lazy connections</link></literal>.
       </entry>
       <entry>Depuis 1.0.0.</entry>
      </row>
@@ -247,7 +332,7 @@
       <entry>
        Nombre de connexions échouées vers un maître
        avec une configuration utilisant les
-       <literal><link linkend="ini.mysqlnd-ms-plugin-config.lazy_connections">lazy connections</link></literal>.
+       <literal><link linkend="ini.mysqlnd-ms-plugin-config-v2.lazy_connections">lazy connections</link></literal>.
       </entry>
       <entry>Depuis 1.0.0.</entry>
      </row>
@@ -258,11 +343,11 @@
       <entry>
        Nombre d'activations du mode <literal>autocommit</literal> via des appels à
        l'API. Peut être utilisé pour surveiller l'activité relative à la configuration
-       <link linkend="ini.mysqlnd-ms-plugin-config.trx_stickiness"><literal>trx_stickiness</literal></link>
+       <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx_stickiness"><literal>trx_stickiness</literal></link>
        du plugin. Si, par exemple, vous souhaitez savoir si un appel particulier à l'API
        invoque la fonction <literal>trx_autocommit()</literal> de la bibliothèque
        <literal>mysqlnd</literal>, ce qui est une nécessité pour
-       <link linkend="ini.mysqlnd-ms-plugin-config.trx_stickiness"><literal>trx_stickiness</literal></link>,
+       <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx_stickiness"><literal>trx_stickiness</literal></link>,
        vous pouvez appeler la fonction utilisation de l'API en question, et
        vérifier si les statistiques ont été modifiées. Les statistiques
        sont modifiées uniquement par la méthode <literal>trx_autocommit()</literal>
@@ -286,7 +371,7 @@
       </entry>
       <entry>
        ombre de requêtes redirigées vers le maître alors que
-       <link linkend="ini.mysqlnd-ms-plugin-config.trx_stickiness"><literal>trx_stickiness=master</literal></link>
+       <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx_stickiness"><literal>trx_stickiness=master</literal></link>
        et le mode <literal>autocommit</literal> sont désactivés.
       </entry>
       <entry>Depuis 1.0.0.</entry>
@@ -304,6 +389,7 @@
     <programlisting role="php">
 <![CDATA[
 <?php
+printf("mysqlnd_ms.enable = %d\n", ini_get("mysqlnd_ms.enable"));
 printf("mysqlnd_ms.collect_statistics = %d\n", ini_get("mysqlnd_ms.collect_statistics"));
 var_dump(mysqlnd_ms_get_stats());
 ?>
@@ -312,17 +398,26 @@ var_dump(mysqlnd_ms_get_stats());
     &example.outputs;
     <screen>
 <![CDATA[
-mysqlnd_ms.collect_statistics = 0
+mysqlnd_ms.enable = 1
+mysqlnd_ms.collect_statistics = 1
 array(13) {
   ["use_slave"]=>
   string(1) "0"
   ["use_master"]=>
   string(1) "0"
-  ["use_slave_forced"]=>
+  ["use_slave_guess"]=>
   string(1) "0"
-  ["use_master_forced"]=>
+  ["use_master_guess"]=>
   string(1) "0"
-  ["use_last_used_forced"]=>
+  ["use_slave_sql_hint"]=>
+  string(1) "0"
+  ["use_master_sql_hint"]=>
+  string(1) "0"
+  ["use_last_used_sql_hint"]=>
+  string(1) "0"
+  ["use_slave_callback"]=>
+  string(1) "0"
+  ["use_master_callback"]=>
   string(1) "0"
   ["non_lazy_connections_slave_success"]=>
   string(1) "0"
