@@ -17,6 +17,8 @@
   &reftitle.required;
   <para>
    <literal>PHP 5.3.6</literal> ou plus récent.
+   Quelques fonctions avancées nécessitent <literal>PHP 5.4.0</literal>
+   ou supérieur.
   </para>
   <para>
    Le plugin de balance de charge et réplication <literal>mysqlnd_ms</literal>
@@ -48,9 +50,22 @@
    de failover et l'utilisation de connections paresseuses (lazy).
   </para>
   <para>
+   Le plugin charge son fichier de configuration au début de la requête web.
+   Il est ensuite mis en cache mémoire et utilisé pour toute la durée de la
+   requête web. De cette façon, il n'est pas nécessaire de redémarrer PHP
+   après avoir déployé le fichier de configuration. Les modifications du
+   fichier de configuration devient ainsi actives en seulement quelques
+   minutes.
+  </para>
+  <para>
    La directive de configuration PHP
    <link linkend="ini.mysqlnd-ms.ini-file"><literal>mysqlnd_ms.ini_file</literal></link> 
-   est utilisée pour indiquer le fichier de configuration des plugins.
+   est utilisée pour indiquer le fichier de configuration des plugins. Notez
+   que la directive de configuration PHP ne sera pas évaluée pour chaque requête
+   web. Toutefois, la modification du nom du fichier de configuration ou son
+   lieu de stockage nécessite un redémarrage de PHP. Cependant, aucun redémarrage
+   n'est nécessaire pour lire les modifications d'un fichier de configuration
+   déjà en place.
   </para>
   <para>
    L'utilisation et l'analyse <acronym>JSON</acronym> est rapide, et son utilisation
@@ -212,12 +227,11 @@ $mysqli = new mysqli("localhost", "username", "password", "database");
    avec le mot clé <literal>slave</literal>. Le fait de ne pas fournir de liste
    d'esclaves produit une erreur de type <literal>E_ERROR</literal> (erreur fatale).
    Malgré le fait que vous ne pouvez pas omettre de liste d'esclaves, elle peut être vide.
-   
-   It is possible to allow no slaves. However, this is only recommended
-   with synchronous clusters, please see also
-   <link linkend="mysqlnd-ms.supportedclusters">supported clusters</link>.
-   The main part of the documentation focusses on the use
-   of aynchronous MySQL replication clusters.
+   Il est possible de n'autoriser aucun esclave. Cependant, ce n'est recommandé
+   que pour les clusters synchrones (lire la documentation sur les
+   <link linkend="mysqlnd-ms.supportedclusters">clusters supportés</link>).
+   La majeure partie de la documentation parle que des clusters de réplication
+   MySQL asynchrones.
   </para>
   <para>
    Les listes de maîtres et d'esclaves peuvent être optionnellement indexées
@@ -1132,38 +1146,41 @@ L'utilisation s'est connecté sur 'myapp'...
     
     <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.filter-user-multi">
      <term>
-      Filter: <parameter>user_multi</parameter>
+      Filtre : <parameter>user_multi</parameter>
       <type>object</type>
      </term>
      <listitem>
       <para>
-       The <literal>user_multi</literal> differs from the <literal>user</literal>
-       only in one aspect. Otherwise, their syntax is identical.
-       The <literal>user</literal> filter must pick
-       and return exactly one node for statement execution. A filter chain
-       usually ends with a filter that emits only one node. The filter chain
-       shall reduce the list of candidates for statement execution down to
-       one. This, only one node left, is the case after the <literal>user</literal>
-       filter has been run.
+       Le filtre <literal>user_multi</literal> diffère du filtre
+       <literal>user</literal> sur un seul aspect. Sinon, leur syntaxe est
+       identique. Le filtre <literal>user</literal> doit prendre et retourner
+       exactement un noeud pour une exécution de requête. Un filtre
+       chaîné se termine habituellement avec un filtre qui émet seulement un
+       noeud. Le filtre chaîné doit réduire la liste des candidats pour exécution
+       de la requête à un seul résultat. Ainsi, un seul noeud reste après l'exécution
+       du filtre <literal>user</literal>.
       </para>
       <para>
-       The <literal>user_multi</literal> filter is a multi filter. It returns a
-       list of slave and a list of master servers. This list needs further filtering
-       to identify exactly one node for statement execution. A multi filter is typically
-       placed at the top of the filter chain. The <literal>quality_of_service</literal>
-       filter is another example of a multi filter.
+       Le filtre <literal>user_multi</literal> est un filtre multiple.
+       Il retourne une liste de serveurs esclaves et maîtres. Cette liste
+       doit ensuite être filtrée pour identifier exactement un noeud pour
+       l'exécution de la requête. Un filtre multiple est habituellement
+       placé au haut de la chaîne de filtrage. Le filtre <literal>quality_of_service</literal>
+       est un autre exemple d'un filtre multiple.
       </para>
       <para>
-       The return value of the callback set for <literal>user_multi</literal> must
-       be an an array with two elements. The first element holds a list of selected master
-       servers. The second element contains a list of selected slave servers. The
-       lists shall contain the keys of the slave and master servers as found in
-       the slave and master lists passed to the callback. The below example returns
-       random master and slave lists extracted from the functions input.
+       La valeur retournée par un fonction de rappel pour le filtre
+       <literal>user_multi</literal> doit être un tableau contenant 2 éléments. Le
+       premier élément contient une liste de serveurs maîtres sélectionnés.
+       Le second élément contient une liste de serveurs maîtres sélectionnés.
+       Ces listes doivent contenir les clés des serveurs esclaves et maîtres telles
+       que trouvées dans les listes d'esclave et de maître passées à la fonction
+       de rappel. L'exemple ci-dessous retourne des listes aléatoires de serveurs
+       maîtres et esclaves extraites depuis les fonctions d'entrée.
       </para>
       <para>
       <example>
-        <title>Returning random masters and slaves</title>
+        <title>Retourne des esclaves et des maîtres aléatoirement</title>
         <programlisting role="php">
 <![CDATA[
 <?php
@@ -1187,75 +1204,77 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
        </example>
       </para>
       <para>
-       The plugin will issue an
-       error of type <literal>E_RECOVERABLE</literal> if the callback fails to return
-       a server list. The error may read <literal>(mysqlnd_ms) User multi
+       Le plugin émettra une erreur de type <literal>E_RECOVERABLE</literal> si
+       la fonction de rappel échoue à retourner une liste de serveurs.
+       L'erreur contiendra ceci : <literal>(mysqlnd_ms) User multi
        filter callback has not returned a list of servers to use.
-       The callback must return an array in %s on line %d</literal>. In case the
-       server list is not empty but has invalid servers key/ids in it, an error
-       of type <literal>E_RECOVERABLE</literal> will the thrown with an
-       error message like <literal>(mysqlnd_ms) User multi filter callback
+       The callback must return an array in %s on line %d</literal>.
+       Dans le cas où la liste de serveurs n'est pas vide mais contient
+       des identifiants/clés de serveurs invalides, une erreur de type
+       <literal>E_RECOVERABLE</literal> sera émise avec un message d'erreur
+       du type : <literal>(mysqlnd_ms) User multi filter callback
        has returned an invalid list of servers to use.
-       Server id is negative in %s on line %d</literal>, or similar.
+       Server id is negative in %s on line %d</literal>, ou similaire.
       </para>
       <para>
-       Whether an error is emitted in case of an empty slave or master list
-       depends on the configuration. If an empty master list is returned
-       for a write operation, it is likely that the plugin will emit a
-       warning that may read <literal>(mysqlnd_ms) Couldn't find the appropriate
+       Une erreur est émise concernant une liste d'esclave ou de maître vide
+       suivant la configuration. Si une liste de maître vide est retournée
+       pour une opération en écriture, le plugin émettra une alerte dont le
+       message sera : <literal>(mysqlnd_ms) Couldn't find the appropriate
        master connection. 0 masters to choose from. Something is wrong in %s on line %d</literal>.
-       Typically a follow up error of type <literal>E_ERROR</literal> will happen.
-       In case of a read operation and an empty slave list the behviour depends
-       on the fail over configuration. If fail over to master is enabled, no
-       error should appear. If fail over to master is deactivated the plugin will
-       emit a warning that may read <literal>(mysqlnd_ms) Couldn't find the appropriate
-       slave connection. 0 slaves to choose from. Something is wrong in %s on line %d</literal>.
+       Typiquement, cette alerte sera suivit d'une erreur de type <literal>E_ERROR</literal>.
+       Dans le cas d'une opération en lecture et une liste d'esclave vide, le comportement
+       dépendra de la configuration du fail over. Si le fail over du maître
+       est désactivé, le plugin émettra une alerte dont le message sera
+       <literal>(mysqlnd_ms) Couldn't find the appropriate slave connection.
+        0 slaves to choose from. Something is wrong in %s on line %d</literal>.
       </para>
      </listitem>
     </varlistentry>
     
     <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.filter-qos">
      <term>
-      Filter: <parameter>quality_of_service</parameter>
+      Filtre : <parameter>quality_of_service</parameter>
       <type>object</type>
      </term>
      <listitem>
       <para>
-       The <literal>quality_of_service</literal> identifies cluster nodes
-       capable of delivering a certain quality of service. It is a multi filter
-       which returns zero, one or multiple of its input servers. Thus, it
-       must be followed by other filters to reduce the number of candidates
-       down to one for statement execution.
+       Le filtre <literal>quality_of_service</literal> identifie les noeuds du cluster
+       capable de délivrer une certaine qualité de service. C'est un filtre multiple
+       qui retourne zéro, un ou plusieurs serveurs d'entrées. Aussi,  Il doit être
+       suivi par d'autres filtres pour réduire le nombre de candidats à un seul pour
+       l'exécution de la requête.
       </para>
       <para>
-       The <literal>quality_of_service</literal> filter has been introduced in 1.2.0-alpha.
-       In the 1.2 series the filters focus is on the consistency aspect of
-       service quality. Different types of clusters offer different
-       default data consistencies. For example, an asynchronous MySQL
-       replication slave offers eventual consistency. The slave may not
-       be able to deliver requested data because it has not replicated the write,
-       it may serve stale database because its lagging behind or it may serve
-       current information. Often, this is acceptable. In some cases
-       higher consistency levels are needed for the application to work correct.
-       In those cases, the <literal>quality_of_service</literal> can filter out cluster nodes
-       which cannot deliver the necessary quality of service.
+       Le filtre <literal>quality_of_service</literal> a été introduit en version
+       1.2.0-alpha. Dans les séries 1.2, le but de ces filtres était sur l'aspect
+       de la qualité du service. Différents types de clusters offrent des
+       consistences de données par défaut différentes. Par exemple, un serveur esclave
+       de réplication MySQL asynchrones offre éventuellement une consistence.
+       L'esclave ne devrait pas être capable de délivrer les données demandées
+       car il n'a pas répliqué l'écriture, il peut délivrer une base de données non à jour
+       en raison des lags, ou bien des données à jour. Souvent, c'est acceptable.
+       Dans quelques cas, des niveaux de consistence élevés sont nécessaire pour
+       que l'application fonctionne correctement. Dans ces cas là, le filtre
+       <literal>quality_of_service</literal> peut filtrer les noeuds du cluster
+       ne pouvant pas délivrer la qualité de service nécessaire.
       </para>
       <para>
-       The <literal>quality_of_service</literal> filter can be replaced or created
-       at runtime. A successful call to
-       <function>mysqlnd_ms_set_qos</function>
-       removes all existing <literal>qos</literal> filter entries from the
-       filter list and installs a new one at the very beginning. All settings
-       that can be made through
-       <function>mysqlnd_ms_set_qos</function>
-       can also be in the plugins configuration file. However, use of the function
-       is by far the most common use case. Instead of setting session consistency and
-       strong consistency service levels in the plugins configuration file it is
-       recommended to define only masters and no slaves. Both service levels will
-       force the use of masters only. Using an empty slave list shortens the
-       configuration file, thus improving readability. The only service level for which
-       there is a case of defining in the plugins configuration file is the combination
-       of eventual consistency and maximum slave lag.
+       Le filtre <literal>quality_of_service</literal> peut être remplacé ou créé
+       au moment de l'exécution. Un appel réussi à la fonction
+       <function>mysqlnd_ms_set_qos</function> supprime toutes les entrées pour le filtre
+       <literal>qos</literal> depuis la liste des filtres, et en installe un nouveau
+       au tout début. Toutes les configurations peuvant être effectuées via la fonction
+       <function>mysqlnd_ms_set_qos</function> peuvent aussi être faîtes au
+       niveau du fichier de configuration. Cependant, l'utilisation de la fonction
+       est générallement privilégiée dans ce cas. Au lieu de configurer la consistence
+       de la session ainsi que les niveaux hauts de consistence du service dans le fichier
+       de configuration du plugin, il est recommandé de définir uniquement des maîtres,
+       et aucun esclave. Les niveaux du service forceront l'utilisation des maîtres uniquement.
+       L'utilisation d'une liste d'esclave vide allège le fichier de configuration et ainsi,
+       en améliore la lisibilité. Le seul niveau de service pour lequel il convient
+       d'utiliser le fichier de configuration est la combinaison d'une consistence éventuelle
+       et d'un maximum d'esclaves.
       </para>
       <informaltable>
        <tgroup cols="3">
@@ -1264,7 +1283,7 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
         <colspec colwidth="2*"/>
         <thead>
          <row>
-          <entry>Keyword</entry>
+          <entry>Mot clé</entry>
           <entry>Description</entry>
           <entry>Version</entry>
          </row>
@@ -1276,28 +1295,32 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
            </entry>
            <entry>
             <para>
-             Request eventual consistency. Allows the use of all
-             master and slave servers. Data returned may or may not be current.
+             Demande une consistence éventuelle. Autorise l'utilisation de tous
+             les serveurs maîtres et de tous les serveurs esclaves. Les données
+             retournées peuvent (ou pas) être des données à jour.
             </para>
             <para>
-             Eventual consistency accepts an optional <literal>age</literal>
-             parameter. If <literal>age</literal> is given the plugin considers
-             only slaves for reading for which MySQL replication reports
-             a slave lag less or equal to <literal>age</literal>.
-             The repliation lag is measure using <literal>SHOW SLAVE STATUS</literal>.
-             If the plugin fails to fetch the replication lag, the slave tested
-             is skipped. Implementation details and tipps are given in the
-             <link linkend="mysqlnd-ms.qos-consistency">quality of service concepts section</link>.
+             La consistence éventuelle accepte un paramètre optionnel
+             <literal>age</literal>. Si le paramètre <literal>age</literal>
+             est fourni, le plugin considère seulement les esclaves pour la lecture
+             pour lesquels la réplication MySQL rapporte d'un lag serveur inférieur
+             ou égal à la valeur du paramètre <literal>age</literal>.
+             Le lag de réplication est mesuré en utilisant
+             <literal>SHOW SLAVE STATUS</literal>.
+             Si le plugin échoue dans la récupération du lag de réplication, l'esclave
+             testé sera ignoré. Des détails ainsi que des astuces de l'implémentation
+             sont fournis dans la <link linkend="mysqlnd-ms.qos-consistency">section
+             sur la qualité de service</link>.
             </para>
             <para>
-              Please note, if a filter chain
-              generates an empty slave list and the PHP configuration directive
-              <literal>mysqlnd_ms.multi_master=0</literal> is used, the plugin may
-              emit a warning.
+             Veuillez noter que si une chaîne de filtres génère une liste vide
+             d'esclave, et que la directive de configuration PHP
+             <literal>mysqlnd_ms.multi_master=0</literal> est utilisée, le plugin
+             peut émettre une alerte.
             </para>
             <para>
              <example>
-               <title>Global limit on slave lag</title>
+               <title>Limitation globale du lag d'un esclave</title>
                 <programlisting role="ini">
 <![CDATA[
 {
@@ -1331,7 +1354,7 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
              </example>
             </para>
           </entry>
-          <entry>Since 1.2.0.</entry>
+          <entry>Depuis 1.2.0.</entry>
          </row>
          <row>
            <entry>
@@ -1339,26 +1362,27 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
            </entry>
            <entry>
             <para>
-              Request session consistency (read your writes). Allows use of all masters
-              and all slaves which are in sync with the master.
-              If no further parameters are given slaves are filtered out
-              as there is no reliable way to test if a slave has caugth up
-              to the master or is lagging behind. Please note, if a filter chain
-              generates an empty slave list and the PHP configuration directive
-              <literal>mysqlnd_ms.multi_master=0</literal> is used, the plugin may
-              emit a warning.
+             Demande une consistence de session (lecture de vos écritures).
+             Autorise l'utilisation de tous les maîtres
+             et de tous les esclaves qui sont synchronisés avec le maître.
+             Si aucun paramètre supplémentaire n'est fourni, les esclaves
+             filtrés seront ceux pour lesquels il n'a pas été possible
+             de tester leur consistence ou bien parce qu'ils lagguent.
+             Notez que si un chaîne de filtres génère une liste d'esclave
+             vide, et que la directive de configuration PHP
+             <literal>mysqlnd_ms.multi_master=0</literal> est utilisé,
+             le plugin peut émettre une alerte.
             </para>
             <para>
-             Session consistency temporarily requested using
-             <function>mysqlnd_ms_set_qos</function> is a valuable alternative
-             to using <literal>master_on_write</literal>.
-             <literal>master_on_write</literal> is likely to send more statements
-             to the master than needed. The application may be able to contiue
-             operation at a lower consistency level after it has done
-             some critial reads.
+             Les demandes temporaires de consistence de session utilisant la fonction
+             <function>mysqlnd_ms_set_qos</function> est une alternative à l'utilisation
+             de <literal>master_on_write</literal>. <literal>master_on_write</literal>
+             est plutôt utilisé pour envoyer plus de requêtes au maître que nécessaires.
+             L'application devrait être capable de continuer l'opération à un niveau
+             de consistence moindre après avoir subit des lectures critiques.
             </para>
           </entry>
-          <entry>Since 1.1.0.</entry>
+          <entry>Depuis 1.1.0.</entry>
          </row>
          <row>
            <entry>
@@ -1366,10 +1390,10 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
            </entry>
            <entry>
             <para>
-              Request strong consistency. Only masters will be used.
+             Demande une consistence forte. Seuls les maîtres seront utilisés.
             </para>
           </entry>
-          <entry>Since 1.2.0.</entry>
+          <entry>Depuis 1.2.0.</entry>
          </row>
         </tbody>
        </tgroup>
@@ -1540,10 +1564,11 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
        </example>
       </para>
       <para>
-       Please, note the <literal>quality_of_service</literal> filter introduced
-       in version 1.2.0-alpha. It gives finer control, for example, for achieving read-your-writes
-       and, it offers additional functionality introducing
-       <link linkend="mysqlnd-ms.qos-consistency">service levels</link>.
+       Veuillez noter que le filtre <literal>quality_of_service</literal>
+       a été introduit en version 1.2.0-alpha. Il fournit un contrôle plus
+       fin, par exemple, pour effectuer une lecture de vos écritures, et,
+       il offre des fonctionnalités supplémentaires en introduisant les
+       <link linkend="mysqlnd-ms.qos-consistency">niveaux de service</link>.
       </para>
      </listitem>
     </varlistentry>
@@ -1993,8 +2018,13 @@ slave[] = mysql_slave_2
  putenv("MYSQL_TEST_CONNECT_FLAGS=0");
  putenv("MYSQL_TEST_EXPERIMENTAL=0");
 
- putenv("MYSQL_TEST_MASTER_HOST=". getenv("MYSQL_TEST_HOST"));
- putenv("MYSQL_TEST_SLAVE_HOST=". getenv("MYSQL_TEST_HOST"));
+ /* émulation d'un cluster de réplication */
+ putenv("MYSQL_TEST_EMULATED_MASTER_HOST=". getenv("MYSQL_TEST_HOST"));
+ putenv("MYSQL_TEST_EMULATED_SLAVE_HOST=". getenv("MYSQL_TEST_HOST"));
+
+ /* cluster de réplication réel */
+ putenv("MYSQL_TEST_MASTER_HOST=". getenv("MYSQL_TEST_EMULATED_MASTER_HOST"));
+ putenv("MYSQL_TEST_SLAVE_HOST=". getenv("MYSQL_TEST_EMULATED_SLAVE_HOST"));
 ]]>
    </programlisting>
   </para>
@@ -2023,7 +2053,7 @@ slave[] = mysql_slave_2
    <programlisting>
 <![CDATA[
 putenv("MYSQL_TEST_SLAVE_HOST=192.168.78.136:3307"));
-putenv("MYSQL_TEST_SLAVE_HOST=myserver_hostname:/path/to/socket"));
+putenv("MYSQL_TEST_MASTER_HOST=myserver_hostname:/path/to/socket"));
 ]]>
    </programlisting>
   </para>
@@ -2172,40 +2202,46 @@ mysqlnd.debug=d:t:x:O,/tmp/mysqlnd.trace
  <section xml:id="mysqlnd-ms.monitoring">
   <title xmlns="http://docbook.org/ns/docbook">Monitoring</title>
   <para>
-   Plugin activity can be monitored using the mysqlnd trace log,
-   mysqlnd statistics, mysqlnd_ms plugin statistics and external PHP debugging tools.
-   Use of the trace log should be limited to debugging. It is recommended
-   to use the plugins statistics for monitoring.
+   L'activité du plugin peut être surveillée en utilisant les logs de trace
+   mysqlnd, les statistiques mysqlnd, les statistiques du plugin mysqlnd_ms,
+   ainsi que des outils de déboggage PHP externes. L'utilisation des logs
+   de trace devrait être limitée au débogage. Il est recommandé d'utiliser
+   les statistiques du plugin pour la surveillance.
   </para>
   <para>
-   Writing a trace log is a slow operation. If using an external PHP debugging tool,
-   please refer to the vendors manual about its perfomance impact and the
-   type of information collected. In many cases, external debugging tools will
-   provide call stacks. Often, a call stack or a trace log is more difficult to interpret
-   than the statistics provided by the plugin.
+   L'écriture d'une trace dans un log est une opération lente. Si vous utilisez
+   un outil de débogage externe PHP, référez-vous au manuel utilisateur de ce dernier
+   concernant les impacts sur les performances ainsi que le type d'informations
+   collectées. Dans la plupart des cas, les outils de débogage externe PHP
+   font des appels à la pile. Un appel à la pile, ou une trace dans les logs
+   sont souvent plus difficiles à interpréter que les statistiques fournies par le
+   plugin.
   </para>
   <para>
-   Plugin statistics tell how often which kind of cluster node has been used (slave or master),
-   why the node was used, if lazy connections have been used and if global transaction
-   ID injection has been performed. The monitoring information provided enables
-   user to verify plugin decisions and to plan their cluster resources based on usage pattern.
-   The function <function>mysqlnd_ms_get_stats</function>
-   is used to access the statistics. Please, see the functions description for a list
-   of available statistics.
+   Les statistiques du plugin indiquent la fréquence d'utilisation d'un noeud du cluster
+   (esclave ou maître), pourquoi le noeud a été utilisé, si les connexions paraisseuses
+   ont été utilisées et si l'injection d'un identifiant global de transaction a
+   été effectuée. Les informations de surveillance fournies permettent à l'utilisateur
+   de vérifier les décisions du plugin et de prévoir les ressources de son cluster
+   suivant leur utilisation. La fonction <function>mysqlnd_ms_get_stats</function>
+   est utilisée pour accéder aux statistiques. Reportez-vous aux descriptions
+   des fonctions pour une liste des statistiques disponibles.
   </para>
   <para>
-   Statistics are collected on a per PHP process basis. Their scope is a PHP process.
-   Depending on the PHP deployment model a process may serve one or multiple web requests.
-   If using CGI model, a PHP process serves one web request. If using FastCGI or
-   pre-fork web server models, a PHP process usually serves multiple web requests.
-   The same is the case with a threaded web server. Please, note that threads running
-   in parallel can update the statistics in parallel. Thus, if using a threaded PHP
-   deployment model, statistics can be changed by more than one script at a time. A
-   script cannot rely on the fact that it sees only its own changes to statistics.
+   Les statistiques sont collectées pour chaque processus PHP. Leur scope se limite à
+   un processus PHP. Suivant le modèle de déploiement PHP, un processus peut
+   servir une ou plusieurs requêtes web. Si le modèle CGI est utilisé, un processus
+   PHP ne sert qu'une requête web. Si le modèle FastCGI ou pre-fork serveur web
+   est utilisé, un processus PHP sert habituellement plusieurs requêtes web ;
+   idem dans le cas d'un serveur web threadé. Notez que les threads fonctionnant
+   en parallèle peuvent mettre à jour les statistiques en parallèle.
+   Aussi, si un modèle de déploiement PHP threadé est utilisé, les statistiques
+   peuvent être modifiées par plus d'un script à la fois. Un script ne peut pas être
+   sûr de ne voir que ces propres modifications sur les statistiques.
   </para>
   <para>
    <example>
-    <title>Verify plugin activity in a non-threaded deployment model</title>
+    <title>Vérification de l'activité du plugin sur un modèle de déploiement non-threadé</title>
     <programlisting role="ini">
 <![CDATA[
 mysqlnd_ms.enable=1
@@ -2215,10 +2251,10 @@ mysqlnd_ms.collect_statistics=1
     <programlisting role="php">
 <![CDATA[
 <?php
-/* Load balanced following "myapp" section rules from the plugins config file (not shown) */
+/* La balance de charge suit les règles de la section "myapp" du fichier de configuration du plugin */
 $mysqli = new mysqli("myapp", "username", "password", "database");
 if (mysqli_connect_errno())
-  /* Of course, your error handling is nicer... */
+  /* Bien évidemment, votre gestionnaire d'erreur est meilleur... */
   die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
 
 $stats_before = mysqlnd_ms_get_stats();
@@ -2227,7 +2263,7 @@ if ($res = $mysqli->query("SELECT 'Read request' FROM DUAL")) {
 }
 $stats_after = mysqlnd_ms_get_stats();
 if ($stats_after['use_slave'] <= $stats_before['use_slave']) {
-  echo "According to the statistics the read request has not been run on a slave!";
+  echo "Suivant les statistiques, la requête en lecture n'a pas été exécutée sur un esclave !";
 }
 ?>
 ]]>
@@ -2235,20 +2271,21 @@ if ($stats_after['use_slave'] <= $stats_before['use_slave']) {
    </example>
   </para>
   <para>
-   Statistics are aggregated for all plugin activities and all connections handled by
-   the plugin. It is not possible to tell how much a certain connection handle has
-   contributed to the overall statistics.
+   Les statistiques sont aggrégées pour les activités de tous les plugins, et toutes
+   les connexions gérées par le plugin. Il n'est pas possible de savoir le nombre
+   de contribution aux statistiques d'un gestionnaire de connexion en particulier.
   </para>
   <para>
-   Utilizing PHPs <function>register_shutdown_function</function> function or the
-   <literal>auto_append_file</literal> PHP configuration directive it is
-   easily possible to dump statistics into, for example, a log file when a script
-   finishes. Instead of using a log file it is also possible to send the statistics
-   to an external monitoring tool for recording and display.
+   L'utilisation de la fonction <function>register_shutdown_function</function>
+   ou de la directive de configuration <literal>auto_append_file</literal> de PHP
+   est une façon simple de copier les statistiques dans, par exemple, un fichier
+   de logs, lorsque le script se termine. Au lieu d'utiliser un fichier de logs,
+   il est également possible d'envoyer les statistiques vers un outil de surveillance
+   externe pour l'enregistrement et le rendu.
   </para>
   <para>
    <example>
-    <title>Recording statistics during shutdown</title>
+    <title>Enregistrement des statistiques lorsque le script se termine</title>
     <programlisting role="ini">
 <![CDATA[
 mysqlnd_ms.enable=1
