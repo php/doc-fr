@@ -1,26 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: e90268fb155ae35c1b1f2439a631b4b22d141fb9 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: dc1dcfb27b0a3dcbaa771035ce891c3ce31a03c7 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="amqpqueue.consume" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>AMQPQueue::consume</refname>
-  <refpurpose>Le but de consume</refpurpose>
+  <refpurpose>Consomme les messages depuis la file d'attente</refpurpose>
  </refnamediv>
  
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <modifier>public</modifier> <type>array</type><methodname>AMQPQueue::consume</methodname>
-   <methodparam choice="opt"><type>array</type><parameter>options</parameter><initializer>array()</initializer></methodparam>
+   <modifier>public</modifier> <type>void</type><methodname>AMQPQueue::consume</methodname>
+   <methodparam><type>callback</type><parameter>callback</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>flags</parameter><initializer><constant>AMQP_NOPARAM</constant></initializer></methodparam>
   </methodsynopsis>
   <para>
-   C'est une fonction non bloquante ; aussi, la fonction ne retournera
-   rien tant que le nombre minimum de messages spécifiés par le
-   paramètre <parameter>min</parameter> n'a pas été lus depuis la file
-   d'attente. Pour utiliser une fonction non bloquante, reportez-vous
-   à la méthode <methodname>AMQPQueue::get</methodname>.
+   Fonction bloquante qui récupère le prochain message depuis
+   la file d'attente, le rendant ainsi disponible et le passe
+   à la fonction de rappel.
   </para>
  </refsect1>
  
@@ -29,34 +28,50 @@
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>options</parameter></term>
+     <term><parameter>callback</parameter></term>
      <listitem>
       <para>
-       Le paramètre <parameter>options</parameter> est un
-       tableau d'options d'analyse. Les clés utilisées dans
-       le tableau <parameter>options</parameter> sont :
-       min, max, et ack. Toute autre clé sera ignoée.
+       Une fonction de rappel qui recevra le message récupéré.
+       La fonction doit accepter au minimum un paramètre, un
+       objet <classname>AMQPEnvelope</classname>, et un
+       second paramètre optionnel <classname>AMQPQueue</classname>
+       représentant la file d'attente depuis laquelle le message
+       est récupéré.
       </para>
       <para>
-       Pour chaque option manquante, l'extension vérifiera la configuration
-       équivalente dans le fichier &php.ini; ou bien utilisera
-       la valeur par défaut.
+       La méthode <methodname>AMQPQueue::consume</methodname>
+       ne retournera pas le thread exécutant la demande au script PHP
+       tant que la fonction de rappel ne retournera pas &false;.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>flags</parameter></term>
+     <listitem>
+      <para>
+       Un masque contenant n'importe quel drapeau
+       <constant>AMQP_NOACK</constant>.
       </para>
      </listitem>
     </varlistentry>
    </variablelist>
   </para>
  </refsect1>
- 
+
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <para>
+   Emets une exception <classname>AMQPChannelException</classname>
+   si le canal n'est pas ouvert.
+  </para>
+  <para>
+   Emets une exception <classname>AMQPConnectionException</classname>
+   si la connexion au broker a été perdue.
+  </para>
+ </refsect1>
+
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>
-   Un tableau contenant le message à analyser. Le nombre de messages
-   retourné sera d'au moins le nombre fourni par le paramètre
-   <parameter>min</parameter> du tableau <parameter>options</parameter>,
-   mais pas plus que le nombre fourni par le paramètre
-   <parameter>max</parameter>.
-  </para>
  </refsect1>
  
  <refsect1 role="examples">
@@ -68,28 +83,31 @@
 <![CDATA[
 <?php
 
-/* Création d'une connexion utilisant toutes les informations d'authentification par défaut : */
-$connection = new AMQPConnection();
-$connection->connect();
+     /* Création d'une connexion utilisant toutes les informations d'authentification par défaut : */
+     $connection = new AMQPConnection();
+     $connection->connect();
 
-/* création d'un objet de file d'attente */
-$queue = new AMQPQueue($connection);
+     $channel = new AMQPChannel($connection);
 
-// Déclaration de la file d'attente
-$queue->declare('myqueue');
+     /* création d'un objet de file d'attente */
+     $queue = new AMQPQueue($channel);
 
-$options = array(
-    'min' => 1,
-    'max' => 10,
-    'ack' => true
-);
+     // Déclaration de la file d'attente
+     $queue->declare('myqueue');
 
-// Récupère les messages
-$messages = $queue->consume($options);
+     $i = 0;
+     function processMessage($envelope, $queue) {
+        global $i;
+        echo "Message $i: " . $envelope->getBody() . "\n";
+        $i++;
+        if ($i > 10) {
+            // Bail after 10 messages
+            return false;
+        }
+     }
 
-foreach ($messages as $message) {
-    echo $message['message_body'];
-}
+     // Récupère les messages
+     $queue->consume("processMessage");
 
 ?>
 ]]>
