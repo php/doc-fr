@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 88723b48e9d5f812144a12d490f3dd3461a024b4 Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 63f0c045f92e4199499013621745b4ebcbe8e83e Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
 
 <sect1 xml:id="language.types.array">
@@ -29,112 +29,321 @@
    <title>Syntaxe d'un tableau</title>
 
    <para>
-    Un tableau peut être créé avec la structure de langage
+    Un tableau peut être créé en utilisant la structure de langage
     <function>array</function>. Il prend un nombre illimité de paramètres,
     chacun séparé par une virgule, sous la forme d'une paire
-    <literal><replaceable>clé</replaceable> =&gt;
-    <replaceable>valeur</replaceable></literal>.
+    <literal><replaceable>key</replaceable> =&gt;
+    <replaceable>value</replaceable></literal>.
    </para>
 
    <synopsis>
-array( <optional> <replaceable>clé</replaceable> =&gt; </optional> <replaceable>valeur</replaceable>
-     , ...
-     )
-// <replaceable>clé</replaceable> ne peut être qu'un &integer; ou une &string;
-// <replaceable>valeur</replaceable> peut être de n'importe quel type</synopsis>
+array(
+    <optional><replaceable>key</replaceable>  =&gt; </optional><replaceable>value</replaceable>,
+    <optional><replaceable>key2</replaceable> =&gt; </optional><replaceable>value2</replaceable>,
+    <optional><replaceable>key3</replaceable> =&gt; </optional><replaceable>value3</replaceable>,
+    ...
+)</synopsis>
    <!-- Do not fix the whitespace for the synopsis end element. A limitation of PhD prevents proper trimming -->
 
-   <informalexample>
+   <para>
+    Depuis PHP 5.4, vous pouvez également utiliser la syntaxe courte,
+    qui remplace <literal>array()</literal> par <literal>[]</literal>.
+   </para>
+   
+   <example>
+    <title>Un tableau simple</title>
     <programlisting role="php">
 <![CDATA[
 <?php
-$arr = array("foo" => "bar", 12 => true);
+$array = array(
+    "foo" => "bar",
+    "bar" => "foo"
+);
 
-echo $arr["foo"]; // bar
-echo $arr[12];    // 1
+// depuis PHP 5.4
+$array = [
+    "foo" => "bar",
+    "bar" => "foo"
+];
 ?>
 ]]>
     </programlisting>
-   </informalexample>
-
+   </example>
+   
    <para>
-    Une <varname>clé</varname> peut être soit un &integer;, soit une &string;.
-    Si une clé est une représentation standard d'un &integer;, elle sera interprétée
-    comme telle (i.e. <literal>"8"</literal> sera interprété comme <literal>8</literal>,
-    alors que <literal>"08"</literal> sera interprétée comme <literal>"08"</literal>).
-    Les nombres à virgule flottante, en tant que <varname>clé</varname>, seront tronqués en &integer;.
-    Les tableaux indexés ou associatifs, en PHP, sont du même type ; ils peuvent
-    ainsi contenir des indices sous la forme d'&integer; et de &string;.
+    La clé <replaceable>key</replaceable> peut être soit un <type>integer</type>,
+    soit une &string;. La valeur <replaceable>value</replaceable> peut être
+    de n'improte quel type.
+   </para>
+   
+   <para>
+    De plus, les modifications de type pour la clé <replaceable>key</replaceable>
+    peuvent survenir :
+    <itemizedlist>
+     <listitem>
+      <simpara>
+       Les chaînes de caractères contenant un entier valide seront modifiées en un type
+       entier. I.e. la clé <literal>"8"</literal> sera actuellement stockée comme
+       l'entier <literal>8</literal>. D'un autre côté, <literal>"08"</literal> se sera
+       pas modifié, sachant que ce n'est pas un entier décimal valide.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       Les nombres à virgule flottante seront aussi modifiés en entier, ce qui signifie
+       que la partie après la virgule sera tronquée. I.e. la clé <literal>8.7</literal>
+       sera stoquée sous l'entier <literal>8</literal>.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       Les booléens seront modifiés en entier également, i.e. la clé
+       <literal>true</literal> sera stoquée sous l'entier <literal>1</literal>
+       et la clé <literal>false</literal> sous l'entier <literal>0</literal>.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       La valeur <type>Null</type> sera modifiée en une chaîne vide, i.e. la clé
+       <literal>null</literal> sera stoquée sous la chaîne de caractère <literal>""</literal>.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       Les tableaux et les objets <emphasis>ne peuvent pas</emphasis> être utilisés comme clé.
+       Si vous le tentez, l'alerte suivante sera émise : <literal>Illegal offset type</literal>.
+      </simpara>
+     </listitem>
+    </itemizedlist>
+   </para>
+   
+   <para>
+    Si plusieurs éléments dans la déclaration d'un tableau utilise la même clé,
+    seule la dernière sera utilisée, écrasant ainsi toutes les précédentes.
+   </para>
+   
+   <example>
+    <title>Exemple sur la modification de type et l'écrasement</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$array = array(
+    1    => "a",
+    "1"  => "b",
+    1.5  => "c",
+    true => "d",
+);
+var_dump($array);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(1) {
+  [1]=>
+  string(1) "d"
+}
+]]>
+    </screen>
+    <para>
+     Vu que toutes les clés de l'exemple ci-dessus sont modifiées en l'entier
+     <literal>1</literal>, la valeur sera écrasée sur chaque nouvel élément,
+     et seul le dernier dont la valeur assignée est <literal>"d"</literal> sera
+     conservé.
+    </para>
+   </example>
+   
+   <para>
+    Les tableaux PHP peuvent contenir des clés de type 
+    <type>integer</type> et <type>string</type> en même temps,
+    vu que PHP ne distingue pas les tableaux indexés et les tableaux associatifs.
    </para>
 
+   <example>
+    <title>Exemple avec des clés de type <type>integer</type> et <type>string</type></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$array = array(
+    "foo" => "bar",
+    "bar" => "foo",
+    100   => -100,
+    -100  => 100,
+);
+var_dump($array);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(4) {
+  ["foo"]=>
+  string(3) "bar"
+  ["bar"]=>
+  string(3) "foo"
+  [100]=>
+  int(-100)
+  [-100]=>
+  int(100)
+}
+]]>
+    </screen>
+   </example>
+   
    <para>
-    Une valeur peut être de n'importe quel type PHP.
+    La clé <replaceable>key</replaceable> est optionnelle. Si elle n'est
+    pas spécifiée, PHP utilisera un incrément de la dernière clé entière utilisée.
    </para>
+   
+   <example>
+    <title>Tableaux indexés sans clé</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$array = array("foo", "bar", "hallo", "world");
+var_dump($array);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(4) {
+  [0]=>
+  string(3) "foo"
+  [1]=>
+  string(3) "bar"
+  [2]=>
+  string(5) "hallo"
+  [3]=>
+  string(5) "world"
+}
+]]>
+    </screen>
+   </example>
+   
+   <para>
+    Il est possible de spécifier la clé seulement pour quelques éléments
+    et ne pas la fournir pour d'autres :
+   </para>
+   
+   <example>
+    <title>Exemple avec des clés seulement pour quelques éléments</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$array = array(
+         "a",
+         "b",
+    6 => "c",
+         "d",
+);
+var_dump($array);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(4) {
+  [0]=>
+  string(1) "a"
+  [1]=>
+  string(1) "b"
+  [6]=>
+  string(1) "c"
+  [7]=>
+  string(1) "d"
+}
+]]>
+    </screen>
+    <para>
+     Comme vous pouvez le voir, la dernière valeur <literal>"d"</literal>
+     a été assignée à la clé <literal>7</literal>. Ceci est du au fait que
+     le dernier entier le plus grand utilisé auparavant était <literal>6</literal>.
+    </para>
+   </example>
+  </sect3>
+  
+  <sect3 xml:id="language.types.array.syntax.accessing">
+   <title>Accès aux éléments d'un tableau en utilisant la syntaxe à base
+    de crochets</title>
+   
+   <para>
+    Les éléments d'un tableau peuvent être accédés en utilisant
+    la syntaxe <literal>array[key]</literal>.
+   </para>
+   
+   <example>
+    <title>Accès aux éléments d'un tableau</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$array = array(
+    "foo" => "bar",
+    42    => 24,
+    "multi" => array(
+         "dimensional" => array(
+             "array" => "foo"
+         )
+    )
+);
 
+var_dump($array["foo"]);
+var_dump($array[42]);
+var_dump($array["multi"]["dimensional"]["array"]);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+string(3) "bar"
+int(24)
+string(3) "foo"
+]]>
+    </screen>
+   </example>
+   
+   <para>
+    Depuis PHP 5.4, il est possible de faire référence à un tableau résultant
+    d'une fonction ou d'une méthode directement. Avant, cela n'était possible
+    qu'en utilisant une variable temporaire.
+   </para>
+   
+   <example>
+    <title>Faire référence à un tableau à la sortie d'une fonction ou d'une méthode</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+function getArray() {
+    return array(1, 2, 3);
+}
+
+// Depuis PHP 5.4
+$secondElement = getArray()[1];
+
+// Avant PHP 5.4
+$tmp = getArray();
+$secondElement = $tmp[1];
+
+// ou
+list(, $secondElement) = getArray();
+?>
+]]>
+    </programlisting>
+   </example>
+   
    <note>
     <para>
-     Tenter d'accéder à un tableau qui n'a pas été définit conduit à la même
-     chose que de tenter d'accéder à une variable non définie :
-     une alerte de niveau <constant>E_NOTICE</constant> sera émise, et le résultat
-     sera la valeur &null;.
+     Une tentative d'accès à une clé d'un tableau qui n'a pas été définie
+     revient à tenter d'accès à une variable non définie : une alerte de
+     niveau <constant>E_NOTICE</constant> sera émise, et le résultat vaudra
+     &null;.
     </para>
    </note>
-
-   <informalexample>
-    <programlisting role="php">
-<![CDATA[
-<?php
-$arr = array("somearray" => array(6 => 5, 13 => 9, "a" => 42));
-
-echo $arr["somearray"][6];    // 5
-echo $arr["somearray"][13];   // 9
-echo $arr["somearray"]["a"];  // 42
-?>
-]]>
-    </programlisting>
-   </informalexample>
-
-   <para>
-    Si une clé n'est pas spécifiée pour une valeur, l'indice &integer; maximal
-    sera pris et la nouvelle clé sera cette valeur, plus 1. Si une clé contient
-    déjà une valeur associée, cette valeur sera écrasée.
-   </para>
-
-   <informalexample>
-    <programlisting role="php">
-<![CDATA[
-<?php
-// Ce tableau est identique à ...
-array(5 => 43, 32, 56, "b" => 12);
-
-// ...ce tableau
-array(5 => 43, 6 => 32, 7 => 56, "b" => 12);
-?>
-]]>
-    </programlisting>
-   </informalexample>
-
-   <warning>
-    <simpara>
-     Avant PHP 4.3.0, le fait d'ajouter à un tableau une valeur, dont la précédent
-     clé est négative, reproduisait le comportement ci-dessus. Depuis PHP 4.3.0, la
-     nouvelle clé sera <literal>0</literal>.
-    </simpara>
-   </warning>
-
-   <para>
-    Utiliser &true; comme <varname>clé</varname> sera évalué à l'&integer; <literal>1</literal>.
-    Utiliser &false; comme <varname>clé</varname> sera évalué à l'&integer; <literal>0</literal>.
-    Utiliser &null; comme clé sera évalué à une &string; vide.
-    Utiliser une &string; vide comme clé créera une clé (ou l'écrasera) vide et sa valeur
-    ne sera <emphasis>pas</emphasis> la même si on utilise des parenthèses vides.
-   </para>
-
-   <para>
-    Les tableaux et les objets ne peuvent être utilisés comme clés. Si vous tentez de le faire,
-    un message de type Alerte sera émis : <literal>Illegal offset type</literal>.
-   </para>
-
   </sect3>
 
   <sect3 xml:id="language.types.array.syntax.modifying">
