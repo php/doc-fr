@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: e5d1ab2810a8c50f3e1a0d4d49626894302c3d03 Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 1e02f4fc708e060aba34ce52492aa7ba1d965032 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <phpdoc:classref xml:id="class.sessionhandlerinterface" xmlns:phpdoc="http://php.net/ns/phpdoc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
@@ -21,6 +21,10 @@
     de session personnalisé à la fonction <function>session_set_save_handler</function>
     en utilisant son invocation <literal>OOP</literal>, la classe doit implémenter
     cette interface.
+   </para>
+   <para>
+    Notez que ces méthodes sont destinées à être appelées de manière interne par PHP, et non
+    depuis l'espace utilisateur.
    </para>
   </section>
 <!-- }}} -->
@@ -45,6 +49,86 @@
    </classsynopsis>
 <!-- }}} -->
 
+  </section>
+  
+  <section xml:id="sessionhandlerinterface.examples">
+   <example>
+    <title>
+     Exemple avec <classname>SessionHandlerInterface</classname>
+    </title>
+    <para>
+     L'exemple qui suit propose un gestionnaire de stockage de sessions basé sur des fichiers,
+     basiquement comme les sessions PHP fonctionnent en interne de manière native, avec le
+     gestionnaire embarqué <parameter>files</parameter>. Cet exemple pourrait être transformé
+     facilement pour utiliser une base de données.
+    </para>
+    <para>
+     Nous utilisons le style orienté objet avec <function>session_set_save_handler</function> et
+     nous enregistrons la fonction de fermeture grâce au paramètre de la fonction. C'est en général
+     conseillé lorsque le gestionnaire de session est basé sur des objets.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class MySessionHandler implements SessionHandlerInterface
+{
+    private $savePath;
+
+    public function open($savePath, $sessionName)
+    {
+        $this->savePath = $savePath;
+        if (!is_dir($this->savePath)) {
+            mkdir($this->savePath, 0777);
+        }
+
+        return true;
+    }
+
+    public function close()
+    {
+        return true;
+    }
+
+    public function read($id)
+    {
+        return (string)@file_get_contents("$this->savePath/sess_$id");
+    }
+
+    public function write($id, $data)
+    {
+        return file_put_contents("$savePath/sess_$id", $data) === false ? false : true;
+    }
+
+    public function destroy($id)
+    {
+        $file = "$this->savePath/sess_$id";
+        if (file_exists($file)) {
+            unlink($file);
+        }
+
+        return true;
+    }
+
+    public function gc($maxlifetime)
+    {
+        foreach (glob("$this->savePath/sess_*") as $file) {
+            if (filemtime($file) + $maxlifetime < time() && file_exists($file)) {
+                unlink($file);
+            }
+        }
+
+        return true;
+    }
+}
+
+$handler = new MySessionHandler();
+session_set_save_handler($handler, true);
+session_start();
+
+// enregistre/récupère des données avec $_SESSION
+]]>
+    </programlisting>
+   </example>
   </section>
 
  </partintro>
