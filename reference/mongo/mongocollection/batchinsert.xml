@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 86b07cdc1e05df99fe79b52403a110b1858fe045 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 42c810b3a50978d0084b2b2fecb81917d4687ff7 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongocollection.batchinsert" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -69,6 +69,21 @@
           <literal>safe</literal> sera automatiquement valorisé à &false;.
          </para>
         </listitem>
+        <listitem>
+         <para>
+          <literal>"continueOnError"</literal>
+         </para>
+         <para>
+          Booléen, par défaut, &false;. Si défini, la base de données n'arrêtera
+          pas une insertion bulk si une d'entre elles échoue (i.e. en raison d'un
+          ID dupliqué). Ceci rend les insertions bulk comme une succession d'insertion
+          simple, sauf que lors d'un appel à la méthode
+          <function>MongoDB::lastError</function>, un jeu d'erreurs sera retourné
+          lors de l'échec d'une insertion, et pas seulement la dernière.
+          Si plusieurs erreurs surviennent, seule la plus récente sera rapportée
+          par la méthode <function>MongoDB::lastError</function>.
+         </para>
+        </listitem>
        </itemizedlist>
       </para>
      </listitem>
@@ -126,6 +141,12 @@
         et ajout de l'option "fsync".
        </entry>
       </row>
+      <row>
+       <entry>1.2.7</entry>
+       <entry>
+        Le drapeau <literal>continueOnError</literal> a été ajouté.
+       </entry>
+      </row>
      </tbody>
     </tgroup>
    </informaltable>
@@ -178,6 +199,60 @@ string(5) "user1"
 string(5) "user2"
 string(5) "user3"
 ...
+]]>
+   </screen>
+  </example>
+
+  <example>
+   <title>Exemple avec <function>MongoCollection::batchInsert</function> où l'on ignore
+    les erreurs</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$con = new Mongo;
+$db = $con->demo;
+
+$doc1 = array(
+        '_id' => new MongoId('4cb4ab6d7addf98506010001'),
+        'id' => 1,
+        'desc' => "ONE",
+);
+$doc2 = array(
+        '_id' => new MongoId('4cb4ab6d7addf98506010002'),
+        'id' => 2,
+        'desc' => "TWO",
+);
+$doc3 = array(
+        '_id' => new MongoId('4cb4ab6d7addf98506010002'), // _id identique au précédent
+        'id' => 3,
+        'desc' => "THREE",
+);
+$doc4 = array(
+        '_id' => new MongoId('4cb4ab6d7addf98506010004'),
+        'id' => 4,
+        'desc' => "FOUR",
+);
+
+$c = $db->selectCollection('c');
+$c->batchInsert(
+    array($doc1, $doc2, $doc3, $doc4),
+    array('continueOnError' => true)
+);
+
+$docs = $c->find();
+foreach ($docs as $doc) {
+    var_dump($doc['desc']);
+}
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+string(3) "ONE"
+string(3) "TWO"
+string(4) "FOUR"
 ]]>
    </screen>
   </example>
