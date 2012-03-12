@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 827c4bb5be72c63554d6aaf371ccb434a2c5f20e Maintainer: yannick Status: ready -->
+<!-- EN-Revision: a6a1f2a7a647e6b34343bbddbbe8a816903f1bbd Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.session-set-save-handler">
@@ -20,6 +20,9 @@
    <methodparam><type>callback</type><parameter>destroy</parameter></methodparam>
    <methodparam><type>callback</type><parameter>gc</parameter></methodparam>
   </methodsynopsis>
+  <para>
+   Depuis PHP 5.4, il est possible d'enregistrer le prototype suivant :
+  </para>
   <methodsynopsis>
    <type>bool</type><methodname>session_set_save_handler</methodname>
    <methodparam><type>SessionHandlerInterface</type><parameter>sessionhandler</parameter></methodparam>
@@ -47,7 +50,8 @@
        Une instance d'une classe implémentant l'interface
        <interfacename>SessionHandlerInterface</interfacename>,
        comme la classe <classname>SessionHandler</classname>,
-       pour l'enregistrement comme gestionnaire de session
+       pour l'enregistrement comme gestionnaire de session.
+       Depuis PHP 5.4 uniquement.
       </para>
      </listitem>
     </varlistentry>
@@ -55,7 +59,7 @@
      <term><parameter>register_shutdown</parameter></term>
      <listitem>
       <para>
-       Enregistre la fonction <function>session_register_shutdown</function>
+       Enregistre la fonction <function>session_write_close</function>
        comme fonction <function>register_shutdown_function</function>.
       </para>
      </listitem>
@@ -66,74 +70,115 @@
 
    <variablelist>
     <varlistentry>
-     <term><parameter>open</parameter></term>
+     <term><parameter>open(string $savePath, string $sessionName)</parameter></term>
      <listitem>
       <para>
-       Fonction d'ouverture, qui fonctionne comme un constructeur dans une
-       classe, et qui est exécutée quand la session est ouverte. La fonction
-       d'ouverture attend deux paramètres : le premier est le chemin de sauvegarde,
-       et le second est le nom de la session.
+       La fonction de rappel <literal>open</literal> fonctionne comme un constructeur
+       dans une classe, et est exécutée lorsque la session s'ouvre.
+       C'est la première fonction de rappel exécutée lorsque la session
+       démarre automatiquement ou manuellement avec la fonction
+       <function>session_start</function>. La valeur retournée
+       est &true; en cas de succès ou &false; si une erreur survient.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>close</parameter></term>
+     <term><parameter>close()</parameter></term>
      <listitem>
       <para>
-       Fonction de fermeture, qui fonctionne comme un destructeur de classe,
-       et qui est exécuté lorsque le script se termine.
+       La fonction de rappel <literal>close</literal> fonctionne comme un
+       destructeur dans une classe, et est exécutée une fois que la fonction
+       de rappel write de la session a terminé de s'exécuter. Elle est également
+       appelé lorsque la fonction <function>session_write_close</function> est appelée.
+       La valeur retournée est &true; en cas de succès, ou &false; si une erreur
+       survient.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>read</parameter></term>
+     <term><parameter>read(string $sessionId)</parameter></term>
      <listitem>
       <para>
-       La fonction de lecture doit toujours retourner une chaîne,
-       pour que le gestionnaire fonctionne comme prévu. Vous devez
-       retourner une chaîne vide s'il n'y a pas de données à lire.
-       Les valeurs retournées par les autres gestionnaires sont
-       converties en booléen avant d'être retournées au script.
-       &true; pour la réussite, &false; pour l'échec.
+       La fonction de rappel <parameter>read</parameter> doit toujours retournée
+       une chaîne linéarisée contenant les données de session encodées
+       ou une chaîne vide s'il n'y a aucune donnée à lire.
+      </para>
+      <para>
+       Cette fonction de rappel est appelée en interne par PHP lorsque la session
+       commence ou lorsque la fonction <function>session_start</function> est appelée.
+       Avant que cette fonction de rappel ne soit invoquée, PHP invoquera
+       la fonction de rappel <parameter>open</parameter>.
+      </para>
+      <para>
+       La valeur retournée par cette fonction de rappel doit être exactement du même
+       format de linéarisation que celui passé pour le stoquage à la fonction
+       de rappel <parameter>write</parameter>. La valeur retournée sera délinéarisée
+       automatiquement par PHP et utilisée pour peupler la variable superglobale
+       <varname>$_SESSION</varname>. Malgré le fait que les données ressemblent fortement
+       aux données issuées de la fonction <function>serialize</function>, notez que c'est bien
+       un format différent, qui est spécifié via l'option de configuration
+       <link linkend="ini.session.serialize-handler">session.serialize_handler</link>.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>write</parameter></term>
+     <term><parameter>write(string $sessionId, string $data)</parameter></term>
      <listitem>
       <para>
-       Fonction appelée lorsque les données de session sont sauvegardées.
-       Cette fonction attend 2 paramètres : un identifiant et les données
-       associés à ce dernier.
+       La fonction de rappel <parameter>write</parameter> est appelée lorsque la session
+       doit être sauvegardée et fermée. Cette fonction de rappel reçoit l'identifiant de
+       la session courante ainsi qu'une version linéarisée du contenu de la variable
+       superglobale <varname>$_SESSION</varname>. La méthode de linéarisation utilisée en
+       interne par PHP est spécifiée via l'option de configuration
+       <link linkend="ini.session.serialize-handler">session.serialize_handler</link>.
+      </para>
+      <para>
+       Les données de session linéarisées passées à cette fonction de rappel doivent être
+       stoquées en utilisant l'identifiant de session fournie. Lors de la récupération
+       de ces données, la fonction de rappel <parameter>read</parameter> doit retourner
+       la valeur exacte, originalement passée à la fonction de rappel <parameter>write</parameter>.
+      </para>
+      <para>
+       Cette fonction de rappel est invoquée lorsque PHP s'arrête ou explicitement
+       lorsque la fonction <function>session_write_close</function> est appelée.
+       Notez qu'après l'exécution de cette fonction, PHP exécutera en interne la
+       fonction de rappel <parameter>close</parameter>.
        <note>
         <para>
-         Le gestionnaire d'écriture n'est pas exécuté tant que le
-         flot de sortie est ouvert. Par conséquent, l'affichage
-         de messages de déboguage durant le gestionnaire d'écriture
-         ne sera donc jamais visible depuis le navigateur. Si vous
-         avez besoin de déboguage, nous vous suggérons d'écrire
-         vos messages dans un fichier.
+         Le gestionnaire d'écriture n'est pas exécuté tant que le flux de sortie
+         n'aura pas été fermé. Aussi, la sortie des requêtes de débogage
+         du gestionnaire "write" ne sera jamais affichée dans le navigateur.
+         Si la sortie de débogage est nécessaire, il est suggéré qu'elle soit
+         plutôt orientée dans un fichier.
         </para>
        </note>
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>destroy</parameter></term>
+     <term><parameter>destroy($sessionId)</parameter></term>
      <listitem>
       <para>
-       Le gestionnaire de destruction est exécuté quand une session est
-       détruite avec la fonction <function>session_destroy</function>. Il prend
-       l'identifiant de session comme seul paramètre. 
+       Cette fonction de rappel est exécutée lorsqu'une session est détruite
+       avec la fonction <function>session_destroy</function> ou avec
+       <function>session_regenerate_id</function> avec le paramètre de destruction définie
+       à &true;. La valeur retournée doit être &true; en cas de succès, ou &false; si une
+       erreur survient.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>gc</parameter></term>
+     <term><parameter>gc($lifetime)</parameter></term>
      <listitem>
       <para>
-       Le collecteur est exécuté quand le collecteur de session est appelé, et il prend
-       comme paramètre unique la durée de vie maximale d'une session.
+       La fonction de rappel de collecteur de gabarit est invoquée en interne par PHP
+       périodiquement afin de purger les anciennes données de session. La fréquence
+       est contrôlé par les options de configuration
+       <link linkend="ini.session.gc-probability">session.gc_probability</link> et
+       <link linkend="ini.session.gc-divisor">session.gc_divisor</link>.
+       La valeur de la durée de vie passée à cette fonction de rappel peut être
+       définie via l'option de configuration <link linkend="ini.session.gc-maxlifetime">session.gc_maxlifetime</link>.
+       La valeur retournée doit être &true; en cas de succès, ou &false; si une erreur survient.
       </para>
      </listitem>
     </varlistentry>
@@ -152,148 +197,126 @@
   &reftitle.examples;
   <para>
    <example>
-    <title>Exemple avec <function>session_set_save_handler</function></title>
+    <title>
+     Gestionnaire de session personnalisé : voir le code complet
+     dans la documentation sur l'interface <classname>SessionHandlerInterface</classname>.
+    </title>
     <para>
-     L'exemple suivant fournit un exemple de stockage des sessions
-     semblable au système par défaut (par fichiers).
-     Cet exemple peut facilement être adapté pour réaliser des
-     sauvegardes en base de données, avec votre serveur préféré.
+     Le code suivant est pour PHP version 5.4.0 et supérieure. Vous pouvez y voir
+     l'invocation, l'exemple complet peut être vu dans la documentation de l'interface
+     <classname>SessionHandlerInterface</classname>.
+    </para>
+    <para>
+     Notez que nous utilisons ici le prototype orienté objet avec
+     <function>session_set_save_handler</function> et enregistrons la fonction
+     d'arrêt en utilisant le drapeau dans le paramètre de la fonction. C'est généralement
+     préférable lors de l'enregistrement d'objets comme gestionnaires de sauvegarde de session.
     </para>
     <programlisting role="php">
 <![CDATA[
 <?php
-function open($save_path, $session_name)
+class MySessionHandler implements SessionHandlerInterface
 {
-  global $sess_save_path;
-
-  $sess_save_path = $save_path;
-  return(true);
+    // implémentation de l'interface ici
 }
 
-function close()
-{
-  return(true);
-}
-
-function read($id)
-{
-  global $sess_save_path;
-
-  $sess_file = "$sess_save_path/sess_$id";
-  return (string) @file_get_contents($sess_file);
-}
-
-function write($id, $sess_data)
-{
-  global $sess_save_path;
-
-  $sess_file = "$sess_save_path/sess_$id";
-  if ($fp = @fopen($sess_file, "w")) {
-    $return = fwrite($fp, $sess_data);
-    fclose($fp);
-    return $return;
-  } else {
-    return(false);
-  }
-
-}
-
-function destroy($id)
-{
-  global $sess_save_path;
-
-  $sess_file = "$sess_save_path/sess_$id";
-  return(@unlink($sess_file));
-}
-
-function gc($maxlifetime)
-{
-  global $sess_save_path;
-
-  foreach (glob("$sess_save_path/sess_*") as $filename) {
-    if (filemtime($filename) + $maxlifetime < time()) {
-      @unlink($filename);
-    }
-  }
-  return true;
-}
-
-session_set_save_handler("open", "close", "read", "write", "destroy", "gc");
-
+$handler = new MySessionHandler();
+session_set_save_handler($handler, true);
 session_start();
 
-// Utilisez vos sessions comme d'habitude
-
-?>
+// processus pour définir et récupérer les valeurs par leurs clés depuis $_SESSION
 ]]>
     </programlisting>
    </example>
    <example>
     <title>
-     Exemple avec 
-     <function>session_set_save_handler</function> utilisant
-     <classname>SessionHandler</classname>
+     Gestionnaire de sauvegarde de session personnalisé en utilisant des objets
     </title>
+    <para>
+     Le code suivant est pour PHP en version inférieure à 5.4.0.
+    </para>
+    <para>
+     L'exemple suivant fournit un gestionnaire de stoquage des sessions basé sur les
+     fichiers, similaire au gestionnaire de sauvegarde de session par défaut de PHP
+     <parameter>files</parameter>.  Cet exemple peut facilement être étendu pour couvrir
+     le stoquage par base de données, en utilisant votre moteur de base de données préféré.
+    </para>
+    <para>
+     Notez que nous enregistrons la fonction d'arrêt <function>session_write_close</function>
+     en utilisant la fonction <function>register_shutdown_function</function> en version antérieure
+     à PHP 5.4.0. C'est généralement préférable lors de l'enregistrement d'objets
+     comme gestionnaires de sauvegarde des sessions sous PHP antérieure à la version 5.4.0.
+    </para>
     <programlisting role="php">
 <![CDATA[
 <?php
-class MySessionHandler extends SessionHandler {
-  public function open($save_path, $sessionid)
-  {
-    global $sess_save_path;
+class FileSessionHandler
+{
+    private $savePath;
 
-    $sess_save_path = $save_path;
-    return(true);
-  }
-  public function close()
-  {
-    return true;
-  }
-  public function read($sessionid)
-  {
-    global $sess_save_path;
+    function open($savePath, $sessionName)
+    {
+        $this->savePath = $savePath;
+        if (!is_dir($this->savePath)) {
+            mkdir($this->savePath, 0777);
+        }
 
-    $sess_file = "$sess_save_path/sess_$id";
-    return (string) @file_get_contents($sess_file);
-  }
-  public function write($sessionid, $sessiondata)
-  {
-    global $sess_save_path;
-
-    $sess_file = "$sess_save_path/sess_$id";
-    if ($fp = @fopen($sess_file, "w")) {
-      $return = fwrite($fp, $sess_data);
-      fclose($fp);
-      return $return;
-    } else {
-      return(false);
+        return true;
     }
-  }
-  public function destroy($sessionid)
-  {
-    global $sess_save_path;
 
-    $sess_file = "$sess_save_path/sess_$id";
-    return(@unlink($sess_file));
-  }
-  public function gc($maxlifetime)
-  {
-    global $sess_save_path;
-
-    foreach (glob("$sess_save_path/sess_*") as $filename) {
-      if (filemtime($filename) + $maxlifetime < time()) {
-        @unlink($filename);
-      }
+    function close()
+    {
+        return true;
     }
-    return true;
-  }
+
+    function read($id)
+    {
+        return (string)@file_get_contents("$this->savePath/sess_$id");
+    }
+
+    function write($id, $data)
+    {
+        return file_put_contents("$this->savePath/sess_$id", $data) === false ? false : true;
+    }
+
+    function destroy($id)
+    {
+        $file = "$this->savePath/sess_$id";
+        if (file_exists($file)) {
+            unlink($file);
+        }
+
+        return true;
+    }
+
+    function gc($maxlifetime)
+    {
+        foreach (glob("$this->savePath/sess_*") as $file) {
+            if (filemtime($file) + $maxlifetime < time() && file_exists($file)) {
+                unlink($file);
+            }
+        }
+
+        return true;
+    }
 }
 
-$handler = new MySessionHandler();
-session_set_save_handler($handler);
+$handler = new FileSessionHandler();
+session_set_save_handler(
+    array($handler, 'open'),
+    array($handler, 'close'),
+    array($handler, 'read'),
+    array($handler, 'write'),
+    array($handler, 'destroy'),
+    array($handler, 'gc')
+    );
+
+// Ceci permet de prévenir des effets non désirés lors de l'utilisation d'objets
+// comme gestionnaires de session
+register_shutdown_function('session_write_close');
 
 session_start();
-?>
+// processus pour définir et récupérer les valeurs par leurs clés depuis $_SESSION
 ]]>
     </programlisting>
    </example>
@@ -304,14 +327,33 @@ session_start();
   &reftitle.notes;
   <warning>
    <para>
+    Lors de l'utilisation d'objets comme gestionnaires de sauvegarde des sessions,
+    il est important d'enregistrer la fonction d'arrêt avec PHP pour éviter les
+    effets non désirés issus de la façon dont PHP détruit en interne les objets
+    lors de l'arrêt, et peut empécher les fonctions de rappel
+    <parameter>write</parameter> et <parameter>close</parameter> d'être exécutées.
+    Typiquement, vous devez enregistrer <parameter>'session_write_close'</parameter>
+    en utilisant la fonction <function>register_shutdown_function</function>.
+   </para>
+   <para>
+    Depuis PHP 5.4.0, vous pouvez utiliser la fonction
+    <function>session_register_shutdown</function> ou simplement utiliser le drapeau
+    'register shutdown' lors de l'appel à la fonction <function>session_set_save_handler</function>
+    en utilisant la méthode orientée objet, et passer une instance qui implémente
+    l'interface <classname>SessionHandlerInterface</classname>.
+   </para>
+  </warning>
+  <warning>
+   <para>
     Les gestionnaires d'écriture et de fermeture sont appelés après la destruction
-    des objets depuis PHP 5.0.5. Ces destructeurs peuvent utiliser les sessions
-    mais le gestionnaire de session ne peut pas utiliser les objets. Dans les versions
-    antérieures, ils étaient appelés dans l'ordre inverse.
+    des objets depuis PHP 5.0.5. et donc, ne peuvent pas utiliser les objets ou
+    lancer des exceptions. Les exceptions ne peuvent donc pas être attrapées ni
+    affichées, et l'exécution ne fera que s'arrêter de façon innatendue.
    </para>
    <para>
     Il est possible d'appeler <function>session_write_close</function> depuis
-    le destructeur pour résoudre ce problème.
+    le destructeur pour résoudre ce problème mais la façon la plus élégante
+    est d'enregistrer la fonction d'arrêt tel que décrit ci-dessus.
    </para>
   </warning>
   <warning>
@@ -338,8 +380,9 @@ session_start();
       <entry>5.4.0</entry>
       <entry>
        Ajout de l'interface <interfacename>SessionHandlerInterface</interfacename>
-       et la classe <classname>SessionHandler</classname>
-       pour implémenter des gestionnaires de session.
+       pour implémenter les gestionnaires de sessions et de la classe
+       <classname>SessionHandler</classname> pour exposer les gestionnaires
+       de sessions internes de PHP.
       </entry>
      </row>
     </tbody>
@@ -354,6 +397,12 @@ session_start();
     <member>
      La directive de configuration <link linkend="ini.session.save-handler">session.save_handler</link>
     </member>
+    <member>
+     La directive de configuration
+     <link linkend="ini.session.serialize-handler">session.serialize_handler</link>.
+    </member>
+    <member><function>register_shutdown_function</function></member>
+    <member><function>session_register_shutdown</function> pour PHP 5.4.0+</member>
    </simplelist>
   </para>
  </refsect1>
