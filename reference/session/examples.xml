@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 4df90a72c5fdc14108a0ee5629711ab9b7af0a50 Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: ec6de8a5397972b3d3f59f54a5a2885b99fa2c67 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
 
 <appendix xml:id="session.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -9,37 +9,42 @@
   <title>Utilisation simple</title>
   <note>
    <para>
-    Depuis PHP 4.1.0, <varname>$_SESSION</varname> est disponible comme
-    variable globale, au même titre que <varname>$_POST</varname>,
-    <varname>$_GET</varname>, <varname>$_REQUEST</varname>, etc.
-    Contrairement à <varname>$HTTP_SESSION_VARS</varname>,
-    <varname>$_SESSION</varname> est toujours globale. Par conséquent, vous
-    n'avez pas besoin d'utiliser le mot réservé
-    <link linkend="language.variables.scope"><command>global</command></link>
-    avec <varname>$_SESSION</varname>. Notez que cette documentation
-    a été modifiée pour utiliser <varname>$_SESSION</varname>.
-    Vous pouvez toujours le remplacer par
-    <varname>$HTTP_SESSION_VARS</varname> si vous préférez l'ancienne version.
-    Notez également que vous devez démarrer votre session en utilisant la fonction
-    <function>session_start</function> avant d'utiliser
-    la variable super-globale <varname>$_SESSION</varname>.
+    Les sessions sont un moyen simple de stoquer des données individuelles pour chaque
+    utilisateur en utilisant un identifiant de session unique. Elles peuvent être utilisées
+    pour faire persister des informations entre plusieurs pages. Les identifiants de session
+    sont normalement envoyés au navigateur via des cookies de session, et l'identifiant
+    est utilisé pour récupérer les données existantes de la session. L'absence d'un identifiant
+    ou d'un cookie de session indique à PHP de créer une nouvelle session, et génère ainsi
+    un nouvel identifiant de session.
    </para>
    <para>
-    Les clés du tableau <varname>$_SESSION</varname> sont sujettes
-    aux mêmes limitations que les variables PHP habituelles, c'est-à-dire
-    qu'elles ne peuvent pas commencer par un nombre, mais commencer par
-    une lettre ou un souligné '_'. Pour plus de détails, reportez-vous à
-    la section sur les <link linkend="language.variables">variables</link>.
+    Les sessions suivent une cinématique simple. Lorsqu'une session est démarrée, PHP va
+    soit récupérer une session existante en utilisant l'identifiant de session passé (habituellement
+    depuis un cookie de session) ou si aucun identifiant de session n'est passé, il va créer une
+    nouvelle session. PHP va ainsi peupler la variable superglobale <varname>$_SESSION</varname>
+    avec toutes les données de session une fois la session démarrée. Lorsque PHP s'arrête,
+    il va prendre automatiquement le contenu de la variable superglobale <varname>$_SESSION</varname>,
+    le linéariser, et l'envoyer pour stoquage au gestionnaire de sauvegarde de session.
+   </para>
+   <para>
+    Par défaut, PHP utilise en interne le gestionnaire de sauvegarde <parameter>files</parameter>
+    qui est défini via la directive <link linkend="ini.session.save-handler">session.save_handler</link>.
+    Les données de session seront sauvegardées sur le serveur à l'endroit spécifié par
+    la directive de configuration <link linkend="ini.session.save-path">session.save_path</link>.
+   </para>
+   <para>
+    Les sessions peuvent être démarrées manuellement en utilisant la fonction
+    <function>session_start</function>, et si la directive de configuration
+    <link linkend="ini.session.auto-start">session.auto_start</link> est définie à
+    <parameter>1</parameter>, une session démarrera automatiquement au moment où PHP envoie
+    n'importe quelle sortie au buffer de sortie.
+   </para>
+   <para>
+    Les sessions s'arrêtent automatiquement lorsque PHP a terminé d'exécuter un script, mais
+    peuvent être stoppées manuellement en utilisant la fonction
+    <function>session_write_close</function>.
    </para>
   </note>
-  
-  <para>
-   Si <link linkend="ini.register-globals">register_globals</link>
-   est désactivé, seuls les éléments du tableau global
-   <varname>$_SESSION</varname> contiendront les variables
-   enregistrées dans la session. Les variables de sessions relues seront
-   uniquement disponibles dans <varname>$_SESSION</varname>.
-  </para>
   <para>
    L'utilisation de <varname>$_SESSION</varname> (ou
    <varname>$HTTP_SESSION_VARS</varname> avec PHP 4.0.6 et plus ancien) est
@@ -57,7 +62,6 @@
 <![CDATA[
 <?php
 session_start();
-// Utilisez $HTTP_SESSION_VARS avec PHP 4.0.6 ou plus ancien
 if (!isset($_SESSION['count'])) {
   $_SESSION['count'] = 0;
 } else {
@@ -76,7 +80,6 @@ if (!isset($_SESSION['count'])) {
 <![CDATA[
 <?php
 session_start();
-// Utilisez $HTTP_SESSION_VARS avec PHP 4.0.6 ou plus ancien
 unset($_SESSION['count']);
 ?>
 ]]>
@@ -111,19 +114,6 @@ unset($_SESSION['count']);
    <function>session_register</function> tandis que
    <varname>$HTTP_SESSION_VARS</varname> et <varname>$_SESSION</varname>
    ne nécessitent pas <function>session_register</function>.
-   <caution>
-    <para>
-     Avant PHP 4.3.0, si vous utilisez <varname>$_SESSION</varname> et que
-     vous avez désactivé <link
-     linkend="ini.register-globals"><option>register_globals</option></link>,
-     n'utilisez pas <function>session_register</function>,
-     <function>session_is_registered</function> ou
-     <function>session_unregister</function>.
-     Désactiver
-     <link linkend="ini.register-globals">register_globals</link>
-     est recommandé pour des raisons de sécurité et de performances.
-    </para>
-   </caution>
   </para>
   <para>
    Si <link
@@ -134,17 +124,6 @@ unset($_SESSION['count']);
    (donc, dans les page précédentes). Cependant, si la variable a été enregistrée
    avec <varname>$_SESSION</varname>, alors, la variable globale est disponible
    jusqu'à la prochaine requête.
-  </para>
-  <para>
-   De plus, si vous enregistrez une nouvelle variable avec la fonction
-   <function>session_register</function>, l'entrée dans l'environnement
-   global et <varname>$_SESSION</varname> ne fera pas de référence vers la
-   même valeur jusqu'à la prochaine utilisation de
-   <function>session_start</function> (ceci s'applique à PHP 4.2.3 et
-   avant seulement). C'est à dire qu'une modification dans les variables
-   globales ne sera pas répercutée dans les entrées de
-   <varname>$_SESSION</varname>. Il est peu probable que cela ait un impact en
-   pratique et, de plus, cela a été corrigé en PHP 4.3.0.
   </para>
  </section>
  
@@ -207,9 +186,9 @@ unset($_SESSION['count']);
 session_start();
 
 if (empty($_SESSION['count'])) {
- $_SESSION['count'] = 1;
+   $_SESSION['count'] = 1;
 } else {
- $_SESSION['count']++;
+   $_SESSION['count']++;
 }
 ?>
 
@@ -248,15 +227,18 @@ if (empty($_SESSION['count'])) {
   <title>Gestion personnalisée des sessions</title>
   <para>
    Pour implémenter un stockage en base de données, ou toute autre méthode,
-   vous aurez besoin de la fonction
-   <function>session_set_save_handler</function> pour
-   paramétrer vos propres fonctions de stockage.
+   vous aurez besoin de la fonction <function>session_set_save_handler</function> pour
+   paramétrer vos propres fonctions de stockage. Depuis PHP 5.4.0, vous pouvez créer des
+   gestionnaires de session en utilisant l'interface <classname>SessionHandlerInterface</classname>
+   ou en étendant les gestionnaires internes de PHP en héritant de la classe
+   <classname>SessionHandler</classname>.
   </para>
   <para>
    Les fonctions de rappel précisées dans <function>session_set_save_handler</function> sont
    des méthodes appelées par PHP pendant le cycle de vie de la session: <parameter>open</parameter>,
    <parameter>read</parameter>, <parameter>write</parameter> et <parameter>close</parameter>
-   ainsi que la fonction de ménage qui détruit les sessions vieilles périodiquement.
+   ainsi que les fonctions de ménage <parameter>destroy</parameter> pour supprimer une session
+   et <parameter>gc</parameter> pour une collecte périodique des gabarits.
   </para>
   <para>
    Ainsi, PHP a toujours besoin d'un gestionnaire de sessions. Par défaut il s'agit du gestionnaire
@@ -278,7 +260,7 @@ if (empty($_SESSION['count'])) {
    fonction <parameter>write</parameter>. Après <parameter>write</parameter>, PHP invoquera <parameter>close</parameter>.
   </para>
   <para>
-   Lorsqu'une session est détruite, PHP appelera destroy() avec l'ID de session.
+   Lorsqu'une session est détruite, PHP appelera <parameter>destroy</parameter> avec l'ID de session.
   </para>
   <para>
    PHP appelera la fonction de rappel <parameter>gc</parameter> de temps en temps pour nettoyer

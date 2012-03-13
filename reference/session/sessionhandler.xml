@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: a63190d9c474f19bcc54c643fdd7424623e48c38 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: f95e682b642155bfb4b328b0426670ff0d0ee807 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <phpdoc:classref xml:id="class.sessionhandler" xmlns:phpdoc="http://php.net/ns/phpdoc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
@@ -15,19 +15,31 @@
    &reftitle.intro;
    <para>
     La classe <classname>SessionHandler</classname> est une classe spéciale permettant
-    d'étendre le gestionnaire courant de sauvegarde des sessions interne à PHP en utilisant
-    l'héritage. Il y a 6 méthodes qui reprennent les fonctions de rappel du gestionnaire
-    de sauvegarde des sessions. Par défaut, PHP utilise le gestionnaire de sauvegarde
-    <parameter>files</parameter> tel que défini par l'option de configuration
-    <link linkend="ini.session.save-handler">session.save_handler</link>.
-    D'autres sont fournis via des extensions PHP coomme SQLite (<parameter>sqlite</parameter>),
-    Memcache (<parameter>memcache</parameter>), et Memcached (<parameter>Memcached</parameter>).
+    d'exposer le gestionnaire courant de sauvegarde des sessions interne à PHP par
+    héritage. Il y a 6 méthodes qui reprennent les fonctions de rappel du gestionnaire
+    de sauvegarde des sessions interne (<parameter>open</parameter>, <parameter>close</parameter>,
+    <parameter>read</parameter>, <parameter>write</parameter>, <parameter>destroy</parameter>
+    et <parameter>gc</parameter>). Par défaut, cette classe reprendra tout ce qui a été défini
+    pour le gestionnaire de sauvegarde interne, tel que défini par la directive de configuration
+    <link linkend="ini.session.save-handler">session.save_handler</link> et qui vaut
+    <parameter>files</parameter> par défaut. D'autres gestionnaires de sauvegarde de session
+    internes sont fournis par des extensions PHP comme SQLite (<parameter>sqlite</parameter>),
+    Memcache (<parameter>memcache</parameter>), et Memcached (<parameter>memcached</parameter>).
    </para>
    <para>
-    Cette classe peut être étendue, et les méthodes surchargées par héritage, incluant la possibilité
-    d'appeler les méthodes de la classe parente. Ceci permet, par exemple, d'intercepter
-    les méthodes <parameter>read</parameter> et <parameter>write</parameter> pour
-    crypter/décrypter les données de session, et de passer le résultat à la classe parente.
+    Lorsqu'une instance complète de <classname>SessionHandler</classname> est définie comme
+    gestionnaire de sauvegarde en utilisant <function>session_set_save_handler</function>, elle
+    remplacera le gestionnaire de sauvegarde courant. Une classe étendue depuis la classe
+    <classname>SessionHandler</classname> vous permet d'écraser les méthodes, de les intercepter,
+    ou de les filtrer en appelant la méthode de la classe parent qui remplace en dernier lieu
+    le gestionnaire de session interne de PHP.
+   </para>
+   <para>
+    Ceci vous permet, par exemple, d'interception les méthodes <parameter>read</parameter> et
+    <parameter>write</parameter> pour crypter/décrypter les données de session, et de passer
+    le résultat à la classe parente. Alternativement, vous pouvez aussi choisir d'écraser
+    totalement une méthode comme la fonction de rappel de collection des gabarits
+    <parameter>gc</parameter>.
    </para>
    <para>
     En raison du fait que la classe <classname>SessionHandler</classname> se comporte comme les
@@ -36,8 +48,17 @@
     les gestionnaires internes.
    </para>
    <para>
-    Pour utiliser cette classe, passez-en une instance (ou une instance d'une classe l'étandant)
-    à la fonction <function>session_set_save_handler</function>.
+    Pour utiliser cette classe, vous devez commencer par définir un gestionnaire de sauvegarde
+    que vous souhaitez exposer en utilisant <link linkend="ini.session.save-handler">session.save_handler</link>
+    puis, passer une instance de la classe <classname>SessionHandler</classname> ou une étendue à la
+    fonction <function>session_set_save_handler</function>.
+   </para>
+   <para>
+    Veuillez noter que les méthodes de rappel de cette classe sont destinées à être appelées
+    en interne par PHP, et ne sont pas prévues pour être appelées depuis le code de l'espace
+    utilisateur. Les valeurs retournées seront utilisées de la même façon en interne par PHP.
+    Pour plus d'informations sur le mécanisme des sessions, référez-vous à la documentation
+    sur la fonction <function>session_set_save_handler</function>.
    </para>
   </section>
 <!-- }}} -->
@@ -67,6 +88,18 @@
 <!-- }}} -->
 
   </section>
+
+  <section xml:id="session.notes">
+   <warning>
+    <para>
+     Cette classe a pour but d'exposer le gestionnaire de sauvegarde de session interne de PHP ; si vous
+     souhaitez écrire votre gestionnaire de sauvegarde personnalisé, vous devez
+     implémenter l'interface <classname>SessionHandlerInterface</classname> au lieu d'étendre
+     la classe <classname>SessionHandler</classname>.
+    </para>
+   </warning>
+  </section>
+  
   <section xml:id="sessionhandler.examples">
    <example>
     <title>
@@ -76,7 +109,7 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-class EncryptedSessionHandler implements SessionHandler
+class EncryptedSessionHandler extends SessionHandler
 {
     private $key;
 
@@ -114,6 +147,17 @@ session_start();
 ]]>
     </programlisting>
    </example>
+   <note>
+    <para>
+     Vu que les méthodes de cette classe sont prévues pour être appelées en interne par PHP
+     car faisant parties du mécanisme normal des sessions, les classes enfants appèlent les méthodes
+     parents (i.e. le gestionnaire natif interne actuellement) et doivent retourner &false; tant que
+     la session n'a pas encore démarrée (soit automatiquement, ou explicitement via la fonction
+     <function>session_start</function>). Ceci est très important à considérer lors de
+     l'écriture de vos tests unitaires où les méthodes de la classe peuvent être invoquées
+     manuellement.
+    </para>
+   </note>
   </section>
 
  </partintro>
