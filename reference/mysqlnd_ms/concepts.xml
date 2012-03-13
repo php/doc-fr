@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: ba28df480003640b326c0cf5472e940983a374e1 Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 26aad1038d8255a0a3ce3d6581810cc6cce13f84 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.concepts" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -1123,7 +1123,16 @@ version = 5.6.2-m5-log
     Les identifiants de transaction sont détectés en scrutant les appels API. C'est possible depuis
     PHP 5.4.0. Voyez aussi <link linkend="mysqlnd-ms.transaction">la gestion des transactions</link>.
    </para>
+   <para>
+    Depuis MySQL 5.6.4-m8, le serveur MySQL fournit des identifiants de transaction globaux.
+    Cette nouvelle fonctionnalité est supportée par PECL/mysqlnd_ms 1.3.0-alpha et suivant.
+    Aucune configuration n'est requise si vous choisissez d'utiliser la fonctionnalité
+    interne du serveur.
+   </para>
   </note>
+  <para>
+   <emphasis role="bold">Idées et émulation côté client</emphasis>
+  </para>
   <para>
    PECL/mysqlnd_ms peut effectuer de l'injection d'identifiant de transaction coté client, de manière transparente.
    Dans sa forme la plus basique, un identifiant de transaction est un compteur incrémenté à chaque transaction
@@ -1165,6 +1174,12 @@ version = 5.6.2-m5-log
    <itemizedlist>
     <listitem>
      <simpara>
+      Les tables d'identifiants de transaction globale doivent être déployées
+      sur tous les maîtres et les réplications.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
       Le GTID peut avoir des trous, seuls les clients PHP utilisant le plugin vont maintenir la table,
       pas les autres clients.
      </simpara>
@@ -1182,13 +1197,66 @@ version = 5.6.2-m5-log
     </listitem>
     </itemizedlist>
   </para>
+  <para>
+    <emphasis role="bold">Utilisation côté serveur de l'identifiant de transaction globale</emphasis>
+  </para>
+  <para>
+   Depuis PECL/mysqlnd_ms 1.3.0-alpha, les identifiants de transaction globale
+   apportés par MySQL 5.6.4-m8 ou supérieure sont supportés. L'utilisation
+   de cette fonctionnalité serveur supprime toutes les limitations vues
+   précédemment. Reportez-vous au manuel de référence MySQL pour les limitations
+   ainsi que les préconditions concernant l'utilisation des identifiants de transaction
+   globale internes.
+  </para>
+  <para>
+   Choisir entre l'utilisation de l'émulation côté client ou la fonctionnalité interne
+   du serveur est une question qui n'est pas en relation directe avec le plugin, aussi,
+   la discussion restera superficielle. Il n'est pas actuellement prévu de supprimer
+   l'émulation côté client et vous pouvez continuer de l'utiliser, si la solution
+   interne du serveur n'est pas une option pour vous. Ce peut être le cas en
+   environnement hétérogène comprenant de vieux serveurs MySQL ou, si une des limitations
+   des solutions côté serveur n'est pas acceptable.
+  </para>
+  <para>
+   D'un point de vue applicatif, il y a une énorme différent dans l'utilisation de
+   l'une ou l'autre des approches. Les propriétés suivantes diffèrent :
+   <itemizedlist>
+    <listitem>
+     <simpara>
+      L'émulation côté client, comme vu dans le manuel, fournie une solution simple
+      pour comparer un numéro de séquence pour les transactions globales. Les multi-maîtres
+      ne sont pas traités pour conserver les exemples du manuel simples.
+     </simpara>
+     <simpara>
+      La fonctionnalité côté serveur utilise une combinaison d'un identifiant de serveur
+      et d'un numéro de séquence comme identifiant de transaction globale. La
+      comparaison ne peut utiliser l'algèbre. A la place de cela, une fonction
+      SQL doit être utilisé. Reportez-vous au manuel de référence MySQL pour plus
+      de détails.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Les statistiques du plugin concernant l'identifiant de transaction globale
+      ne sont disponibles qu'avec l'émulation côté client car elles surveillent
+      l'émulation.
+     </simpara>
+    </listitem>
+   </itemizedlist>
+  </para>
   <note>
-   <title>Support de l'ID de transaction</title>
+   <title>Les identifiants de transaction globale dans les systèmes distribués</title>
    <para>
-    Le plugin est conçu pour supporter les serveurs MySQL qui implémentent l'ID de transaction
-    eux-mêmes. L'injection coté client n'est pas nécessaire avec de tels serveurs. Cependant,
-    sans de tels serveurs, ou dans un environnement hétérogène, l'injection coté client, même
-    si non parfaite, est tout à fait valable.
+    Les identifiants de transaction globale peuvent servir de différentes façon dans
+    un contexte de systèmes distribués, comme un cluster de base de données. Les
+    identifiants de transaction globale peuvent être utilisés, par exemple, comme
+    identification système des transactions, comme tri global des transaction,
+    comme mécanisme permettant de savoir si le serveur est toujours disponible,
+    et pour vérifier le statut de réplication pour les serveurs de réplication.
+    PECL/mysqlnd_ms, un driver côté client basé sur un sofware, ne focalise sur l'utilisation
+    des GTIDs pour les tâches qui peuvent être gérées par le client, comme la vérification
+    du statut de réplication des serveurs de réplication pour les configurations
+    asynchrones de réplication.
    </para>
   </note>
  </section>
