@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 5e154f6c4444d45d9a5befcc012cb2dbe5000a8f Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<chapter xml:id="yaml.callbacks" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Callbacks</title>
+
+ <section xml:id="yaml.callbacks.parse">
+  <title>Analyse des fonctions de rappel</title>
+  <para>
+   L'analyse des fonctions de rappel est invoqué par les fonctions
+   <function>yaml_parse</function>, <function>yaml_parse_file</function> ou
+   <function>yaml_parse_url</function> lorsqu'une balise YAML enregistré est
+   rencontré. La fonction de rappel est appelée avec la valeur de l'entité
+   de la balise, la balise, et les drapeaux indiquant le type scalaire de
+   l'entité. La fonction de rappel doit retourner les données que l'analyseur YAML
+   doit émettre pour cette entité.
+  </para>
+  <example>
+   <title>Exemple d'analyse de fonction de rappel</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+/**
+ * Fonction de rappel analysant une balise YAML.
+ * @param mixed $value Données depuis le fichier YAML
+ * @param string $tag Balise émise par la fonction de rappel
+ * @param int $flags Type scalaire de l'entité (voir YAML_*_SCALAR_STYLE)
+ * @return mixed Valeur que l'analyseur YAML doit émettre pour la valeur donnée
+ */
+function tag_callback ($value, $tag, $flags) {
+  var_dump(func_get_args()); // débogage
+  return "Hello {$value}";
+}
+
+$yaml = <<<YAML
+greeting: !example/hello World
+YAML;
+
+$result = yaml_parse($yaml, 0, $ndocs, array(
+    '!example/hello' => 'tag_callback',
+  ));
+
+var_dump($result);
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+array(3) {
+  [0]=>
+  string(5) "World"
+  [1]=>
+  string(14) "!example/hello"
+  [2]=>
+  int(1)
+}
+array(1) {
+  ["greeting"]=>
+  string(11) "Hello World"
+}
+]]>
+   </screen>
+  </example>
+ </section>
+
+ <section xml:id="yaml.callbacks.emit">
+  <title>Emission des fonctions de rappel</title>
+  <para>
+   L'émission des fonctions de rappel est invoquée lorsqu'un instance
+   d'une classe enregistrée est émise via la fonction <function>yaml_emit</function> ou
+   la fonction <function>yaml_emit_file</function>. La fonction de rappel
+   reçoit l'objet à émettre. La fonction de rappel doit retourner un tableau
+   contenant 2 clés :
+   &quot;<literal>tag</literal>&quot; et &quot;<literal>data</literal>&quot;.
+   La valeur associée avec la clé &quot;<literal>tag</literal>&quot; doit être une
+   chaîne à utiliser comme balise YAML dans la sortie. La valeur associée
+   avec la clé &quot;<literal>data</literal>&quot; sera encodé YAML et émise
+   à la place de l'objet intercepté.
+  </para>
+  <example>
+   <title>Exemple d'émission des fonctions de rappel</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class EmitExample {
+  public $data;    // les données peuvent être de n'importe quel type valide pecl/yaml
+
+  public function __construct ($d) {
+    $this->data = $d;
+  }
+
+  /**
+   * Yaml émet une fonction de rappel, référencé par un appel à yaml_emit par le nom de la classe
+   *
+   * Il est attendu de retourner un tableau contenant 2 valeurs :
+   *   - 'tag': balise personnalisée pour cette linéarisation
+   *   - 'data': valeur à convertir en yaml (array, string, bool, number)
+   *
+   * @param object $obj Objet à émettre
+   * @return array Balise et données associées à émettre
+   */
+  public static function yamlEmit (EmitExample $obj) {
+    return array(
+      'tag' => '!example/emit',
+      'data' => $obj->data,
+    );
+  }
+}
+
+$emit_callbacks = array(
+  'EmitExample' => array('EmitExample', 'yamlEmit')
+);
+
+$t = new EmitExample(array('a','b','c'));
+$yaml = yaml_emit(
+  array(
+    'example' => $t,
+  ),
+  YAML_ANY_ENCODING,
+  YAML_ANY_BREAK,
+  $emit_callbacks
+);
+var_dump($yaml);
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+string(43) "---
+example: !example/emit
+- a
+- b
+- c
+...
+"
+]]>
+   </screen>
+  </example>
+ </section>
+
+</chapter>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
