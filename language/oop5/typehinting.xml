@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 725924e665c85dc385346f0727babe988c73ae58 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
  <sect1 xml:id="language.oop5.typehinting" xmlns="http://docbook.org/ns/docbook">
@@ -9,9 +9,21 @@
    PHP 5 introduit le typage objet implicite (littéralement,
    <literal>Type Hinting</literal>). Les fonctions peuvent maintenant
    imposer aux paramètres d'être des objets (en spécifiant le nom de la classe
-   dans le prototype de la fonction) ou des tableaux (depuis PHP 5.1).
+   dans le prototype de la fonction), des interfaces, des tableaux (depuis PHP 5.1)
+   ou de type <type>callable</type>.
    Cependant, si <type>NULL</type> est utilisé en tant que valeur par défaut
    du paramètre, il sera autorisé comme argument pour tous les futurs appels.
+  </para>
+  
+  <para>
+   Si une classe ou une interface est spécifié comme type, alors tous ces enfants
+   ou ces implémentations sont aussi autorisés.
+  </para>
+  
+  <para>
+   La spécification d'un type ne peut être utilisée avec les types scalaires
+   comme <type>int</type> ou <type>string</type>.
+   <link linkend="language.oop5.traits">Traits</link> n'est pas non plus autorisé.
   </para>
 
   <example>
@@ -39,6 +51,20 @@ class MaClasse
     */
     public function test_array(array $input_array) {
         print_r($input_array);
+    }
+    
+    /**
+     * Le premier paramètre doit être un itérateur
+     */
+    public function test_interface(Traversable $iterator) {
+        echo get_class($iterator);
+    }
+    
+    /**
+     * Le premier paramètre doit être une fonction de rappel (callable)
+     */
+    public function test_callable(callable $callback, $data) {
+        call_user_func($callback, $data);
     }
 }
 
@@ -78,6 +104,12 @@ $myclass->test_array('a string');
 
 // Fonctionne : Affiche le tableau
 $myclass->test_array(array('a', 'b', 'c'));
+
+// Fonctionne : Affiche ArrayObject
+$myclass->test_interface(new ArrayObject(array()));
+
+// Fonctionne : Affiche int(1)
+$myclass->test_callable('var_dump', 1);
 ?>
 ]]>
    </programlisting>
@@ -88,7 +120,7 @@ $myclass->test_array(array('a', 'b', 'c'));
 <![CDATA[
 <?php
 // Un exemple de classe
-class MaClasse {
+class maClasse {
     public $var = 'Bonjour le monde!';
 }
 
@@ -97,13 +129,13 @@ class MaClasse {
  *
  * Le premier paramètre doit être un objet de type MaClasse
  */
-function MaFonction(MaClasse $foo) {
+function maFonction(MyClass $foo) {
     echo $foo->var;
 }
 
 // Fonctionne
-$maclasse = new MaClasse;
-MaFonction($maclasse);
+$maclasse = new maClasse;
+maFonction($maclasse);
 ?>
 ]]>
    </programlisting>
@@ -126,12 +158,6 @@ test(new stdClass);
 ]]>
    </programlisting>
   </example>
-  <para>
-   Le typage de paramètre ne fonctionne qu'avec les variables de type
-   <type>object</type> et <type>array</type>. Le typage avec les
-   types traditionnels, tels que <type>int</type> et <type>string</type>,
-   n'est pas supporté.
-  </para>
  </sect1>
 
 <!-- Keep this comment at the end of the file
