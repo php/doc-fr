@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: d5ac5b0152d590e2305e4dde23d92c96268065ef Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 18ac0c56e94b1efd51e4c575e1a1dd40190a5e8d Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.quickstart" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -1063,7 +1063,7 @@ PHP Warning:  mysqli::query(): (mysqlnd_ms) No connection selected by the last f
     MySQL.
    </para>
    <para>
-    Depuis MySQL 5.6.4-m8, le serveur MySQL fournit des identifiants de
+    Depuis MySQL 5.6.5-m8, le serveur MySQL fournit des identifiants de
     transaction globale. Cette fonctionnalité est supportée par
     PECL/mysqlnd_ms 1.3.0-alpha ou supérieure.
    </para>
@@ -1071,7 +1071,7 @@ PHP Warning:  mysqli::query(): (mysqlnd_ms) No connection selected by the last f
   <para>
    PECL/mysqlnd_ms peut soit utiliser sa propre émulation des identifiants
    de transaction globale, soit la fonctionnalité interne du serveur
-   MySQL 5.6.4-m8 ou supérieure. D'un point de vue développeur, ces différentes
+   MySQL 5.6.5-m8 ou supérieure. D'un point de vue développeur, ces différentes
    approches offrent les mêmes fonctionnalités au niveau des niveaux de service
    fournis par PECL/mysqlnd_ms. Leurs différences sont abordées dans la
    <link linkend="mysqlnd-ms.gtid">section sur les concepts</link>.
@@ -1398,7 +1398,7 @@ var_dump($res->fetch_assoc());
    <emphasis role="bold">Utilisation de la fonctionalité d'identifiant de transaction globale côté serveur</emphasis>
   </para>
   <para>
-   Depuis MySQL 5.6.4-m8, le système de réplication MySQL utilise des identifiants
+   Depuis MySQL 5.6.5-m8, le système de réplication MySQL utilise des identifiants
    globaux de transaction côté serveur. Ces identifiants de transaction sont
    automatiquement générés et maintenus par le serveur. Les utilisateurs n'ont pas
    à s'inquiéter de les maintenir. Il n'y a besoin d'avoir des tables de disponible
@@ -1411,7 +1411,7 @@ var_dump($res->fetch_assoc());
    les esclaves de réplication MySQL. L'algorithme fonctionne tel que décrit ci-après.
    Des requêtes SQL différentes doivent être configurées pour
    <literal>fetch_last_gtid</literal> et <literal>check_for_gtid</literal>.
-   Ces requêtes sont fournies ci-dessous. Notez que MySQL 5.6.4-m8 est une version
+   Ces requêtes sont fournies ci-dessous. Notez que MySQL 5.6.5-m8 est une version
    de développement. Les détails sur l'implémentation serveur peuvent changer dans le
    futur et nécessite une adoption des requêtes SQL utilisées.
   </para>
@@ -1428,7 +1428,7 @@ var_dump($res->fetch_assoc());
   </para>
   <para>
    <example>
-    <title>Configuration du plugin : utilisation de la fonctionalité GTID interne à MySQL 5.6.4-m8</title>
+    <title>Configuration du plugin : utilisation de la fonctionalité GTID interne à MySQL 5.6.5-m8</title>
     <programlisting role="ini">
 <![CDATA[
 {
@@ -1457,6 +1457,220 @@ var_dump($res->fetch_assoc());
    </example>
   </para>
 
+ </section>
+ <section xml:id="mysqlnd-ms.quickstart.cache">
+  <title>Intégration du cache</title>
+  <note>
+   <title>Version requise et dépendances</title>
+   <para>
+    L'intégration du cache est disponible depuis PECL/mysqlnd_ms 1.3.0-beta
+    (sous développement). PECL/mysqlnd_qc 1.1.0 (sous développement) ou supérieure
+    est utilisé comme un cache. Les deux plugins doivent être installés.
+    PECL/mysqlnd_ms doit être compilé avec le support de la fonctionalité du cache.
+    L'utilisation de PHP 5.4.0 ou supérieure est obligatoire.
+   </para>
+  </note>
+  <para>
+   Les clusters de base de données peuvent délivrer différents niveaux de consistences.
+   Depuis PECL/mysqlnd_ms 1.2.0, il est possible de demander au plugin de considérer
+   uniquement les noeuds de clusters qui peuvent délivrer le niveau de consistance
+   requis. Par exemple, si vous utilisez un serveur de réplication MySQL asynchrone
+   avec une échelle de cluster éventuellement consistent, il est possible de
+   demander une session de consistence (lecture de vos écritures) à n'importe quel
+   moment en utilisant la fonction <function>mysqlnd_ms_set_quos</function>.
+   Veuillez également vous reportez à la section de la documentation sur
+   <link linkend="mysqlnd-ms.quickstart.qos-consistency">les niveaux de service
+    et de consistence</link>.
+  </para>
+  <para>
+   <example>
+    <title>Récapitulatif : qualité de service demandant de lire vos écritures</title>
+    <programlisting role="php">
+/* Demande d'une session de consistence : lecture de vos écritures */
+if (!mysqlnd_ms_set_qos($mysqli, MYSQLND_MS_QOS_CONSISTENCY_SESSION))
+  die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+     </programlisting>
+   </example>
+  </para>
+  <para>
+   Supposons que PECL/mysqlnd a été explicitement configuré pour délivrer aucun
+   niveau de consistence plus élevé que la consistence éventuelle, il est possible
+   de remplacer un noeud de base de données accessible en lecture avec un cache
+   côté client utilisant time-to-live (TTL), en invalidant ainsi la statégie.
+   Ainsi, à la fois le noeud de base de données et le cache peuvent ou non servir
+   les données courantes, sachant que c'est ce que définit la consistence éventuelle.
+  </para>
+  <para>
+   Remplacer l'accès en lecture d'un noeud de base de données avec un accès au
+   cache local peut améliorer les performances globales et baisser la charge
+   de la base de données. Si l'entrée du cache est souvent réutilisée
+   par d'autres clients que celui ayant créée l'entrée dans le cache, un
+   accès base de données est sauvé et ainsi, la charge de la base de données
+   baisse. De plus, les performances du système peuvent devenir meilleures
+   sachant que le calcul et la délivrance d'une requête de base de données
+   est plus lente que l'accès à un cache local.
+  </para>
+  <para>
+   <example>
+    <title>Configuration du plugin : aucune entrée spéciale pour la mise en cache</title>
+    <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost",
+                "socket": "\/tmp\/mysql.sock"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "127.0.0.1",
+                "port": "3306"
+            }
+        },
+    }
+}
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Mise en cache d'une requête esclave</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (!$mysqli)
+  /* Bien évidemment, votre gestionnaire d'erreur est meilleur... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
+    !$mysqli->query("CREATE TABLE test(id INT)") ||
+    !$mysqli->query("INSERT INTO test(id) VALUES (1)"))
+  die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+
+/* Autorise explicitement la consistence éventuelle et la mise en cache (TTL <= 60 secondes) */
+if (false == mysqlnd_ms_set_qos($mysqli, MYSQLND_MS_QOS_CONSISTENCY_EVENTUAL, MYSQLND_MS_QOS_OPTION_CACHE, 60)) {
+	die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+}
+
+/* Pour que ceci fonctionne, nous devons juste attendre d'atteindre un esclave.
+Forçons le. */
+
+$attempts = 0;
+do {
+  /* Vérifie si l'esclave a la table */
+  if ($res = $mysqli->query("SELECT id FROM test")) {
+    break;
+  } else if ($mysqli->errno) {
+    die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+  }
+  /* Attente d'un esclave */
+  usleep(200000);
+} while ($attempts++ < 10);
+
+/* La requête va être exécutée sur un esclave, le résultat est dans le cache */
+assert($res);
+var_dump($res->fetch_assoc());
+
+/* Servi depuis le cache */
+$res = $mysqli->query("SELECT id FROM test");
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Cet exemple montre la façon dont on doit utiliser la fonctionalité du cache.
+   Tout d'abord, vous devez définir la qualité de service à une consistence
+   éventuelle et explicitement autoriser la mise en cache. Ceci est fait
+   en appelant la fonction <function>mysqlnd_ms_set_qos</function>.
+   Puis, le jeu de résultats de chaque requête en lecture seule est mis
+   en cache pour plus de quelques secondes, tel qu'autorisé avec la fonction
+   <function>mysqlnd_ms_set_qos</function>.
+  </para>
+  <para>
+   Le TTL actuel est inférieur ou égal à la valeur définie avec la fonction
+   <function>mysqlnd_ms_set_qos</function>. La valeur passée à la fonction
+   définit l'âge maximal (en secondes) des données délivrées. Pour calculer
+   la valeur actuelle du TTL, la latence du serveur de réplication est vérifiée
+   et soustrait à la valeur fournie. Si, par exemple, l'âge maximal est défini
+   à 60 secondes, et l'esclave rapporte une latence de 10 secondes, le TTL
+   résultant sera de 50 secondes. Le TTL est calculé de façon individuelle
+   pour chaque requête mise en cache.
+  </para>
+  <para>
+   <example>
+    <title>Lecture de vos écritures et mise en cache</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (!$mysqli)
+  /* Bien évidemment, votre gestionnaire d'erreur est meilleur... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
+    !$mysqli->query("CREATE TABLE test(id INT)") ||
+    !$mysqli->query("INSERT INTO test(id) VALUES (1)"))
+  die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+
+/* Autorise explicitement la consistence éventuelle et la mise en cache (TTL <= 60 secondes) */
+if (false == mysqlnd_ms_set_qos($mysqli, MYSQLND_MS_QOS_CONSISTENCY_EVENTUAL, MYSQLND_MS_QOS_OPTION_CACHE, 60)) {
+	die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+}
+
+/* Pour que ceci fonctionne, nous devons juste attendre d'atteindre un esclave.
+Forçons le. */
+$attempts = 0;
+do {
+  /* Vérifie si l'esclave a la table */
+  if ($res = $mysqli->query("SELECT id FROM test")) {
+    break;
+  } else if ($mysqli->errno) {
+    die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+  }
+  /* Attente d'un esclave */
+  usleep(200000);
+} while ($attempts++ < 10);
+
+assert($res);
+
+/* La requête va être exécutée sur un esclave, le résultat est dans le cache */
+var_dump($res->fetch_assoc());
+
+/* Servi depuis le cache */
+if (!($res = $mysqli->query("SELECT id FROM test")))
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+var_dump($res->fetch_assoc());
+
+/* Mise à jour sur le maître */
+if (!$mysqli->query("UPDATE test SET id = 2"))
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+
+/* Lecture de vos écritures */
+if (false == mysqlnd_ms_set_qos($mysqli, MYSQLND_MS_QOS_CONSISTENCY_SESSION)) {
+	die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+}
+
+/* Récupération des dernières données */
+if (!($res = $mysqli->query("SELECT id FROM test")))
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+var_dump($res->fetch_assoc());
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   La qualité de service peut être modifiée à n'importe quel moment
+   pour supprimer l'utilisation du cache. Si nécessaire, vous pouvez
+   le modifier pour lire vos écritures (session de consistence).
+   Dans ce cas, le cache ne sera pas utilisé et les dernières données
+   seront lues.
+  </para>
  </section>
 </chapter>
 
