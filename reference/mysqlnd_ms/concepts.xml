@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 902cbcc2dfb6251773a4b6c269e305ad4390ed1f Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 4683fdcff3805166b1e72aa5664d2182f6a36c1a Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.concepts" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -659,13 +659,24 @@ version = 5.6.2-m5-log
    Un exemple d'échec manuel est fourni dans la section sur les
    <link linkend="mysqlnd-ms.errorhandling">gestionnaires d'erreurs</link>.
   </para>
+  <para>
+   Veuillez noter que si vous utilisez une copie de cluster primaire,
+   comme une réplication MySQL, il est difficile de faire un failover de connexion
+   dans le cas où la connexion au maître échoue. A tout moment, il n'y a
+   qu'un seul maître dans le cluster pour un jeu de données.
+   Le maître représent un seul point. Si il échoue, les clients n'ont plus
+   de cible à utiliser pour effectuer les requêtes en écriture. Dans le cas où
+   le maître tombe en panne, l'administrateur de base de données doit prendre
+   en compte la situation et éventuellement mettre à jour les configurations
+   des clients.
+  </para>
  </section>
  
  <section xml:id="mysqlnd-ms.loadbalancing">
   <title>Répartition de charge</title>
   <para>
-   Il existe quatre stratégies pour distribuer les requêtes de lecture-seule
-   sur les esclaves configurés:
+   Il existe quatre stratégies pour distribuer les requêtes
+   sur les esclaves configurés :
   </para>
   <para>
    <variablelist>
@@ -1261,6 +1272,172 @@ version = 5.6.2-m5-log
   </note>
  </section>
 
+ <section xml:id="mysqlnd-ms.concept_cache">
+  <title>Intégration du cache</title>
+  <note>
+   <title>Version requise</title>
+   <para>
+    Cette fonctionalité requière l'utilisation de PECL/mysqlnd_ms 1.3.0-beta
+    ou supérieure et de PECL/mysqlnd_qc 1.1.0-alpha ou supérieure. PECL/mysqlnd_ms
+    doit être compilé pour supporter cette fonctionalité. PHP 5.4.0 ou supérieure
+    est requise.
+   </para>
+  </note>
+  <note>
+   <title>Clusters MySQL appropriés</title>
+   <para>
+    Cette fonctionalité est prévue pour une utilisation avec un serveur
+    de réplication MySQL (copie primaire). Actuellement, aucun autre type
+    de cluster MySQL n'est supporté. Les utilisateurs d'un tel cluster
+    doivent contrôler PECL/mysqlnd_qc manuellement s'ils sont intéressés
+    dans la mise en cache de requête côté client.
+   </para>
+  </note>
+  <para>
+   Le support des clusters de réplication MySQL (copie primaire asynchrone)
+   est le principal but de PECL/mysqlnd_ms. Les esclaves d'un cluster de
+   réplication MySQL peuvent ou non refléter les dernières mises à jour
+   depuis le maître. Les esclaves sont asynchrones, et peuvent lagger derrière
+   le maître. Une lecture depuis un esclave a une consistence éventuelle depuis
+   une perspective cluster.
+  </para>
+  <para>
+   Le même niveau de consistence est offert par un cache local en utilisant
+   une stratégie d'invalidation time-to-live (TTL). Des données courantes ou
+   des données non mises à jour peuvent être servies. Eventuellement, les données
+   recherchées depuis le cache peuvent ne pas être disponibles et la source
+   du cache peut devoir être accédé.
+  </para>
+  <para>
+   En fournissant à la fois un esclage de réplication MySQL (secondaire asynchrone)
+   et un cache local TTL, un niveau de service identique est fourni, et il est possible
+   de remplacer de façon transparente un accès à une base de données distante par
+   un accès au cache local afin d'améliorer les possibilités.
+  </para>
+  <para>
+   Depuis PECL/mysqlnd_ms 1.3.0-beta, le plugin est capable de contrôler de façon
+   transparente PECL/mysqlnd_ms 1.1.0-alpha ou supérieure pour mettre en cache une
+   requête en lecture seule si c'est explicitement autorisé via la configuration
+   d'une qualité de service appropriée en utilisant la fonction
+   <function>mysqlnd_ms_set_qos</function>. Reportez-vous à la section
+   <link linkend="mysqlnd-ms.quickstart.cache">Démarrage rapide</link> pour un exemple
+   de code. Les deux plugins doivent être installés, et PECL/mysqlnd_ms doit avoir été
+   compilé pour supporter la fonctionalité de cache, et enfin, PHP 5.4.0 ou supérieure
+   doit être utilisé.
+  </para>
+  <para>
+   Les applications ont un contrôle total de l'utilisation du cache et peuvent
+   demander la mise à jour des données à n'importe quel moment, si besoin.
+   L'utilisation du cache peut être activée et désactivé lors de l'exécution
+   du script. Le cache sera utilisé si la fonction <function>mysqlnd_ms_set_qos</function>
+   définit la qualité de service à une consistence éventuelle, et active
+   l'utilisation du cache. L'utilisation du cache est désactivé en demandant un
+   niveau de consistence supérieur, par exemple, une consistence de session (lecture
+   de vos écritures). Une fois que la qualité de service revient à une consistence
+   éventuelle, le cache peut de nouveau être activé.
+  </para>
+  <para>
+   Si la mise en cache est active pour une requête en lecture seule, PECL/mysqlnd_ms
+   peut injecter <link linkend="mysqlnd-qc.quickstart.caching">une astuce SQL pour contrôler
+   la mise en cache</link> via PECL/mysqlnd_qc. Cela va modifier la requête SQL
+   récupérée depuis l'application. Les processeurs SQL suivants sont supposés
+   ignorer les astuces SQL. Une astuce SQL est un commentaire SQL. Les commentaires
+   ne doivent pas être ignorés, par exemple, par le serveur de base de données.
+  </para>
+  <para>
+   Le TTL d'une entrée du cache est calculé pour chaque requête. Les applications
+   définissent l'âge maximal des données qu'elles souhaitent récupérer en utilisant
+   la fonction <function>mysqlnd_ms_set_qos</function>. L'âge définit une limite supérieure
+   approximative en secondes des données pouvant être retournées depuis le maître en
+   tenant compte du lag.
+  </para>
+  <para>
+   La logique suivante est utilisée pour calculer le TTL courant si le cache
+   est actif. La logique prend en compte le lag estimé de l'esclave pour choisir
+   un TTL. Si, par exemple, il y a deux esclaves qui laguent de 5 et 10 secondes
+   et que l'âge maximal autorisé est de 60 secondes, le TTL sera défini à 50 secondes.
+   Notez également que la définission de l'âge ne dépassera pas le calcul estimé.
+   <itemizedlist>
+    <listitem>
+     <simpara>
+      Vérifie si la requête est une requête en lecture seule. Si ce n'est pas le cas,
+      aucune mise en cache ne sera demandée.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Si le cache est actif, vérifie si le lag de tous les serveurs esclaves configurés.
+      Etablissement des connexions aux esclaves si aucune n'existe et que les connexions
+      paraisseuses sont utilisées.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Envoi <literal>SHOW SLAVE STATUS</literal> à tous les esclaves. N'attends pas
+      que le premier esclave réponde avant d'envoyer la demande au second.
+      Les clients attendent souvent longtemps, aussi, tout est envoyé en même temps
+      et l'analyse se fera dans un second temps.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      On parcourt tous les esclaves. Pour chaque esclave, on attend sa réponse.
+      On ne commence pas l'analyse du prochain esclave avant que le courant n'ait
+      répondu. On vérifie <literal>Slave_IO_Running=Yes</literal> et <literal>Slave_SQL_Running=Yes</literal>.
+      Si les deux conditions sont vraies, on récupère la valeur de
+      <literal>Seconds_Behind_Master</literal>. Dans le cas d'une erreur, ou d'un échec sur
+      l'une des conditions, on définit une erreur sur la connexion de l'esclave.
+      Cela permet d'ignorer ces connexions pour le reste du filtrage de connexion.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Recherche de la valeur maximale de <literal>Seconds_Behind_Master</literal>
+      depuis tous les esclaves qui ont passés les conditions précédentes.
+      On soustrait la valeur depuis l'âge maximal fourni par l'utilisateur avec 
+      la fonction <function>mysqlnd_ms_set_qos</function>. Le reste de cette soustraction
+      sera utilisé comme TTL.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Ce filtrage va trier tous les esclaves. Ainsi, l'âge maximal est utilisé
+      comme TTL, car le lag maximal trouvé vaut zéro. Il est tout à fait valide
+      de trier tous les esclaves. Le filtre de balance de charge interne
+      prendra le maître.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Injection des astuces SQL appropriées pour activer la mise en cache par PECL/mysqlnd_qc.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Traitement avec la connexion filtrée, i.e. applique les règles de balance
+      de charge pour récupérer un esclave.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      PECL/mysqlnd_qc est chargé après PECL/mysqlnd_ms par PHP. Aussi, il verra toutes
+      les modifications de requêtes de PECL/mysqlnd_ms et mettra en cache la requête si
+      il en a reçu l'instruction.
+     </simpara>
+    </listitem>
+   </itemizedlist>
+  </para>
+  <para>
+   L'algorithme peut paraître impressionnant. <literal>SHOW SLAVE STATUS</literal> est une
+   opération très rapide.En considérant un nombre de requêtes suffisants et les accès
+   au cache par seconde, le coût de la vérification du lag des esclaves est largement
+   inférieur au coût d'une décision du cache.
+  </para>
+  <para>
+   Les suggestions sur un meilleur algorithme sont bien entendues les bienvenues.
+  </para>
+ </section>
+
  <section xml:id="mysqlnd-ms.supportedclusters">
   <title>Clusters supportés</title>
   <para>
@@ -1286,23 +1463,24 @@ version = 5.6.2-m5-log
   </para>
   <para>
    Le plugin est optimisé pour gérer ces tâches dans un contexte de réplication MySQL
-   asynchrone classique, à savoir un seul maitre et plusieurs esclaves. Dans ce cas, toutes
-   les tâches listées plus haut doivent être gérées coté client.
+   asynchrone classique, à savoir un seul maitre et plusieurs esclaves (copie primaire).
+   Dans ce cas, toutes les tâches listées plus haut doivent être gérées coté client.
   </para>
   <para>
    D'autres types de clusters MySQL ont moins d'implication coté client.
    Par exemple, si tous les noeuds du cluster peuvent répondre aux lectures et aux écritures,
-   aucune séparation ne sera nécessaire. Si tous les noeuds sont synchrones, ils sont tous
-   éligibles avec le même poids, ce qui simplifie la tâche de selection. Dans de tels cas,
-   le plugin doit être reconfiguré pour désactiver certaines logiques, comme la séparation
-   des lectures/écritures.
+   aucune séparation ne sera nécessaire (plusieurs maîtres, mise à jour total).
+   Si tous les noeuds sont synchrones, ils sont tous éligibles avec le même poids, ce qui
+   simplifie la tâche de selection. Dans de tels cas, le plugin doit être reconfiguré pour
+   désactiver certaines logiques, comme la séparation des lectures/écritures.
   </para>
   <note>
    <title>But de la documentation</title>
    <para>
-    La documentation décrit l'utilisation du plugin dans un cas classique de réplication asynchrone.
-    C'est le cas de base, qui a inspiré l'écriture du plugin. D'autres types de clusters sont décrits brièvement
-    ci-dessous, nous continuons à travailler dessus actuellement.
+    La documentation décrit l'utilisation du plugin dans un cas classique de réplication
+    asynchrone (copie primaire). C'est le cas de base, qui a inspiré l'écriture du plugin.
+    D'autres types de clusters sont décrits brièvement ci-dessous, nous continuons à
+    travailler dessus actuellement.
    </para>
   </note>
   <para>
