@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 48e5dd1b7e9920436dd3b40e192d27c670e9679a Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.stream-filter-register" xmlns="http://docbook.org/ns/docbook">
@@ -40,138 +40,14 @@
      <listitem>
       <para>
        Pour créer une classe de filtre, vous devez définir une classe qui
-       étend la classe <literal>php_user_fitler</literal> avec les membres
-       et méthodes définis ci-dessous. Lorsque vous réalisez des opérations
+       étend la classe <classname>php_user_fitler</classname>.
+       Lorsque vous réalisez des opérations
        de lecture et d'écriture dans le flux auquel votre filtre est attaché,
        PHP passera les données à travers votre filtre (et tous les autres 
        filtres attachés), de façon à ce que les données soient modifiées 
        tel que désiré. Vous devez implémenter les méthodes tel que 
-       décrit ci-dessous, sous peine de comportements indéfinis.
-      </para>
-      <methodsynopsis>
-       <type>int</type><methodname>filter</methodname>
-       <methodparam><type>resource</type><parameter>in</parameter></methodparam>
-       <methodparam><type>resource</type><parameter>out</parameter></methodparam>
-       <methodparam><type>int</type><parameter role="reference">consumed</parameter></methodparam>
-       <methodparam><type>bool</type><parameter>closing</parameter></methodparam>
-      </methodsynopsis>
-      <para>
-       Cette méthode est appelée à chaque fois que des données sont lues ou écrites
-       dans le flux attaché (avec des fonctions comme <function>fread</function> ou
-       <function>fwrite</function>). Le paramètre <parameter>in</parameter> est une
-       &resource; qui pointe sur une <literal>bucket brigade</literal> qui contient
-       un ou plusieurs objet <literal>bucket</literal> contenant les données à filtrer.
-       <parameter>out</parameter> est une autre &resource; qui pointe sur une 
-       <literal>bucket brigade</literal> dans laquelle les données seront placées.
-       <parameter>consumed</parameter>, qui doit <emphasis>toujours</emphasis>
-       être déclaré par référence, doit être incrémenté de la taille de données que
-       votre filtre lit et modifie. Dans la plupart des cas, cela signifie que vous
-       devrez incrémenter <parameter>consumed</parameter> avec <literal>$bucket->datalen</literal>
-       pour chaque <literal>$bucket</literal>.
-       Si le flux est en cours de fermeture (et, par conséquent, cela sera le dernier
-       passage dans la chaîne de filtres), le paramètre <parameter>closing</parameter> 
-       vaudra &true; La méthode <methodname>filter</methodname> doit retourner l'une 
-       des trois valeurs suivantes : 
-       <informaltable>
-        <tgroup cols="2">
-         <thead>
-          <row>
-           <entry>Valeur retournée</entry>
-           <entry>Signification</entry>
-          </row>
-         </thead>
-         <tbody>
-          <row>
-           <entry><constant>PSFS_PASS_ON</constant></entry>
-           <entry>
-            Filtre traité avec succès ; les données sont disponibles
-            dans le paramètre <parameter>out</parameter> de 
-            la <literal>bucket brigade</literal>.
-           </entry>
-          </row>
-          <row>
-           <entry><constant>PSFS_FEED_ME</constant></entry>
-           <entry>
-            Filtre traité avec succès ; aucune donnée disponible.
-            Plus de données sont nécessaires depuis le flux ou
-            avant le filtre.
-           </entry>
-          </row>
-          <row>
-           <entry><constant>PSFS_ERR_FATAL</constant> (default)</entry>
-           <entry>
-            Le filtre a rencontré une erreur fatale, et ne peut plus 
-            continuer.
-           </entry>
-          </row>
-         </tbody>
-        </tgroup>
-       </informaltable>
-      </para>
-      <methodsynopsis>
-       <type>bool</type><methodname>onCreate</methodname>
-       <void/>
-      </methodsynopsis>
-      <simpara>
-       Cette méthode est appelée durant l'instanciation du filtre. Si votre 
-       filtre alloue ou initialise d'autres ressources (comme des
-       buffers), c'est le moment de le faire. Votre implémentation de cette
-       méthode doit retourner &false; en cas d'erreur et &true; en cas de succès.
-      </simpara>
-      <simpara>
-       Lorsque votre filtre est instancié pour la première fois
-       et que <literal>votrefiltre-&gt;onCreate()</literal> est appelée, un nombre
-       de propriétés est disponible comme montré dans la table ci-dessous.
-      </simpara>
-      <para>
-       <informaltable>
-        <tgroup cols="2">
-         <thead>
-          <row>
-           <entry>Propriétés</entry>
-           <entry>Contenu</entry>
-          </row>
-         </thead>
-         <tbody>
-          <row>
-           <entry><literal>FilterClass-&gt;filtername</literal></entry>
-           <entry>
-            Une chaîne contenant le nom du filtre est instanciée.
-            Les filtres peuvent être enregistrés sous de noms 
-            multiples ainsi qu'avec des jokers. Utilisez cette 
-            propriété pour déterminer quel nom est utilisé.
-           </entry>
-          </row>
-          <row>
-           <entry><literal>FilterClass-&gt;params</literal></entry>
-           <entry>
-            Le contenu du paramètre <parameter>params</parameter> passé à 
-            la fonction <function>stream_filter_append</function> ou la fonction
-            <function>stream_filter_prepend</function>.
-           </entry>
-          </row>
-          <row>
-           <entry><literal>FilterClass-&gt;stream</literal></entry>
-           <entry>
-            La &resource; de flux qui est filtrée. Peut être disponible uniquement
-            durant l'appel de la méthode <methodname>filter</methodname>, lorsque
-            le paramètre <literal>closing</literal> vaut &false;.
-           </entry>
-          </row>
-         </tbody>
-        </tgroup>
-       </informaltable>
-      </para>
-      <methodsynopsis>
-       <type>void</type><methodname>onClose</methodname>
-       <void/>
-      </methodsynopsis>
-      <para>
-       Cette méthode est appelée durant l'extinction du filtre (généralement,
-       lorsque le flux est fermé), et est exécutée <emphasis>après</emphasis>
-       l'appel de la fonction <literal>flush</literal>. Si des ressources
-       ont été allouées ou créées durant <literal>onCreate()</literal>,
-       c'est le moment de les libérer.
+       décrit dans <classname>php_user_filter</classname>, sous peine de
+       comportements indéfinis.
       </para>
      </listitem>
     </varlistentry>
