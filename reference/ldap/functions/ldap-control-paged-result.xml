@@ -1,25 +1,156 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 94497636f2f6956ba6bf1017297d589009fbd040 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: e5f1018742d659bf13ea732b7a536c04a19a66ae Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
-<refentry xml:id='function.ldap-control-paged-result' xmlns="http://docbook.org/ns/docbook">
+<refentry xml:id='function.ldap-control-paged-result'
+xmlns="http://docbook.org/ns/docbook"
+xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>ldap_control_paged_result</refname>
-  <refpurpose>Injecte le contrôle des résultats paginés</refpurpose>
+  <refpurpose>Envoi un contrôle de pagination LDAP</refpurpose>
  </refnamediv>
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <type>mixed</type><methodname>ldap_control_paged_result</methodname>
+   <type>bool</type><methodname>ldap_control_paged_result</methodname>
    <methodparam><type>resource</type><parameter>link</parameter></methodparam>
    <methodparam><type>int</type><parameter>pagesize</parameter></methodparam>
-   <methodparam choice="opt"><type>bool</type><parameter role="reference">iscritical</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter role="reference">cookie</parameter></methodparam>
+   <methodparam choice="opt"><type>bool</type><parameter>iscritical</parameter></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>cookie</parameter></methodparam>
   </methodsynopsis>
-  &warn.undocumented.func;
+  <para>
+   Active la pagination LDAP en envoyant le contrôle de pagination
+   (taille de la page, cookie,...).
+  </para>
  </refsect1>
 
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>link</parameter></term>
+     <listitem>
+      <para>
+       Un identifiant de lien LDAP, retourné par la fonction
+       <function>ldap_connect</function>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>pagesize</parameter></term>
+     <listitem>
+      <para>
+       Le nombre d'entrées par page.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>iscritical</parameter></term>
+     <listitem>
+      <para>
+       Indique si la pagination est critique ou non. Si vaut &true;,
+       et si le serveur ne supporte pas la pagination,
+       la recherche ne retournera aucun résultat.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>cookie</parameter></term>
+     <listitem>
+      <para>
+       Une structure opaque envoyée par le serveur
+       (<function>ldap_control_paged_result_response</function>).
+      </para>
+     </listitem>
+    </varlistentry>
+    </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   &return.success;
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   L'exemple ci-dessous montre la manière pour récupérer la première page
+   d'une recherche paginée avec une seule entrée par page.
+   <example>
+    <title>Pagination LDAP</title>
+    <programlisting role="php">
+     <![CDATA[
+     <?php
+     // $ds est un identifiant de lien valide (voir ldap_connect)
+
+     $dn        = 'ou=example,dc=org';
+     $filter    = '(|(sn=Doe*)(givenname=John*))';
+     $justthese = array('ou', 'sn', 'givenname', 'mail');
+
+     // active la pagination avec une taille de page à 1.
+     ldap_control_paged_result($ds, 1);
+
+     $sr = ldap_search($ds, $dn, $filter, $justthese);
+
+     $info = ldap_get_entries($ds, $sr);
+
+     echo $info['count'] . ' entrées retournées' . PHP_EOL;
+     ]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   L'exemple ci-dessous montre la manière pour récupérer tous les résultats
+   paginés avec 100 entrées par page.
+   <example>
+    <title>Pagination LDAP</title>
+    <programlisting role="php">
+     <![CDATA[
+     <?php
+     // $ds est un identifiant de lien valide (voir ldap_connect)
+
+     $dn        = 'ou=example,dc=org';
+     $filter    = '(|(sn=Doe*)(givenname=John*))';
+     $justthese = array('ou', 'sn', 'givenname', 'mail');
+
+     // active la pagination avec une taille de page à 100.
+     $pageSize = 100;
+
+     $cookie = '';
+     do {
+         ldap_control_paged_result($ds, $pageSize, true, $cookie);
+
+         $result  = ldap_search($ds, $dn, $filter, $justthese);
+         $entries = ldap_get_entries($ds, $result);
+             
+         foreach ($entries as $e) {
+             echo $e['dn'] . PHP_EOL;
+         }
+
+         ldap_control_paged_result_response($ds, $result, $cookie);
+       
+     } while($cookie !== null && $cookie != '');
+     ]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>ldap_control_paged_result_response</function></member>
+    <member><link xlink:href="&url.rfc;2696">RFC2696 : Extension de contrôle LDAP pour
+     une manipulation simplifiée des résultats paginés</link></member>
+   </simplelist>
+  </para>
+ </refsect1>
 </refentry>
 
 <!-- Keep this comment at the end of the file
