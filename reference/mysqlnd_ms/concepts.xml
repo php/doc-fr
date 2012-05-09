@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 4683fdcff3805166b1e72aa5664d2182f6a36c1a Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 8549e3a1b12d26d356b8afd9fa84750ef14a0dde Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.concepts" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -358,6 +358,33 @@
    a toujours besoin de maintenir le statut de la connexion, si besoin.
   </para>
   </caution>
+
+  <para>Jeux de caractères et échappement des chaînes</para>
+  <para>
+   En raison de l'utilisation des connexions paraisseuses, qui sont actives
+   par défaut, il peut survenir qu'une application tente d'échapper une chaîne
+   pour une utilisation dans une requête SQL avant qu'une connexion ne soit
+   établie. Dans ce cas, l'échappement de la chaîne n'est pas possible.
+   La fonction d'échappement de chaînes ne connait pas le jeu de caractères
+   à utiliser avant qu'une connexion ne soit établie.
+  </para>
+  <para>
+   Pour éviter ce problème, une nouvelle option de configuration
+   <link linkend="ini.mysqlnd-ms-plugin-config-v2.server-charset"><literal>server_charset</literal></link>
+   a été introduite en version 1.4.0.
+  </para>
+  <para>
+   Une attention particulière doit être portée lors de l'échappement de chaînes
+   avec un certain jeu de caractères, mais utilisant le résultat sur une connexion
+   qui utilise un jeu de caractères différent. Notez que PECL/mysqlnd_ms
+   manipule les connexions et qu'une connexion au niveau applicatif représente une
+   file de plusieurs connexions qui peuvent avoir différents jeux de caractères
+   par défaut. Il est recommandé de configurer le serveur pour utiliser le même
+   jeu de caractères par défaut. L'option de configuration <literal>server_charset</literal>
+   va être utile dans cette situation. Si vous utilisez l'option
+   <literal>server_charset</literal>, le plugin va définir le jeu de caractères
+   fourni sur toutes les nouvelles connexions ouvertes.
+  </para>
  </section>
  
  <section xml:id="mysqlnd-ms.transaction">
@@ -629,7 +656,7 @@ version = 5.6.2-m5-log
  <section xml:id="mysqlnd-ms.failover">
   <title>Gestion des incidents (Failover)</title>
   <para>
-   La gestion des incidents de connexion est laissée à l'utilisateur. L'application
+   Par défaut, la gestion des incidents de connexion est laissée à l'utilisateur. L'application
    est responsable de la vérification des valeurs de retour des fonctions concernant
    les bases de données, et doit réagir en cas de detection d'erreur. Par exemple, si le
    plugin reconnait une requête de type lecture-seule  et l'aiguille vers un serveur esclave
@@ -648,7 +675,10 @@ version = 5.6.2-m5-log
   </para>
   <para>
    Un utilisateur ne changeant pas le statut d'une connexion après l'avoir ouverte peut activer
-   la gestion des incidents pour le maitre. 
+   la gestion des incidents. Notez que la logique de failover automatique n'est pas
+   utilisée pour les connexions déjà ouvertes. Il n'y a aucune façon pour indiquer
+   au plugin de tenter un failover sur une connexion qui a été déjà connectée
+   à MySQL dans le passé.
   </para>
   <para>
    Cette gestion des incidents se configure dans le fichier de configuration du plugin au moyen

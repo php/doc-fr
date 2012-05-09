@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ --> 
-<!-- EN-Revision: d5ac5b0152d590e2305e4dde23d92c96268065ef Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 8549e3a1b12d26d356b8afd9fa84750ef14a0dde Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.setup" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -1499,7 +1499,7 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
       </para>
       <para>
        Lors de l'utilisation de <literal>failover=master</literal>,
-       le plugin basculera implicitement vers un esclave, si disponible.
+       le plugin basculera implicitement vers un maître, si disponible.
        Reportez-vous à la documentation de ce concept pour en apprendre
        plus sur les risques de l'utilisation de <literal>failover=master</literal>.
       </para>
@@ -1527,6 +1527,15 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
 ]]>
         </programlisting>
        </example>
+      </para>
+      <para>
+       Veuillez noter que la logique de failover automatique est
+       appliquée seulement lors de l'ouverture d'une connexion. Une
+       fois la connexion ouverte, aucune tentative automatique
+       ne sera effectuée pour la ré-ouvrir lors d'une erreur. Si, par exemple,
+       une connexion serveur est fermée, et que l'utilisateur tente
+       d'y exécuter une requête, aucun failover automatique ne sera tenté.
+       Au lieu de cela, une erreur sera rapportée.
       </para>
       <para>
        Le fait de définir <literal>failover</literal> à une valeur
@@ -1589,6 +1598,118 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
 }
 ]]>
         </programlisting>
+       </example>
+      </para>
+      <para>
+       Voir aussi <literal>server_charset</literal> afin de prévenir
+       de possibles problèmes avec les chaînes échappées et des
+       serveurs utilisant des jeux de caractères différents.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.server-charset">
+     <term>
+      <parameter>server_charset</parameter>
+      <type>string</type>
+     </term>
+     <listitem>
+      <para>
+       Ce paramètre a été introduit en 1.4.0. Il est recommandé de le définir
+       lors de l'utilisation des connexions paraisseuses.
+      </para>
+      <para>
+       L'option <literal>server_charset</literal> a deux buts. Il agit comme
+       un jeu de caractères de secours à utiliser lors de l'échappement des chaînes
+       avant qu'une connexion ne soit établie, et il aide à éviter les erreurs
+       lors de l'échappement en environnements hétérogènes avec des serveurs
+       utilisant des jeux de caractères différents.
+      </para>
+      <para>
+       L'échappement des chaînes prend en compte le jeu de caractères de la connexion.
+       L'échappement des chaînes n'est pas possible avant qu'une connexion ne
+       soit ouverte, et que le jeu de caractères de la connexion ne soit connu.
+       L'utilisation des connexions paraisseuses retarde l'ouverture de la connexion,
+       attendant qu'une requête ne soit envoyée.
+      </para>
+      <para>
+       Une application utilisant les connexions paraisseuses peut tenter d'échapper
+       une chaîne avant d'envoyer une requête. En fait, c'est un cas commun
+       sachant que la chaîne de requête peut contenir la chaîne à échapper.
+       Cependant, en raison de l'utilisation des connexions paraisseuses, aucune
+       connexion n'a été ouverte et l'échappement échoue. Le plugin peut rapporter
+       une erreur de type <literal>E_WARNING</literal> ainsi qu'un message
+       de ce type : <literal>(mysqlnd_ms) string escaping doesn't work without established connection.
+       Possible solution is to add server_charset to your configuration</literal>
+       afin de vous informer de cet échec.
+      </para>
+      <para>
+       Le fait de définir <literal>server_charset</literal> fera que le plugin
+       utilisera le jeu de caractères fourni lors de l'échappement des chaînes
+       effectué sur des connexions paraisseuses avant d'établir une connexion réseau
+       vers MySQL. De plus, le plugin va forcer l'utilisation de ce jeu de caractères
+       lorsque la connexion est établie.
+      </para>
+      <para>
+       Le forcage de l'utilisation du jeu de caractères configuré pour l'échappement
+       est réalisé pour éviter d'avoir des erreurs en utilisant un jeu de caractères
+       pour l'échappement différent de celui utilisé ensuite pour la connexion.
+       Cela apporte également l'avantage de ne pas avoir à aligner la configuration
+       du jeu de caractères pour tous les serveurs utilisés. Inutile de savoir le jeu
+       de caractères par défaut des serveurs, le plugin définiera celui configuré
+       par défaut.
+      </para>
+      <para>
+       Le plugin n'empêchera pas l'utilisateur de changer le jeu de caractères
+       à tout moment, en utilisant la fonction <function>set_charset</function>
+       ou une requête SQL équivalente. Veuillez noter que l'utilisation de SQL n'est
+       pas recommandé car il ne pourra pas être surveiller par le plugin.
+       L'utilisateur peut, par exemple, modifier le jeu de caractères sur un
+       gestionnaire de connexions paraisseuses après l'échappement d'une chaîne et
+       avant que la connexion actuelle ne soit ouverte. Le jeu de caractères définit
+       par l'utilisateur sera utilisé pour tous les échappements avant que la
+       connexion ne soit établie. La connexion sera établie en utilisant le jeu
+       de caractères configuré, peu importe le jeu de caractères du serveur, et
+       peu importe le jeu de caractères défini par l'utilisateur auparavant. Une
+       fois une connexion ouverte, <literal>set_charset</literal> n'a plus de sens.
+      </para>
+      <para>
+       <example>
+        <title>Echappement d'une chaîne sur une connexion paraisseuse</title>
+        <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+        },
+        "lazy_connections": 1,
+        "server_charset" : "utf8"
+    }
+}
+]]>
+        </programlisting>
+        <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+$mysqli->real_escape("this will be escaped using the server_charset setting - utf8");
+$mysqli->set_charset("latin1");
+$mysqli->real_escape("this will be escaped using latin1");
+/* server_charset définit implicitement une connexion utf8 */
+$mysqli->query("SELECT 'This connection will be set to server_charset upon establishing' AS _msg FROM DUAL");
+/* latin1 sera maintenant utilisé */
+$mysqli->set_charset("latin1");
+?>
+]]>
+         </programlisting>
        </example>
       </para>
      </listitem>
