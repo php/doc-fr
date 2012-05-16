@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 84b8fca68fc762fefe85acde180a38b2e77a28b9 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 4778c21b0ced33780bd3809e4f5ad824a0d21804 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="features.commandline" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -1641,23 +1641,31 @@ php >
   </para>
   
   <para>
-   Les requêtes URI sont servies depuis le dossier de travail courant
-   où PHP a été démarré, tant que l'option -t est utilisé pour spécifier
-   explicitement un document racine.
+   Les requêtes sont servies de façon séquentielle.
   </para>
   
   <para>
-   Si une requête URI ne spécifie pas un fichier, alors soit index.php,
-   soit index.html du dossier courant sera retourné. Si aucun de ces fichiers
-   n'existe, alors un code réponse 404 est retourné.
+   Les requêtes URI sont servies depuis le dossier de travail courant
+   où PHP a été démarré, tant que l'option -t est utilisé pour spécifier
+   explicitement un document racine. Si une requête URI ne spécifie
+   pas un fichier, alors le fichier index.php ou le fichier
+   index.html du dossier courant sera retourné. Si aucun de ces
+   fichiers n'existe, alors un code réponse 404 sera retourné.
   </para>
   
   <para>
    Si un fichier PHP est fourni dans la ligne de commande lorsque le serveur web
-   est démarré, il sera traité comme un script "routeur" pour le serveur web.
+   est démarré, il sera traité comme un script "routeur".
    Le script sera exécuté au début de chaque requête HTTP. Si ce script retourne
    &false;, alors la ressource demandée est retournée telle quelle.
    Sinon, la sortie du script est retournée au navigateur.
+  </para>
+  
+  <para>
+   Les types MIME standards sont retournés pour les fichiers avec les
+   extensions : .css, .gif, .htm, .html, .jpe, .jpeg, .jpg, .js, .png,
+   .svg, et .txt. Les extensions .htm et .svg sont reconnues depuis
+   PHP 5.4.4.
   </para>
   
   <example>
@@ -1723,16 +1731,17 @@ Press Ctrl-C to quit
   <example>
    <title>Utilisation d'un script routeur</title> 
    <para>
-    Le fait de demander des images les affichera, mais les requêtes pour les fichiers
-    HTML afficheront "Bienvenue chez PHP !"
+    Dans cet exemple, le fait de demander des images les affichera,
+    mais les requêtes pour les fichiers HTML afficheront
+    "Bienvenue chez PHP !".
    </para>
    <programlisting role="php">
 <![CDATA[
 <?php
 // router.php
-if (preg_match('/\.(?:png|jpg|jpeg|gif)$/', $_SERVER["REQUEST_URI"]))
+if (preg_match('/\.(?:png|jpg|jpeg|gif)$/', $_SERVER["REQUEST_URI"])) {
     return false;    // retourne la requête telle quelle.
-else { 
+} else {
     echo "<p>Bienvenue chez PHP !</p>";
 }
 ?>]]>
@@ -1742,70 +1751,120 @@ else {
 $ php -S localhost:8000 router.php
 ]]>
    </programlisting>
+  </example>
+  
+  <example>
+   <title>Vérification de l'utilisation CLI du serveur Web</title>
    <para>
-    Après plusieurs requêtes URI, le terminal affichera quelques choses comme :
+    Pour ré-utiliser un script router du framework lors du
+    développement avec le CLI du serveur web et ensuite, continuez
+    de l'utiliser avec un serveur web de production :
    </para>
-   <screen>
+   <programlisting role="php">
 <![CDATA[
-PHP 5.4.0 Development Server started at Thu Jul 21 10:53:19 2011
-Listening on localhost:8000
-Document root is /home/me/public_html
-Press Ctrl-C to quit.
-[Thu Jul 21 10:53:45 2011] ::1:55801 GET /mylogo.jpg - Request read
-[Thu Jul 21 10:53:52 2011] ::1:55803 GET /abc.html - Request read
-[Thu Jul 21 10:53:52 2011] ::1:55804 GET /favicon.ico - Request read
+<?php
+// router.php
+if (php_sapi_name() == 'cli-server') {
+    /* Activation de la route statique et retourne FALSE */
+}
+/* on continue avec les opérations d'un index.php normal */
+?>]]>
+   </programlisting>
+   <programlisting role="shell">
+<![CDATA[
+$ php -S localhost:8000 router.php
 ]]>
-   </screen>
+   </programlisting>
+  </example>
+  
+  <example>
+   <title>Gestion des types de fichiers non supportés</title> 
+   <para>
+    Si vous devez servir une ressource statique pour laquelle le type
+    MIME n'est pas géré par le CLI du serveur web, utilisez ceci :
+   </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+// router.php
+$path = pathinfo($_SERVER["SCRIPT_FILENAME"]);
+if ($path["extension"] == "ogg") {
+    header("Content-Type: video/ogg");
+    readfile($_SERVER["SCRIPT_FILENAME"]);
+}
+else {
+    return FALSE;
+}
+?>]]>
+   </programlisting>
+   <programlisting role="shell">
+<![CDATA[
+$ php -S localhost:8000 router.php
+]]>
+   </programlisting>
+  </example>
+  
+  <example>
+   <title>Accès au CLI du serveur web depuis une machine distante</title> 
+   <para>
+    Vous pouvez rendre le serveur web accessible sur le port 8000
+    pour toutes les interfaces avec :
+   </para>
+   <programlisting role="shell">
+<![CDATA[
+$ php -S 0.0.0.0:8000
+]]>
+   </programlisting>
   </example>
   
  </section>
  <!--}}}-->
-
-  <section xml:id="features.commandline.ini">
-   <title>Configurations INI</title>
-   <para>
-    <table>
-     <title>Options de configuration CLI SAPI</title>
-     <tgroup cols="4">
-      <thead>
-       <row>
-        <entry>&Name;</entry>
-        <entry>&Default;</entry>
-        <entry>&Changeable;</entry>
-        <entry>&Changelog;</entry>
-       </row>
-      </thead>
-      <tbody>
-       <row>
-        <entry><link linkend="ini.cli-server.color">cli_server.color</link></entry>
-        <entry>"0"</entry>
-        <entry>PHP_INI_ALL</entry>
-        <entry>Disponible depuis PHP 5.4.0.</entry>
-       </row>
-      </tbody>
-     </tgroup>
-    </table>
-   </para>
-   
-   &ini.descriptions.title;
-   
-   <para>
-    <variablelist>
-     <varlistentry xml:id="ini.cli-server.color">
-      <term>
-       <parameter>cli_server.color</parameter>
-       <type>boolean</type>
-      </term>
-      <listitem>
-       <para>
-        Active le serveur web de développement interne à utiliser
-        la coloration ANSI du code dans la sortie du terminal.
-       </para>
-      </listitem>
-     </varlistentry>
-    </variablelist>
-   </para>
-  </section>
+ 
+ <section xml:id="features.commandline.ini">
+  <title>Configurations INI</title>
+  <para>
+   <table>
+    <title>Options de configuration CLI SAPI</title>
+    <tgroup cols="4">
+     <thead>
+      <row>
+       <entry>&Name;</entry>
+       <entry>&Default;</entry>
+       <entry>&Changeable;</entry>
+       <entry>&Changelog;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><link linkend="ini.cli-server.color">cli_server.color</link></entry>
+       <entry>"0"</entry>
+       <entry>PHP_INI_ALL</entry>
+       <entry>Disponible depuis PHP 5.4.0.</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+  
+  &ini.descriptions.title;
+  
+  <para>
+   <variablelist>
+    <varlistentry xml:id="ini.cli-server.color">
+     <term>
+      <parameter>cli_server.color</parameter>
+      <type>boolean</type>
+     </term>
+     <listitem>
+      <para>
+       Active le serveur web de développement interne à utiliser
+       la coloration ANSI du code dans la sortie du terminal.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </section>
  
 </chapter>
 
