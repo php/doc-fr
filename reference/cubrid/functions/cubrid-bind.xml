@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8b6d169424ff189bb563ef4c3f35f8adff3f42c5 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 4774d2e9a266278c00f417dd2c83c0d00aa17d82 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-bind" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -14,7 +14,7 @@
   <methodsynopsis>
    <type>bool</type><methodname>cubrid_bind</methodname>
    <methodparam><type>resource</type><parameter>req_identifier</parameter></methodparam>
-   <methodparam><type>mixed</type><parameter>bind_param</parameter></methodparam>
+   <methodparam><type>int</type><parameter>bind_index</parameter></methodparam>
    <methodparam><type>mixed</type><parameter>bind_value</parameter></methodparam>
    <methodparam choice="opt"><type>string</type><parameter>bind_value_type</parameter></methodparam>
   </methodsynopsis>
@@ -151,16 +151,11 @@
     </varlistentry>
     <varlistentry>
      <term>
-      <parameter>bind_param</parameter>
+      <parameter>bind_index</parameter>
      </term>
      <listitem>
       <para>
-       Identifiant de paramètre. Pour une requête préparée utilisant
-       un marqueur nommé, ce sera un nom de paramètre sous la forme :nom
-       (Notez que le nom ne peut contenir que des nombres, des lettres et des underscores,
-       et ne peut pas commencer par un nombre. La longueur du nom ne peut dépasser
-       les 32 caractères). Pour une requête préparée utilisant un marqueur joker,
-       ce sera la position (les indexes commençant à 1) du paramètre.
+       Position des paramètres liés. Commence avec 1.
       </para>
      </listitem>
     </varlistentry>
@@ -213,13 +208,6 @@
       </row>
      </thead>
      <tbody>
-      <row>
-       <entry>8.4.0</entry>
-       <entry>
-        Ajout du support des paramètres nommés ; Lors d'un liage d'un type de
-        données BLOB, on peut directement lier le chemin du fichier.
-       </entry>
-      </row>
       <row>
        <entry>8.3.1</entry>
        <entry>
@@ -288,53 +276,6 @@ Barkley Charles
   </example>
   
   <example>
-   <title>Exemple avec <function>cubrid_bind</function> et les paramètres nommés</title>
-   <programlisting role="php">
-<![CDATA[
-<?php
-$conn = cubrid_connect("localhost", 33000, "demodb");
-
-$sql_stmt = <<<EOD
-SELECT s.name FROM stadium s, game g
-WHERE s.code = g.stadium_code AND g.medal = :medal_type
-GROUP BY g.stadium_code ORDER BY count(medal) DESC LIMIT 1;
-EOD;
-
-$req = cubrid_prepare($conn, $sql_stmt);
-printf("%-30s %s\n", "Medal Type", "Stadium where most medals were ever won");
-
-cubrid_bind($req, ":medal_type", "G");
-cubrid_execute($req);
-$row = cubrid_fetch_assoc($req);
-printf("%-30s %s\n", "Gold", $row["name"]);
-
-cubrid_bind($req, ":medal_type", "S");
-cubrid_execute($req);
-$row = cubrid_fetch_assoc($req);
-printf("%-30s %s\n", "Silver", $row["name"]);
-
-cubrid_bind($req, ":medal_type", "B");
-cubrid_execute($req);
-$row = cubrid_fetch_assoc($req);
-printf("%-30s %s\n", "Bronze", $row["name"]);
-
-cubrid_close_request($req);
-cubrid_disconnect($conn);
-?>
-]]>
-   </programlisting>
-   &example.outputs;
-   <screen>
-<![CDATA[
-Medal Type                     Stadium where most medals were ever won
-Gold                           Olympic Aquatic Centre
-Silver                         Olympic Aquatic Centre
-Bronze                         Sydney Convention and Exhibition Centre
-]]>
-   </screen>
-  </example>
-  
-  <example>
    <title>Exemple avec <function>cubrid_bind</function> et les types BLOB/CLOB</title>
    <programlisting role="php">
 <![CDATA[
@@ -353,7 +294,7 @@ if ($con) {
 ]]>
    </programlisting>
   </example>
-
+  
   <example>
    <title>Exemple avec <function>cubrid_bind</function> et BLOB/CLOB</title>
    <programlisting role="php">

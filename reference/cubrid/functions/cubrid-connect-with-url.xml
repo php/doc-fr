@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: ab30a4abeb927432200f31e3a745727068b3881e Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 4774d2e9a266278c00f417dd2c83c0d00aa17d82 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-connect-with-url" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -28,14 +28,33 @@
   </para>
   <para>
    &lt;url&gt; ::= CUBRID:&lt;host&gt;:&lt;db_name&gt;:&lt;db_user&gt;:&lt;db_password&gt;:[?&lt;properties&gt;]
-   &lt;properties&gt; ::= &lt;property&gt; [&amp;&lt;propertygt;]
-   &lt;properties&gt; ::= autocommit=&lt;autocommit_mode&gt;
+  </para>
+  <para>
+   &lt;properties&gt; ::= &lt;property&gt; [&amp;&lt;property&gt;]
+  </para>
+  <para>
+   &lt;properties&gt; ::= alhosts=&lt;alternative_hosts&gt;[ &amp;rctime=&lt;time&gt;]
+  </para>
+  <para>
+   &lt;properties&gt; ::= login_timeout=&lt;milli_sec&gt;
+  </para>
+  <para>
+   &lt;properties&gt; ::= query_timeout=&lt;milli_sec&gt;
+  </para>
+  <para>
+   &lt;properties&gt; ::= disconnect_on_query_timeout=true|false
+  </para>
+  <para>
    &lt;alternative_hosts&gt; ::= &lt;standby_broker1_host&gt;:&lt;port&gt; [,&lt;standby_broker2_host&gt;:&lt;port&gt;]
+  </para>
+  <para>
    &lt;host&gt; := HOSTNAME | IP_ADDR
+  </para>
+  <para>
    &lt;time&gt; := SECOND
   </para>
   <para>
-   ou &lt;url&gt; ::= cci:CUBRID:&lt;host&gt;:&lt;db_name&gt;:......
+   &lt;milli_sec&gt; := MILLI SECOND
   </para>
   <para>
    <simplelist>
@@ -44,15 +63,36 @@
     <member>db_user : Un nom d'utilisateur pour la base de données</member>
     <member>db_password : Le mot de passe associé à l'utilisateur</member>
     <member>autocommit : Le mode auto-commit de la connexion à la base de données</member>
-    <member>alhosts: spécifie le courtier d'information pour le serveur de secours,
+    <member>
+     alhosts : spécifie le courtier d'information pour le serveur de secours,
      qui sera utilisé comme backup lorsqu'il devient impossible de se connecter au
      serveur courant. Vous pouvez spécifier plusieurs courtiers comme backup et la connexion
-     aux courtiers se fera dans l'ordre de alhosts</member>
-    <member>rctime : un intervalle pendant lequel il sera tenter de se connecter
+     aux courtiers se fera dans l'ordre de alhosts
+    </member>
+    <member>
+     rctime : un intervalle pendant lequel il sera tenter de se connecter
      au courtier active lorsqu'une erreur survient. Après qu'une erreur ne soit survenue,
      le système se connecter au courant spécifié par althosts, met fin à la transaction,
      et tente une connexion au courtier actif de la base de données principale à chaque
-     intervalle rctime. La valeur par défaut est 600 secondes.</member>
+     intervalle rctime. La valeur par défaut est 600 secondes.
+    </member>
+    <member>
+     login_timeout : Valeur du délai maximal d'attente (unité : mseconde) pour l'identification
+     à la base de données. Par défaut, cette valeur vaut 0, ce qui signifie que l'on attend
+     indéfiniment.
+    </member>
+    <member>
+     query_timeout : Valeur du délai maximal d'attente (unité : mseconde) pour l'exécution
+     de la requête. Une fois cette valeur atteinte, un message pour annuler la requête
+     envoyée au serveur est envoyé. La valeur retournée peut dépendre de la configuration
+     de disconnect_on_query_timeout configuration ; même si le message pour annuler
+     la requête a été envoyée au serveur, la requête peut réussir.
+    </member>
+    <member>
+     disconnect_on_query_timeout : Configure une valeur déterminant si l'on doit retourner
+     immédiatement une erreur pour les fonctions exécutées après le délai maximal d'attente.
+     La valeur par défaut est &false;.
+    </member>
    </simplelist>
   </para>
   <note>
@@ -71,7 +111,9 @@
    </para>
    <para>
     $url = "CUBRID:localhost:33000:tbd:::?autocommit=off";
-    $conn = cubrid_connect_with_url ($url, "dba", "12?");
+   </para>
+   <para>
+    $conn = cubrid_connect_with_url($url, "dba", "12?");
    </para>
   </note>
  </refsect1>
@@ -128,20 +170,20 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-$conn_url = "CUBRID:127.0.0.1:33088:demodb:dba:123456:?autocommit=off"
-$con = cubrid_connect_with_url ($conn_url);
+$conn_url = "CUBRID:localhost:33000:demodb:public:123456";
+$con = cubrid_connect_with_url($conn_url);
 
 if ($con) {
    echo "Connexion avec succès.";
    $req =cubrid_execute($con, "insert into person values(1,'James')");
 
    if ($req) {
-      cubrid_close_request ($req);
-      cubrid_commit ($con);
+      cubrid_close_request($req);
+      cubrid_commit($con);
    } else {
-      cubrid_rollback ($con);
+      cubrid_rollback($con);
    }
-   cubrid_disconnect ($con);
+   cubrid_disconnect($con);
 }
 ?>
 ]]>
@@ -153,7 +195,7 @@ if ($con) {
    <programlisting role="php">
 <![CDATA[
 <?php
-$conn_url = "CUBRID:127.0.0.1:33088:demodb:dba:123456:?autocommit=off&althost=10.34.63.132:33088&rctime=100"
+$conn_url = "CUBRID:127.0.0.1:33000:demodb:public:123456:?althost=10.34.63.132:33088&rctime=100"
 $con = cubrid_connect_with_url ($conn_url);
 
 if ($con) {
@@ -161,12 +203,12 @@ if ($con) {
    $req =cubrid_execute($con, "insert into person values(1,'James')");
 
    if ($req) {
-      cubrid_close_request ($req);
-      cubrid_commit ($con);
+      cubrid_close_request($req);
+      cubrid_commit($con);
    } else {
-      cubrid_rollback ($con);
+      cubrid_rollback($con);
    }
-   cubrid_disconnect ($con);
+   cubrid_disconnect($con);
 }
 ?>
 ]]>
