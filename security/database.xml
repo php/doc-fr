@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 1821ec72a025e9fe9caec423ae0bc9f6f733c0b1 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 6bfcf7d9af614b4155c72e84814a61607be21229 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="security.database" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -124,19 +124,21 @@
 <![CDATA[
 <?php
 // Stockage du mot de passe hashé
+// $random_chars récupéré en utilisant /dev/random
 $query  = sprintf("INSERT INTO users(name,pwd) VALUES('%s','%s');",
-             pg_escape_string($username), crypt($password, '$2a$07$usesomesillystringforsalt$'));
+            pg_escape_string($username),
+            pg_escape_string(crypt($password, '$2a$07$' . $random_chars . '$')));
 $result = pg_query($connection, $query);
 
-// interroger le serveur pour comparer le mot de passe soumis
-$query = sprintf("SELECT 1 FROM users WHERE name='%s' AND pwd='%s';",
-             pg_escape_string($username), crypt($password, '$2a$07$usesomesillystringforsalt$'));
-$result = pg_query($connection, $query);
+// Interroger le serveur pour comparer le mot de passe soumis
+$query = sprintf("SELECT pwd FROM users WHERE name='%s';",
+            pg_escape_string($username));
+$row = pg_fetch_assoc(pg_query($connection, $query));
 
-if (pg_num_rows($result) > 0) {
-    echo "Bienvenue, $username!";
+if ($row && crypt($password, $row['pwd']) == $row['pwd']) {
+    echo 'Bienvenue, ' . htmlspecialchars($username) . '!';
 } else {
-    echo "Identification échouée pour $username.";
+    echo 'Identification échouée pour ' . htmlspecialchars($username) . '.';
 }
 ?>
 ]]>
@@ -175,10 +177,7 @@ if (pg_num_rows($result) > 0) {
 <?php
 $offset = $argv[0]; // Attention, aucune validation!
 $query  = "SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET $offset;";
-// avec PostgreSQL
 $result = pg_query($conn, $query);
-// avec MySQL
-$result = mysql_query($query);
 ?>
 ]]>
     </programlisting>
@@ -193,19 +192,11 @@ $result = mysql_query($query);
     <title>Exemple d'injection SQL</title>
     <programlisting>
 <![CDATA[
-<?php
-// cas de PostgreSQL
 0;
 insert into pg_shadow(usename,usesysid,usesuper,usecatupd,passwd)
     select 'crack', usesysid, 't','t','crack'
     from pg_shadow where usename='postgres';
 --
-
-// cas de MySQL
-0;
-UPDATE user SET Password=PASSWORD('crack') WHERE user='root';
-FLUSH PRIVILEGES;
-?>
 ]]>
     </programlisting>
    </example>
@@ -240,8 +231,7 @@ FLUSH PRIVILEGES;
 <![CDATA[
 <?php
 $query  = "SELECT id, name, inserted, size FROM products
-                  WHERE size = '$size'
-                  ORDER BY $order LIMIT $limit, $offset;";
+           WHERE size = '$size'";
 $result = odbc_exec($conn, $query);
 ?>
 ]]>
@@ -286,21 +276,23 @@ $query= "UPDATE usertable SET pwd='$pwd' WHERE uid='$uid';";
     </programlisting>
    </example>
    Mais un internaute fourbe peut envoyer une valeur telle que
-   <literal>' or uid like '%admin%'; --</literal> dans <varname>$uid</varname>
+   <literal>' or uid like'%admin%</literal> dans <varname>$uid</varname>
    pour modifier le mot de passe utilisateur, ou simplement, utiliser la
    variable <varname>$pwd</varname> avec la valeur
-   <literal>"hehehe', admin='yes', trusted=100 "</literal> (avec l'espace
-   final) pour obtenir des droits supplémentaires. La requête devient alors :
+   <literal>hehehe', trusted=100, admin='yes</literal>
+   pour obtenir des droits supplémentaires. La requête devient alors :
    <example>
     <title>Une requête et son injection</title>
     <programlisting role="php">
 <![CDATA[
 <?php
-// $uid == ' or uid like'%admin%'; --
-$query = "UPDATE usertable SET pwd='...' WHERE uid='' or uid like '%admin%'; --";
+// $uid == ' or uid like '%admin%
+$query = "UPDATE usertable SET pwd='...' WHERE uid='' or uid like '%admin%';";
 
-// $pwd == "hehehe', admin='yes', trusted=100 "
-$query = "UPDATE usertable SET pwd='hehehe', admin='yes', trusted=100 WHERE ...;"
+// $pwd: hehehe', trusted=100, admin='yes
+$query = "UPDATE usertable SET pwd='hehehe', trusted=100, admin='yes' WHERE
+...;";
+
 ?>
 ]]>
     </programlisting>
@@ -330,8 +322,8 @@ $result = mssql_query($query);
 <![CDATA[
 <?php
 $query  = "SELECT * FROM products
-                    WHERE id LIKE '%a%'
-                    exec master..xp_cmdshell 'net user test testpass /ADD'--";
+           WHERE id LIKE '%a%'
+           exec master..xp_cmdshell 'net user test testpass /ADD' --%'";
 $result = mssql_query($query);
 ?>
 ]]>
@@ -393,6 +385,14 @@ $result = mssql_query($query);
     </listitem>
     <listitem>
      <simpara>
+      Utilisez des requêtes préparées avec des variables liées. Elles sont
+      disponibles avec <link linkend="pdo.prepared-statements">PDO</link>,
+      <link linkend="mysqli.quickstart.prepared-statements">MySQLi</link>
+      ainsi que d'autres bibliotèques.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
       Vérifiez que les données ont bien le type attendu. <acronym>PHP</acronym> dispose
       d'un éventail de fonction de validation large, depuis les plus
       simples, de la section <link linkend="ref.var">Variables</link> et
@@ -405,7 +405,7 @@ $result = mssql_query($query);
     <listitem>
      <para>
       Si l'application attend une entrée numérique, vérifiez vos données
-      avec la fonction <function>is_numeric</function>, ou bien modifiez
+      avec la fonction <function>ctype_digit</function>, ou bien modifiez
       automatiquement le type avec la fonction <function>settype</function>,
       ou encore avec <function>sprintf</function>.
       <example>
@@ -427,19 +427,16 @@ $query = sprintf("SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET %d
     </listitem>
     <listitem>
      <simpara>
-      Mettez entre guillemets toutes les valeurs non numériques qui sont
+      Si la couche de base de données ne suppose pas les variables liées,
+      alors, mettez entre guillemets toutes les valeurs non numériques qui sont
       passées à la base de données avec la fonction spécifique à la base de
       données d'échappement de caractères (e.g.
       <function>mysql_real_escape_string</function>,
-      <function>sqlite_escape_string</function>, etc.). Si un mécanisme
-      d'échappement spécifique à une base de données n'existe pas, les
-      fonctions <function>addslashes</function> et
-      <function>str_replace</function> peuvent être très utiles (en fonction
-      du type de la base de données).
-      Lisez <link linkend="security.database.storage">le premier
-      exemple</link>. Comme le montre l'exemple, ajouter des guillemets à la
-      partie statique de la requête n'est pas suffisant, rendant cette requête
-      facile à pirater.
+      <function>sqlite_escape_string</function>, etc.).
+      Les fonctions génériques comme <function>addslashes</function> sont utiles
+      uniquement dans un environnement très spécifique (i.e. MySQL avec un jeu
+      de caractères sur un seul octet avec <varname>NO_BACKSLASH_ESCAPES</varname>
+      désactivé), aussi, il est préférable de ne pas les utiliser.
      </simpara>
     </listitem>
     <listitem>
