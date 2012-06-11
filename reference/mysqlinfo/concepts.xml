@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 6c0500759f60f066a93f6f1bd8e2f163d82e1169 Maintainer: itanea Status: ready -->
+<!-- EN-Revision: 41f14ef421ced23b42a1d792228c47f0ecb825df Maintainer: itanea Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlinfo.concepts" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -126,6 +126,117 @@ if ($uresult) {
 ]]>
    </programlisting>
   </example>
+ </section>
+
+ <section xml:id="mysqlinfo.concepts.charset">
+  <title>Jeux de caractères</title>
+
+  <para>
+   Idéalement, un jeu de caractères propre doit être défini
+   au niveau du serveur, opération décrite dans la section
+   <link xlink:href="&url.mysql.charsets.config;">Configuration du jeu de
+    caractères</link> du manuel MySQL Server. Alternativement, chaque API
+   MySQL offre une méthode pour définir le jeu de caractères lors de
+   l'exécution.
+  </para>
+
+  <caution>
+   <title> Le jeu de caractères et l'échappement des caractères</title>
+   <para>
+    Le jeu de caractères doit être compris et défini, sachant qu'il a un
+    effet sur chaque action, et a des implications au niveau de la
+    sécurité. Par exemple, le mécanisme d'échappement (i.e.
+    <function>mysqli_real_escape_string</function> pour mysqli,
+    <function>mysql_real_escape_string</function> pour mysql, et
+    <methodname>PDO::quote</methodname> pour PDO_MySQL) va utiliser
+    cette configuration. Il est important de garder en tête que ces fonctions
+    n'utiliseront pas le jeu de caractères défini avec une requête, aussi,
+    l'exemple suivant n'aura aucun effet sur le jeu de caractères :
+   </para>
+  </caution>
+
+  <example>
+   <title>Problèmes lors de la définition du jeu de caractères avec SQL</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
+
+// N'affectera pas $mysqli->real_escape_string();
+$mysqli->query("SET NAMES utf8");
+
+// N'affectera pas $mysqli->real_escape_string();
+$mysqli->query("SET CHARACTER SET utf8");
+
+// Mais, ceci va affecter $mysqli->real_escape_string();
+$mysqli->set_charset('utf8')) {
+
+?>
+]]>
+   </programlisting>
+  </example>
+
+  <para>
+   Ci-dessous les exemples qui démontrent la façon de modifier proprement
+   le jeu de caractères lors de l'exécution en utilisant chacune des APIs.
+  </para>
+
+  <example>
+   <title>Exemple de définition du jeu de caractères : mysqli</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
+
+if (!$mysqli->set_charset('utf8')) {
+    printf("Erreur lors du chargement du jeu de caractères utf8 : %s\n", $mysqli->error);
+} else {
+    printf("Jeu de caractères courant : %s\n", $mysqli->character_set_name());
+}
+
+print_r( $mysqli->get_charset() );
+
+?>
+]]>
+   </programlisting>
+  </example>
+
+  <example>
+   <title>Exemple de définition du jeu de caractères : <link linkend="ref.pdo-mysql.connection">pdo_mysql</link></title>
+   <para>
+    Note : Ceci ne fonctionnera qu'à partir de PHP 5.3.6.
+   </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$pdo = new PDO("mysql:host=localhost;dbname=world;charset=utf8", 'my_user', 'my_pass');
+?>
+]]>
+   </programlisting>
+  </example>
+
+  <example>
+   <title>Exemple de définition du jeu de caractères : mysql</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$conn = mysql_connect("localhost", "my_user", "my_pass");
+$db   = mysql_select_db("world");
+
+if (!mysql_set_charset('utf8', $conn)) {
+    echo "Erreur : Impossible de définir le jeu de caractères.\n";
+    exit;
+}
+
+echo 'Jeu de caractères courant : ' .  mysql_client_encoding($conn);
+
+?>
+]]>
+   </programlisting>
+  </example>  
  </section>
 
 </chapter>
