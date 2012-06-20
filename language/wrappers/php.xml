@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
 <!-- EN-Revision: 84b8fca68fc762fefe85acde180a38b2e77a28b9 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- Reviewed: yes -->
 
 <refentry xml:id="wrappers.php" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" role="noversion">
  <refnamediv>
@@ -13,10 +13,10 @@
   &reftitle.description;
   <para>
    PHP fournit un nombre important de flux I/O qui permettent d'accéder
-   aux flux d'entrée et de sortie de Php, à l'entrée standard, à l'entrée
-   et la sortie des descripteurs de fichiers, aux flux représentant les fichiers
-   temporaires en mémoire vive ou sur le disque, ainsi qu'aux filtres qui peuvent
-   manipuler d'autres ressources de fichiers en lecture ou en écriture.
+   aux flux d'entrée et de sortie de PHP lui-même, aux descripteurs de fichiers
+   de l'entrée standard et des sorties standard et d'erreurs, à des flux représentant
+   des fichiers temporaires en mémoire vive ou sur le disque, ainsi qu'à des filtres
+   qui peuvent manipuler d'autres ressources de fichiers pendant la lecture ou l'écriture.
   </para>
 
   <refsect2>
@@ -24,11 +24,11 @@
    <simpara>
     <filename>php://stdin</filename>, <filename>php://stdout</filename> et
     <filename>php://stderr</filename> permettent des accès directs aux flux d'entrée
-    ou de sortie correspondant du processus PHP. Le flux représente une copie
-    du descripteur de fichier, aussi, si vous ouvrez <filename>php://stdin</filename>
+    ou de sortie correspondant du processus PHP. Le flux fait référence à une copie
+    du descripteur de fichier, ce qui signifie que si vous ouvrez <filename>php://stdin</filename>
     et le fermez plus tard, vous ne fermez que votre copie du descripteur ; le
-    flux actuel, référencé par <constant>STDIN</constant> n'est pas affecté. Notez
-    que PHP avez un comportement relativement bogué jusqu'à la version PHP 5.2.1.
+    flux réellement référencé par <constant>STDIN</constant> n'est pas affecté. Notez
+    que PHP avait un comportement relativement bogué à ce sujet jusqu'à la version PHP 5.2.1.
     Il est recommandé d'utiliser uniquement les constantes <constant>STDIN</constant>,
     <constant>STDOUT</constant> et <constant>STDERR</constant> au lieu
     d'ouvrir manuellement les flux en utilisant ces gestionnaires.
@@ -44,13 +44,13 @@
    <title>php://input</title>
    <simpara>
     <filename>php://input</filename> est un flux en lecture seule qui permet
-    de lire des données brutes depuis la requête. Dans le cas de requêtes POST,
+    de lire des données brutes depuis le corps de la requête. Dans le cas de requêtes POST,
     il est préférable d'utiliser le flux <filename>php://input</filename> au lieu
-    de la variable <varname>$HTTP_RAW_POST_DATA</varname>
-    vu qu'elle ne dépend d'aucune directive de configuration du &php.ini;.
+    de la variable <varname>$HTTP_RAW_POST_DATA</varname>, puisque
+    ce premier ne dépend d'aucune directive de configuration du &php.ini;.
     De plus, dans les cas où <varname>$HTTP_RAW_POST_DATA</varname> n'est pas
-    peuplé par défaut, il est potentiellement plus intéressant en terme
-    de mémoire d'activer la directive <link
+    peuplé par défaut, ce sera une alternative potentiellement plus intéressante en termes
+    de mémoire que d'activer la directive <link
     linkend="ini.always-populate-raw-post-data">always_populate_raw_post_data</link>.
     <filename>php://input</filename> n'est pas disponible avec
     <literal>enctype="multipart/form-data"</literal>.
@@ -60,8 +60,8 @@
      Un flux ouvert avec <filename>php://input</filename> ne peut être lu qu'une
      seule fois ; le flux ne supporte pas les opérations de rembobinage. Cependant,
      suivant l'implémentation du SAPI, il peut être possible d'ouvrir un autre flux
-     <filename>php://input</filename> et recommencer à lire. Ceci n'est possible que
-     si la requête des données a été sauvegardée. Typiquement, c'est le cas pour les
+     <filename>php://input</filename> et de recommencer à lire. Ceci n'est possible que
+     si les données du corps de la requête ont été sauvegardées. Typiquement, c'est le cas pour les
      requêtes POST, mais pas pour les autres méthodes comme PUT ou PROPFIND.
     </simpara>
    </note>
@@ -70,7 +70,7 @@
   <refsect2>
    <title>php://output</title>
    <para>
-    <filename>php://output</filename> est un flux en écriture seule qui permet d'écrire
+    <filename>php://output</filename> est un flux en écriture seule, qui permet d'écrire
     dans le mécanisme de buffer de sortie de la même façon que les fonctions
     <function>print</function> et
     <function>echo</function>.
@@ -81,7 +81,7 @@
    <title>php://fd</title>
    <simpara>
     <filename>php://fd</filename> permet un accès direct au descripteur de fichier
-    fourni. Par exemple, <filename>php://fd/3</filename> correspond au
+    spécifié. Par exemple, <filename>php://fd/3</filename> correspond au
     descripteur de fichier numéro 3.
    </simpara>
   </refsect2>
@@ -90,19 +90,19 @@
    <title>php://memory et php://temp</title>
    <simpara>
     <filename>php://memory</filename> et <filename>php://temp</filename>
-    sont des flux en lecture/écriture qui permettent de sauvegarder des données
+    sont des flux en lecture/écriture qui permettent de stocker des données
     temporaires dans un gestionnaire de fichiers. La seule différence entre
-    ces deux flux est que <filename>php://memory</filename> autorise la sauvegarde
-    des données en mémoire, alors que <filename>php://temp</filename> utilisera un
-    fichier temporaire une fois que la quantité de données sauvegardées aura dépassé
-    une limite prédéfinie (par défaut, 2 Mo). L'endroit de stockage
+    ces deux flux est que <filename>php://memory</filename> stockera toujours
+    ses données en mémoire, alors que <filename>php://temp</filename> utilisera un
+    fichier temporaire une fois que la quantité de données enregistrées aura dépassé
+    une limite prédéfinie (par défaut, 2 Mo). L'emplacement
     de ce fichier temporaire est déterminé de la même manière que pour
     la fonction <function>sys_get_temp_dir</function>.
    </simpara>
    <simpara>
     La limite mémoire de <filename>php://temp</filename> peut être contrôlée
     en ajoutant <literal>/maxmemory:NN</literal>, où <literal>NN</literal> est
-    la quantité de mémoire maximale à conserver en mémoire avant d'utiliser
+    la quantité maximale de données à conserver en mémoire avant d'utiliser
     un fichier temporaire, en octets.
    </simpara>
   </refsect2>
@@ -112,20 +112,20 @@
    <simpara>
     <filename>php://filter</filename> est une sorte de gestionnaire prévu
     pour permettre l'application de <link linkend="filters">filtres</link>
-    sur un flux au moment de l'ouverture. Ceci est très pratique avec
+    sur un flux au moment de son ouverture. Ceci est très pratique avec
     des fonctions sur des fichiers toutes-en-un comme les fonctions
     <function>readfile</function>, <function>file</function> et
-    <function>file_get_contents</function> où il n'est pas opportun
-    d'appliquer un filtre au flux avant d'avoir lu le contenu.
+    <function>file_get_contents</function>, où il n'existe pas d'autre mécanisme
+    permettant d'appliquer un filtre au flux avant que le contenu ne soit lu.
    </simpara>
    <para>
     La cible de <filename>php://filter</filename> prend les paramètres suivants
-    sous la forme de partie du chemin. Reportez-vous aux exemples spécifiques
+    sous la forme de composantes de son chemin. Reportez-vous aux exemples
     pour une utilisation correcte de ces paramètres.
    </para>
    <para>
     <table>
-     <title>php://filter parameters</title>
+     <title>Paramètres de php://filter</title>
      <tgroup cols="2">
       <thead>
        <row>
@@ -236,7 +236,7 @@
         <literal>php://output</literal>,
         <literal>php://fd</literal>,
         <literal>php://memory</literal> et
-        <literal>php://temp</literal> uniquement. (Équivalent à l'écriture)
+        <literal>php://temp</literal> uniquement. (Équivalent à de l'écriture)
        </entry>
       </row>
       <row>
@@ -328,8 +328,8 @@
   <example><!-- {{{ -->
    <title>php://temp/maxmemory</title>
    <para>
-    Le paramètre optionnel autorise la configuration de la limitation
-    mémoire avant que <filename>php://temp</filename> commence à utiliser
+    Ce paramètre optionnel permet de configurer la limite
+    mémoire avant que <filename>php://temp</filename> ne commence à utiliser
     un fichier temporaire.
    </para>
    <programlisting role="php">
@@ -351,7 +351,7 @@ echo stream_get_contents($fp);
   <example><!-- {{{ -->
    <title>php://filter/resource=&lt;flux à filtrer&gt;</title>
    <para>
-    Ce paramètre doit se situer à la fin de votre spécification
+    Ce paramètre doit être placé à la fin de votre spécification
     de <filename>php://filter</filename> et doit pointer sur le flux
     que vous souhaitez filtrer.
    </para>
@@ -376,12 +376,12 @@ readfile("php://filter/resource=http://www.example.com");
    <programlisting role="php">
 <![CDATA[
 <?php
-/* Ceci affichera le contenu complet de
-  www.example.com en majuscule */
+/* Ceci affichera le contenu de
+  www.example.com entièrement en majuscules */
 readfile("php://filter/read=string.toupper/resource=http://www.example.com");
 
 /* Ceci fera la même chose que le précédent,
-  mais encodera en ROT13 le résultat */
+  mais encodera en plus le résultat en ROT13 */
 readfile("php://filter/read=string.toupper|string.rot13/resource=http://www.example.com");
 ?>
 ]]>
@@ -397,7 +397,7 @@ readfile("php://filter/read=string.toupper|string.rot13/resource=http://www.exam
 <![CDATA[
 <?php
 /* Ceci va filtrer la chaîne "Hello World"
-  via le filtre rot13, puis, écrit le résultat
+  via le filtre rot13, puis écrire le résultat
   dans le fichier example.txt du dossier courant */
 file_put_contents("php://filter/write=string.rot13/resource=example.txt","Hello World");
 ?>
@@ -427,4 +427,3 @@ vim600: syn=xml fen fdm=syntax fdl=2 si
 vim: et tw=78 syn=sgml
 vi: ts=1 sw=1
 -->
-
