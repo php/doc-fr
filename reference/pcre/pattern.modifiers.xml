@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 67921109e7460111f4e538e745b7d8a8b8dfca4f Maintainer: yannick Status: ready -->
+<!-- EN-Revision: cca4900cad4991211c0508abbeda88ca532cee14 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <article xml:id="reference.pcre.pattern.modifiers" xmlns="http://docbook.org/ns/docbook">
@@ -114,10 +114,58 @@
          fonction <function>preg_replace</function>.
         </para>
        </caution>
+       <caution>
+        <para>
+         L'utilisation de ce modificateur <emphasis>n'est pas recommandé</emphasis>,
+         sachant qu'il peut introduire très facilement des vulnérabilités :
+        </para>
+        <informalexample>
+         <programlisting role="php">
+<![CDATA[
+<?php
+$html = $_POST['html'];
+
+// Mise en majuscule
+$html = preg_replace(
+    '(<h([1-6])>(.*?)</h\1>)e',
+    '"<h$1>" . strtoupper("$2") . "</h$1>"',
+    $html
+);
+]]>
+         </programlisting>
+        </informalexample>
+        <para>
+         L'exemple ci-dessus peut être facilement exploité en y passant une chaîne
+         comme celle-ci : <literal>&lt;h1&gt;{${eval($_GET[php_code])}}&lt;/h1&gt;</literal>.
+         Ceci fournit à l'attaquant la possibilité d'exécuter du code PHP arbitraire,
+         et ainsi, lui donne un accès quasi global à votre serveur.
+        </para>
+        <para>
+         Pour éviter de type de vulnérabilité, la fonction
+         <function>preg_replace_callback</function> doit être utilisée à la place :
+        </para>
+        <informalexample>
+         <programlisting role="php">
+<![CDATA[
+<?php
+$html = $_POST['html'];
+
+// Mise en majuscule
+$html = preg_replace_callback(
+    '(<h([1-6])>(.*?)</h\1>)',
+    function ($m) {
+        return "<h$m[1]>" . strtoupper($m[2]) . "</h$m[1]>";
+    },
+    $html
+);
+]]>
+         </programlisting>
+        </informalexample>
+       </caution>
        <note>
         <para>
          Seule <function>preg_replace</function> utilise cette option. Elle est
-         ignorée par les autres.
+         ignorée par les autres fonctions PCRE.
         </para>
        </note>
       </listitem>
