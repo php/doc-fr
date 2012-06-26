@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
 <!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- Reviewed: yes Maintainer: pmartin -->
 
 <chapter xml:id="security.errors" xmlns="http://docbook.org/ns/docbook">
  <title>Rapport d'erreurs</title>
@@ -11,14 +11,14 @@
  </para>
  <para>
   Une tactique d'attaque standard consiste à faire faire des erreurs
-  au système, et lire les variables d'environnement et de contexte qui
-  sont retournées. Cela permet au pirate de lire de nombreuses
-  informations sur le serveur, et de détecter des faiblesses du serveur.
-  Par exemple, si un intrus a glané des informations sur votre page, avec
-  une première utilisation de votre site, il peut essayer de remplacer les
+  au système, et à analyser les types des erreurs qui sont retournées,
+  ainsi que leur contexte. Cela permet à l'attaquant d'obtenir des
+  informations à propos du serveur, en vue de détecter de possibles faiblesses.
+  Par exemple, si un intrus a glané des informations sur une page dépendant
+  de la soumission préalable d'un formulaire, il peut essayer d'écraser les
   variables par ses propres valeurs :
   <example>
-   <title>Attaque de site avec une page HTML personnalisée</title>
+   <title>Attaque de variables avec une page HTML personnalisée</title>
    <programlisting role="php">
 <![CDATA[
 <form method="post" action="http://www.site.cible.com/?username=badfoo&password=badfoo">
@@ -33,18 +33,18 @@
   Les erreurs PHP qui sont normalement retournées peuvent être
   très pratiques pour un développeur qui essaie de déboguer un
   script, car elles donnent de précieux renseignements tels que
-  quelle fonction a échoué, quel fichier n'a pas été
-  trouvé, quel script PHP a un bug, et quelle ligne est en faute. Toutes
-  ces informations sont exploitables. Il est commun aux développeurs PHP
-  d'utiliser les fonctions <function>show_source</function>,
+  la fonction qui a échouée, depuis quel fichier PHP, et même le numéro
+  de la ligne à laquelle l'erreur s'est produite. Toutes ces informations sont exploitables.
+  Il n'est pas rare que les développeurs PHP utilisent
+  les fonctions <function>show_source</function>,
   <function>highlight_string</function>, ou
   <function>highlight_file</function> comme outils de déboguage, mais sur un
-  site en production, cela expose des variables cachées, des syntaxes non
-  vérifiées ou d'autres informations critiques. Il est particulièrement
-  dangereux d'exécuter du code de sources connues, avec les gestionnaires de
-  débogage. Si l'intrus peut comprendre votre technique habituelle
-  d'utilisation, il peut tenter une attaque frontale sur une page, en
-  envoyant des chaînes de débogage :
+  site en production, cela peut exposer des variables cachées, des syntaxes non
+  vérifiées, ou d'autres informations critiques. Il est particulièrement
+  dangereux d'exécuter du code de sources connues avec des gestionnaires de
+  débogage inclus, ou de travailler avec des techniques de débogage répandues.
+  Si l'attaquant peut déterminer quelle technique générale vous utilisez, il peut
+  tenter une attaque frontale sur une page, en envoyant des chaînes de débogage connues :
   <example>
    <title>Exploiter des variables classiques de débogage</title>
    <programlisting role="php">
@@ -59,63 +59,64 @@
   </example>
  </para>
  <para>
-  Indépendamment de la gestion des erreurs, la possibilité de tester
-  la gestion des erreurs d'un système conduit à un trou de sécurité,
-  et la diffusion de plus d'informations sur votre système.
+  Indépendamment de la méthode de gestion des erreurs, la possibilité de tester
+  un système pour identifier des erreurs revient à fournir à un attaquant
+  plus d'informations sur votre système.
  </para>
  <para>
-  Si un pirate affiche une page html, et essaye de la
-  tester (pour rechercher des faiblesses du système), il peut déterminer sur
-  quel système PHP a été compilé.
+  Par exemple, le style même d'une erreur PHP standard indique d'un système fait
+  tourner PHP.
+  Si un attaquant affiche une page .html, et essaye de la tester (pour rechercher des
+  faiblesses connues du système), en lui envoyant des données invalides, il peut déterminer
+  qu'elle a été construite via un script PHP.
  </para>
  <para>
-  Une erreur de fonction indique si un système supporte une base de
-  données spécifique, ou bien indique comment la page a
-  été générée. Cela peut orienter l'intrus
+  Une erreur de fonction peut indiquer si un système supporte une base de
+  données spécifique, ou bien donner des indices quant à la façon dont une page a
+  été conçue ou développée. Cela peut orienter l'intrus
   vers les ports de cette base de données ou bien vers une attaque
   liée à cette application. En envoyant des données
   erronées, par exemple, un pirate peut déterminer l'ordre
-  d'identification dans un script, à partir des lignes d'erreurs,
-  et essayer de les exploiter ailleurs, dans le script.
+  d'identification dans un script (à partir des numéros de lignes d'erreurs),
+  ou sonder à la recherche de failles qui pourraient être exploitées à
+  différents endroits du script.
  </para>
  <para>
-  Une erreur de fichier, ou une erreur générale PHP peut indiquer
+  Une erreur de fichier, ou une erreur générale de PHP, peut indiquer
   quelles sont les permissions du serveur web, ainsi que la structure
   et l'organisation des fichiers. Les gestionnaires d'erreurs utilisateurs
   peuvent aussi aggraver ce problème, en permettant l'exploitation facile
-  d'informations préalablement cachées.
+  d'informations préalablement "cachées".
  </para>
  <para>
   Il y a trois solutions majeures à ces problèmes : la première
   est de scruter toutes les fonctions, et d'essayer de traiter toutes les
-  erreurs. La deuxième est de désactiver le rapport d'erreur, dès
+  erreurs. La seconde est de totalement désactiver le rapport d'erreur, dès
   que le script est en production. La troisième est d'utiliser les
-  fonctions de gestion des erreurs. Suivant votre politique de
-  sécurité, vous pouvez utiliser un panachage savant des
-  trois méthodes.
+  fonctions de gestion des erreurs de PHP pour créer vos propres gestionnaires d'erreurs.
+  En fonction de votre politique de sécurité, il se peut que vous arriviez à la conclusion
+  que ces solutions sont toutes les trois applicables à votre situation.
  </para>
  <para>
   Une méthode pour gagner du temps est d'utiliser la fonction
   <function>error_reporting</function>, pour vous aider à
-  sécuriser le code, et détecter les utilisations dangereuses de variables.
-  Vous testez votre code en béta test avec la valeur
-  <constant>E_ALL</constant>, et vous pouvez rapidement repérer les variables
-  qui ne sont pas protégées. Une fois que le code est prêt à être déployé,
-  vous devez soit désactiver complètement le rapport d'erreur en affectant 0 à
-  la fonction <function>error_reporting</function>, soit en désactivant
-  l'affichage des erreurs en utilisant l'option de configuration
-  <literal>display_errors</literal> du &php.ini;. Si vous choisissez la
-  dernière solution, vous devez également définir le chemin de votre fichier
-  de log en utilisant la directive de configuration
-  <literal>error_log</literal>, et en activant la directive
-  <literal>log_errors</literal>.
+  sécuriser votre code, et détecter certaines utilisations dangereuses de variables.
+  En testant votre code, avant le déploiement, avec <constant>E_ALL</constant>,
+  vous pouvez rapidement repérer les variables qui ne sont pas protégées.
+  Une fois que le code est prêt à être déployé, vous devriez soit désactiver complètement
+  le rapport d'erreur en passant 0 à la fonction <function>error_reporting</function>,
+  soit en désactivant l'affichage des erreurs en utilisant l'option de configuration
+  <literal>display_errors</literal> de &php.ini;. Si vous choisissez la
+  seconde solution, vous devriez également définir le chemin vers votre fichier
+  de log en utilisant la directive de configuration <literal>error_log</literal>,
+  et en activant la directive <literal>log_errors</literal>.
   <example>
    <title>Détecter des variables non protégées avec E_ALL</title>
    <programlisting role="php">
 <![CDATA[
 <?php
 if ($username) {
-  // Non initialisée, ou vérifée avant utilisation
+  // Non initialisée ou vérifée avant utilisation
   $good_login = 1;
 }
 if ($good_login == 1) {
