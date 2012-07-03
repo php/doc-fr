@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8549e3a1b12d26d356b8afd9fa84750ef14a0dde Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 219db352d7b37f9bc7bfe8b9e086d105e129872c Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.concepts" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -397,28 +397,29 @@
    Par défaut, le plugin ne se soucie pas des transactions SQL. Il est donc possible qu'il
    décide de basculer de connexions dans le cadre de la répartition de charge, et ceci peut
    arriver au milieu d'une transaction. C'est contre la nature même d'une transaction SQL, le
-   plugin n'est donc pas au courant des transactions par défaut.
+   plugin n'est donc, par défaut, pas au courant des transactions.
   </para>
   <para>
-   Les applications qui utilisent des transactions SQL avec le plugin doivent utiliser des
-   <link linkend="mysqlnd-ms.quickstart.sqlhints">astuces SQL</link> (artefacts) pour désactiver
-   la bascule automatique de connexion effectuée par le plugin. Voyez les détails dans
-   <link linkend="mysqlnd-ms.quickstart">les sections d'exemple.</link>
+   Toute type de balance de charge MySQL peut être touché entre le début et la fin
+   d'une transaction. Ce peut être de façon explicitie en monitorant les appels API
+   ou en utilisant des astuces SQL. L'API de monitorage nécessite PHP 5.4.0 ou supérieur.
+   Le plugin, tout comme n'importe quel répartiteur de charge MySQL, ne peut pas
+   détecter les limites d'une transaction en se basant sur le protocole client serveur
+   de MySQL. Aussi, une transparence totale d'une transaction avec un répartiteur
+   de charge n'est pas possible. L'option la moins intrusive est l'API de monitorage,
+   qui nécessite très peu de modifications de l'application.
   </para>
-  <!-- TODO Refactor PHP 5.4.0 references -->
-  <note>
-   <title>Ajouts effectués depuis PHP 5.4.0</title>
-   <para>
-    La bibliothèque <link linkend="book.mysqlnd">mysqlnd</link> permet au plugin de
-    surcharger l'appel C <literal>set_autocommit()</literal>, afin de détecter le statut
-    du mode <literal>autocommit</literal>.
-   </para>
-   <para>
-    Ajout du support de
-    <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx-stickiness">trx_stickiness=master</link>
-   </para>
-  </note>
-  
+  <para>
+   Vous trouverez des exemples d'utilisation d'astuces SQL ou de l'API de
+   monitorage dans la <link linkend="mysqlnd-ms.quickstart">section des exemples</link>.
+   Les détails de l'API de monitorage, qui rend les transactions au niveau du plugin
+   sûres, sont décrits ci-dessous.
+  </para>
+  <para>
+   Depuis PHP 5.4.0, la bibliothèque <link linkend="book.mysqlnd">mysqlnd</link>
+   autorise ce plugin à surcharger l'appel API C <literal>set_autocommit()</literal>,
+   afin de détecter le statut du mode <literal>autocommit</literal>.
+  </para>
   <para>
    Les extensions PHP pour MySQL effectuent une requête (comme <literal>SET AUTOCOMMIT=0|1</literal>),
    ou utilisent l'appel mysqlnd <literal>set_autcommit()</literal> pour contrôler le statut de
@@ -434,6 +435,12 @@
    peut être utilisée pour rendre le plugin sensible aux transactions.
    Grâce à ça, le plugin arrête la répartition de charge si l'autocommit est désactivé,
    et la réactive dans le cas contraire.
+  </para>
+  <para>
+   Une application qui ne veut pas utiliser les astuces SQL pour les transactions
+   mais souhaite utiliser l'API de monitorage pour éviter les modifications applicatifs
+   doit s'assurer que la configuration autocommit est bien modifiée que via les appels
+   API listés.
   </para>
  </section>
  
@@ -663,6 +670,9 @@ version = 5.6.2-m5-log
    dont la connexion n'est pas disponible, il renverra une erreur.
   </para>
   <para>
+   <emphasis role="bold">Défaut : failover manuel</emphasis>
+  </para>
+  <para>
    C'est à l'application de gérer l'erreur, et, si besoin, de re-présenter la requête
    afin qu'elle soit re-prise en charge par le plugin et aiguillée vers un autre serveur.
    Le plugin ne se charge pas de ça lui-même, car il pourrait risquer d'impacter l'état des
@@ -681,13 +691,61 @@ version = 5.6.2-m5-log
    à MySQL dans le passé.
   </para>
   <para>
+   <emphasis role="bold">Failover automatique</emphasis>
+  </para>
+  <para>
    Cette gestion des incidents se configure dans le fichier de configuration du plugin au moyen
    de la directive
    <literal><link linkend="ini.mysqlnd-ms-plugin-config-v2.failover">failover</link></literal>.
   </para>
   <para>
+   Le failover automatique et silencieux peut être activé via la directive
+   de configuration <link linkend="ini.mysqlnd-ms-plugin-config-v2.failover">failover</link>.
+   Le failover automatique peut être configuré soit pour essayer exactement un maître
+   après l'échec d'un esclave ou bien, pour parcourir tous les esclaves et tous les
+   maîtres avant de retourner une erreur à l'utilisateur. Le nombre de tentative de
+   connexion peut être limité et les hôtes en échec peuvent être exclus des
+   futurs tentatives de balance de charge. Liimiter le nombre de tentatives
+   et le fait de retenir les hôtes en échec sont considérés comme des fonctionalités
+   expérimentales malgré le fait qu'elles sont relativement stables.
+   Leur syntaxe et leur signification peuvent être modifiées dans les futures
+   versions.
+  </para>
+  <para>
    Un exemple d'échec manuel est fourni dans la section sur les
    <link linkend="mysqlnd-ms.errorhandling">gestionnaires d'erreurs</link>.
+  </para>
+  <para>
+   <emphasis role="bold">Serveurs de secours</emphasis>
+  </para>
+  <para>
+   En utilisant la <link linkend="ini.mysqlnd-ms-plugin-config-v2.filter-random">balance
+   de charge pondérée</link>, introduite en PECL/mysqlnd 1.4.0, il est possible de configurer
+   des serveurs de secours qui sont peu utilisés lors d'opérations normales.
+   Un server de secours qui est utilisé comme cible en failover peut se voir
+   assigner une priorité/un poids faible par rapport aux autres serveurs.
+   Tant que tous les serveurs sont prêts et fonctionnels, la mageur partie
+   de la charge est assignée aux serveurs qui ont un poids élevé. Une petite
+   partie des requêtes sera redirigée vers le système de secours qui possède
+   un poids faible.
+  </para>
+  <para>
+   Lors d'un échec d'un serveur possédant une priorité élevée, vous pouvez toujours
+   basculer vers le secours, qui s'est vu attribué une priorité de balance de charge
+   faible en y assignant un poids faible. Le failover peut être manuel ou automatique.
+   S'il est automatique, vous pouvez vouloir le combiner avec l'option
+   <link linkend="ini.mysqlnd-ms-plugin-config-v2.failover"><literal>remember_failed</literal></link>.
+  </para>
+  <para>
+   A ce moment là, il n'est pas possible d'indiquer à la balance de charge
+   de ne rediriger aucune requête au secours. Ceci ne peut être considéré
+   comme une limitation sachant que le poids le plus élevé pouvant être assigné
+   à un serveur est 65535. Si l'on prend deux esclaves, dont un va servir de secours
+   avec un poids de 1, le secours devra gérer moins de un pourcent de la
+   charge totale.
+  </para>
+  <para>
+   <emphasis role="bold">Failover et copie primaire</emphasis>
   </para>
   <para>
    Veuillez noter que si vous utilisez une copie de cluster primaire,
@@ -697,7 +755,7 @@ version = 5.6.2-m5-log
    Le maître représent un seul point. Si il échoue, les clients n'ont plus
    de cible à utiliser pour effectuer les requêtes en écriture. Dans le cas où
    le maître tombe en panne, l'administrateur de base de données doit prendre
-   en compte la situation et éventuellement mettre à jour les configurations
+   en compte la situation et mettre à jour les configurations
    des clients.
   </para>
  </section>
@@ -756,6 +814,16 @@ version = 5.6.2-m5-log
    <link linkend="ini.mysqlnd-ms-plugin-config-v2.filter-roundrobin">roundrobin</link>,
    and <link linkend="ini.mysqlnd-ms-plugin-config-v2.filter-user">user</link>
    <link linkend="mysqlnd-ms.filter">filters</link>.
+  </para>
+  <para>
+   Les serveurs peuvent être priorisés en leur assignant un poids.
+   Un serveur dont le poids est de 2 recevra deux fois plus de requêtes
+   qu'un serveur dont le poids est de 1 (poids par défaut). La priorisation
+   peut être utile en environnement hétérogène. Par exemple, vous pouvez
+   vouloir assigner plus de requêtes à une machine puissante plutôt
+   qu'à une autre qui l'est moins. Ou bien, vous pouvez configurer
+   différemment des serveurs qui sont plus ou moins éloignés du client,
+   réduisant ainsi les latences.
   </para>
  </section>
  
@@ -1152,6 +1220,24 @@ version = 5.6.2-m5-log
      <simpara>Consistence forte (pas d'option possible): tous les maitres</simpara>
     </listitem>
    </itemizedlist>
+  </para>
+  <para>
+    <emphasis role="bold">Etranglement</emphasis>
+  </para>
+  <para>
+   La qualité d'un filtre de service peut être combinée avec
+   <link linkend="mysqlnd-ms.gtid">les identifiants globaux de transaction</link>
+   pour limiter les clients. L'étranglement va réduire la charge en écriture
+   sur le maître en ralentissant les clients. Si une consistence de
+   session est demandée, et que les identifiants globaux de session
+   sont utilisés pour vérifier le statut d'un esclave, la vérification
+   peut être effectuée de deux façons différentes. Par défaut, un esclave
+   est vérifiée et écartée immédiatement s'il ne correspond pas aux critères
+   d'une consistence de session. Alternativement, le plugin peut attendre
+   pour attrapper un esclave pour le maître qu'une consistence de session
+   soit possible. Pour activer l'étranglement, vous devez définir
+   l'option de configuration
+   <link linkend="ini.mysqlnd-ms-plugin-config-v2.gtid">wait_for_gtid_timeout</link>.
   </para>
  </section>
 

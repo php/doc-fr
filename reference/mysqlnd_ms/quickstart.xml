@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 649f89731ce6c51290172e2a2e716c093097bc12 Maintainer: itanea Status: ready -->
+<!-- EN-Revision: 579ed5184d3c61f2627552dace4206c2933872cd Maintainer: itanea Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.quickstart" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -583,10 +583,16 @@ $mysqli->close();
  <section xml:id="mysqlnd-ms.quickstart.transactions">
   <title>Transactions</title>
   <para>
-   La version actuelle du plugin ne gère pas les trasactions. Les transactions SQL sont
-   des opérations atomiques exécutées sur un seul et même serveur. Le plugin ne sait
-   pas quand l'opération atomique commence et quand elle prend fin. Ainsi, il peut
-   décider de basculer de connexion au milieu d'une transaction.
+   La version actuelle du plugin ne gère pas les transactions de façon sûre par
+   défaut, car il n'est pas sûre d'exécuter des transactions dans tous les cas.
+   Les transactions SQL sont des opérations atomiques exécutées sur un seul et
+   même serveur. Le plugin ne sait pas toujours quand l'opération atomique commence
+   et quand elle prend fin. Ainsi, il peut décider de basculer de connexion au milieu
+   d'une transaction.
+  </para>
+  <para>
+   Aucun type de balance de charge MySQL peut détecter les limites d'une
+   transaction sans avoir d'astuce au sein de l'application.
   </para>
   <para>
    Vous devez utiliser des astuces SQL pour éviter un tel comportement, ou activer la
@@ -669,7 +675,8 @@ $mysqli->close();
    Depuis PHP 5.4.0 la bibliothèque <literal>mysqlnd</literal> permet au plugin de
    surveiller le statut de l'<literal>autocommit</literal>, si celui-ci est utilisé via
    des appels à l'API plutot que via une requête du type <literal>SET AUTOCOMMIT=0</literal>.
-   Ceci rend le plugin sensible et réactif aux transactions.
+   Ceci rend le plugin sensible et réactif aux transactions. Dans ce cas,
+   vous n'avez pas besoin d'utiliser d'astuces SQL.
   </para>
   <para>
    Si vous utilisez PHP 5.4.0, les appels de l'API pour gérer l'<literal>autocommit</literal>
@@ -1036,12 +1043,6 @@ PHP Warning:  mysqli::query(): (mysqlnd_ms) No connection selected by the last f
     </screen>
    </example>
   </para>
-  <note>
-   <title>La logique de reprise sur incident est en cours d'élaboration</title>
-   <para>
-    Les détails de la reprise sur incident peuvent encore changer dans le futur.
-   </para>
-  </note>
  </section>
  <section xml:id="mysqlnd-ms.quickstart.gtid">
   <title>ID de transaction globale</title>
@@ -1662,6 +1663,93 @@ var_dump($res->fetch_assoc());
    le modifier pour lire vos écritures (session de consistence).
    Dans ce cas, le cache ne sera pas utilisé et les dernières données
    seront lues.
+  </para>
+ </section>
+ <section xml:id="mysqlnd-ms.quickstart.failover">
+  <title>Failover</title>
+  <para>
+   Par défaut, le plugin ne tente pas de failover si la connexion vers un hôte
+   échoue. Ce comportement évite des erreurs en relation avec
+   <link linkend="mysqlnd-ms.quickstart.connectionpooling">le statut de la connexion</link>.
+   Il est recommandé de gérer manuellement les erreurs de connexion d'une façon similaire
+   à un échec d'une transaction. Vous devez capturer l'erreur, re-construire le
+   statut de la connexion, et exécuter votre requête comme ci-dessous.
+  </para>
+  <para>
+   Si le statut de connexion n'est pas important pour vous, vous pouvez
+   activer le failover automatique et silencieux. Suivant la configuration,
+   le failover automatique et silencieux va soit tenter, en cas d'échec de
+   basculer vers le maître au lieu d'émettre une erreur, soit tenter une
+   connexion avec un autre esclave, suivant si la requête l'autorise, avant
+   de tenter une connexion vers le maître.
+  </para>
+  <para>
+   <example>
+    <title>Failover manuel, optionnellement, automatique</title>
+    <programlisting role="ini">
+<![CDATA[
+  {
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost",
+                "socket": "\/tmp\/mysql.sock"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "simulate_slave_failure",
+                "port": "0"
+            },
+            "slave_1": {
+                "host": "127.0.0.1",
+                "port": 3311
+            }
+        },
+       "filters": { "roundrobin": [] }
+    }
+ }
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Failover manuel</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (!$mysqli)
+  /* Bien évidemment, votre gestionnaire d'erreur est meilleur... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+$sql = "SELECT 1 FROM DUAL";
+
+/* Gestionnaire d'erreur tel qu'il doit être suivant le plugin */
+if (!($res = $link->query($sql))) {
+  /* spécifique au plugin : vérification d'une erreur de connexion */
+  switch ($link->errno) {
+    case 2002:
+    case 2003:
+    case 2005:
+      printf("Erreur de connexion - Tentative sur le prochain esclave !\n");
+      /* Le répartiteur de charge va prendre le prochain esclave */
+      $res = $link->query($sql);
+      break;
+    default:
+      /* Aucune erreur de connexion, failover ne va probablement pas être utile */
+      die(sprintf("Erreur SQL : [%d] %s", $link->errno, $link->error));
+      break;
+  }
+}
+if ($res) {
+  var_dump($res->fetch_assoc());
+}
+?>
+]]>
+    </programlisting>
+   </example>
   </para>
  </section>
 </chapter>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ --> 
-<!-- EN-Revision: 8549e3a1b12d26d356b8afd9fa84750ef14a0dde Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 219db352d7b37f9bc7bfe8b9e086d105e129872c Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.setup" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -568,7 +568,7 @@ $mysqli = new mysqli("localhost", "username", "password", "database");
        Si une liste d'esclave vide est configuré et une tentative est faîte
        d'exécuter une requête sur un esclave, le plugin émettra une alerte du
        type <literal>mysqlnd_ms) Couldn't find the appropriate slave connection.
-        0 slaves to choose from.</literal> lors de l'exécution. Il est possible
+       0 slaves to choose from.</literal> lors de l'exécution. Il est possible
        qu'une autre alerte suive, comme ceci
        <literal>(mysqlnd_ms) No connection selected by the last filter</literal>.
       </para>
@@ -599,7 +599,7 @@ $mysqli = new mysqli("localhost", "username", "password", "database");
         <tbody>
          <row>
           <entry>
-            <literal>fetch_last_gtid</literal>
+           <literal>fetch_last_gtid</literal>
           </entry>
           <entry>
            <para>
@@ -613,7 +613,7 @@ $mysqli = new mysqli("localhost", "username", "password", "database");
          </row>
          <row>
           <entry>
-            <literal>check_for_gtid</literal>
+           <literal>check_for_gtid</literal>
           </entry>
           <entry>
            <para>
@@ -629,7 +629,7 @@ $mysqli = new mysqli("localhost", "username", "password", "database");
          </row>
          <row>
           <entry>
-            <literal>report_errors</literal>
+           <literal>report_errors</literal>
           </entry>
           <entry>
            <para>
@@ -651,10 +651,43 @@ $mysqli = new mysqli("localhost", "username", "password", "database");
            </para>
           </entry>
           <entry>Depuis 1.2.0.</entry>
-          </row>
-         </tbody>
-        </tgroup>
-       </informaltable>
+         </row>
+         <row>
+          <entry>
+           <literal>wait_for_gtid_timeout</literal>
+           </entry>
+           <entry>
+            <para>
+             Indique au plugin d'attendre <literal>wait_for_gtid_timeout</literal>
+             secondes pour attraper un esclave lors d'une recherche d'esclaves
+             qui peuvent délivrer une consistence de session. Cette option
+             limite le temps consacré pour interroger le statut de l'esclave.
+             Si cette interrogation prend trop de temps, le temps passé
+             au total peut dépasser la valeur de l'option <literal>wait_for_gtid_timeout</literal>.
+             Le plugin appel <literal>sleep(1)</literal> pour attendre une seconde
+             entre deux demandes.
+            </para>
+            <para>
+             L'option peut être utilisée avec l'émulation côté client mais aussi
+             avec la fonctionalité des identifiants globaux de transaction de MySQL 5.6.
+            </para>
+            <para>
+             L'attente d'un esclave pour répliquer un certain GTID nécessaire
+             pour une consistence de session signifie également l'étranglement
+             du client. En étranglant le client, le charge en écriture du maître
+             est indirectement réduite. Une copie primaire basé sur le système
+             de réplication, comme une réplication MySQL, prend plus de temps
+             pour atteindre un statut de consistence. Ce comportement peut
+             être désiré, par exemple, pour accroitre le nombre de copies de 
+             données pour des considérations de haute disponibilité, ou
+             pour prévenir la surcharge du maître.
+            </para>
+           </entry>
+           <entry>Depuis 1.4.0.</entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </informaltable>
      </listitem>
     </varlistentry>
     <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.filters">
@@ -825,16 +858,153 @@ PHP Warning:  mysqli::query(): Couldn't fetch mysqli in filter_warning.php on li
        </example>
       </para>
       <para>
-       Les arguments inconnus sont ignorés. Aucune alerte ni erreur ne sont fournies.
+       A la fois le filtre <literal>random</literal> et le filtre
+       <literal>roundrobin</literal> supportent la définition d'une priorité,
+       un poids pour un serveur, et ce, depuis PECL/mysqlnd_ms 1.4.0.
+       Si l'argument <literal>weight</literal> est passé au filtre, il doit
+       assigner un poids à tous les serveurs. Les serveurs doivent donner
+       un alias dans la liste des serveurs <literal>slave</literal> et
+       <literal>master</literal>. L'alias doit être utilisé pour référencer
+       les serveurs pour l'assignement d'une priorité avec l'argument <literal>weight</literal>.
+      </para>
+      <para>
+       <example>
+        <title>Erreur de référencement</title>
+        <screen>
+<![CDATA[
+[E_RECOVERABLE_ERROR] mysqli_real_connect(): (mysqlnd_ms) Unknown server 'slave3' in 'random' filter configuration. Stopping in %s on line %d
+]]>
+        </screen>
+       </example>
+      </para>
+      <para>
+       L'utilisation d'un mauvais alias avec l'argument
+       <literal>weight</literal> peut conduire à une erreur similaire
+       à celle de l'exemple ci-dessus.
+      </para>
+      <para>
+       Si <literal>weight</literal> est omis, le poids par défaut de tous les
+       serveurs sera de un.
+      </para>
+      <para>
+       <example>
+        <title>Assignement d'un argument <literal>weight</literal> pour la balance de charge</title>
+        <programlisting role="ini">
+<![CDATA[
+{
+   "myapp": {
+       "master": {
+           "master1":{
+               "host":"localhost",
+               "socket":"\/var\/run\/mysql\/mysql.sock"
+           }
+       },
+       "slave": {
+           "slave1": {
+               "host":"192.168.2.28",
+               "port":3306
+           },
+           "slave2": {
+               "host":"192.168.2.29",
+               "port":3306
+           },
+           "slave3": {
+               "host":"192.0.43.10",
+               "port":3306
+           },
+       },
+       "filters": {
+           "random": {
+               "weights": {
+                   "slave1":8,
+                   "slave2":4,
+                   "slave3":1,
+                   "master1":1
+               }
+           }
+       }
+   }
+}
+]]>
+        </programlisting>
+       </example>
+      </para>
+      <para>
+       En moyenne, un serveur dont le poids est de deux sera sélectionné
+       de fois plus qu'un serveur dont le poids est de un. Différents poids
+       peuvent être assignés pour refléter différentes tailles de machine,
+       pour préférer des esclaves proches qui ont une latence réseau faible, ou
+       pour configurer un serveur de secours en cas d'échec. Dans ce dernier
+       cas, vous pouvez vouloir assigner au serveur de secours un poids
+       très faible par rapport aux autres serveurs. Par exemple, si l'on reprend
+       la configuration ci-dessus, <literal>slave3</literal> ne recevra qu'en
+       moyenne huit pourcent des requêtes. Tant que les esclaves <literal>slave1</literal>
+       et <literal>slave2</literal> fonctionnent, il sera utilisé rarement,
+       un peu à la façon d'un serveur de secours. En cas d'erreur sur l'esclave
+       <literal>slave1</literal> et l'esclave <literal>slave2</literal>,
+       l'utilisation de l'esclave <literal>slave3</literal> augmentera.
+       Veuillez lire les notes relative au failover avant d'utiliser
+       l'argument <literal>weight</literal> dans ce but.
+      </para>
+      <para>
+       L'intervalle de valeurs valides pour le poids est de 1 à 65535.
+      </para>
+      <para>
+       Les arguments inconnus sont ignorés par le filtre. Aucune alerte
+       ni erreur n'est fourni.
       </para>
       
       <para>
-       Attends un ou plusieurs serveurs en entrée. Sort un seul serveur.
+       Le filtre attente un ou plusieurs serveurs en entrée et ne sort qu'un
+       seul serveur.
        Une séquence de filtre comme
        <literal>random</literal>, <literal>roundrobin</literal> peut
        émettre une alerte et un message d'erreur définis sur le
        gestionnaire de connexion lors de l'exécution d'une requête.
       </para>
+      <para>
+       Liste des arguments du filtre.
+      </para>
+      <informaltable>
+       <tgroup cols="3">
+        <colspec colwidth="1*"/>
+        <colspec colwidth="7*"/>
+        <colspec colwidth="2*"/>
+        <thead>
+         <row>
+          <entry>Mot clé</entry>
+          <entry>Description</entry>
+          <entry>Version</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry>
+            <literal>sticky</literal>
+          </entry>
+          <entry>
+           <para>
+            Active ou désactive la politique de balance de charge
+            "random once". Voir ci-dessus.
+           </para>
+          </entry>
+          <entry>Depuis 1.2.0.</entry>
+         </row>
+         <row>
+          <entry>
+            <literal>weight</literal>
+          </entry>
+          <entry>
+           <para>
+            Assigne une priorité/un poids de balance de charge
+            à un serveur. Voir ci-dessus pour une description.
+           </para>
+          </entry>
+          <entry>Depuis 1.4.0.</entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </informaltable>
      </listitem>
     </varlistentry>
     <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.filter-roundrobin">
@@ -884,6 +1054,38 @@ PHP Warning:  mysqli::query(): Couldn't fetch mysqli in filter_warning.php on li
        une alerte et un message d'erreur définis sur le gestionnaire de connexion
        lors de l'exécution d'une requête.
       </para>
+      <para>
+       Liste des arguments du filtre.
+      </para>
+      <informaltable>
+       <tgroup cols="3">
+        <colspec colwidth="1*"/>
+        <colspec colwidth="7*"/>
+        <colspec colwidth="2*"/>
+        <thead>
+         <row>
+          <entry>Mot clé</entry>
+          <entry>Description</entry>
+          <entry>Version</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry>
+            <literal>weight</literal>
+          </entry>
+          <entry>
+           <para>
+            Assigne une priorité/un poids à un serveur. Repportez-vous
+            à la <link linkend="ini.mysqlnd-ms-plugin-config-v2.filter-random">section
+            ci-dessus</link> pour plus de détails.
+           </para>
+          </entry>
+          <entry>Depuis 1.4.0.</entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </informaltable>
      </listitem>
     </varlistentry>
     <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.filter-user">
@@ -1255,9 +1457,9 @@ L'utilisation s'est connecté sur 'myapp'...
        maîtres et esclaves extraites depuis les fonctions d'entrée.
       </para>
       <para>
-      <example>
+       <example>
         <title>Retourne des esclaves et des maîtres aléatoirement</title>
-        <programlisting role="php">
+       <programlisting role="php">
 <![CDATA[
 <?php
 function pick_server($connected, $query, $masters, $slaves, $last_used_connection, $in_transaction)
@@ -1276,7 +1478,7 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
 }
 ?>
 ]]>
-         </programlisting>
+       </programlisting>
        </example>
       </para>
       <para>
@@ -1366,38 +1568,38 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
         </thead>
         <tbody>
          <row>
-           <entry>
-             <literal>eventual_consistency</literal>
-           </entry>
-           <entry>
-            <para>
-             Demande une consistence éventuelle. Autorise l'utilisation de tous
-             les serveurs maîtres et de tous les serveurs esclaves. Les données
-             retournées peuvent (ou pas) être des données à jour.
-            </para>
-            <para>
-             La consistence éventuelle accepte un paramètre optionnel
-             <literal>age</literal>. Si le paramètre <literal>age</literal>
-             est fourni, le plugin considère seulement les esclaves pour la lecture
-             pour lesquels la réplication MySQL rapporte d'un lag serveur inférieur
-             ou égal à la valeur du paramètre <literal>age</literal>.
-             Le lag de réplication est mesuré en utilisant
-             <literal>SHOW SLAVE STATUS</literal>.
-             Si le plugin échoue dans la récupération du lag de réplication, l'esclave
-             testé sera ignoré. Des détails ainsi que des astuces de l'implémentation
-             sont fournis dans la <link linkend="mysqlnd-ms.qos-consistency">section
-             sur la qualité de service</link>.
-            </para>
-            <para>
-             Veuillez noter que si une chaîne de filtres génère une liste vide
-             d'esclave, et que la directive de configuration PHP
-             <literal>mysqlnd_ms.multi_master=0</literal> est utilisée, le plugin
-             peut émettre une alerte.
-            </para>
-            <para>
-             <example>
-               <title>Limitation globale du lag d'un esclave</title>
-                <programlisting role="ini">
+          <entry>
+           <literal>eventual_consistency</literal>
+          </entry>
+          <entry>
+           <para>
+            Demande une consistence éventuelle. Autorise l'utilisation de tous
+            les serveurs maîtres et de tous les serveurs esclaves. Les données
+            retournées peuvent (ou pas) être des données à jour.
+           </para>
+           <para>
+            La consistence éventuelle accepte un paramètre optionnel
+            <literal>age</literal>. Si le paramètre <literal>age</literal>
+            est fourni, le plugin considère seulement les esclaves pour la lecture
+            pour lesquels la réplication MySQL rapporte d'un lag serveur inférieur
+            ou égal à la valeur du paramètre <literal>age</literal>.
+            Le lag de réplication est mesuré en utilisant
+            <literal>SHOW SLAVE STATUS</literal>.
+            Si le plugin échoue dans la récupération du lag de réplication, l'esclave
+            testé sera ignoré. Des détails ainsi que des astuces de l'implémentation
+            sont fournis dans la <link linkend="mysqlnd-ms.qos-consistency">section
+            sur la qualité de service</link>.
+           </para>
+           <para>
+            Veuillez noter que si une chaîne de filtres génère une liste vide
+            d'esclave, et que la directive de configuration PHP
+            <literal>mysqlnd_ms.multi_master=0</literal> est utilisée, le plugin
+            peut émettre une alerte.
+           </para>
+           <para>
+            <example>
+             <title>Limitation globale du lag d'un esclave</title>
+             <programlisting role="ini">
 <![CDATA[
 {
     "myapp": {
@@ -1433,41 +1635,41 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
           <entry>Depuis 1.2.0.</entry>
          </row>
          <row>
-           <entry>
-             <literal>session_consistency</literal>
-           </entry>
-           <entry>
-            <para>
-             Demande une consistence de session (lecture de vos écritures).
-             Autorise l'utilisation de tous les maîtres
-             et de tous les esclaves qui sont synchronisés avec le maître.
-             Si aucun paramètre supplémentaire n'est fourni, les esclaves
-             filtrés seront ceux pour lesquels il n'a pas été possible
-             de tester leur consistence ou bien parce qu'ils lagguent.
-             Notez que si un chaîne de filtres génère une liste d'esclave
-             vide, et que la directive de configuration PHP
-             <literal>mysqlnd_ms.multi_master=0</literal> est utilisé,
-             le plugin peut émettre une alerte.
-            </para>
-            <para>
-             Les demandes temporaires de consistence de session utilisant la fonction
-             <function>mysqlnd_ms_set_qos</function> est une alternative à l'utilisation
-             de <literal>master_on_write</literal>. <literal>master_on_write</literal>
-             est plutôt utilisé pour envoyer plus de requêtes au maître que nécessaires.
-             L'application devrait être capable de continuer l'opération à un niveau
-             de consistence moindre après avoir subit des lectures critiques.
-            </para>
+          <entry>
+           <literal>session_consistency</literal>
+          </entry>
+          <entry>
+           <para>
+            Demande une consistence de session (lecture de vos écritures).
+            Autorise l'utilisation de tous les maîtres
+            et de tous les esclaves qui sont synchronisés avec le maître.
+            Si aucun paramètre supplémentaire n'est fourni, les esclaves
+            filtrés seront ceux pour lesquels il n'a pas été possible
+            de tester leur consistence ou bien parce qu'ils lagguent.
+            Notez que si un chaîne de filtres génère une liste d'esclave
+            vide, et que la directive de configuration PHP
+            <literal>mysqlnd_ms.multi_master=0</literal> est utilisé,
+            le plugin peut émettre une alerte.
+           </para>
+           <para>
+            Les demandes temporaires de consistence de session utilisant la fonction
+            <function>mysqlnd_ms_set_qos</function> est une alternative à l'utilisation
+            de <literal>master_on_write</literal>. <literal>master_on_write</literal>
+            est plutôt utilisé pour envoyer plus de requêtes au maître que nécessaires.
+            L'application devrait être capable de continuer l'opération à un niveau
+            de consistence moindre après avoir subit des lectures critiques.
+           </para>
           </entry>
           <entry>Depuis 1.1.0.</entry>
          </row>
          <row>
-           <entry>
-             <literal>strong_consistency</literal>
-           </entry>
-           <entry>
-            <para>
-             Demande une consistence forte. Seuls les maîtres seront utilisés.
-            </para>
+          <entry>
+           <literal>strong_consistency</literal>
+          </entry>
+          <entry>
+           <para>
+            Demande une consistence forte. Seuls les maîtres seront utilisés.
+           </para>
           </entry>
           <entry>Depuis 1.2.0.</entry>
          </row>
@@ -1480,12 +1682,14 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
     <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.failover">
      <term>
       <parameter>failover</parameter>
-      <type>string</type>
+      A partir de 1.3.x : <type>string</type>.
+      Depuis 1.4.0 : <type>object</type>.
      </term>
      <listitem>
       <para>
        Politique de basculement. Politiques supportées :
-       <literal>disabled</literal> (défaut), <literal>master</literal>.
+       <literal>disabled</literal> (défaut), <literal>master</literal>,
+       <literal>loop_before_master</literal> (depuis 1.4.0).
       </para>
       <para>
        Si aucune politique de basculement n'est définie, le plugin
@@ -1498,6 +1702,14 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
        déclencher la sélection d'un autre serveur.
       </para>
       <para>
+       A noter : la logique de basculement automatique est appliqué seulement
+       lors de l'ouverture des connexions. Une fois la connexion ouverte, aucune
+       tentative automatique n'est effectuée pour la ré-ouvrir lorsqu'une erreur
+       survient. Si, par exemple, la connexion vers le serveur est fermée, et
+       que l'utilisateur tente d'y exécuter une requête, aucun basculement
+       automatique ne sera tenté. En lieu et place, une erreur sera rapportée.
+      </para>
+      <para>
        Lors de l'utilisation de <literal>failover=master</literal>,
        le plugin basculera implicitement vers un maître, si disponible.
        Reportez-vous à la documentation de ce concept pour en apprendre
@@ -1505,7 +1717,7 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
       </para>
       <para>
        <example>
-        <title>Basculement optionnel vers un maître lors d'un échec de connexion sur un esclave</title>
+        <title>Basculement optionnel vers un maître lors d'un échec de connexion sur un esclave  (PECL/mysqlnd_ms &lt; 1.4.0)</title>
         <programlisting role="ini">
 <![CDATA[
 {
@@ -1529,18 +1741,136 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
        </example>
       </para>
       <para>
-       Veuillez noter que la logique de failover automatique est
-       appliquée seulement lors de l'ouverture d'une connexion. Une
-       fois la connexion ouverte, aucune tentative automatique
-       ne sera effectuée pour la ré-ouvrir lors d'une erreur. Si, par exemple,
-       une connexion serveur est fermée, et que l'utilisateur tente
-       d'y exécuter une requête, aucun failover automatique ne sera tenté.
-       Au lieu de cela, une erreur sera rapportée.
+       Depuis PECL/mysqlnd_ms 1.4.0, le mot clé de configuration du basculement
+       se réfère à un objet.
       </para>
       <para>
+       <example>
+        <title>Nouvelle syntaxe depuis 1.4.0</title>
+        <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+        },
+        "failover": {"strategy": "master" }
+    }
+}
+]]>
+        </programlisting>
+       </example>
+      </para>
+      <informaltable>
+       <tgroup cols="3">
+        <colspec colwidth="1*"/>
+        <colspec colwidth="7*"/>
+        <colspec colwidth="2*"/>
+        <thead>
+         <row>
+          <entry>Mot clé</entry>
+          <entry>Description</entry>
+          <entry>Version</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry>
+           <literal>strategy</literal>
+          </entry>
+          <entry>
+           <para>
+            Politique de basculement. Les valeurs possibles sont :
+            <literal>disabled</literal> (par défaut), <literal>master</literal>,
+            <literal>loop_before_master</literal>
+           </para>
+           <para>
+            Une valeur à <literal>disabled</literal> désactivera le basculement
+            automatique.
+           </para>
+           <para>
+            Le fait de définir le <literal>master</literal> indique au plugin
+            de tenter une connexion vers ce maître lors d'une erreur de connexion
+            vers l'esclave. Si la connexion au maître échoue, le plugin sortira
+            de la boucle de basculement et une erreur sera retournée à
+            l'utilisateur.
+           </para>
+           <para>
+            Lors de l'utilisation de <literal>loop_before_master</literal> et 
+            qu'une requête esclave est faîte, le plugin tentera une connexion
+            aux autres esclabes avant de basculer vers le maître. Si plusieurs
+            maîtres sont fournis, et que la gestion des multi-maîtres
+            est activée, le plugin parcourra la liste des maîtres et tentera
+            de s'y connecter avant de retourner une erreur à l'utilisateur.
+           </para>
+          </entry>
+          <entry>Depuis 1.4.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>remember_failed</literal>
+          </entry>
+          <entry>
+           <para>
+            Se souvenir des échecs pendant la durée d'une requête web.
+            Par défaut, vaut <literal>false</literal>.
+            </para>
+            <para>
+             Si défini à <literal>true</literal>, le plugin va se souvenir des
+             hôtes ayant échoués, et les écartera dans toutes les balances
+             de charge réalisées pendant la durée de la requête web courante.
+            </para>
+          </entry>
+          <entry>
+           Depuis 1.4.0. Fonctionalité expérimentale. Cette fonctionalité
+           n'est disponible qu'avec les filtres <literal>random</literal> et
+           <literal>roundrobin</literal> de balance de charge.
+           Son comportement et sa syntaxe peuvent changer dans le futur.
+          </entry>
+         </row>
+         <row>
+           <entry>
+            <literal>max_retries</literal>
+           </entry>
+           <entry>
+            <para>
+             Nombre maximal de tentative de reconnexion avant d'écarter un hôte.
+             Défaut : <literal>0</literal> (aucune limite).
+            </para>
+            <para>
+             Cette configuration est utilisée pour éviter qu'un hôte
+             soit écarté de la liste des hôtes dès le premier échec.
+             Si défini à <literal>n > 0</literal>, le pluginva conserver
+             le noeud dans la liste des noeuds y compris après une tentative
+             de connexion échouée. Le noeud ne sera pas supprimé immédiatement
+             de la liste des esclaves et de la liste des maîtres après
+             le premier échec de connexion, mais <literal>n</literal> tentatives
+             suivantes seront réalisées dans les futures balances de charge
+             avant d'être réellement écarté.
+            </para>
+          </entry>
+          <entry>
+           Depuis 1.4.0. Fonctionalité expérimentale. Cette fonctionalité n'est
+           disponible qu'avec les filtres <literal>random</literal> et <literal>roundrobin</literal>
+           de balance de charge. Le comportement et la syntaxe peuvent changer
+           dans le futur.
+          </entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </informaltable>
+      <para>
        Le fait de définir <literal>failover</literal> à une valeur
-       autre que <literal>disabled</literal> ou <literal>master</literal>
-       n'émettra aucune alerte ni erreur.
+       autre que <literal>disabled</literal>, <literal>master</literal>
+       ou <literal>loop_before_master</literal> n'émettra aucune alerte ni erreur.
       </para>
      </listitem>
     </varlistentry>
@@ -1709,7 +2039,7 @@ $mysqli->query("SELECT 'This connection will be set to server_charset upon estab
 $mysqli->set_charset("latin1");
 ?>
 ]]>
-         </programlisting>
+        </programlisting>
        </example>
       </para>
      </listitem>
@@ -2395,7 +2725,7 @@ mysqlnd.debug=d:t:x:O,/tmp/mysqlnd.trace
    <literal>host=localhost user=root db=test port=3306 flags=131072 persistent=0 state=0</literal>.
   </para>
  </section>
-
+ 
  <section xml:id="mysqlnd-ms.monitoring">
   <title xmlns="http://docbook.org/ns/docbook">Monitoring</title>
   <para>
