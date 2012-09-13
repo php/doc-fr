@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 8b6d169424ff189bb563ef4c3f35f8adff3f42c5 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<section xml:id="mongo.readpreferences" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Préférences de lecture</title>
+ <para>
+  MongoDB 2.2 et la version 1.3.0 du driver ajoutent le support pour les
+  <link xlink:href="&url.mongodb.docs.readpreferences;">préférences de lecture</link>,
+  qui autorise le contrôle sur la façon dont les requêtes sont dirigées vers les
+  instances mongod. Les préférences de lecture peuvent être spécifiées soit pour
+  chaque connexion, soit par base de données, soit par collection ou bien par curseur.
+  Les préférences définies à un niveau plus élévé seront héritées par défaut (i.e.
+  <classname>MongoCollection</classname> héritera des préférences définies au niveau
+  correspondant de l'instance <classname>MongoDB</classname>).
+ </para>
+ <para>
+  Les préférences de lecture sont spécifiées avec des combinaison de modes
+  et de jeu de tags. Les modes déterminent la façon dont les instances mongod sont priorisées,
+  alors que les <link xlink:href="&url.mongodb.docs.tagsets;">jeux de tags</link>
+  spécifient les critères d'éligibilité des instances mongod.
+ </para>
+ <section>
+  <title>Les modes des préférences de lecture</title>
+  <warning>
+   <para>
+    Tous les modes des préférences de lecture, excepté <literal>Mongo::RP_PRIMARY</literal>
+    peuvent retournés des données périmées sachant que les opérations de réplications des
+    secondaires depuis le primaire peuvent prendre un certain délai. Assurez-vous que votre
+    application peut toélérer des données périmées si vous choisissez d'utiliser un
+    mode autre que le mode <literal>Mongo::RP_PRIMARY</literal>.
+   </para>
+  </warning>
+  <itemizedlist>
+   <listitem>
+    <para>
+     <literal>Mongo::RP_PRIMARY</literal>
+    </para>
+    <para>
+     Toutes les opérations de lecture n'utilisent que le jeu primaire de réplication courant.
+     C'est le comportement par défaut. Si le primaire n'est pas disponible, les
+     opérations de lecture produiront une exception.
+    </para>
+    <para>
+     Ce mode est incompatible avec l'utilisation des jeux de tags. Le fait de spécifier
+     un jeu de tags avec le mode <literal>Mongo::RP_PRIMARY</literal> retournera une erreur.
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     <literal>Mongo::RP_PRIMARY_PREFERRED</literal>
+    </para>
+    <para>
+     Dans la plupart des situations, les opérations de lecture s'effectue depuis
+     le membre primaire du jeu. Cependant, si le primaire n'est pas disponible, ce qui 
+     est le cas lors des situations critiques, les opérations de lecture s'effectue
+     depuis les membres secondaires.
+    </para>
+    <para>
+     Lorsque les préférences de lecture incluent un jeu de tags, le client
+     lit tout d'abord en utilisant le primaire, s'il est disponible, puis,
+     en utilisant les secondaires qui correspondent aux tags spécifiés.
+     Si aucun secondaire ne correspond aux tags spécifiés, l'opération
+     de lecture échoue et produit une exception.
+    </para>
+    <warning>
+     <para>
+      La version 2.2 de mongo ajoute un support complet des préférences
+      de lecture. Lors de la connexion à d'anciennes instances mongo,
+      <literal>Mongo::RP_PRIMARY_PREFERRED</literal>
+      enverra les requêtes aux secondaires.
+     </para>
+    </warning>
+   </listitem>
+   <listitem>
+    <para>
+     <literal>Mongo::RP_SECONDARY</literal>
+    </para>
+    <para>
+     Les opérations de lecture ne s'effectuent que sur les membres
+     secondaires du jeu. Si aucun secondaire n'est disponible,
+     les opérations de lecture produiront une exception.
+    </para>
+    <para>
+     La plupart des jeux ont au moins un secondaire, mais il existe
+     des situations où il peut ne pas être disponible. Par exemple,
+     un jeu avec un primaire, un secondaire, un arbitraire peut ne pas
+     avoir de secondaire si un membre est en cours de récupération ou
+     indisponible.
+    </para>
+    <para>
+     Lorsque les préférences de lecture incluent un jeu de tags, le client
+     tente de trouver des membres secondaires qui correspondent au jeu de
+     tags spécifié, et dirige les lectures vers un secondaire pris aléatoirement
+     dans le groupe le plus proche. Si aucun secondaire ne correspond aux
+     tags, l'opération de lecture produira une exception.
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     <literal>Mongo::RP_SECONDARY_PREFERRED</literal>
+    </para>
+    <para>
+     Dans la plupart des situations, les opérations de lecture s'effectuent
+     sur les membres secondaires, mais dans le cas où le jeu contient
+     un seul primaire avec aucun autre membre, l'opération de lecture
+     utilisera le primaire du jeu.
+    </para>
+    <para>
+     Lorsque les préférences de lecture incluent un jeu de tags, le client
+     tente de trouver un membre secondaire qui correspond au jeu de tags
+     spécifié, et dirige les lectures vers un secondaire pris aléatoirement
+     dans la groupe le plus proche. Si aucun secondaire ne correspond aux tags,
+     l'opération de lecture produira une exception.
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     <literal>Mongo::RP_NEAREST</literal>
+    </para>
+    <para>
+     Le driver lit depuis le membre le plus proche du jeu, suivant le
+     processus de sélection des membres. Les lectures en mode
+     <literal>Mongo::RP_NEAREST</literal> ne prennent pas en considération le
+     type du membre, et peuvent lire depuis à la fois les primaires et les
+     secondaires.
+    </para>
+    <para>
+     Utilisez ce mode pour minimiser les effects de latence du réseau
+     lors des opérations de lecture sans préférence pour des données courantes
+     ou périmées.
+    </para>
+    <para>
+     Si vous spécifiez un jeu de tags, le client tente de trouver un membre
+     secondaire qui correspond au jeu de tags spécifié et dirige les lectures
+     vers un secondaire pris aléatoirement depuis le groupe le plus proche.
+    </para>
+    <note>
+     <para>
+      Toutes les opérations lisent depuis le membre le plus proche du jeu
+      de réplication qui correspond au mode de préférence de lecture spécifié.
+      Le mode <literal>Mongo::RP_NEAREST</literal> préfère les faibles latences
+      lors des lectures sur les membres au statut primaire ou secondaire.
+     </para>
+    </note>
+   </listitem>
+  </itemizedlist>
+ </section>
+ <section>
+  <title>Jeux de tags</title>
+  <para>
+   Les <link xlink:href="&url.mongodb.docs.tagsets;">jeux de tags</link>
+   vous permettent de spécifier des critères indiquant à votre application
+   les membres spécifiques à utiliser lors des opérations de lecture,
+   en se basant sur des paramètres personnalisés. Les jeux de tags permettent
+   cela, permettant ainsi de s'assurer que les opérations de lecture utilisent
+   des membres d'un centre de données particulier, ou utilisent des instances
+   mongod désignées pour une classe particulière d'opérations, comme les
+   rapports ou les analyses.
+  </para>
+  <para>
+   Vous pouvez spécifier des jeux de tags avec les modes de préférence de
+   lecture suivants :
+  </para>
+  <itemizedlist>
+   <listitem>
+    <para>
+     <literal>Mongo::RP_PRIMARY_PREFERRED</literal>
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     <literal>Mongo::RP_SECONDARY</literal>
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     <literal>Mongo::RP_SECONDARY_PREFERRED</literal>
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     <literal>Mongo::RP_NEAREST</literal>
+    </para>
+   </listitem>
+  </itemizedlist>
+  <para>
+   Vous ne pouvez pas spécifier de jeux de tags avec le mode de préférence
+   de lecture <literal>Mongo::RP_PRIMARY</literal>. Les tags sont applicables
+   que lors de la sélection d'un membre secondaire d'un jeu, excepté
+   lors du mode utilisant le plus proche.
+  </para>
+ </section>
+ <section>
+  <title>Spécifier les préférences de lecture</title>
+  <para>
+   Les préférences de lecture peuvent être spécifiées dans l'URI de connexion
+   fourni à la méthode <function>Mongo::__construct</function>, qui utilise
+   une syntaxe de type requête, ou via des méthodes du coeur de la classe,
+   qui utilise un tableau pour spécifier les jeux de tags.
+  </para>
+  <para>
+   Lorsque les modes de préférences de lecture sont fournis via une chaîne
+   de type requête, les noms
+   <literal>primary</literal>, <literal>primaryPreferred</literal>,
+   <literal>secondary</literal>, <literal>secondaryPreferred</literal>, et
+   <literal>nearest</literal> doivent être utilisés au lieu des constantes pour
+   la valeur de <literal>readPreference</literal>. Les jeux de tags pour
+   la valeur de <literal>readPreferenceTags</literal> doivent être une séquence
+   délimitée par une virgule de paires clé/valeur séparée par deux points(:).
+  </para>
+  <note>
+   <para>
+    Chaque jeu de tags défini dans la chaîne de requête utilisera le nom
+    <literal>readPreferenceTags</literal>. Contrairement à la façon dont PHP
+    gère les chaînes de type URL, les valeurs successives de
+    <literal>readPreferenceTags</literal> n'effaceront pas les précédentes.
+    Le driver va collecter les jeux de tags dans l'ordre de leur apparition
+    dans la chaîne de requête.
+   </para>
+  </note>
+  <para>
+   <example>
+    <title>Préférences de lecture via l'URI de connexion avec une syntaxe de type
+     requête</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// Préfère le serveur le plus proche avec aucun tag de préférence
+$uri  = 'mongodb://rs1.example.com,rs2.example.com/';
+$uri .= '?readPreference=nearest';
+$m = new Mongo($uri, array('replicaSet' => 'rs'));
+
+// Préfère le serveur le plus proche dans le centre de données "east"
+$uri  = 'mongodb://rs1.example.com,rs2.example.com/';
+$uri .= '?readPreference=nearest';
+$uri .= '&readPreferenceTags=dc:east';
+$m = new Mongo($uri, array('replicaSet' => 'rs'));
+
+// Préfère le serveur le plus proche dans le centre de données "east", également
+// utilisé pour les rapports, mais utilise le centre de données "west" en cas de problème
+$uri  = 'mongodb://rs1.example.com,rs2.example.com/';
+$uri .= '?readPreference=nearest';
+$uri .= '&readPreferenceTags=dc:east,use:reporting';
+$uri .= '&readPreferenceTags=dc:west';
+$m = new Mongo($uri, array('replicaSet' => 'rs'));
+
+// Préfère le serveur le plus proche dans le centre de données "east", puis, un
+// serveur dans le centre de données "west", et pour terminer, n'avoir aucun
+jeu de tags de préférence si une erreur survient
+$uri  = 'mongodb://rs1.example.com,rs2.example.com/';
+$uri .= '?readPreference=nearest';
+$uri .= '&readPreferenceTags=dc:east';
+$uri .= '&readPreferenceTags=dc:west';
+$uri .= '&readPreferenceTags=';
+$m = new Mongo($uri, array('replicaSet' => 'rs'));
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Préférences de lecture avec une syntaxe de type tableau pour les jeux de tags</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$m = new Mongo('mongodb://rs1.example.com,rs2.example.com', array(
+    'replicaSet' => 'rs',
+));
+
+// Préfère le serveur le plus proche, avec aucun tag de préférence
+$m->setReadPreference(Mongo::RP_NEAREST, array());
+
+// Préfère le serveur le plus proche dans le centre de données "east"
+$m->setReadPreference(Mongo::RP_NEAREST, array(
+    array('dc' => 'east'),
+));
+
+// Préfère le serveur le plus proche dans le centre de données "east" également
+// utilisé pour les rapports, mais prend un serveur du centre de données "west"
+// en cas d'erreur
+$m->setReadPreference(Mongo::RP_NEAREST, array(
+    array('dc' => 'east', 'use' => 'reporting'),
+    array('dc' => 'west'),
+));
+
+// Préfère le serveur le plus proche dans le centre de données "east", puis un
+// serveur dans le centre de données "west", et pour terminer, n'avoir aucun
+jeu de tags de préférence si une erreur survient
+$m->setReadPreference(Mongo::RP_NEAREST, array(
+    array('dc' => 'east'),
+    array('dc' => 'west'),
+    array(),
+));
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </section>
+</section>
