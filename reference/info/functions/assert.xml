@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: dd9fa0aed7377da913904e3d26d59a22bec69015 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.assert" xmlns="http://docbook.org/ns/docbook">
@@ -14,6 +14,7 @@
   <methodsynopsis>
    <type>bool</type><methodname>assert</methodname>
    <methodparam><type>mixed</type><parameter>assertion</parameter></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>description</parameter></methodparam>
   </methodsynopsis>
   <para>
    <function>assert</function> va vérifier l'assertion
@@ -55,8 +56,8 @@
   </para>
   <para>
    La fonction <function>assert_options</function> et la directive
-   ASSERT_CALLBACK permettent de configurer une fonction qui sera appelée
-   lorsque l'assertion échoue.
+   <constant>ASSERT_CALLBACK</constant> permettent de configurer une
+   fonction qui sera appelée lorsque l'assertion échoue.
   </para>
   <para>
    Les fonctions de rappel pour <function>assert</function> sont
@@ -71,8 +72,11 @@
    contient le nom du fichier qui a vu l'assertion échouer. Le second
    contient le numéro de ligne dans le fichier précédent.
    Le troisième argument contient l'expression qui a échoué (s'il
-   y en a : les valeurs littérales comme 1 ou "deux" ne seront
-   pas passées par cet argument).
+   y en a : les valeurs littérales &#x2014; comme 1 ou "deux" ne seront
+   pas passées par cet argument). Les utilisateurs de PHP 5.4.8 ou supérieur
+   peuvent également fournir un quatrième argument optionnel, qui contiendra
+   la <parameter>description</parameter> fournie à la fonction
+   <function>assert</function>, s'il est défini.
   </para>
  </refsect1>
 
@@ -88,6 +92,15 @@
       </para>
      </listitem>
     </varlistentry>
+    <varlistentry>
+     <term><parameter>description</parameter></term>
+     <listitem>
+      <para>
+       Une description optionnelle, qui sera incluse dans le message
+       d'échec si l'<parameter>assertion</parameter> échoue.
+      </para>
+     </listitem>
+    </varlistentry>
    </variablelist>
   </para>
  </refsect1>
@@ -96,6 +109,33 @@
   &reftitle.returnvalues;
   <para>
    &false; si l'assertion est fausse, &true; sinon.
+  </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>5.4.8</entry>
+       <entry>
+        La paramètre <parameter>description</parameter> a été ajoutée.
+        La <parameter>description</parameter> est également maintenant fournie
+        à la fonction de rappel en mode <constant>ASSERT_CALLBACK</constant>
+        comme quatrième argument.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
   </para>
  </refsect1>
 
@@ -129,6 +169,45 @@ assert('mysql_query("")');
 ?>
 ]]>
     </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Utilisation d'un gestionnaire personnalisé pour afficher une description</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Activation de l'assertion et on le rend silencieux
+assert_options(ASSERT_ACTIVE, 1);
+assert_options(ASSERT_WARNING, 0);
+assert_options(ASSERT_QUIET_EVAL, 1);
+
+// Création d'une fonction de gestionnaire
+function my_assert_handler($file, $line, $code, $desc = null)
+{
+    echo "Echec de l'assertion : $file:$line: $code";
+    if ($desc) {
+        echo ": $desc";
+    }
+    echo "\n";
+}
+
+// Définition de la fonction de rappel
+assert_options(ASSERT_CALLBACK, 'my_assert_handler');
+
+// Effectue une assertion qui doit échouer
+assert('2 < 1');
+assert('2 < 1', 'Deux est inférieur à un');
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Echec de l'assertion : test.php:21: 2 < 1
+Echec de l'assertion : test.php:22: 2 < 1: Deux est inférieur à un
+]]>
+    </screen>
    </example>
   </para>
  </refsect1>
