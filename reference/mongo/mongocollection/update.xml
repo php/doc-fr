@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: c90424bc60a933348a29381c53116ec6ca607f4a Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 1a5e05754ba1fa3a3838c15b8074adafa7db3000 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongocollection.update" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -59,9 +59,16 @@
          </para>
          <para>
           Si aucun document ne correspond au critère <parameter>$criteria</parameter>,
-          un nouveau document sera créé depuis les variables
-          <parameter>$criteria</parameter> et <parameter>$new_object</parameter>
-          (voir l'exemple avec upsert ci-dessous).
+          un nouveau document sera inséré.
+         </para>
+         <para>
+          Si un nouveau document doit être inséré, et que
+          <parameter>$new_object</parameter> contient des modificateurs atomiques
+          (i.e. opérateurs <literal>$</literal>), alors ces opérateurs seront appliqués
+          au paramètre <parameter>$criteria</parameter> pour créer le nouveau document.
+          Si <parameter>$new_object</parameter> ne contient pas de modificateur atomique,
+          il sera pris tel quel en tant que document inséré. Voir l'exemple ci-dessous pour plus
+          d'informations.
          </para>
         </listitem>
         <listitem>
@@ -142,13 +149,12 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Si le paramètre <parameter>safe</parameter>
-   a été défini, retourne un tableau contenant le statut
-   de la mise à jour. Sinon, retourne un booléen représentant
-   le fait que le tableau n'était pas vide (un tableau vide
-   ne sera pas inséré). Ce champ de ce tableau est décrit dans la
-   documentation de la méthode
-   <function>MongoCollection::insert</function>.
+   Retourne un tableau contenant le statit de la mise à jour si l'option
+   <literal>"safe"</literal> est définie. Sinon, retourne &true;.
+  </para>
+  <para>
+   Les champs du tableau de statut sont décrits dans la documentation
+   de la méthode <function>MongoCollection::insert</function>.
   </para>
  </refsect1>
  
@@ -156,14 +162,13 @@
   &reftitle.errors;
   <para>
    Lance une exception <classname>MongoCursorException</classname>
-   si l'option "safe" est définie et que la mise à jour échoue.
+   si l'option <literal>"safe"</literal> est définie et que la mise à jour échoue.
   </para>
   <para>
    Lance une exception <classname>MongoCursorTimeoutException</classname>
-   si l'option "safe" est définie et que l'opération prend plus
+   si l'option <literal>"safe"</literal> est définie et que l'opération prend plus
    de temps que <varname>MongoCollection::$wtimeout</varname> millisecondes.
-   Ceci ne tue pas le processus serveur, mais uniquement le délai
-   d'attente côté client.
+   Ceci ne tue pas le processus serveur, mais uniquement le délai d'attente côté client.
   </para>
  </refsect1>
  
@@ -180,45 +185,11 @@
      </thead>
      <tbody>
       <row>
-       <entry>1.0.1</entry>
+       <entry>1.3.0</entry>
        <entry>
-        Le paramètre "options" passe de booléen à un tableau.
-        En version Pre-1.0.1, le second paramètre était une valeur
-        booléenne optionnelle, spécifiant un upsert.
-       </entry>
-      </row>
-      <row>
-       <entry>1.0.5</entry>
-       <entry>
-        Ajout de l'option "safe".
-       </entry>
-      </row>
-      <row>
-       <entry>1.0.9</entry>
-       <entry>
-        Ajout de la possibilité de passer des entiers à l'option
-        "safe" (auparavant, seuls les booléens étaient acceptés)
-        et ajout de l'option "fsync".
-       </entry>
-      </row>
-      <row>
-       <entry>1.0.9</entry>
-       <entry>
-        Le type retourné a été modifié en un tableau contenant
-        les informations de l'erreur si l'option "safe" est
-        utilisé, sinon, ce sera un booléen comme auparavant.
-       </entry>
-      </row>
-      <row>
-       <entry>1.0.11</entry>
-       <entry>
-        Se déconnecte lors d'erreurs "not master" si "safe" est utilisé.
-       </entry>
-      </row>
-      <row>
-       <entry>1.2.0</entry>
-       <entry>
-        Ajout de l'option timeout.
+        Le paramètre <parameter>options</parameter> n'accepte plus
+        de booléen pour indiquer un upsert. A la place, ceci
+        doit être effectué via <literal>array('upsert' => true)</literal>.
        </entry>
       </row>
       <row>
@@ -229,11 +200,46 @@
        </entry>
       </row>
       <row>
-       <entry>1.3.0</entry>
+       <entry>1.2.0</entry>
        <entry>
-        Le paramètre <parameter>options</parameter> n'accepte plus
-        de booléen pour indiquer un upsert. A la place, ceci
-        doit être effectué via <literal>array('upsert' => true)</literal>.
+        Ajout de l'option <literal>"timeout"</literal>.
+       </entry>
+      </row>
+      <row>
+       <entry>1.0.11</entry>
+       <entry>
+        Se déconnecte lors d'erreurs "not master" si <literal>"safe"</literal> est utilisé.
+       </entry>
+      </row>
+      <row>
+       <entry>1.0.9</entry>
+       <entry>
+        <para>
+         Ajout de la possibilité de passer des entiers à l'option
+         <literal>"safe"</literal> (auparavant, seuls les booléens étaient acceptés).
+        </para>
+        <para>
+         Ajout de l'option <literal>"fsync"</literal>.
+        </para>
+        <para>
+         Le type retourné a été modifié en un tableau contenant
+         les informations de l'erreur si l'option <literal>"safe"</literal> est
+         utilisé, sinon, ce sera un booléen comme auparavant.
+        </para>
+       </entry>
+      </row>
+      <row>
+       <entry>1.0.5</entry>
+       <entry>
+        Ajout de l'option <literal>"safe"</literal>.
+       </entry>
+      </row>
+      <row>
+       <entry>1.0.1</entry>
+       <entry>
+        Le paramètre <parameter>options</parameter> passe de booléen à un tableau.
+        En version Pre-1.0.1, le second paramètre était une valeur
+        booléenne optionnelle, spécifiant un upsert.
        </entry>
       </row>
      </tbody>
@@ -280,17 +286,27 @@ array(4) {
    </screen>
   </example>
   <example>
-   <title>Exemple avec <function>MongoCollection::update</function> et upsert</title>
+   <title>Exemples avec <function>MongoCollection::update</function> et upsert</title>
    <para>
     Les Upserts permettent de simplifier le code, vu qu'une simple ligne
-    permet de créer l'objet s'il n'existe pas encore, et de le mettre à jour s'il existe.
+    permet de créer le document s'il n'existe pas encore (en se basant sur
+    le paramètre <parameter>$criteria</parameter>) ou de le mettre à jour s'il existe.
+   </para>
+   <para>
+    Dans l'exemple suivant, <parameter>$new_object</parameter> contient un modificateur
+    atomique. Vu que la collection est vide, l'upsert doit insérer un nouveau document,
+    et utilisera les opérateurs de <parameter>$criteria</parameter> pour le créer.
    </para>
    <programlisting role="php">
 <![CDATA[
 <?php
 
 $c->drop();
-$c->update(array("uri" => "/summer_pics"), array('$inc' => array("page hits" => 1)), array("upsert" => true));
+$c->update(
+    array("uri" => "/summer_pics"),
+    array('$inc' => array("page hits" => 1)),
+    array("upsert" => true)
+);
 var_dump($c->findOne());
 
 ?>
@@ -311,10 +327,11 @@ array(3) {
 ]]>
    </screen>
    <para>
-    Si <parameter>$new_object</parameter> ne se compose pas d'opérateurs à $, un upsert
-    créera un nouveau document composé uniquement des champs fournis.
-    Ceci adopte le comportement d'une mise à jour normale, dans laquelle ne
-    pas utiliser d'opérateurs $ implique que tout le document soit écrasé.
+    Si <parameter>$new_object</parameter> ne contient pas de modificateurs atomiques
+    (i.e. des opérateurs <literal>$</literal>), un upsert utilisera
+    <parameter>$new_object</parameter> tel quel comme nouveau document.
+    Ceci correspond à une mise à jour normale, vu qu'aucun modificateur atomique n'est
+    utilisé, le document sera écrasé.
    </para>
    <programlisting role="php">
 <![CDATA[
