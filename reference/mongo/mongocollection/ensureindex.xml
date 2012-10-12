@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: c90424bc60a933348a29381c53116ec6ca607f4a Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 2983ed9c5015b3bda27e2dafff947c8532093164 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongocollection.ensureindex" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -63,8 +63,10 @@
          <warning>
           <para>
            Un index unique ne peut être créé sur un champ si plusieurs
-           documents existants ne contiennent ce champ. Le champ sera &null;
-           pour ces documents et donc, non-unique.
+           documents existants ne contiennent pas ce champ. Le champ sera &null;
+           pour ces documents et donc, non-unique. L'indexation clairsemé peut
+           être utilisée pour résoudre ce problème, sachant qu'elle évite d'indexer
+           les documents ne contenant pas ce champ.
           </para>
          </warning>
         </listitem>
@@ -75,6 +77,34 @@
          <para>
           Si un index unique est sur le point d'être créé et que les
           valeurs dupliquées existent, les valeurs existantes seront supprimées.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <literal>"sparse"</literal>
+         </para>
+         <para>
+          Crée un index clairsemé, qui ne contient que les documents contenant
+          le champ. Cette option n'est compatible qu'avec des indexes sur des
+          champs seuls.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <literal>"expireAfterSeconds"</literal>
+         </para>
+         <para>
+          La valeur de cette option doit spécifier le nombre de secondes après
+          lequel un document doit être considéré comme expiré, et doit être
+          supprimé automatiquement de la collection. Cette option n'est compatible
+          qu'avec des indexes sur des champs seuls où le champ contient des valeurs
+          <classname>MongoDate</classname>.
+         </para>
+         <para>
+          Cette fonctionalité est disponible depuis MongoDB 2.2+. Pour plus
+          d'informations, reportez-vous à la documentation sur l'
+          <link xlink:href="&url.mongodb.docs.expire_data;">expiration de données
+           depuis des collections en définissant un TTL</link>.
          </para>
         </listitem>
         <listitem>
@@ -170,30 +200,11 @@
      </thead>
      <tbody>
       <row>
-       <entry>1.0.2</entry>
+       <entry>1.3.0</entry>
        <entry>
-        Le paramètre "options" passe de booléen à un tableau.
-        En version Pre-1.0.2, le second paramètre était une valeur booléenne
-        optionnelle spécifiant un index unique.
-       </entry>
-      </row>
-      <row>
-       <entry>1.0.11</entry>
-       <entry>
-        "safe" déclenchera le failover du maitre, si nécessaire.
-       </entry>
-      </row>
-      <row>
-       <entry>1.0.11</entry>
-       <entry>
-        <classname>MongoException</classname> sera envoyée si le nom de l'index
-        (généré ou défini) est plus long que 128 octets.
-       </entry>
-      </row>
-      <row>
-       <entry>1.2.0</entry>
-       <entry>
-        Ajout de l'option timeout.
+        Le paramètre <parameter>options</parameter> n'accepte plus que les booléens
+        pour identifier un index unique. A la place, il peut contenir un tableau
+        dont la syntaxe est la suivante : <literal>array('unique' => true)</literal>.
        </entry>
       </row>
       <row>
@@ -204,11 +215,29 @@
        </entry>
       </row>
       <row>
-       <entry>1.3.0</entry>
+       <entry>1.2.0</entry>
        <entry>
-        Le paramètre <parameter>options</parameter> n'accepte plus que les booléens
-        pour identifier un index unique. A la place, il peut contenir un tableau
-        dont la syntaxe est la suivante : <literal>array('unique' => true)</literal>.
+        Ajout de l'option <literal>"timeout"</literal>.
+       </entry>
+      </row>
+      <row>
+       <entry>1.0.11</entry>
+       <entry>
+        <para>
+         L'option <literal>"safe"</literal> déclenchera le failover du maitre, si nécessaire.
+        </para>
+        <para>
+         <classname>MongoException</classname> sera envoyée si le nom de l'index
+         (généré ou défini) est plus long que 128 octets.
+        </para>
+       </entry>
+      </row>
+      <row>
+       <entry>1.0.2</entry>
+       <entry>
+        Le paramètre <parameter>options</parameter> passe de booléen à un tableau.
+        En version Pre-1.0.2, le second paramètre était une valeur booléenne
+        optionnelle spécifiant un index unique.
        </entry>
       </row>
      </tbody>
@@ -291,7 +320,7 @@ $collection->insert(array("username" => "joeschmoe"));
 ]]>
    </programlisting>
   </example>
-
+  
   <example>
    <title>Indexation géospatiales</title>
    <para>

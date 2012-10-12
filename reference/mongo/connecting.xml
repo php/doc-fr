@@ -15,63 +15,52 @@
  </para>
 
  <section>
-  <title>Identification sur une connexion</title>
+  <title>Authentification</title>
   <para>
-   Si MongoDB est en fonctionnement avec l'option <literal>--auth</literal>
-   ou avec l'option <literal>--keyFile</literal>, vous devez vous connecter
-   avant de faire une quelconque opération avec le driver. Vous pouvez vous
-   identifier sur la connexion en fournissant le nom d'utilisateur et son
-   mot de passe directement dans l'URI de connexion :
+   Si MongoDB est en fonctionnement avec l'option <literal>--auth</literal> ou
+   l'option <literal>--keyFile</literal>, vous devez vous authentifier avant de
+   faire n'importe quelle opération avec le driver. Vous pouvez vous authentifier
+   via la connexion en spécifiant le nom d'utilisateur et le mot de passe
+   soit dans l'URI de connexion, ou en utilisant les options
+   <literal>"username"</literal> et <literal>"password"</literal> dans le constructeur
+   <function>Mongo::__construct</function>.
   </para>
   <programlisting role="php">
 <![CDATA[
 <?php
 
+// Spécifie le nom d'utilisateur et le mot de passe dans l'URI de connexion
 $m = new Mongo("mongodb://${username}:${password}@localhost");
 
+// Spécifie le nom d'utilisateur et le mot de passe via le tableau d'options
+$m = new Mongo("mongodb://localhost", array("username" => $username, "password" => $password));
+
 ?>
 ]]>
   </programlisting>
   <para>
-   Si la connexion à la base de données est interrompue, le driver tentera
-   automatiquement de se re-connecter et de vous ré-identifier.
-  </para>
-  <para>
-   Vous pouvez aussi vous identifier au niveau de chaque base de données
-   avec la fonction <function>MongoDB::authenticate</function> :
+   Par défaut, le driver s'authentifiera sur la base de données <literal>admin</literal>.
+   Vous pouvez vous authentifier sur une base de données différente en le spécifiant
+   soit dans l'URI de connexion, soit via l'option <literal>"db"</literal> du constructeur
+   <function>Mongo::__construct</function>.
   </para>
   <programlisting role="php">
 <![CDATA[
 <?php
 
-$m = new Mongo();
-$db = $m->admin;
+// Spécifie la base de données à utiliser dans l'URI de connexion
+$m = new Mongo("mongodb://${username}:${password}@localhost/myDatabase");
 
-$db->authenticate($username, $password);
+// Spécifie la base de données à utiliser via le tableau d'options
+$m = new Mongo("mongodb://${username}:${password}@localhost", array("db" => "myDatabase"));
 
 ?>
 ]]>
   </programlisting>
   <para>
-   Il y a un inconvénient majeur à cette méthode : si la connexion
-   est interrompue puis, rétablie, la nouvelle connexion ne sera plus
-   authentifiée. Si vous utilisez le format URI, le driver PHP authentifiera
-   automatiquement l'utilisateur lorsqu'une nouvelle connexion est créée.
+   Si votre connexion est interrompue, le driver tentera automatiquement une re-connexion
+   ou une ré-authentification.
   </para>
-  <para>
-   Pour s'authentifier sur une base de données différente, vous devez spécifier
-   le nom de la base de données après l'hôte. Cet exemple identifiera l'utilisateur
-   dans la base de données "blog" :
-  </para>
-  <programlisting role="php">
-<![CDATA[
-<?php
-
-$m = new Mongo("mongodb://${username}:${password}@localhost/blog");
-
-?>
-]]>
-  </programlisting>
  </section>
 
  <section>
@@ -79,12 +68,17 @@ $m = new Mongo("mongodb://${username}:${password}@localhost/blog");
   <para>
    Pour se connecter à une paire de réplication, vous devez spécifier
    au moins un membre de la paire et utiliser l'option <literal>replicaSet</literal>.
+   Plusieurs serveurs doivent être délimités par une virgule.
   </para>
   <programlisting role="php">
 <![CDATA[
 <?php
 
-$m = new Mongo("mongodb://localhost:27017", array("replicaSet" => "myReplSetName"));
+// Utilisation d'un seul serveur de la liste
+$m = new Mongo("mongodb://rs1.example.com:27017", array("replicaSet" => "myReplSetName"));
+
+// Utilisation de plusieurs serveurs de la liste
+$m = new Mongo("mongodb://rs1.example.com:27017,rs2.example.com:27017", array("replicaSet" => "myReplSetName"));
 
 ?>
 ]]>
@@ -118,12 +112,44 @@ $m = new Mongo("mongodb://localhost:27017", array("replicaSet" => "myReplSetName
  </section>
 
  <section>
+  <title>Fragmentation</title>
+  <para>
+   Pour se connecter à un cluster fragmenté, vous devez spécifier une ou
+   plusieurs instances <literal>mongos</literal> dans la chaîne de connexion.
+   Les serveurs doivent être séparés par une virgule.
+  </para>
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+// Utilisation d'un serveur depuis la liste
+$m = new Mongo("mongodb://mongos1.example.com:27017");
+
+// Utilisation de plusieurs serveurs depuis la liste
+$m = new Mongo("mongodb://mongos1.example.com:27017,mongos2.example.com:27017"));
+
+?>
+]]>
+  </programlisting>
+  <para>
+   Que le cluster fragmenté soit un serveur <literal>mongod</literal> simple
+   ou un jeu complet de réplication, le processus de connexion du driver reste
+   le même. Toutes les communications à la base de données seront dirigées
+   vers <literal>mongos</literal>.
+  </para>
+  <para>
+   Pour plus d'informations sur la fragmentation avec MongoDB, reportez-vous à cette
+   <link xlink:href="&url.mongodb.docs.sharding;">documentation</link>.
+  </para>
+ </section>
+
+ <section>
   <title>Support des Domain Socket</title>
 
   <para>
-   Si vous utilisez MongoDB localement et que vous avez une version 1.0.9 ou supérieure du
+   Si vous utilisez MongoDB localement et que vous utilisez une version 1.0.9 ou supérieure du
    pilote, vous pouvez vous connecter au travers d'un fichier. MongoDB ouvre automatiquement
-   un fichier de socket au démarrage: /tmp/mongodb-&lt;port&gt;.sock.
+   un fichier de socket au démarrage : <literal>/tmp/mongodb-&lt;port&gt;.sock.</literal>.
   </para>
 
   <para>
