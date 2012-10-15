@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 91982cbb41845dd4006546db61e980dc24718f0f Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<chapter xml:id="pthreads.tutorials" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ &reftitle.examples;
+
+ <section role="examples">
+  <para>
+   Cet exemple "HelloWorld" démontre la facilité de définition et d'exécution
+   de Threads dans les applications PHP.
+  </para>
+  <example>
+   <title>Exemple Hello World</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class HelloWorld extends Thread {
+    public function __construct($world) {
+       $this->world = $world;
+    }
+
+    public function run() {
+        return sprintf("Hello %s", $this->world);
+    }
+}
+
+$thread = new HelloWorld("World");
+
+if ($thread->start()) {
+    printf("Thread #%lu says: %s\n", $thread->getThreadId(), $thread->join());
+}
+?>
+]]>
+   </programlisting>
+  </example>
+ </section>
+
+ <section role="examples">
+  <para>
+   Le but de PHP est de générer du contenu ; le fait d'avoir Thread dans sa boite à
+   outils rend plus de contenu de disponible. Mais le contenu est un sujet relatif
+   et pour cette raison, un bon contrôle est nécessaire lorsqu'un thread est autorisé
+   à exécuter, ou au contraire, forcé à attendre.
+  </para>
+  <para>
+   Par exemple, un moteur de recherche de méta-données doit se préoccuper de ceci :
+  </para>
+  <orderedlist>
+   <listitem>
+    <para>
+     Initialiser une recherche avec une source primaire de données
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     Historiser les résultats de l'utilisation de l'API dans un but de statistique
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     Mettre en cache les résultats pour limiter l'utilisation d'API externe
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     Requêter les bases de données locales pour générer le contenu d'une page -
+     recherches récentes, etc...
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     Mettre en cache les résultats de l'utilisation des bases de données locales,
+     de l'utilisation HTTP, de l'utilisation du cache et les fallbacks utilisés vers
+     une source de données secondaires;
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     Générer le contenu (HTML) depuis la sortie de l'API, xml/json, etc...
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     Envoyer le contenu au client
+    </para>
+   </listitem>
+  </orderedlist>
+  <para>
+   Dans un environnement multi-threadé, le Thread déléguant la tâche 2 ne peut
+   pas s'exécuter tant que Thread 1 n'a pas retourné de résultat.
+  </para>
+  <para>
+   Dans un environnement plus extrême, où chaque tâche est alloué à un Thread,
+   Threads 2,3,4,5 et pourquoi pas 6 peuvent tous être exécutés de façon concurrente,
+   mais ils dépendent tous du retour du contenu de Thread 1.
+  </para>
+  <para>
+   pthreads fournit une façon simple de synchronisation, lorsque Threads
+   sont autorisés à s'exécuter, ou forcer à attente, permettant plus de flexibilité,
+   plus de puissance dans le multi-threading, qu'ils soient utilisés pour un moteur
+   de recherche ou pour de l'administration ( ie. tâches cron ).
+  </para>
+  <example>
+  <title>Synchronisation</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+class Task1 extends Thread {
+    public function __construct($params) {
+        $this->params = $params;
+    }
+  
+    /* ... */
+  
+    public function run() {
+
+       /* faire des tâches d'administration ici ; peut utiliser les caches locaux, vérifier si le client
+          est un googlebot, etc... */
+       if ($this->ensureAvailabiilty()) {
+           $this->notify();
+           return $this->resultSet();
+       }
+    }
+}
+ 
+class Task2 extends Thread {
+    public function __construct($task1, $params) {
+        $this->task1 = $task1;
+        $this->params = $params;
+    }
+  
+    /* ... */
+  
+    public function run(){
+    $task1 = Thread::getThread($this->task1);
+        if ($task1->wait()) {
+            $this->createLogs();
+        }
+    }
+}
+ 
+$tasks    = array();
+$tasks[0] = new Task1($_POST);
+$tasks[1] = new Task2($tasks[0]->getThreadId(), $_POST);
+/* ... */
+ 
+foreach ($tasks as $id => $task) {
+    $task->start();
+}
+ 
+/* ... */
+?>
+]]>
+   </programlisting>
+   </example>
+   <para>
+    L'utilisation des mécanismes d'attente/de notification en pthreads cache la
+    complexité de l'utilisation de Mutex, et des variables de condition pour synchroniser
+    Threads, simplifie la lisibilité, et plus de maintenabilité d'une idée ou d'une implémentation.
+   </para>
+ </section>
+
+ <section role="examples">
+  <para>
+   pthreads permet un accès direct (un sous ensemble de) à l'ensemble de ces fonctionalités.
+   Le développeur doit s'assurer de détruire un Mutex ainsi que les gestionnaires de
+   variables de condition qui ne sont plus utilisés dans son code.
+  </para>
+  <para>
+   Mutex et les variables de condition ne sont pas détruits automatiquement à la place du
+   développeur, comme les autres ressources de PHP ; cela réduirait leur utilité dans le contexte
+   multi-threadé en environnement SAPI.
+  </para>
+  <para>
+   Ils sont stockés et récupérés facilement, étant représentés comme des nombres longs.
+   Mutex et les variables de condition persistent, vu qu'ils sont alloués, et ce, tant qu'ils
+   ne sont pas explicitement détruits.
+  </para>
+  <example>
+  <title>Mutex et les variables de condition</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+/* ... */
+if (Cond::broadcast($finished)) {
+    Cond::destroy($finished);
+    Mutex::destroy($signals);
+}
+?>
+]]>
+  </programlisting>
+  </example>
+  <para>
+   Le code ci-dessus montre un script PHP envoyant son broadcast final au Threads
+   qu'il a créé, détruisant la variable de condition qu'il a créée, et utilisée
+   pour le broadcast. Les autres Threads attendent un signal de type $finished en utilisant
+   $signals - l'attente d'un signal requière toujours un Mutex - et la variable
+   de condition n'est plus valide, le Mutex associé est également détruit.
+  </para>
+  <para>
+  <warning>
+   <para>
+    Avant que le programmeur tente d'utiliser les variables de condition, ils
+    doivent être familiés avec "Spurious Wakeups" tel que conseillé dans les
+    spécifications Posix Threads depuis lequel pthreads est construit.
+   </para>
+   <para>
+    Une explication simple du problème serait ceci :
+   </para>
+   <para>
+    Un appel à Cond::wait doit se terminer avant que la variable de condition
+    ne reçoive un signal légitime comme un résultat d'un autre contexte appelant
+    la méthode Cond::signal ou la méthode Cond::broadcast. En raison de ce comportement,
+    un appel à attendre pour un signal sur une variable de condition doit vérifier
+    un pré-requis (habituellement, une valeur booléenne) avant de retourner depuis
+    l'appel à la méthode Cond::wait. Ceci permet d'éliminer le risque de "Spurious Wakeups".
+   </para>
+  </warning>
+  </para>
+ </section>
+ 
+ <section role="examples">
+ <title>Membres de Thread</title>
+ <para>
+  Les membres d'un Thread peuvent être de n'importe quel type, sachant que PHP supporte
+  la linéarisation, y compris une classe délcarée par le programmeur.
+ </para>
+ <para>
+  Dans le cas où un Thread contient des membres qui sont des classes déclarées par le
+  pogrammeur, le programmeur doit inclure la déclaration en utilisant la méthode
+  magique Thread::__prepare.
+ </para>
+ <para>
+  La méthode Thread::__prepare est exécutée par pthreads dans le contexte dernièrement créé,
+  avant que le nouveau contexte créé n'exécute Thread::run. Ceci provoquera une dé-linéarisation
+  correcte du type déclaré par le programmeur dans le nouveau contexte.
+ </para>
+ <example>
+ <programlisting role="php">
+<![CDATA[
+<?php
+class ExampleThread extends Thread {
+    public function __prepare(){
+        require_once("/path/to/inc.php");
+    }
+
+    public function __construct($myType){
+        $this->myType = $myType;
+    }
+
+    public function run(){
+        if (method_exists($this->myType, "myMethod")) {
+    
+        }
+   }
+}
+
+require_once("/path/to/inc.php");
+/* ... */
+
+$my = new Inc();
+/* ... */
+
+$example = new ExampleThread($my);
+if ($example->start()) {
+    /* ... */
+}
+?>
+]]>
+  </programlisting>
+  </example>
+  <para>
+   Dans l'exemple ci-dessus, /path/to/inc.php déclare une classe, telle que définie
+   par le pogrammeur. Le programmeur inclut la déclaration dans le contexte global,
+   avant de passer une instance de l'objet à une instance de ExampleThread.
+   L'instance de ExampleThread est capable de manipuler l'objet et d'exécuter
+   des fonctions du membre ayant inclus la déclaration en utilisant la méthode magique
+   __prepare.
+  </para>
+ </section>
+</chapter>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
