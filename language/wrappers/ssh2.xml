@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8b6d169424ff189bb563ef4c3f35f8adff3f42c5 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: f49c307f13f1ec78ff0e441906d6d3d066b69f82 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="wrappers.ssh2" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" role="noversion">
@@ -247,6 +247,33 @@ $stream = fopen("ssh2.tunnel://$session/remote.example.com:1234", 'r');
 ?>
 ]]>
    </programlisting>
+  </example>
+  <example>
+   <title>La variable <varname>$session</varname> doit rester disponible !</title>
+   <simpara>
+    Afin d'utiliser le gestionnaire <filename>ssh2.*://$session</filename>, vous
+    devez conserver la variable de ressource <varname>$session</varname> disponible.
+    Le code ci-dessous n'aura pas l'effet escompté :
+   </simpara>
+      <programlisting role="php">
+<![CDATA[
+<?php
+$session = ssh2_connect('example.com', 22);
+ssh2_auth_pubkey_file($session, 'username', '/home/username/.ssh/id_rsa.pub',
+                                            '/home/username/.ssh/id_rsa', 'secret');
+$connection_string = "ssh2.sftp://$session/";
+unset($session);
+$stream = fopen($connection_string . "path/to/file", 'r');
+?>
+]]>
+   </programlisting>
+   <simpara>
+    La fonction unset() clôt la session, car la variable <varname>$connection_string</varname>
+    ne contient pas de référence à la variable <varname>$session</varname>, mais uniquement
+    une chaîne dérivée. Ceci survient également lorsque la fonction
+    <function>unset</function> est implicite, lors d'une sortie du scope (comme dans une
+    fonction).
+   </simpara>
   </example>
 
  </refsect1><!-- }}} -->
