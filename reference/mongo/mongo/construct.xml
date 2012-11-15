@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 2983ed9c5015b3bda27e2dafff947c8532093164 Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: c05e5bfb32f31da05d666e3480b537d317a6d1cd Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongo.construct" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -51,8 +51,15 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
   </para>
   <para>
    Une chaîne optionnelle de la requête peut être utilisée pour spécifier
-   les <link linkend="mongo.readpreferences">préférences de lecture</link>
-   pour la connexion.
+   d'autres options. Les mêmes options sont également supportées via le tableau
+   <parameter>options</parameter>, et y sont décrites.
+  </para>
+  <para>
+   Une partie de ces options concerne la façon dont le driver lit
+   depuis des noeuds secondaires dans un environnement de jeu de réplication.
+   Vous pouvez trouver plus d'informations sur la méthode de fonctionnement
+   des préférences de lecture via la page de la documentation relative
+   aux <link linkend="mongo.readpreferences">préférences de lecture</link>.
   </para>
  </refsect1>
  
@@ -84,15 +91,95 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
          </para>
          <para>
           Si le constructeur doit se connecter avant de retourner l'objet. Par défaut
-          &true;.
+          &true;. Lorsque vaut &false;, le driver va
+          <emphasis>automatiquement</emphasis> se connecter au serveur chaque
+          fois qu'il est nécessaire d'y faire une requête. Mais vous pouvez aussi
+          exécuter la méthode <function>Mongo::connect</function> manuellement.
+         </para>
+         <warning>
+          <para>
+           Cette option n'est pas supportée via la chaîne de connexion.
+          </para>
+         </warning>
+        </listitem>
+        <listitem>
+         <para>
+          <literal>"db"</literal>
+         </para>
+         <para>
+          La base de données sur laquelle l'authentification doit s'effectuer ;
+          elle peut être spécifiée ici au lieu de l'inclure dans la liste des hôtes.
+          Ce paramètre écrase une base de données fournie dans la liste des hôtes.
+         </para>
+        </listitem>
+<!--
+        <listitem>
+         <para>
+          <literal>"fireAndForget"</literal>
+         </para>
+         <para>
+          This option influence how the drivers deals with potential errors
+          from write operations (<function>MongoCollection::insert</function>,
+          <function>MongoCollection::update</function> and
+          <function>MongoCollection::delete</function>).
+         </para>
+         <para>
+          When set to <literal>true</literal> (the default) the driver does
+          <emphasis>not</emphasis> wait until the server has acknowledged the
+          write. When set to <literal>false</literal> (the
+          <emphasis>recommended</emphasis> setting), the driver will wait
+          until the database has acknowledged the write.
+         </para>
+         <para>
+          If an error occurs, and <literal>fireAndForget</literal> is set to
+          <literal>false</literal>, then a
+          <classname>MongoCursorException</classname> is thrown.
+         </para>
+        </listitem>
+-->
+        <listitem>
+         <para>
+          <literal>"password"</literal>
+         </para>
+         <para>
+          Le mot de passe peut être spécifié ici, au lieu de l'inclure dans la
+          liste des hôtes. Ceci est utile tout spécialement si le mot de
+          passe contient le caractère "@". Ce paramètre écrase le mot de passe
+          défini dans la liste des hôtes.
          </para>
         </listitem>
         <listitem>
          <para>
-          <literal>"timeout"</literal>
+          <literal>"readPreference"</literal>
          </para>
          <para>
-          Période avant timeout (tentative de connexion à la base). En millisecondes.
+          Spécifie le type de préférence de lecture. Les préférences de lecture
+          vous permettent de contrôler quel secondaire sera utilisé pour lire
+          les données.
+         </para>
+         <para>
+          Les valeurs possibles sont : <literal>primary</literal>,
+          <literal>primaryPreferred</literal>,
+          <literal>secondary</literal>, <literal>secondaryPreferred</literal>
+          et <literal>nearest</literal>.
+         </para>
+         <para>
+          Voir la documentation sur les <link linkend="mongo.readpreferences">préférences
+          de lecture</link> pour plus d'informations.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <literal>"readPreferenceTags"</literal>
+         </para>
+         <para>
+          Spécifie les tags pour les préférences de lecture. Les tags peuvent
+          être utilisés en combinaison de l'option <literal>readPreference</literal>
+          afin de contrôler le type de données que l'on doit lire depuis le secondaire.
+         </para>
+         <para>
+          Voir la documentation sur les <link linkend="mongo.readpreferences">préférences
+          de lecture</link> pour plus d'informations.
          </para>
         </listitem>
         <listitem>
@@ -104,6 +191,14 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
           sera déterminé en utilisant la commande <literal>ismaster</literal> sur les
           serveurs, ainsi le pilote peut se connecter à un serveur qui n'était même pas
           listé. Voyez l'exemple après pour plus de détails.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <literal>"timeout"</literal>
+         </para>
+         <para>
+          Délai d'attente maximale de connexion à la base de données (en millisecondes).
          </para>
         </listitem>
         <listitem>
@@ -120,25 +215,45 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
         </listitem>
         <listitem>
          <para>
-          <literal>"password"</literal>
+          <literal>"w"</literal>
          </para>
          <para>
-          Le mot de passe peut être spécifié ici, au lieu de l'inclure dans la
-          liste des hôtes. Ceci est utile tout spécialement si le mot de
-          passe contient le caractère "@".
-          Ce paramètre écrase le mot de passe défini dans
-          la liste des hôtes.
+          L'option <literal>w</literal> contrôle la durée de blocage du driver
+          lors d'une écriture sur un membre du jeu de réplication.
+         </para>
+         <para>
+          Une valeur entière positive contrôle le <emphasis>nombre</emphasis>
+          de noeuds dans un jeu de réplication qui ont reçu une instruction
+          d'écriture avant que le driver ne continue. Une valeur de
+          <literal>3</literal> signifie que l'écriture a été appliquée au primaire
+          ainsi qu'à deux autres membres du jeu de réplication.
+         </para>
+         <para>
+          Une chaîne est utilisée pour contrôler quels jeux de tags seront pris
+          en compte pour les écritures. La chaîne <literal>"majority"</literal>
+          est spéciale et s'assure que les opérations d'écriture ont été appliquées
+          à la majorité (plus de 50%) des noeuds concernés.
+         </para>
+         <para>
+          Reportez-vous à la <link
+          xlink:href="&url.mongodb.docs;applications/replication/#replica-set-write-concern">
+          documentation du coeur</link> sur les jeux de réplication pour plus d'informations.
+         </para>
+         <para>
+          Veuillez noter que l'utilisation de l'option "w" définit implicitement
+          <literal>fireAndForget</literal> à &false;.
          </para>
         </listitem>
         <listitem>
          <para>
-          <literal>"db"</literal>
+          <literal>"wTimeout"</literal>
          </para>
          <para>
-          La base de données utilisée pour l'authentification peut être
-          spécifiée ici, au lieu de l'inclure dans la liste des hôtes.
-          Ce paramètre écrase la base de données fournie dans la liste
-          des hôtes.
+          Cette option est utilisée avec l'option "w". Elle permet de contrôler
+          le nombre de millisecondes d'attente du serveur pour les opérations
+          d'écriture. Si ces opérations prennent plus de temps, alors le serveur
+          le signale au driver et ce dernier lancera une exception de type
+          <classname>MongoCursorException</classname>.
          </para>
         </listitem>
        </itemizedlist>
@@ -178,6 +293,13 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
       </row>
      </thead>
      <tbody>
+      <row>
+       <entry>1.3.0</entry>
+       <entry>Ajout des options <literal>"fireAndForget"</literal>,
+       <literal>"readPreference"</literal>,
+       <literal>"readPreferenceTags"</literal>, <literal>"w"</literal> et
+       <literal>"wTimeout"</literal>.</entry>
+      </row>
       <row>
        <entry>1.2.0</entry>
        <entry>
