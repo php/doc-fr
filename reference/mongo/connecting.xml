@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 28e9d06d537a6bfeca7a543f008eff0684cc6cd8 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 8a4640c71cd1b8b6ad42f5c58ba0daacfea739c4 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <section xml:id="mongo.connecting" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Connection</title>
 
  <para>
-  La connexion à MongoDB est aussi simple que cela : <literal>new Mongo</literal>,
+  La connexion à MongoDB est aussi simple que cela : <literal>new MongoClient</literal>,
   mais il existe aussi plusieurs options et plusieurs configurations.
-  La page sur la méthode <function>Mongo::__construct</function> couvre
+  La page sur la méthode <function>MongoClient::__construct</function> couvre
   toutes les options offertes par l'API, mais aussi, propose
   plusieurs cas pratiques.
  </para>
@@ -23,16 +23,16 @@
    via la connexion en spécifiant le nom d'utilisateur et le mot de passe
    soit dans l'URI de connexion, ou en utilisant les options
    <literal>"username"</literal> et <literal>"password"</literal> dans le constructeur
-   <function>Mongo::__construct</function>.
+   <function>MongoClient::__construct</function>.
   </para>
   <programlisting role="php">
 <![CDATA[
 <?php
 // Spécifie le nom d'utilisateur et le mot de passe dans l'URI de connexion (méthode préférée)
-$m = new Mongo("mongodb://${username}:${password}@localhost");
+$m = new MongoClient("mongodb://${username}:${password}@localhost");
 
 // Spécifie le nom d'utilisateur et le mot de passe via le tableau d'options (méthode alternative)
-$m = new Mongo("mongodb://localhost", array("username" => $username, "password" => $password));
+$m = new MongoClient("mongodb://localhost", array("username" => $username, "password" => $password));
 ?>
 ]]>
   </programlisting>
@@ -40,16 +40,16 @@ $m = new Mongo("mongodb://localhost", array("username" => $username, "password" 
    Par défaut, le driver s'authentifiera sur la base de données <literal>admin</literal>.
    Vous pouvez vous authentifier sur une base de données différente en le spécifiant
    soit dans l'URI de connexion, soit via l'option <literal>"db"</literal> du constructeur
-   <function>Mongo::__construct</function>.
+   <function>MongoClient::__construct</function>.
   </para>
   <programlisting role="php">
 <![CDATA[
 <?php
 // Spécifie la base de données à utiliser dans l'URI de connexion (méthode préférée)
-$m = new Mongo("mongodb://${username}:${password}@localhost/myDatabase");
+$m = new MongoClient("mongodb://${username}:${password}@localhost/myDatabase");
 
 // Spécifie la base de données à utiliser via le tableau d'options (méthode alternative)
-$m = new Mongo("mongodb://${username}:${password}@localhost", array("db" => "myDatabase"));
+$m = new MongoClient("mongodb://${username}:${password}@localhost", array("db" => "myDatabase"));
 ?>
 ]]>
   </programlisting>
@@ -63,7 +63,7 @@ $m = new Mongo("mongodb://${username}:${password}@localhost", array("db" => "myD
   <title>Paires de réplication</title>
   <para>
    Pour se connecter à une paire de réplication, vous devez spécifier
-   au moins un membre de la paire et utiliser l'option <literal>replicaSet</literal>.
+   au moins un membre de la paire et utiliser l'option <literal>"replicaSet"</literal>.
    Plusieurs serveurs doivent être délimités par une virgule.
   </para>
   <programlisting role="php">
@@ -71,37 +71,39 @@ $m = new Mongo("mongodb://${username}:${password}@localhost", array("db" => "myD
 <?php
 
 // Utilisation de plusieurs serveurs de la liste (méthode préférée)
-$m = new Mongo("mongodb://rs1.example.com:27017,rs2.example.com:27017/?replicaSet=myReplSetName"));
+$m = new MongoClient("mongodb://rs1.example.com:27017,rs2.example.com:27017/?replicaSet=myReplSetName"));
 
 
 // Utilisation d'un seul serveur de la liste
-$m = new Mongo("mongodb://rs1.example.com:27017", array("replicaSet" => "myReplSetName"));
+$m = new MongoClient("mongodb://rs1.example.com:27017", array("replicaSet" => "myReplSetName"));
 
 // Utilisation de plusieurs serveurs de la liste
-$m = new Mongo("mongodb://rs1.example.com:27017,rs2.example.com:27017", array("replicaSet" => "myReplSetName"));
+$m = new MongoClient("mongodb://rs1.example.com:27017,rs2.example.com:27017", array("replicaSet" => "myReplSetName"));
 ?>
 ]]>
   </programlisting>
   <para>
-   Les versions 1.0.9+ du pilote sont requises pour connecter une paire
-   (les versions d'avant ne detectent pas correctement le maitre et ne se reconnectent
-   pas correctement.
+   Les versions 1.0.9+ du pilote sont requises pour connecter une paire.
+   Les versions antérieures ne detectent pas correctement le primaire et ne se
+   reconnectent pas correctement.
   </para>
   <para>
    Le pilote PHP requêtera le(s) serveur(s) de base de données listé(s) pour vérifier qui
-   est le maître. Dès qu'il peut se connecter à au moins un hôte listé, et trouver un maitre,
+   est le primaire. Dès qu'il peut se connecter à au moins un hôte listé, et trouver un primaire,
    la connexion sera réussie. Dans le cas contraire, une
    <classname>MongoConnectionException</classname> est envoyée.
   </para>
   <para>
-   Si le maître devient indisponible, les esclaves ne deviendront pas maîtres pendant ces
-   quelques secondes. Pendant ce temps là, la connexion ne sera pas capable d'effectuer
-   les opérations sur la base de données (les connexions aux esclaves pourront toujours
-   effectuer des lectures) et une exception sera levée.
+   Si le primaire devient indisponible, les secondaires ne deviendront pas
+   primaires pendant ces quelques secondes. Pendant ce temps là
+   (<link xlink:href="&url.mongodb.replica.failover;">20-60 secondes</link>),
+   la connexion ne sera pas capable d'effectuer les opérations sur la base
+   de données (les connexions aux secondaires pourront toujours effectuer des
+   lectures) et une exception sera levée.
   </para>
   <para>
    Une fois le maître trouvé, essayer des lectures ou écritures permettra au pilote de
-   détecter le nouveau maître. Le pilote en fera alors sa connexion principale et continuera
+   détecter le nouveau primaire. Le pilote en fera alors sa connexion principale et continuera
    les opérations normalement.
   </para>
   <para>
@@ -122,10 +124,10 @@ $m = new Mongo("mongodb://rs1.example.com:27017,rs2.example.com:27017", array("r
 <?php
 
 // Utilisation d'un serveur depuis la liste
-$m = new Mongo("mongodb://mongos1.example.com:27017");
+$m = new MongoClient("mongodb://mongos1.example.com:27017");
 
 // Utilisation de plusieurs serveurs depuis la liste
-$m = new Mongo("mongodb://mongos1.example.com:27017,mongos2.example.com:27017"));
+$m = new MongoClient("mongodb://mongos1.example.com:27017,mongos2.example.com:27017"));
 
 ?>
 ]]>
@@ -147,7 +149,7 @@ $m = new Mongo("mongodb://mongos1.example.com:27017,mongos2.example.com:27017"))
 
   <para>
    Si vous utilisez MongoDB localement et que vous utilisez une version 1.0.9 ou supérieure du
-   pilote, vous pouvez vous connecter au travers d'un fichier. MongoDB ouvre automatiquement
+   pilote, vous pouvez vous connecter au travers d'un socket. MongoDB ouvre automatiquement
    un fichier de socket au démarrage : <literal>/tmp/mongodb-&lt;port&gt;.sock.</literal>.
   </para>
 
@@ -159,21 +161,22 @@ $m = new Mongo("mongodb://mongos1.example.com:27017,mongos2.example.com:27017"))
   <programlisting role="php">
 <![CDATA[
 <?php
-$m = new Mongo("mongodb:///tmp/mongo-27017.sock");
+$m = new MongoClient("mongodb:///tmp/mongo-27017.sock");
 ?>
 ]]>
   </programlisting>
 
   <para>
-   Si vous voulez utiliser une authentification sur la connexion avec un fichier de socket,
-   vous devez alors préciser un port égal à 0 comme cela l'analyseur sait où trouver la fin
-   de la chaine de connexion.
+   Si vous voulez vous authentifier sur une base de données (tel que décrit ci-dessous) en
+   utilisant un socket, vous devez alors préciser un port égal à 0 comme cela l'analyseur
+   sait où trouver la fin de la chaine de connexion. Vous pouvez également utiliser
+   les options du constructeur.
   </para>
 
   <programlisting role="php">
 <![CDATA[
 <?php
-$m = new Mongo("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
+$m = new MongoClient("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
 ?>
 ]]>
   </programlisting>
@@ -191,10 +194,10 @@ $m = new Mongo("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
   </para>
   <para>
    Lorsqu'un utilisateur crée une nouvelle instance de la clase
-   <classname>Mongo</classname>, toutes les connexions nécessaires seront
+   <classname>MongoClient</classname>, toutes les connexions nécessaires seront
    prises depuis leurs files d'attente (les connexions pour le jeu de réplication
    peuvent nécessiter plusieurs connexions, une pour chaque membre du jeu).
-   Lorsque l'instance de la classe <classname>Mongo</classname> sort du scope,
+   Lorsque l'instance de la classe <classname>MongoClient</classname> sort du scope,
    les connexions seront remises dans la file d'attente. Lorsque le processus PHP
    existe, toutes les connexions de la file d'attente seront fermées.
   </para>
@@ -261,17 +264,19 @@ $m = new Mongo("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
      <para>
       Si vous utilisez PHP-FPM, le fait d'estimer le nombre de connexions peut être
       délicat car le processus va engendrer encore plus de fils à forte charge.
-      Pour rester dans un contexte sécurisé, regardez le paramètre max_children
-      et ajoutez-y spare_servers+start_servers (choisissez le nombre le plus important).
-      Le résultat sera le nombre de processus PHP (et donc, le nombre de jeux de files
-      d'attente) dont vous pourrez vous attendre.
+      Pour rester dans un contexte sécurisé, regardez le paramètre <literal>max_children</literal>
+      et ajoutez-y <literal>spare_servers</literal> + <literal>start_servers</literal> (choisissez
+      le nombre le plus important). Le résultat sera le nombre de processus PHP (et donc, le nombre
+      de jeux de files d'attente) dont vous pourrez vous attendre.
      </para>
     </listitem>
    </itemizedlist>
    <para>
     Les trois variables ci-dessus peuvent être multipliés ensemble pour fournir
     le nombre maximal de connexions attendues :
-    <literal>connections_per_pool*pools_per_process*processes</literal>.  Notez
+    <literal>connections_per_pool</literal> *
+    <literal>pools_per_process</literal> *
+    <literal>processes</literal>.  Notez
     que <literal>connections_per_pool</literal> peut être différent suivant les files
     d'attente, aussi, <literal>connections_per_pool</literal> devrait être le maximal.
    </para>
@@ -318,7 +323,7 @@ $m = new Mongo("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
 <?php
 
 for ($i=0; $i<1000; $i++) {
-  $m = new Mongo();
+  $m = new MongoClient();
 }
 
 ?>
@@ -335,7 +340,7 @@ for ($i=0; $i<1000; $i++) {
 <?php
 
 for ($i=0; $i<1000; $i++) {
-  $m = new Mongo("localhost:27017", array("persist" => "x"));
+  $m = new MongoClient("localhost:27017", array("persist" => "x"));
 }
 
 ?>

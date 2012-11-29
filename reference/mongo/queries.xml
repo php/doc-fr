@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: e49b53d06f3862247534f648a1756637f27f346f Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 8a4640c71cd1b8b6ad42f5c58ba0daacfea739c4 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <section xml:id="mongo.queries" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Interrogation</title>
   <section>
-  <title>Distribution des requêtes aux esclaves</title>
+  <title>Distribution des requêtes aux secondaires</title>
 
   <note>
    <title>1.1.0+</title>
@@ -14,16 +14,16 @@
     Si vous utilisez un
     <link xlink:href="&url.mongodb.replica;">jeux de réplication</link>
     ainsi que la version 1.1.0 ou suivante du driver, le driver peut automatiquement
-    acheminer les lectures sur les esclaves. Ce comportement n'existe pas
+    acheminer les lectures sur les secondaires. Ce comportement n'existe pas
     dans les précédentes versions du driver et  <emphasis>ne peut pas</emphasis>
     être utilisé avec un serveur principal/esclave normal.
    </para>
   </note>
 
   <para>
-   Par défaut, le driver envoie toutes les requêtes au serveur principal.
+   Par défaut, le driver envoie toutes les requêtes au primaire.
    Si vous définissez l'option "slaveOkay", le driver enverra toutes les
-   requêtes à un serveur non-principal, si c'est possible. L'option
+   requêtes à un serveur secondaire, si c'est possible. L'option
    "slaveOkay" peut être définie à plusieurs niveaux :
    <link linkend="mongo.setslaveokay">à la connexion</link>,
    <link linkend="mongodb.setslaveokay">à la base de données</link>,
@@ -47,18 +47,18 @@ $cursor = $c->find();
   </programlisting>
 
   <para>
-   alors la requête sera exécutée sur un esclave (la collection hérite de
+   alors la requête sera exécutée sur un secondaire (la collection hérite de
    "slaveOkay" depuis la base de données et le curseur en hérite de la collection).
   </para>
 
   <section>
-   <title>Comment les esclaves sont choisis ?</title>
+   <title>Comment les secondaires sont-ils choisis ?</title>
 
    <para>
-    Chaque instance de <classname>Mongo</classname> choisit son esclave
-    en utilisant l'esclave ayant le ping le moins élevé. Ainsi, si nous
+    Chaque instance de <classname>MongoClient</classname> choisit son secondaire
+    en utilisant le secondaire ayant le ping le moins élevé. Ainsi, si nous
     avons un client PHP en Europe et un en Australie et que nous
-    avons un esclave dans chacun de ces data-centers, nous pouvons faire :
+    avons un secondaire dans chacun de ces data-centers, nous pouvons faire :
    </para>
    <programlisting role="php">
 <![CDATA[
@@ -66,14 +66,14 @@ $cursor = $c->find();
 // P est le primaire
 
 // sur un client Australien
-$m1 = new Mongo("mongodb://P", array("replicaSet" => 'setName'));
+$m1 = new MongoClient("mongodb://P", array("replicaSet" => 'setName'));
 $m1->foo->bar->find()->slaveOkay()->getNext();
-echo "L'esclave m1 est : ".$m1->getSlave()."\n";
+echo "Le secondaire m1 est : ".$m1->getSlave()."\n";
 
 // sur un client européen
-$m2 = new Mongo("mongodb://P", array("replicaSet" => 'setName'));
+$m2 = new MongoClient("mongodb://P", array("replicaSet" => 'setName'));
 $m2->foo->bar->find()->slaveOkay()->getNext();
-echo "L'esclave m2 est : ".$m2->getSlave()."\n";
+echo "Le secondaire m2 est : ".$m2->getSlave()."\n";
 
 ?>
 ]]>
@@ -82,20 +82,20 @@ echo "L'esclave m2 est : ".$m2->getSlave()."\n";
     nous pourrions constater quelque chose comme :
    </para>
    <screen>
-L'esclave m1 est : australianHost
-L'esclave m2 est : europeanHost
+Le secondaire m1 est : australianHost
+Le secondaire m2 est : europeanHost
    </screen>
 
    <para>
-    Notez que nous devons exécuter une requête avant qu'un esclave
-    ne soit choisi : les esclaves sont choisis par le driver.
-    <function>Mongo::getSlave</function> retournera &false;
-    tant qu'une esclave n'est pas utilisé.
+    Notez que nous devons exécuter une requête avant qu'un secondaire
+    ne soit choisi : les secondaires sont choisis par le driver.
+    <function>MongoClient::getSlave</function> retournera &false;
+    tant qu'un secondaire n'est pas utilisé.
    </para>
 
    <para>
     Le driver connaît le statut courant de ces membres
-    en exécutant la méthode <function>Mongo::getHosts</function>.
+    en exécutant la méthode <function>MongoClient::getHosts</function>.
    </para>
 
    <para>
@@ -103,7 +103,7 @@ L'esclave m2 est : europeanHost
     la lecture vers le serveur principal (y compris si "slaveOkay" est défini).
     Un serveur est considéré comme accessible si son statut vaut 2 (SECONDARY)
     et sa santé, 1. Vous pouvez vérifier ces valeurs avec la méthode
-    <function>Mongo::getHosts</function> :
+    <function>MongoClient::getHosts</function> :
    </para>
 
    <para>
@@ -125,7 +125,7 @@ L'esclave m2 est : europeanHost
    </para>
 
    <para>
-    La santé et le statut d'un esclave sont vérifiés toutes les 5 secondes ou bien
+    La santé et le statut d'un secondaire sont vérifiés toutes les 5 secondes ou bien
     lorsque la prochaine opération intervient après 5 secondes. La configuration
     est également re-vérifiée lorsque le driver a un problème pour atteindre un serveur.
    </para>
