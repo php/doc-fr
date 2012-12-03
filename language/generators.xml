@@ -1,0 +1,576 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: d096079ebb3e48ffbf2e211e3258a831dd7e9296 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<chapter xml:id="language.generators" xmlns="http://docbook.org/ns/docbook">
+ <title>Generators</title>
+
+ <sect1 xml:id="language.generators.overview">
+  <title>Résumé sur les générateurs</title>
+  <?phpdoc print-version-for="generators"?>
+
+  <para>
+   Les générateurs fournissent une façon simple d'implémenter des
+   <link linkend="language.oop5.iterations">itérateurs</link>
+   sans le coût, ni la complexité d'implémenter une classe qui implémente
+   l'interface <classname>Iterator</classname>.
+  </para>
+
+  <para>
+   Un générateur vous permet d'écrire du code qui utilise &foreach;
+   pour parcourir un jeu de données, sans avoir à construire un tableau
+   en mémoire pouvant conduire à la limite de la mémoire, ou nécessiter
+   du temps de génération. Au lieu de cela, vous pouvez écrire une fonction
+   générateur, qui est identique à une
+   <link linkend="functions.user-defined">fonction</link> normale,
+   excepté le fait qu'au lieu de faire un seul
+   <link linkend="functions.returning-values">retour</link>, un générateur
+   peut &yield; autant de fois que nécessaire afin de fournir les valeurs
+   à parcourir.
+  </para>
+
+  <para>
+   Un exemple simple de ce mécanisme est la ré-implémentation
+   de la fonction <function>range</function> sous la forme d'un générateur.
+   La fonction standard <function>range</function> doit générer un tableau
+   avec chaque valeur le contenant, et le retourner, ce qui peut conduire
+   en la génération de gros tableaux : par exemple, l'appel du code
+   <command>range(0, 1000000)</command> peut consommer plus de 100 Mo de mémoire.
+  </para>
+
+  <para>
+   Comme alternative, nous pouvons implémenter un générateur
+   <literal>xrange()</literal>, qui n'aura en besoin mémoire que la seule
+   création d'un objet <classname>Iterator</classname>, et surveiller
+   le statut courant interne du génération, ce qui revient à une
+   consommation mémoire inférieure à 1 Ko.
+  </para>
+
+  <example>
+   <title>Implémentation de la fonction <function>range</function> sous la forme d'un générateur</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+function xrange($start, $limit, $step = 1) {
+    if ($start < $limit) {
+        if ($step <= 0) {
+            throw new LogicException('Step must be +ve');
+        }
+
+        for ($i = $start; $i <= $limit; $i += $step) {
+            yield $i;
+        }
+    } else {
+        if ($step >= 0) {
+            throw new LogicException('Step must be -ve');
+        }
+
+        for ($i = $start; $i >= $limit; $i += $step) {
+            yield $i;
+        }
+    }
+}
+
+/* Note que les fonctions range() et xrange() produisent le
+ * même affichage. */
+
+echo 'Chiffre paire simple depuis range():  ';
+foreach (range(1, 9, 2) as $number) {
+    echo "$number ";
+}
+echo "\n";
+
+echo 'Chiffre paire simple depuis xrange(): ';
+foreach (xrange(1, 9, 2) as $number) {
+    echo "$number ";
+}
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Chiffre paire simple depuis range():  1 3 5 7 9 
+Chiffre paire simple depuis xrange(): 1 3 5 7 9 
+]]>
+   </screen>
+  </example>
+ </sect1>
+
+ <sect1 xml:id="language.generators.syntax">
+  <title>Generator syntax</title>
+
+  <para>
+   Une fonction générateur ressemble à une fonction normale, excepté qu'au lieu
+   de retourner une valeur, le &yield; d'un générateur contient autant
+   de valeurs que nécessaire.
+  </para>
+
+  <para>
+   Lorsqu'une fonction générateur est appelée, elle retourne un objet
+   que l'on peut parcourir. Lorsque vous parcourez cette objet (via une
+   boucle &foreach;), PHP va appeler la fonction générateur chaque fois
+   qu'il a besoin d'une valeur, puis, sauvegarder le statut du générateur
+   lorsque le générateur génère une valeur, pouvant être ainsi repris lorsque
+   la prochaine valeur est requise.
+  </para>
+
+  <para>
+   Lorsqu'il n'y a plus de valeurs à fournir, alors la fonction générateur
+   sort, tout simplement, et le code appelant continue comme si un tableau
+   n'avait plus de valeur.
+  </para>
+
+  <note>
+   <para>
+    Un générateur ne peut pas retourner une valeur : si vous tentez
+    de retourner la valeur d'un générateur, une erreur de compilation sera émise.
+    Une structure <command>return</command> vide est une syntaxe valide,
+    mais est inutile, vide de sens et ne fera rien.
+   </para>
+  </note>
+
+  <sect2 xml:id="language.generators.syntax.yield">
+   <title>Le mot clé <command>yield</command></title>
+
+   <para>
+    Le mot clé <command>yield</command> est le coeur d'une fonction générateur.
+    Dans sa forme la plus simple, une structure yield ressemble à une structure
+    return, excepté qu'au lieu de stopper l'exécution de la fonction,
+    et retourner, yield fournit une valeur au code parcourant le générateur,
+    et met en pause l'exécution de la fonction générateur.
+   </para>
+
+   <example>
+    <title>Un exemple simple de valeurs produites</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+function gen_one_to_three() {
+    for ($i = 1; $i <= 3; $i++) {
+        // Notez que $i est préservé entre chaque valeur produite.
+        yield $i;
+    }
+}
+
+$generator = gen_one_to_three();
+foreach ($generator as $value) {
+    echo "$value\n";
+}
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+1
+2
+3
+]]>
+    </screen>
+   </example>
+
+   <note>
+    <para>
+     En interne, les clés séquentielles d'un entier seront associées
+     avec les valeurs yield, exactement comme un tableau non-associatif.
+    </para>
+   </note>
+
+   <caution>
+    <para>
+     Si vous utilisez yield dans un contexte d'expression (par exemple, à droite 
+     d'un assignement), vous devez entourer yield avec des paranthèses. Par
+     exemple, ceci est valide :
+    </para>
+
+    <informalexample>
+     <programlisting role="php">
+<![CDATA[
+      $data = (yield $value);
+]]>
+     </programlisting>
+    </informalexample>
+
+    <para>
+     Mais ceci ne l'est pas, et génèrera une erreur d'analyse :
+    </para>
+
+    <informalexample>
+     <programlisting role="php">
+<![CDATA[
+      $data = yield $value;
+]]>
+     </programlisting>
+    </informalexample>
+
+    <para>
+     Cette syntaxe peut être utilisée en conjonction de la méthode
+     <link linkend="language.generators.object.send">send()</link> sur
+     les objets Générateur.
+    </para>
+   </caution>
+
+   <sect3 xml:id="language.generators.syntax.yield.associative">
+    <title>Fourniture de valeurs avec des clés</title>
+
+    <para>
+     PHP supporte également les tableaux associatifs, et les générateurs
+     ne sont pas différents. En plus de fournir des valeurs simples, comme nous
+     l'avons vu plus haut, vous pouvez aussi fournir une clé dans le même temps.
+    </para>
+
+    <para>
+     La syntaxe pour fournir une paire clé/valeur est similaire à celle utilisée
+     pour définir un tableau associatif ; comme ceci :
+    </para>
+
+    <example>
+     <title>Fourniture d'une paire clé/valeur</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+/* L'entrée sera des champs séparés par un point-virgule,
+ * dont le premier champ est un ID à utiliser comme clé. */
+
+$input = <<<'EOF'
+1;PHP;Likes dollar signs
+2;Python;Likes whitespace
+3;Ruby;Likes blocks
+EOF;
+
+function input_parser($input) {
+    foreach (explode("\n", $input) as $line) {
+        $fields = explode(';', $line);
+        $id = array_shift($fields);
+
+        yield $id => $fields;
+    }
+}
+
+foreach (input_parser($input) as $id => $fields) {
+    echo "$id:\n";
+    echo "    $fields[0]\n";
+    echo "    $fields[1]\n";
+}
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+1:
+    PHP
+    Likes dollar signs
+2:
+    Python
+    Likes whitespace
+3:
+    Ruby
+    Likes blocks
+]]>
+     </screen>
+    </example>
+
+    <caution>
+     <para>
+      Comme pour l'exemple de fournir de valeurs simples, la fourniture
+      d'une paire clé/valeur dans un contexte d'expression requière
+      que la structure yield soit entre parenthèses :
+     </para>
+
+     <informalexample>
+      <programlisting role="php">
+<![CDATA[
+      $data = (yield $key => $value);
+]]>
+      </programlisting>
+     </informalexample>
+    </caution>
+   </sect3>
+
+   <sect3 xml:id="language.generators.syntax.yield.null">
+    <title>Fourniture de valeurs nulles</title>
+
+    <para>
+     Yield peut être appelé sans argument pour fournir une valeur nulle
+     avec une clé automatique.
+    </para>
+
+    <example>
+     <title>Fourniture de valeurs nulles</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+function gen_three_nulls() {
+    foreach (range(1, 3) as $i) {
+        yield;
+    }
+}
+
+var_dump(iterator_to_array(gen_three_nulls()));
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+array(3) {
+  [0]=>
+  NULL
+  [1]=>
+  NULL
+  [2]=>
+  NULL
+}
+]]>
+     </screen>
+    </example>
+   </sect3>
+
+   <sect3 xml:id="language.generators.syntax.yield.references">
+    <title>Fourniture de valeurs par référence</title>
+
+    <para>
+     Les fonctions générateur peuvent fournir des valeurs par référence.
+     Ceci se fait de la même façon que le
+     <link linkend="functions.returning-values">retour par référence
+      depuis des fonctions</link> : en ajoutant un ET commercial (&amp;) au nom
+     de la fonction.
+    </para>
+
+    <example>
+     <title>Fourniture de valeurs par référence</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+function &gen_reference() {
+    $value = 3;
+
+    while ($value > 0) {
+        yield $value;
+    }
+}
+
+/* Notez qu'il est possible de changer $number dans la boucle,
+ * et, du fait que le générateur fournit des références, $value
+ * dans gen_reference() change aussi. */
+foreach (gen_reference() as &$number) {
+    echo (--$number).'... ';
+}
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+2... 1... 0... 
+]]>
+     </screen>
+    </example>
+   </sect3>
+  </sect2>
+ </sect1>
+
+ <sect1 xml:id="language.generators.object">
+  <title><classname>Generator</classname> et les objets</title>
+
+  <para>
+   Lorsqu'une fonction générateur est appelée pour la première fois, un objet
+   de la classe interne <classname>Generator</classname> est retourné. Cet objet
+   implémente l'interface <classname>Iterator</classname> de la même façon
+   qu'un objet itérateur le ferait.
+  </para>
+
+  <para>
+   La plupart des méthodes de la classe <classname>Generator</classname>
+   a la même sémantique que les méthodes de l'interface
+   <classname>Iterator</classname>, mais les objets du générateur ont une méthode
+   supplémentaire : <command>send()</command>.
+  </para>
+
+  <caution>
+   <para>
+    Les objets <classname>Generator</classname> ne peuvent être instanciés
+    via le mot clé <link linkend="language.oop5.basic.new">new</link>.
+   </para>
+  </caution>
+
+  <!-- TODO: I've nicked this from the exception documentation, but I don't
+             actually like it very much. At some point, let's try to break
+             this and Exception out into proper class/method documentation.
+   -->
+
+  <example>
+   <title>La classe <classname>Generator</classname></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Generator implements Iterator {
+    public function rewind();          // Ré-initialise l'itérateur. Si
+                                       // l'itération a déjà commencé,
+                                       // ceci va émettre une exception.
+
+    public function valid();           // Retourne false si l'itérateur
+                                       // a été fermé.
+                                       // Sinon, retourne true.
+
+    public function current();         // Retourne la valeur fournie.
+
+    public function key();             // Retourne la clé fournie.
+
+    public function next();            // Reprend l'exécution du
+                                       // générateur.
+    
+    public function send($value);      // Envoi la valeur fournie au
+                                       // générateur comme résultat
+                                       // de l'expression et reprend
+                                       // l'exécution du générateur.
+}
+]]>
+   </programlisting>
+  </example>
+
+  <sect2 xml:id="language.generators.object.send">
+   <title><methodname>Generator::send</methodname></title>
+
+   <para>
+    La méthode <methodname>Generator::send</methodname> permet aux valeurs d'être injectées
+    dans les fonctions du générateur pendant l'itération. La valeur injectée
+    sera retournée depuis la structure &yield; et peut ainsi être utilisée
+    comme n'importe quelle autre variable dans la fonction générateur.
+   </para>
+
+   <example>
+    <title>Utilisation de la méthode <methodname>Generator::send</methodname> pour injecter des valeurs</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+function printer() {
+    while (true) {
+        $string = yield;
+        echo $string;
+    }
+}
+
+$printer = printer();
+$printer->send('Hello world!');
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Hello world!
+]]>
+    </screen>
+   </example>
+  </sect2>
+ </sect1>
+
+ <sect1 xml:id="language.generators.comparison">
+  <title>Comparaison de générateurs avec des objets <classname>Iterator</classname></title>
+
+  <para>
+   Le principal avantage des générateurs est leur simplicité. Moins de codes
+   compliqués doient être écrits par rapport à l'implémentation d'une classe
+   <classname>Iterator</classname>, et le code est générallement plus lisible.
+   Par exemple, la fonction et la classe suivante sont équivalents :
+  </para>
+
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+function getLinesFromFile($fileName) {
+    if (!$fileHandle = fopen($fileName, 'r')) {
+        return;
+    }
+ 
+    while (false !== $line = fgets($fileHandle)) {
+        yield $line;
+    }
+ 
+    fclose($fileHandle);
+}
+
+// versus...
+
+class LineIterator implements Iterator {
+    protected $fileHandle;
+ 
+    protected $line;
+    protected $i;
+ 
+    public function __construct($fileName) {
+        if (!$this->fileHandle = fopen($fileName, 'r')) {
+            throw new RuntimeException('Impossible d\'ouvrir le fichier : "' . $fileName . '"');
+        }
+    }
+ 
+    public function rewind() {
+        fseek($this->fileHandle, 0);
+        $this->line = fgets($this->fileHandle);
+        $this->i = 0;
+    }
+ 
+    public function valid() {
+        return false !== $this->line;
+    }
+ 
+    public function current() {
+        return $this->line;
+    }
+ 
+    public function key() {
+        return $this->i;
+    }
+ 
+    public function next() {
+        if (false !== $this->line) {
+            $this->line = fgets($this->fileHandle);
+            $this->i++;
+        }
+    }
+ 
+    public function __destruct() {
+        fclose($this->fileHandle);
+    }
+}
+?>
+]]>
+   </programlisting>
+  </informalexample>
+
+  <para>
+   Cependant, cette fléxibilité a un coût : les générateurs sont des itérateurs
+   n'allant que de l'avant, et ne peuvent pas être ré-initialisés une fois
+   l'itération commencée. Cela signifie également que le même générateur ne peut
+   pas être utilisé à plusieurs reprises : le générateur doit soit être reconstruit
+   en appelant une nouvelle fois la fonction générateur, ou clôné via le mot
+   clé <link linkend="language.oop5.cloning">clone</link>.
+  </para>
+ </sect1>
+</chapter>
+ 
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
