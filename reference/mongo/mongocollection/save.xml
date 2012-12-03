@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8a4640c71cd1b8b6ad42f5c58ba0daacfea739c4 Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 48e1717a75a72c11438caeac29bb0fd0b0c02107 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="mongocollection.save" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -43,55 +43,10 @@
       <para>
        Options pour la sauvegarde.
        <itemizedlist>
-        <listitem>
-         <para>
-          <literal>"safe"</literal>
-         </para>
-         <para>
-          Booléen ou entier, &false; par défaut. Si &false;, le programme continue son
-          exécution sans attendre de réponse de la base. Si &true;, le programme attendra
-          la réponse de la base et enverra une <classname>MongoCursorException</classname>
-          si l'insertion a échoué. 
-         </para>
-         <para>
-          Si vous utilisez la réplication et que le primaire a changé, utiliser "safe"
-          fera que le pilote se déconnectera du primaire, enverra une exception, et tentera
-          de trouver un nouveau primaire à l'opération suivante (votre application doit
-          décider si oui ou non l'opération devra être rééssayée sur le nouveau primaire).
-         </para>
-         <para>
-          Si vous n'utilisez <emphasis>pas</emphasis> "safe" avec une paire de réplication
-          et que le primaire change, il n'y aura aucun moyen pour le pilote d'avoir connaissance
-          de ce changement et il continuera des écritures en échec.
-         </para>
-         <para>
-          Si <literal>safe</literal> est un entier, la réplication aura lieu avant de retourner
-          avec succès (ou enverra une exception si la réplication n'a pas fonctionné, voyez
-          wtimeout). Ceci écrase la variable w de la collection.
-         </para>
-        </listitem>
-        <listitem>
-         <para>
-          <literal>"fsync"</literal>
-         </para>
-         <para>
-          Booléen, par défaut &false;. Force l'insertion à être écrite sur disque avant de retourner
-          avec succès. Si &true;, une insertion sécurisée est effectuée et écrasera le paramètre
-          <literal>safe</literal> si à &false;.
-         </para>
-        </listitem>
-        <listitem>
-         <para>
-          <literal>"timeout"</literal>
-         </para>
-         <para>
-          Entier, par défaut, vaut <literal>MongoCursor::$timeout</literal>.
-          Si "safe" est défini, il définira (en millisecondes) le temps d'attente
-          du client d'une réponse de la base de données. Si la base de données ne
-          répond pas dans la période de timeout, une exception
-          <classname>MongoCursorTimeoutException</classname> sera émise.
-         </para>
-        </listitem>
+        &mongo.writes.parameters.writeconcern;
+        &mongo.writes.parameters.fsync;
+        &mongo.writes.parameters.timeout;
+        &mongo.writes.parameters.safe;
        </itemizedlist>
       </para>
      </listitem>
@@ -103,24 +58,14 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Si <parameter>safe</parameter> est utilisé, retourne un tableau contenant le statut de la sauvegarde.
+   Si <parameter>w</parameter> est utilisé, retourne un tableau contenant le statut de la sauvegarde.
    Sinon, retourne un booléen si le tableau était non vide (un tableau vide ne sera pas inséré).
   </para>
  </refsect1>
  
  <refsect1 role="errors">
   &reftitle.errors;
-  <para>
-   Lance une exception <classname>MongoCursorException</classname>
-   si l'option "safe" est définie et que la sauvegarde échoue.
-  </para>
-  <para>
-   Lance une <classname>MongoCursorTimeoutException</classname> 
-   si l'option "safe" est définie et que l'opération prend plus
-   de temps que <varname>MongoCollection::$wtimeout</varname> millisecondes.
-   Ceci ne tue pas le processus serveur, mais uniquement le délai
-   d'attente côté client.
-  </para>
+  &mongo.errors.exceptions.writeconcern;
  </refsect1>
  
  <refsect1 role="changelog">
@@ -184,6 +129,7 @@ $obj = array('x' => 1);
 
 // insertion de $obj dans la base
 $collection->save($obj);
+var_dump($obj);
 
 // ajout d'un nouveau champ
 $obj['foo'] = 'bar';
@@ -197,8 +143,33 @@ $collection->save($obj);
 ?>
 ]]>
    </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+array(2) {
+  ["x"]=>
+  int(1)
+  ["_id"]=>
+  object(MongoId)#4 (1) {
+    ["$id"]=>
+    string(24) "50b6afe544415ed606000000"
+  }
+}
+]]>
+   </screen>
   </example>
  </refsect1>
+ 
+ <refsect1 role="notes"><!-- {{{ -->
+  &reftitle.notes;
+  <note>
+   <para>
+    Cette méthode va créer un champ <literal>_id</literal> dans le tableau
+    <parameter>a</parameter> avec un ID pré-généré si le champ n'existe pas -
+    sauf si l'argument était une référence.
+   </para>
+  </note>
+ </refsect1><!-- }}} -->
  
 </refentry>
 <!-- Keep this comment at the end of the file

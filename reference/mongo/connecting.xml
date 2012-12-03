@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8a4640c71cd1b8b6ad42f5c58ba0daacfea739c4 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 95613c06978f494ad0356f4c8b0944fe352fad15 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
-<section xml:id="mongo.connecting" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+<chapter xml:id="mongo.connecting" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Connection</title>
-
+ 
  <para>
   La connexion à MongoDB est aussi simple que cela : <literal>new MongoClient</literal>,
   mais il existe aussi plusieurs options et plusieurs configurations.
@@ -13,8 +13,8 @@
   toutes les options offertes par l'API, mais aussi, propose
   plusieurs cas pratiques.
  </para>
-
- <section>
+ 
+ <section xml:id="mongo.connecting.auth">
   <title>Authentification</title>
   <para>
    Si MongoDB est en fonctionnement avec l'option <literal>--auth</literal> ou
@@ -25,7 +25,9 @@
    <literal>"username"</literal> et <literal>"password"</literal> dans le constructeur
    <function>MongoClient::__construct</function>.
   </para>
-  <programlisting role="php">
+  <example xml:id="mongo.connecting.auth-example">
+   <title>Authentification sur la base de données "admin"</title>
+   <programlisting role="php">
 <![CDATA[
 <?php
 // Spécifie le nom d'utilisateur et le mot de passe dans l'URI de connexion (méthode préférée)
@@ -35,14 +37,17 @@ $m = new MongoClient("mongodb://${username}:${password}@localhost");
 $m = new MongoClient("mongodb://localhost", array("username" => $username, "password" => $password));
 ?>
 ]]>
-  </programlisting>
+   </programlisting>
+  </example>
   <para>
    Par défaut, le driver s'authentifiera sur la base de données <literal>admin</literal>.
    Vous pouvez vous authentifier sur une base de données différente en le spécifiant
    soit dans l'URI de connexion, soit via l'option <literal>"db"</literal> du constructeur
    <function>MongoClient::__construct</function>.
   </para>
-  <programlisting role="php">
+  <example xml:id="mongo.connecting.auth-db-example">
+   <title>Authentification sur une base de données normale</title>
+   <programlisting role="php">
 <![CDATA[
 <?php
 // Spécifie la base de données à utiliser dans l'URI de connexion (méthode préférée)
@@ -52,21 +57,24 @@ $m = new MongoClient("mongodb://${username}:${password}@localhost/myDatabase");
 $m = new MongoClient("mongodb://${username}:${password}@localhost", array("db" => "myDatabase"));
 ?>
 ]]>
-  </programlisting>
+   </programlisting>
+  </example>
   <para>
    Si votre connexion est interrompue, le driver tentera automatiquement une re-connexion
    ou une ré-authentification.
   </para>
  </section>
-
- <section>
+ 
+ <section xml:id="mongo.connecting.rs">
   <title>Paires de réplication</title>
   <para>
    Pour se connecter à une paire de réplication, vous devez spécifier
    au moins un membre de la paire et utiliser l'option <literal>"replicaSet"</literal>.
    Plusieurs serveurs doivent être délimités par une virgule.
   </para>
-  <programlisting role="php">
+  <example xml:id="mongo.connecting.rs-example">
+   <title>Liste du jeu de réplication</title>
+   <programlisting role="php">
 <![CDATA[
 <?php
 
@@ -81,18 +89,21 @@ $m = new MongoClient("mongodb://rs1.example.com:27017", array("replicaSet" => "m
 $m = new MongoClient("mongodb://rs1.example.com:27017,rs2.example.com:27017", array("replicaSet" => "myReplSetName"));
 ?>
 ]]>
-  </programlisting>
-  <para>
-   Les versions 1.0.9+ du pilote sont requises pour connecter une paire.
-   Les versions antérieures ne detectent pas correctement le primaire et ne se
-   reconnectent pas correctement.
-  </para>
+   </programlisting>
+  </example>
   <para>
    Le pilote PHP requêtera le(s) serveur(s) de base de données listé(s) pour vérifier qui
    est le primaire. Dès qu'il peut se connecter à au moins un hôte listé, et trouver un primaire,
    la connexion sera réussie. Dans le cas contraire, une
    <classname>MongoConnectionException</classname> est envoyée.
   </para>
+  <tip>
+   <para>
+    Vous devriez toujours fournir une liste de partage contenant plus d'un membre
+    du jeu de réplication. Pour une haute disponibilité, vous devriez partager
+    avec au moins un serveur de chacun de vos centres de données.
+   </para>
+  </tip>
   <para>
    Si le primaire devient indisponible, les secondaires ne deviendront pas
    primaires pendant ces quelques secondes. Pendant ce temps là
@@ -101,25 +112,95 @@ $m = new MongoClient("mongodb://rs1.example.com:27017,rs2.example.com:27017", ar
    de données (les connexions aux secondaires pourront toujours effectuer des
    lectures) et une exception sera levée.
   </para>
+  <note>
+   <para>
+    La <link linkend="mongo.readpreferences">préférence de lecture</link>
+    par défaut est de ne lire que depuis le primaire. Lors du processus d'élection,
+    il n'y a pas de primaire, et toutes les lectures échoueront.
+   </para>
+   <para>
+    Il est recommandé d'utiliser la préférence de lecture
+    <constant>MongoClient::RP_PRIMARY_PREFERRED</constant> pour les applications
+    qui requièrent une haute disponibilité pour les lectures, vu que les
+    lectures ne seront réalisées sur les secondaires que lorsqu'il n'y a aucun
+    primaire de disponible.
+   </para>
+  </note>
   <para>
    Une fois le maître trouvé, essayer des lectures ou écritures permettra au pilote de
    détecter le nouveau primaire. Le pilote en fera alors sa connexion principale et continuera
    les opérations normalement.
   </para>
   <para>
+   La santé et le statut d'un secondaire sont vérifiés toutes les 5 secondes
+   (configurable avec la directive
+   <link linkend="ini.mongo.ping-interval">mongo.ping_interval</link>)
+   ou lorsque la prochaine opération survient après 5 secondes. La
+   configuration sera de nouveau analysée lorsque le driver rencontre
+   un problème lors d'une connexion à un serveur.
+  </para>
+  <para>
+   Les failovers du jeu de réplication sont vérifiés toutes les 60 secondes
+   (configurable avec la directive
+   <link linkend="ini.mongo.is-master-interval">mongo.is_master_interval</link>),
+   et lorsqu'une opération en écriture échoue avec des écritures reconnues.
+  </para>
+  
+  <caution>
+   <para>
+    Les secondaires peuvent être derrière le primaire lors des opérations,
+    aussi, votre application doit être capable de gérer les données périmées
+    lors de l'utilisation de préférences de lecture autre que
+    <constant>MongoClient::RP_PRIMARY</constant>.
+   </para>
+  </caution>
+  
+  <para>
    Pour plus d'informations sur les paires de réplication, reportez-vous à la
    <link xlink:href="&url.mongodb.replica;">documentation interne</link>.
   </para>
+  
+  <simplesect role="seealso">
+   &reftitle.seealso;
+   <simplelist>
+    <member><xref linkend="mongo.readpreferences" /></member>
+    <member><xref linkend="mongo.writeconcerns" /></member>
+   </simplelist>
+  </simplesect>
+  
+  <simplesect role="changelog">
+   &reftitle.changelog;
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>1.0.9</entry>
+       <entry>
+        Ajout du support au jeu de réplication, et du failover automatique.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </simplesect>
+  
  </section>
-
- <section>
+ 
+ <section xml:id="mongo.connecting.mongos">
   <title>Fragmentation</title>
   <para>
    Pour se connecter à un cluster fragmenté, vous devez spécifier une ou
    plusieurs instances <literal>mongos</literal> dans la chaîne de connexion.
    Les serveurs doivent être séparés par une virgule.
   </para>
-  <programlisting role="php">
+  <example xml:id="mongo.connecting.mongos-example">
+   <programlisting role="php">
 <![CDATA[
 <?php
 
@@ -131,7 +212,8 @@ $m = new MongoClient("mongodb://mongos1.example.com:27017,mongos2.example.com:27
 
 ?>
 ]]>
-  </programlisting>
+   </programlisting>
+  </example>
   <para>
    Que le cluster fragmenté soit un serveur <literal>mongod</literal> simple
    ou un jeu complet de réplication, le processus de connexion du driver reste
@@ -143,48 +225,86 @@ $m = new MongoClient("mongodb://mongos1.example.com:27017,mongos2.example.com:27
    <link xlink:href="&url.mongodb.docs.sharding;">documentation</link>.
   </para>
  </section>
-
- <section>
-  <title>Support des Domain Socket</title>
-
+ 
+ <section xml:id="mongo.connecting.uds">
+  <title>Support des sockets de domaine</title>
+  
   <para>
-   Si vous utilisez MongoDB localement et que vous utilisez une version 1.0.9 ou supérieure du
-   pilote, vous pouvez vous connecter au travers d'un socket. MongoDB ouvre automatiquement
-   un fichier de socket au démarrage : <literal>/tmp/mongodb-&lt;port&gt;.sock.</literal>.
+   MongoDB a un support interne des sockets de domaine Unix, et ouvrira
+   le socket au démarrage, par défaut, situé dans le fichier
+   <filename>/tmp/mongodb-&lt;port&gt;.sock.</filename>.
   </para>
-
+  
   <para>
    Pour vous connecter au fichier de socket, specifiez le chemin dans la chaine de connexion
    MongoDB:
   </para>
-
-  <programlisting role="php">
+  
+  <example xml:id="mongo.connecting.uds-example">
+   <programlisting role="php">
 <![CDATA[
 <?php
 $m = new MongoClient("mongodb:///tmp/mongo-27017.sock");
 ?>
 ]]>
-  </programlisting>
-
+   </programlisting>
+  </example>
+  
   <para>
    Si vous voulez vous authentifier sur une base de données (tel que décrit ci-dessous) en
    utilisant un socket, vous devez alors préciser un port égal à 0 comme cela l'analyseur
    sait où trouver la fin de la chaine de connexion. Vous pouvez également utiliser
    les options du constructeur.
   </para>
-
-  <programlisting role="php">
+  
+  <example xml:id="mongo.connecting.uds-auth-example">
+   <programlisting role="php">
 <![CDATA[
 <?php
 $m = new MongoClient("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
 ?>
 ]]>
-  </programlisting>
-
+    </programlisting>
+  </example>
+  
+  <simplesect role="changelog">
+   &reftitle.changelog;
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>1.0.9</entry>
+       <entry>
+        Ajout du support des sockets de domaine Unix.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </simplesect>
+  
  </section>
-
- <section>
+ 
+ <section xml:id="mongo.connecting.pools">
   <title>File d'attente de connexion (version 1.2.0-1.2.12 *seulement*)</title>
+  <note>
+   <para>
+    Cette section n'est plus pertinente depuis la version 1.3.0 du driver,
+    et n'est plus présente que dans un but d'historisation de l'information
+    sur la façon dont la mise en file d'attente fonctionne.
+   </para>
+   <para>
+    The latest versions of the driver have no concept of pooling anymore and
+    will maintain only one connection per process, for each connection type
+    (ReplicaSet/standalone/mongos), for each credentials combination.
+   </para>
+  </note>
   <para>
    La création de connexions est une des actions les plus lourdes réalisées
    par le driver. Cela peut prendre plusieurs millisecondes pour définir correctement
@@ -295,30 +415,31 @@ $m = new MongoClient("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
   </section>
  </section>
  
- <section>
-  <title>Les connexions persistantes</title>
+ <section xml:id="mongo.connecting.persistent">
+  <title>Les connexions persistantes (version supérieure à 1.1.4 *uniquement*)</title>
   <note>
    <para>
     Cette section n'est pas pertinente pour les versions 1.2.0+. En 1.2.0+,
     les connexions sont toujours persistantes et gérées automatiquement
-    par le driver. Si vous utilisez la version 1.2.x, reportez-vous à la méthode
-    <classname>MongoPool</classname> pour plus d'informations sur les files d'attente
-    de connexions.
+    par le driver. Si vous utilisez la version 1.2.x (mais non 1.3.x ou supérieur),
+    reportez-vous à la méthode <classname>MongoPool</classname> pour plus
+    d'informations sur les files d'attente de connexions.
    </para>
   </note>
-
+  
   <para>
    La création de nouvelles connexions à la base de données est une opération lente.
    Pour minimiser le nombre de connexions que vous devez effectuer, vous pouvez utiliser
    les connexions dites "persistantes". Une connexion persistante est sauvegardée par PHP,
    et ainsi, vous pourrez utiliser la même connexion pour toutes vos requêtes.
   </para>
-
+  
   <para>
    Par exemple, ce programme simple se connecte à la base de données 1000 fois :
   </para>
-
-  <programlisting role="php">
+  
+  <example xml:id="mongo.connecting.no-persistent-example">
+   <programlisting role="php">
 <![CDATA[
 <?php
 
@@ -328,14 +449,16 @@ for ($i=0; $i<1000; $i++) {
 
 ?>
 ]]>
-  </programlisting>
-
+   </programlisting>
+  </example>
+  
   <para>
    Son exécution prend approximativement 18 secondes. Si vous changez ce code pour
    utiliser les connexions persistantes :
   </para>
-
-  <programlisting role="php">
+  
+  <example xml:id="mongo.connecting.persistent-example">
+   <programlisting role="php">
 <![CDATA[
 <?php
 
@@ -345,13 +468,14 @@ for ($i=0; $i<1000; $i++) {
 
 ?>
 ]]>
-  </programlisting>
-
+   </programlisting>
+  </example>
+  
   <para>
    ... il ne prend plus que .02 secondes, vu qu'il ne réalise réellement qu'une seule
    connexion à la base de données.
   </para>
-
+  
   <para>
    Les connexions persistantes ont besoin d'une chaîne d'identification (qui est "x" dans
    notre précédent exemple) afin de les identifier de façon unique. Afin d'utiliser une
@@ -367,5 +491,5 @@ for ($i=0; $i<1000; $i++) {
    dans le cas des bases de données relationnelles ne sont pas applicables pour MongoDB.
   </para>
  </section>
-
-</section>
+ 
+</chapter>
