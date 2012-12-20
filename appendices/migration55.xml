@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 2927587d3f15ea62b6c373d3a711f9a9e6b8e718 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 65e697ff671608989432a6e6bf8ae8128b2be2c7 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <!-- Based on UPGRADING version 322438. Work in progess !-->
@@ -127,6 +127,26 @@
      </simpara>
     </listitem>
    </itemizedlist>
+  </sect2>
+
+  <sect2 xml:id="migration55.incompatible.execution">
+   <title>Modification dans l'exécution interne</title>
+
+   <para>
+    Les auteurs d'extension doivent noter que la fonction
+    <command>zend_execute()</command> ne peut plus être surchargée,
+    que de nombreux changements ont été effectués sur la structure
+    <literal>execute_data</literal> ainsi que les fonctions associées,
+    mais aussi sur la méthode de gestion de l'opcode.
+   </para>
+
+   <para>
+    La plupart des extensions ne sont pas affectées,par ces modifications,
+    mais celles qui vont profondément dans le moteur Zend le seront, et
+    nous recommandons à leurs auteurs de lire 
+    <link linkend="migration55.internals">les notes relatives à ces
+     modifications</link>.
+   </para>
   </sect2>
  </sect1>
 
@@ -321,6 +341,18 @@ Déréférencement d'une chaîne de caractères : P
  <sect1 xml:id="migration55.deprecated">
   <title>Fonctionalités devenues obsolètes en PHP 5.5.x</title>
 
+  <sect2 xml:id="migration55.deprecated.mysql">
+   <title>Obsoléscence dans l'extension <link linkend="book.mysql">ext/mysql</link></title>
+
+   <para>
+    L'<link linkend="book.mysql">extension MySQL original</link> est maintenant
+    obsolète, et génèrera des alertes de niveau <constant>E_DEPRECATED</constant>
+    lors de la connexion à la base de données. A la place, utilisez
+    l'extension <link linkend="book.mysqli">MySQLi</link> ou l'extension
+    <link linkend="ref.pdo-mysql">PDO_MySQL</link>.
+   </para>
+  </sect2>
+  
   <sect2 xml:id="migration55.deprecated.preg-replace-e">
    <title>Le modificateur <literal>/e</literal> de la fonction <function>preg_replace</function></title>
 
@@ -1044,6 +1076,113 @@ Déréférencement d'une chaîne de caractères : P
     le nouveau protocole d'authentification MySQL.
    </para>
   </sect2>
+ </sect1>
+
+ <sect1 xml:id="migration55.internals">
+  <title>Modifications internes à PHP</title>
+
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     Les extensions ne peuvent plus surcharger <command>zend_execute()</command>
+     et doivent maintenant surcharger <command>zend_execute_ex()</command> à la place.
+     <literal>EG(current_execute_data)</literal> est déjà initialisé dans
+     <command>zend_execute_ex()</command>, aussi, pour rester compatible, les extensions
+     doivent utiliser <literal>EG(current_execute_data)-&gt;prev_execute_data</literal>
+     à la place.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Suppression de <literal>EG(arg_types_stack)</literal>,
+     <literal>EX(fbc)</literal>, <literal>EX(called_scope)</literal> et
+     <literal>EX(current_object)</literal>.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Ajout de <literal>op_array-&gt;nested_calls</literal>, qui est calculé
+     au moment de la compilation.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Ajout de <literal>EX(call_slots)</literal>, qui est un tableau permettant
+     de stocker les informations sur les appels imbriqués (i.e.
+     <literal>foo(bar())</literal>) et est pré-alloué avec
+     <literal>execute_data</literal>.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Ajout de <literal>EX(call)</literal>, qui est un pointeur vers la fonction
+     appelante courante, et est un élément de <literal>EX(call_slots)</literal>.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Les opcodes
+     <link linkend="internals2.opcodes.init-method-call">INIT_METHOD_CALL</link>,
+     <link linkend="internals2.opcodes.init-static-method-call">ZEND_INIT_STATIC_METHOD_CALL</link>,
+     <link linkend="internals2.opcodes.init-fcall-by-name">ZEND_INIT_FCALL_BY_NAME</link>
+     et
+     <link linkend="internals2.opcodes.init-ns-fcall-by-name">ZEND_INIT_NS_FCALL_BY_NAME</link>
+     utilisent <literal>result.num</literal> comme index dans
+     <literal>EX(call_slots)</literal>.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     L'opcode <link linkend="internals2.opcodes.new">ZEND_NEW</link> utilise
+     <literal>extended_value</literal> comme index dans
+     <literal>EX(call_slots)</literal>.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Les opcodes <link linkend="internals2.opcodes.do-fcall">ZEND_DO_FCALL</link>
+     et
+     <link linkend="internals2.opcodes.do-fcall-by-name">ZEND_DO_FCALL_BY_NAME</link>
+     utilisent <literal>op2.num</literal> comme index dans
+     <literal>EX(call_slots)</literal>.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Ajout de <literal>op_array-&gt;used_stack</literal>, qui est calculé au moment
+     de la compilation ; l'espace de la pile correspondant est pré-alloué avec
+     <literal>execute_data</literal>. Comme résultat, les opcodes ZEND_SEND* et
+     ZEND_DO_FCALL* n'ont plus besoin de vérifier les éventuels dépassements de pile.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Suppression du champ <literal>execute_data-&gt;Ts</literal>.Les variables temporaires
+     VM sont toujours allouées immédiatement avant la structure
+     <literal>execute_data</literal>, et peuvent être maintenant accédées par leur
+     position depuis le pointeur de base <literal>execute_data</literal> au lieu
+     d'utiliser <literal>execute_data-&gt;Ts</literal>. Le compilateur stocke les
+     nouvelles positions dans <literal>op_array-&gt;opcodes[*].op?.num</literal>.
+     Les macros <command>EX_TMP_VAR()</command> et <command>EX_TMP_VAR_NUM()</command>
+     peuvent être utilisées pour accéder aux variables temporaires par leur position
+     ou leur numéro. Vous pouvez convertir le numéro en position en utilisant
+     <command>EX_TMP_VAR_NUM(0,num)</command> ou la position en numéro en utilisant
+     <command>(EX_TMP_VAR_NUM(0,0)-EX_TMP_VAR(0,offset))</command>.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Suppression du champ <literal>execute_data-&gt;CVs</literal>.
+     Les variables VM compilées sont toujours allouées immédiatement
+     après la structure <literal>execute_data</literal>, et peuvent être maintenant
+     accédées par leur position depuis le pointeur de base
+     <literal>execute_data</literal> au lieu d'utiliser
+     <literal>execute_data-&gt;CVs</literal>. Vous pouvez utiliser la macro
+     <command>EX_CV_NUM()</command> pour accéder aux variables par leur
+     numéro.
+    </simpara>
+   </listitem>
+  </itemizedlist>
  </sect1>
 </appendix>
 
