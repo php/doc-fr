@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 201dc3748c7a94e788d470c697f017d2149c6736 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 7916455ba0cdb65c1590977df92ad2dd99f4c79f Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="memcached.decrement" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -15,12 +15,16 @@
    <modifier>public</modifier> <type>int</type><methodname>Memcached::decrement</methodname>
    <methodparam><type>string</type><parameter>key</parameter></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>offset</parameter><initializer>1</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>initial_value</parameter><initializer>0</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>expiry</parameter><initializer>0</initializer></methodparam>
   </methodsynopsis>
   <para>
    <function>Memcached::decrement</function> décrémente la valeur numérique
    de <parameter>offset</parameter> unités. Si l'élément n'est pas numérique,
-   il est traité comme la valeur 0. <function>Memcached::decrement</function> 
-   va échouer si l'élément n'existe pas.
+   une erreur sera émise. Si l'opération tente de décrémenter en dessous de 0,
+   la nouvelle valeur sera 0. <function>Memcached::decrement</function>
+   va définir l'élément à la valeur du paramètre <parameter>initial_value</parameter>
+   si la clé n'existe pas.
   </para>
  </refsect1>
 
@@ -44,6 +48,23 @@
       </para>
      </listitem>
     </varlistentry>
+    <varlistentry>
+     <term><parameter>initial_value</parameter></term>
+     <listitem>
+      <para>
+       La valeur à utiliser pour définir l'élément s'il n'existe
+       pas.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>expiry</parameter></term>
+     <listitem>
+      <para>
+       Le délai d'expiration dans la définition de l'élément.
+      </para>
+     </listitem>
+    </varlistentry>
    </variablelist>
   </para>
  </refsect1>
@@ -52,8 +73,6 @@
   &reftitle.returnvalues;
   <para>
    Retourne la nouvelle valeur de l'élément en cas de succès&return.falseforfailure;.
-   La méthode <methodname>Memcached::getResultCode</methodname> retourne
-   <constant>Memcached::RES_NOTFOUND</constant> si la clé n'existe pas.
   </para>
  </refsect1>
 
@@ -69,11 +88,18 @@ $m = new Memcached();
 $m->addServer('localhost', 11211);
 
 $m->set('counter', 5);
-$m->decrement('counter');
+$n = $m->decrement('counter');
+var_dump($n);
+
+$n = $m->decrement('counter', 10);
+var_dump($n);
+
 var_dump($m->get('counter'));
 
-$m->decrement('counter', 10);
-var_dump($m->get('counter'));
+$m->set('counter', 'abc');
+$n = $m->increment('counter');
+// ^ va échouer en raison du fait que la valeur de l'élément n'est pas un numérique
+var_dump($n);
 ?>
 ]]>
     </programlisting>
@@ -82,6 +108,8 @@ var_dump($m->get('counter'));
 <![CDATA[
 int(4)
 int(0)
+int(0)
+bool(false)
 ]]>
     </screen>
    </example>
@@ -93,6 +121,8 @@ int(0)
   <para>
    <simplelist>
     <member><methodname>Memcached::increment</methodname></member>
+    <member><methodname>Memcached::incrementByKey</methodname></member>
+    <member><methodname>Memcached::decrementByKey</methodname></member>
    </simplelist>
   </para>
  </refsect1>

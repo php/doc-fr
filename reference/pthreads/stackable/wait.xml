@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 61e03462c9d20adb088b7c786a944fcfadf84dc6 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 7d1dc9ad7da7c8ec5772ef7ee24432679e1f29d1 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="stackable.wait" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -38,6 +38,51 @@
   &reftitle.returnvalues;
   <para>
    Un booléen indiquant le succès de l'opération.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Notifications et Attente</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Work extends Stackable {
+    public function run() {
+        $this->synchronized(function($object){
+        printf("%s synchronisé\n", __CLASS__);    
+        $object->notify();
+        }, $this);
+    }
+}
+class My extends Worker {
+    public function run() {
+        /** ... **/
+    }
+}
+
+$my = new My();
+$my->start();
+$work = array(new Work());
+$my->stack($work[0]);
+/** Envoi une notification au thread en attente **/
+$work[0]->synchronized(function($object){
+    printf("Process synchronisé\n");
+    $object->wait();
+}, $work[0]);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Process synchronisé
+Work synchronisé
+]]>
+    </screen>
+   </example>
   </para>
  </refsect1>
 
