@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: ec6cb30f0e84618fb4a79d2d58d14126a8a071ba Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 6f59b9c6a9307d5cef36f06d73258c75d2976bc2 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="mongocollection.insert" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>MongoCollection::insert</refname>
-  <refpurpose>Insère un tableau dans la collection</refpurpose>
+  <refpurpose>Insère un document dans la collection</refpurpose>
  </refnamediv>
  
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
    <modifier>public</modifier> <type>bool|array</type><methodname>MongoCollection::insert</methodname>
-   <methodparam><type>array</type><parameter>a</parameter></methodparam>
+   <methodparam><type>array|object</type><parameter>a</parameter></methodparam>
    <methodparam choice="opt"><type>array</type><parameter>options</parameter><initializer>array()</initializer></methodparam>
   </methodsynopsis>
   <para>
@@ -34,8 +34,17 @@
      </term>
      <listitem>
       <para>
-       Un tableau.
+       Un tableau ou un objet. Si un objet est utilisé, ces propriétés ne
+       doivent être ni protégées, ni privées.
       </para>
+      <note>
+       <para>
+        Si le paramètre n'a pas de clé <literal>_id</literal> ou de propriété,
+        une nouvelle instance <classname>MongoId</classname> sera créée et utilisée.
+        Ce comportement spécial ne signifie pas que le paramètre est passé par
+        référence.
+       </para>
+      </note>
      </listitem>
     </varlistentry>  
     <varlistentry>
@@ -124,8 +133,9 @@
      </term>
      <listitem>
       <para>
-       Si la dernière opération était une insertion, une mise à jour ou une suppression,
-       le nombre d'objets affectés sera retourné.
+       Si la dernière opération était une mise à jour, un upsert ou une suppression,
+       le nombre d'objets affectés sera retourné. Pour les opérations
+       d'insertion, cette valeur sera toujours de <literal>0</literal>.
       </para>
      </listitem>
     </varlistentry>
@@ -194,7 +204,9 @@
   &reftitle.errors;
   <para>
    Lance une exception <classname>MongoCursorTimeoutException</classname>
-   si le tableau inséré est vide.
+   si le document inséré est vide ou s'il contient des clés d'une longueur de zéro.
+   Le fait de tenter d'insérer un objet avec des propriétés protégées ou privées
+   causera une erreur de type "clé d'une longueur zéro".
   </para>
   &mongo.errors.exceptions.writeconcern;
  </refsect1>
@@ -274,26 +286,53 @@
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>Exemple avec <function>MongoCollection::insert</function></title>
+   <title>Exemple avec <function>MongoCollection::insert</function> <literal>_id</literal></title>
    <para>
-    L'insertion d'un objet ajoutera un champ _id sauf s'il est passé par référence.
+    Un champ <literal>_id</literal> sera ajouté au document inséré s'il n'est
+    pas présent. Suivant comment le paramètre est passé, un <literal>_id</literal>
+    généré peut ou non être disponible pour le code appelant.
    </para>
    <programlisting role="php">
 <![CDATA[
 <?php
 
 $m = new MongoClient();
-$db = $m->selectDB('test');
-$collection = new MongoCollection($db, 'phpmanual');
+$collection = $m->selectCollection('test', 'phpmanual');
 
-$a = array('x' => 12);
+// Si un tableau litéral est utilisé, il n'y a aucun moyen d'accéder à l'_id généré
+$collection->insert(array('x' => 1));
+
+// L'_id est disponible pour un tableau passé par valeur
+$a = array('x' => 2);
 $collection->insert($a);
 var_dump($a);
 
-$b = array('x' => 12);
+// L'_id n'est pas disponible sur un tableau passé par référence
+$b = array('x' => 3);
 $ref = &$b;
 $collection->insert($ref);
 var_dump($ref);
+
+// L'_id est disponible si la fonction ne déclenche pas de copy-on-write
+function insert_no_cow($collection, $document)
+{
+    $collection->insert($document);
+}
+
+$c = array('x' => 4);
+insert_no_cow($collection, $c);
+var_dump($c);
+
+// L'_id n'est pas disponible si la fonction déclenche un copy-on-write
+function insert_cow($collection, $document)
+{
+    $document['y'] = 1;
+    $collection->insert($document);
+}
+
+$d = array('x' => 5);
+insert_cow($collection, $d);
+var_dump($d);
 
 ?>
 ]]>
@@ -303,14 +342,25 @@ var_dump($ref);
 <![CDATA[
 array(2) {
   ["x"]=>
-  int(12)
+  int(2)
   ["_id"]=>
   object(MongoId)#4 (0) {
   }
 }
-array(12) {
+array(1) {
   ["x"]=>
-  int(1)
+  int(3)
+}
+array(2) {
+  ["x"]=>
+  int(4)
+  ["_id"]=>
+  object(MongoId)#5 (0) {
+  }
+}
+array(1) {
+  ["x"]=>
+  int(5)
 }
 ]]>
    </screen>
