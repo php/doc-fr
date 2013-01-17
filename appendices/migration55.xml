@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 65e697ff671608989432a6e6bf8ae8128b2be2c7 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 55929e29ac7535345c9f38ad3f703c6f3cd2cc59 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes Maintainer: pmartin -->
 
 <!-- Based on UPGRADING version 322438. Work in progess !-->
@@ -95,6 +95,71 @@
     vous devriez tester que vous n'êtes pas impacté par ce changement de comportement
     avant de déployer PHP 5.5 en environnement de production.
    </para>
+  </sect2>
+
+  <sect2 xml:id="migration55.incompatible.pack">
+   <title>Modifications des fonctions <function>pack</function> et <function>unpack</function></title>
+
+   <para>
+    Des modifications ont été réalisées sur les fonctions <function>pack</function>
+    et <function>unpack</function> pour les rendre plus compatible avec Perl :
+   </para>
+
+   <itemizedlist>
+    <listitem>
+     <simpara>
+      <function>pack</function> supporte maintenant le code format "Z",
+      dont le comportement est identique à "a".
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <function>unpack</function> supporte maintenant le code format "Z"
+      pour les chaînes de caractères complétées avec la valeur NULL,
+      et se comporte comme "a" dans les précédentes versions : il va supprimer
+      les octets NULL finaux.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <function>unpack</function> conserve maintenant les octets NULL finaux
+      lorsque le code format "a" est utilisé.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      <function>unpack</function> supprime maintenant les espaces blancs ASCII
+      finaux lorsque le code format "A" est utilisé.
+     </simpara>
+    </listitem>
+   </itemizedlist>
+
+   <para>
+    L'écriture de code compatible de façon ascendante qui utilise le code
+    format "a" avec la fonction <function>unpack</function> requiert l'utilisation
+    de la fonction <function>version_compare</function>, en raison de cette cassure
+    de compatiblité ascendante.
+   </para>
+   <para>
+    Par exemple :
+   </para>
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Ancien code :
+$data = unpack('a5', $packed);
+
+// Nouveau code :
+if (version_compare(PHP_VERSION, '5.5.0-dev', '>=')) {
+  $data = unpack('Z5', $packed);
+} else {
+  $data = unpack('a5', $packed);
+}
+?>
+]]>
+    </programlisting>
+   </informalexample>
   </sect2>
 
   <sect2 xml:id="migration55.incompatible.guid">
@@ -429,21 +494,10 @@ Déréférencement d'une chaîne de caractères : P
     </listitem>
     <listitem>
      <simpara>
-      Les fonctions <function>pack</function> et <function>unpack</function>
-      supportent désormais le format <literal>Z</literal> pour les chaînes complétées par null.
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      Le format <literal>a</literal> de la fonction <function>unpack</function>
-      ne supprime plus les dernier octets nul, s'alignant ainsi sur le comportement de Perl.
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      Le format <literal>A</literal> de la fonction <function>unpack</function>
-      va désormais supprimer tous les caractères ASCII d'espacement de fin, s'alignant ainsi sur le
-      comportement de Perl.
+      Le comportement de la fonction <function>pack</function> et de la fonction
+      <function>unpack</function> avec les codes format "a" et "A" a changé.
+      <link linkend="migration55.incompatible.pack">Des notes détaillées sur ces
+       modifications sont disponibles.</link>
      </simpara>
     </listitem>
    </itemizedlist>
