@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 2983ed9c5015b3bda27e2dafff947c8532093164 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: cdb9df4c46f4c382360443e53fc61a255cb7c503 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="mongogridfs.storeupload" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>MongoGridFS::storeUpload</refname>
-  <refpurpose>Sauve un fichier téléchargé dans la base</refpurpose>
+  <refpurpose>Stocke un fichier téléchargé dans la base de données</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -16,34 +16,6 @@
    <methodparam><type>string</type><parameter>name</parameter></methodparam>
    <methodparam choice="opt"><type>array</type><parameter>metadata</parameter></methodparam>
   </methodsynopsis>
-  <para>
-   Stock des fichiers directement depuis un POST vers une
-   base de données. Par exemple, supposez que vous avez le
-   formulaire HTML suivant :
-  </para>
-  <programlisting role="php">
-<![CDATA[
-<form method="POST" enctype="multipart/form-data">
-     Choisissez une image à télécharger : <input type="file" name="pic"/>
-     <input type="submit"/>
-</form>
-]]>
-  </programlisting>
-  <para>
-   Si vous voulez stocker ce téléchargement dans MongoDB, vous pouvez faire :
-  </para>
-  <programlisting role="php">
-<![CDATA[
-<?php
-
-$grid->storeUpload("pic", array("username" => "joe"));
-
-?>
-]]>
-  </programlisting>
-  <para>
-   Notez que le champ "name" en HTML correspond au paramètre du même nom.
-  </para>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -56,7 +28,8 @@ $grid->storeUpload("pic", array("username" => "joe"));
      </term>
      <listitem>
       <para>
-       Le champ de nom du fichier téléchargé.
+       Le nom du fichier téléchargé à stocker. Il doit correspondre à l'attribut
+       <literal>name</literal> du formulaire HTML.
       </para>
      </listitem>
     </varlistentry>   
@@ -66,9 +39,14 @@ $grid->storeUpload("pic", array("username" => "joe"));
      </term>
      <listitem>
       <para>
-       Un tableau de champs supplémentaires pour le fichier
-       téléchargé.
+       Autres champs de méta-données à inclure dans le document fichier.
       </para>
+      &mongo.gridfs.store.metadata.note;
+      <note>
+       <para>
+        L'index <literal>filename</literal> contiendra le nom du fichier utilisé.
+       </para>
+      </note>
      </listitem>
     </varlistentry>   
    </variablelist>
@@ -77,9 +55,7 @@ $grid->storeUpload("pic", array("username" => "joe"));
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>
-   Retourne l'identifiant <literal>_id</literal> du fichier téléchargé.
-  </para>
+  &mongo.gridfs.store.return;
  </refsect1>
 
  <refsect1 role="changelog">
@@ -106,6 +82,53 @@ $grid->storeUpload("pic", array("username" => "joe"));
     </tgroup>
    </informaltable>
   </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <function>MongoGridFS::storeUpload</function> et un formulaire HTML</title>
+   <para>
+    Supposons que vous avez le formulaire HTML suivant :
+   </para>
+   <programlisting role="html">
+<![CDATA[
+<form method="POST" enctype="multipart/form-data">
+    <label for="username">Username:</label>
+    <input type="text" name="username" id="username" />
+
+    <label for="pic">Please upload a profile picture:</label>
+    <input type="file" name="pic" id="pic" />
+
+    <input type="submit" />
+</form>
+]]>
+   </programlisting>
+   <para>
+    Si vous voulez stocker l'image téléchargé dans MongoDB, vous pouvez
+    le faire grâce au script suivant, gérant la soumission du formulaire :
+   </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$m = new MongoClient();
+$gridfs = $m->selectDB('test')->getGridFS();
+
+$gridfs->storeUpload('pic', array('username' => $_POST['username']));
+?>
+]]>
+   </programlisting>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><function>MongoGridFS::put</function></member>
+   <member><function>MongoGridFS::storeBytes</function></member>
+   <member><function>MongoGridFS::storeFile</function></member>
+   <member>Documentation coeur MongoDB sur <link xlink:href="&url.mongodb.docs.gridfs;">GridFS</link></member>
+  </simplelist>
  </refsect1>
  
 </refentry>
