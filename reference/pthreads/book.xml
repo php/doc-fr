@@ -1,20 +1,94 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 61e03462c9d20adb088b7c786a944fcfadf84dc6 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 7d1dc9ad7da7c8ec5772ef7ee24432679e1f29d1 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <book xml:id="book.pthreads" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>pthreads</title>
  <titleabbrev>pthreads</titleabbrev>
-
+ 
  <preface xml:id="intro.pthreads">
   &reftitle.intro;
   <para>
-   Pthreads utilise les capacités de TSRM et de PHP pour fournir
-   des fonctionalités multi-threadées orientées objet.
+   pthreads est une API orientée objet qui permet le multi-threading en espace utilisateur
+   en PHP. Il inclut tous les outils nécessaires pour créer des applications multi-threadées
+   pour le Web ou pour la console. Les applications PHP peuvent créer, lire, écrire, exécuter
+   et synchroniser des Threads, des Workers, et des Stackables.
   </para>
+  <para>
+   Un objet Thread : L'utilisateur peut implémenter un thread en étendant la déclaration Thread
+   fournie par pthreads. N'importe quel membre peut écrire et lire dans n'importe quel contexte
+   avec une référence au Thread, n'importe quel contexte peut aussi exécuter n'importe quelle
+   méthode publique et protégée. La méthode run de l'implémentation est exécutée dans un thread
+   séparé lorsque la méthode start de l'implémentation est appelée depuis le contexte (Thread
+   ou Processus) qui l'a créé. Seul le contexte qui crée un thread peut le démarre ou le rejoindre.
+  </para>
+  <para>
+   Un objet Worker : Un Thread Worker a un statut persistant, et sera disponible depuis l'appelant
+   pour le démarrer tant que l'objet ne sort pas du scope, ou qu'il n'est pas explicitement éteint.
+   N'importe quel contexte avec une référence peut passer des objets de type Stackable au Worker
+   qui sera exécuté par le Worker dans un Thread séparé. La méthode run d'un Worker est exécutée
+   avant les objets de la pile, ainsi, il peut initialiser les ressources dont les Stackables
+   auront besoin.
+  </para>
+  <para>
+   Un objet Stackable : Un objet Stackable peut lire/écrire, et exécuter le Worker ($this->worker)
+   pendant l'exécution de sa méthode run. De plus, n'importe quel contexte avec une référence vers
+   le Stackable peut lire, écrire, et exécuter ses méthodes avant, pendant, et après l'exécution.
+  </para>
+  <para>
+   Synchronisation : Tous les objets que pthreads crée possèdent un mécanisme de synchronisation de
+   la forme ::wait et ::notify. L'appel à ::wait sur un objet fera que le contexte attendra qu'un autre
+   contexte appelle ::notify sur le même objet. Ceci permet une synchronisation puissante entre les
+   objets Threadés en PHP.
+  </para>
+  <para>
+   Un instant... les objets Threadés ?
+   Un Stackable, un Thread ou un Worker peut être considéré, et doit être utilisé comme une stdClass Threadée :
+   Un Thread, un Worker, et un Stackable fonctionnent de la même façon dans n'importe quel contexte avec une
+   référence. Tous les objets prévus pour une utilisation dans des parties multi-threadées de votre application
+   doivent étendre la déclaration d'un Stackable, d'un Thread, ou d'un Worker. Ce qui signifie qu'ils doivent
+   implémenter une méthode run mais qu'ils peuvent ne jamais être exécutés ; il est cependant fréquent que les objets
+   utilisés dans un environnement multi-threadé sont prévus pour être exécutés. Le fait de faire celà signifie
+   que n'importe quel contexte (Thread/Worker/Stackable/Process) avec une référence peut lire, écrire
+   et exécuter les membres des objets Threadés avant, pendant, et après l'exécution.
+  </para>
+  <para>
+   Modificateurs de méthode : Les méthodes protégées des objets Threadés sont protégées par pthreads,
+   aussi, uniquement un contexte peut appeler cette méthode à la fois. Les méthodes privées des objets
+   Threadés peuvent seulement être appelées depuis l'objet Threadé pendant l'exécution.
+  </para>
+  <para>
+   Stockage des données : En règle générale, tous les types de données pouvant être linéarisés peuvent
+   être utilisés comme membre d'un objet Threadé, ils peuvent être lus, et écrits depuis n'importe quel
+   contexte avec une référence vers l'objet Threadé. Tous les types de données ne sont pas stockés
+   après linéarisation ; les types simples sont stockés sous leur forme initiale. Les types complexes,
+   les tableaux et les objets qui ne sont pas Threadés, sont stockés linéarisés ; ils peuvent être lus
+   et écrits dans l'objet Threadé depuis n'importe quel contexte avec une référence.
+   A l'exception des objets Threadés, toute référence utilisée pour définir un membre d'un objet Threadé
+   est séparé de la référence dans l'objet Threadé ; les mêmes données peuvent être lues directement
+   depuis l'objet Threadé à tout moment par n'importe quel contexte avec une référence vers l'objet Threadé.
+  </para>
+  <note>
+   <para>
+    Ressources : Les extensions et les fonctionalités qui définissent des ressoures en PHP ne sont pas préparées
+    pour ce type d'environnement ; pthreads prend des dispositions en matière de ressource à partager entre
+    les contextes, cependant, pour la plupart des ressources, elles devront être considérées comme dangereuses.
+    Un soin et une extrème prudence devront être de mise pour partager les ressources entre les contextes.
+   </para>
+  </note>
+  <caution>
+   <para>
+    pthreads est toujours une expérimentation qui produit de bons résultats. L'ensemble des limitations et
+    des fonctionalités peut changer à tout moment ; gardez à l'esprit qu'il s'agit toujours d'une expérimentation.
+    Les limitations - même celles imposées par l'implémentation - existent pour de bonnes raisons ; le but de
+    pthreads est de fournir une solution utilisation pour le multi-tâche en PHP à tout niveau.
+    Dans l'environnement d'exécution de pthreads, des restrictions et des limitations sont nécessaires afin de
+    fournir un environnement stable.
+   </para>
+  </caution>
  </preface>
-
+ 
  &reference.pthreads.setup;
  &reference.pthreads.thread;
  &reference.pthreads.worker;
@@ -22,7 +96,7 @@
  &reference.pthreads.modifiers;
  &reference.pthreads.mutex;
  &reference.pthreads.cond;
-
+ 
 </book>
 
 <!-- Keep this comment at the end of the file
