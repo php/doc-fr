@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: bb129b41d117517606c54dc7e4abdccf6df434cf Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 5e3799d3171b02888602a968bbad9db413df3600 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.changes" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -49,7 +49,61 @@
     <listitem>
      <para>
       Correction du bogue #60605 relatif à une erreur de segmentation
-      lorsque mysqlnd_ms est activé
+      lorsque mysqlnd_ms est activé.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Le fait des définir les transactions gluantes désactive toutes les
+      balances de charge, incluant le failover automatique, pour la durée
+      d'une transaction. Jusqu'alors, les switches de connexion peuvaient
+      survenir au milieu d'une transaction en configuration multi-maîtres
+      ainsi que durant le failover automatique bien que la surveillance
+      des transactions avait détectée correctement les limites de la
+      transaction.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Compatibilité ascendante rompue, et corrections de bogues.
+      Les astuces SQL permettant de forcer l'utilisation d'une sorte
+      de serveur (<constant>MYSQLND_MS_MASTER_SWITCH</constant>,
+      <constant>MYSQLND_MS_SLAVE_SWITCH</constant>,
+      <constant>MYSQLND_MS_LAST_USED_SWITCH</constant>) étaient ignorées
+      pour la durée d'une transaction (gluante) alors que les limites
+      de la transaction avait été détectée correctement.
+     </para>
+     <para>
+      Ceci est une modification dans le comportement. Cependant, c'est également
+      une correction de bogue, et une étape nécessaire pour rendre cohérent
+      le comportement. Si, dans les précédentes versions, dans un contexte
+      de transaction gluante, une de ces astuces SQL ainsi qu'une qualité de service
+      se basant sur le filtrage étaient combinées, il pouvait arriver que les
+      astuces SQL étaient ignorées. Dans quelques cas, les astuces SQL fonctionnaient
+      normalement, dans d'autres, elles ne fonctionnaient pas. Ce nouveau
+      comportement est plus cohérent. Les astuces SQL seront toujours ignorées
+      pour la durée de la transaction, si
+      <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx-stickiness">les transactions
+      gluantes</link> sont actives.
+     </para>
+     <para>
+      Notez que la détection des limites des transactions continue d'être
+      basée sur des appels de l'API de surveillance. Les commandes SQL
+      contrôlant les transactions ne sont pas surveillées.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Compatibilité ascendante rompue, et corrections de bogues. Les appels
+      à la fonction <function>mysqlnd_ms_set_qos</function> échoueront
+      lorsqu'effectués au milieu d'une transaction si
+      <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx-stickiness">les transactions
+      gluantes</link> sont actives. Les swtiches de connexion ne sont pas
+      autorisées pour la durée d'une transaction. Le changement de qualité
+      de service revient à qualifier un jeu de serveurs différent pour l'exécution
+      de la requête, et donc, il se peut qu'il soit nécessaire de changer
+      de connexions. Aussi, l'appel n'est pas autorisé durant une transaction.
+      La qualité de service peut, cependant, être changée entre les transactions.
      </para>
     </listitem>
    </itemizedlist>

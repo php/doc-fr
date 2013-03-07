@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 04b11e621f6ccf857368d90262f051a8d40c865d Maintainer: yannick Status: ready -->
+<!-- EN-Revision: af871c29a56de390dbc98f2d3844482296a75a2d Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.concepts" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -710,6 +710,17 @@ version = 5.6.2-m5-log
    expérimentales malgré le fait qu'elles sont relativement stables.
    Leur syntaxe et leur signification peuvent être modifiées dans les futures
    versions.
+  </para>
+  <para>
+   Notez que depuis la version 1.5.0, le failover automatique est désactivé
+   pour la durée d'une transaction si les transactions gluantes sont actives,
+   et que les limites de transaction ont été détectées. Le plugin ne va pas
+   changer de connexions durant une transaction. De même, il ne va pas faire
+   de failover automatique et silencieux. A la place, une erreur sera émise.
+   Il est alors du ressort de l'utilisateur de gérer l'échec de la transaction.
+   Veuillez vous raporter à la documentation de
+   <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx-stickiness"><literal>trx_stickiness</literal></link>
+   sur la façon de réaliser ceci.
   </para>
   <para>
    Un exemple d'échec manuel est fourni dans la section sur les
@@ -1600,36 +1611,182 @@ version = 5.6.2-m5-log
    </para>
   </note>
   <para>
-    <emphasis role="bold">Clusters asynchrones avec un seul maitre</emphasis>
+    <emphasis role="bold">Copie primaire (Réplication MySQL)</emphasis>
   </para>
   <para>
-   Cas d'utilisation de base du plugin.
-  </para>
-  <note>
-   <title>Version requise</title>
-   <para>
-    Certains paramètres ne sont disponibles qu'à partir de mysqlnd_ms 1.2.0-alpha.
-   </para>
-  </note>
-  <para>
-    <emphasis role="bold">Clusters asynchrones avec plusieurs maitres</emphasis>
+   C'est le but primaire de ce plugin. Suivez les astuces fournies dans les
+   descriptions de chacune des fonctionalités.
   </para>
   <para>
-   Actuellement non supporté.
+   <itemizedlist>
+    <listitem>
+     <simpara>
+      Configure un maître et un ou plusieurs esclaves.
+      <link linkend="mysqlnd-ms.plugin-ini-json.server-list-syntax">Les détails de la
+      configuration du serveur</link> sont fournis dans la section sur l'installation.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Utilisez la politique de balance de charge aléatoire avec le flag
+      <link linkend="ini.mysqlnd-ms-plugin-config-v2.filter-random">sticky</link>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Si vous ne prévoyez pas d'utiliser les appels API
+      <link linkend="mysqlnd-ms.quickstart.qos-consistency">du niveau de service</link>,
+      ajoutez le flag
+      <link linkend="ini.mysqlnd-ms-plugin-config-v2.master-on-write">d'écriture sur le maître</link>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Soyez prudent sur les propriétés du failover automatique avant d'ajouter
+      la directive <link linkend="ini.mysqlnd-ms-plugin-config-v2.failover">failover</link>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Vous devriez considérer l'utilisation du flag
+      <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx-stickiness">trx_stickiness</link>
+      pour exécuter les transactions uniquement sur le primaire. Veuillez lire
+      attentivement son mode de fonctionnement avant de l'utiliser.
+     </simpara>
+    </listitem>
+   </itemizedlist>
   </para>
   <para>
-   Le plugin n'a pas de fonctionnalité intégrée lui permettant de diriger certaines écritures
-   sur certains maitres. Plus tard, le filtrage sur table sera peut-être ajouté, il permettrait
-   de restreindre les lectures et les écritures à certains esclaves ou maitres, en se basant
-   sur la base de données et/ou la table intérrogée.
+   <example>
+    <title>Activation du plugin (php.ini)</title>
+    <programlisting role="ini">
+<![CDATA[
+mysqlnd_ms.enable=1
+mysqlnd_ms.config_file=/path/to/mysqlnd_ms_plugin.ini
+]]>
+    </programlisting>
+    </example>
   </para>
   <para>
-   Cette fonctionnalité est préparée dans le code source du plugin, mais elle est actuellement
-   instable et ne devrait pas être utilisée. Les rapports de bugs sur cette fonctionnalités
-   seront rejetés.
+   <example>
+    <title>Configuration simple du plugin (mysqlnd_ms_plugin.ini) pour une réplication MySQL</title>
+    <programlisting role="ini">
+<![CDATA[
+{
+  "myapp": {
+    "master": {
+      "master_1": {
+        "host": "localhost",
+        "socket": "\/tmp\/mysql57.sock"
+      }
+    },
+    "slave": {
+      "slave_0": {
+        "host": "127.0.0.1",
+        "port": 3308
+      },
+      "slave_1": {
+        "host": "192.168.2.28",
+        "port": 3306
+      }
+    },
+    "filters": {
+      "random": {
+        "sticky": "1"
+      }
+    }
+  }
+}
+]]>
+    </programlisting>
+    </example>
   </para>
   <para>
-   <emphasis role="bold">Clusters synchrones, comme MySQL Cluster</emphasis>
+    <emphasis role="bold">Copie primaire avec plusieurs primaires (MMM - MySQL Multi Master)</emphasis>
+  </para>
+  <para>
+   La réplication MySQL vous permet de créer des topologies de cluster avec plusieurs maîtres (primaires).
+   Les conflits d'écriture ne sont pas gérées par le système de réplication. Aussi,
+   les données doivent être partitionnées manuellement et les clients doivent être redirigés suivant
+   les règles de partitionnement. La configuration recommandée est identique à la configuration
+   de fragmentation ci-dessous.
+  </para>
+  <para>
+    <emphasis role="bold">Fragmentation manuelle, combinée éventuellement avec une copie primaire et plusieurs
+     primaires</emphasis>
+  </para>
+  <para>
+   Utilisez les astuces SQL et le filtre de groupe du noeud pour les clusters qui utilisent
+   le partitionnement des données, mais laissez au client la redirection de la requête. L'exemple de configuration
+   montre une configuration de plusieurs maîtres avec deux fragmentations.
+  </para>
+  <para>
+   <example>
+    <title>Plusieurs primaires - plusieurs maîtres (php.ini)</title>
+    <programlisting role="ini">
+<![CDATA[
+mysqlnd_ms.enable=1
+mysqlnd_ms.config_file=/path/to/mysqlnd_ms_plugin.ini
+mysqlnd_ms.multi_master=1
+]]>
+    </programlisting>
+    </example>
+  </para>
+  <para>
+   <example>
+    <title>Copie primaire avec plusieurs primaires et le partitionnement</title>
+    <programlisting role="ini">
+<![CDATA[
+{
+  "myapp": {
+    "master": {
+      "master_1": {
+        "host": "localhost",
+        "socket": "\/tmp\/mysql57.sock"
+      }
+      "master_2": {
+        "host": "192.168.2.27",
+        "socket": "3306"
+      }
+    },
+    "slave": {
+      "slave_1": {
+        "host": "127.0.0.1",
+        "port": 3308
+      },
+      "slave_2": {
+        "host": "192.168.2.28",
+        "port": 3306
+      }
+    },
+    "filters": {
+      "node_groups": {
+        "Partition_A" : {
+          "master": ["master_1"],
+          "slave": ["slave_1"]
+        },
+        "Partition_B" : {
+          "master": ["master_2"],
+          "slave": ["slave_2"]
+        }
+      },
+      "roundrobin": []
+    }
+  }
+}
+]]>
+    </programlisting>
+    </example>
+  </para>
+  <para>
+   Le plugin peut également être utilisé avec une collection mouvante de
+   morceaux indépendants. Pour un tel cluster, configurez les maîtres uniquement
+   et désactivez la séparation des lectures/écritures. Les noeuds d'un tel cluster
+   sont appelés maîtres dans la configuration du plugin vu qu'ils acceptent à la fois
+   les lectures et les écritures pour leur partition.
+  </para>
+  <para>
+   <emphasis role="bold">Using synchronous update everywhere clusters such as MySQL Cluster</emphasis>
   </para>
   <para>
    MySQL Cluster est une solution de cluster synchrone. Tous les noeuds acceptent des lectures et des
@@ -1697,24 +1854,82 @@ version = 5.6.2-m5-log
     <listitem>
      <simpara>
       Mettez
-      <link linkend="mysqlnd-ms.configuration"><literal>mysqlnd_ms.multi_master=1</literal></link>
+      <link linkend="mysqlnd-ms.configuration"><literal>mysqlnd_ms.multi_master=1</literal>.</link>
      </simpara>
     </listitem>
     <listitem>
-     <simpara>Ne configurez aucun esclave</simpara>
+     <simpara>Ne configurez aucun esclave.</simpara>
     </listitem>
     <listitem>
      <simpara>
       Mettez
-      <literal><link linkend="mysqlnd-ms.plugin-ini-json">failover=master</link></literal>
+      <literal><link linkend="mysqlnd-ms.plugin-ini-json">failover=loop_before_master</link></literal>
       dans le fichier de configuration du plugin, pour éviter les messages d'avertissement
-      concernant une liste d'esclave vide.
+      concernant une liste d'esclave vide et pour permettre à la logique de boucle du
+      failover de parcourir tous les maîtres configurés avant d'émettre une erreur.
+     </simpara>
+     <simpara>
+      Notez les alertes fournies à propos du failover automatique dans les précédentes
+      sections.
      </simpara>
     </listitem>
    </itemizedlist>
   </para>
+  <para>
+   <example>
+    <title>Plusieurs primaires - plusieurs maîtres (php.ini)</title>
+    <programlisting role="ini">
+<![CDATA[
+mysqlnd_ms.enable=1
+mysqlnd_ms.config_file=/path/to/mysqlnd_ms_plugin.ini
+mysqlnd_ms.multi_master=1
+mysqlnd_ms.disable_rw_split=1
+]]>
+    </programlisting>
+    </example>
+  </para>
+  <para>
+   <example>
+    <title>Mise à jour synchrone dans n'importe quel cluster</title>
+    <programlisting role="ini">
+<![CDATA[
+
+  "myapp": {
+    "master": {
+      "master_1": {
+        "host": "localhost",
+        "socket": "\/tmp\/mysql57.sock"
+      },
+      "master_2": {
+        "host": "192.168.2.28",
+        "port": 3306
+      }
+    },
+    "slave": {
+    },
+    "filters": {
+      "roundrobin": {
+      }
+    },
+    "failover": {
+      "strategy": "loop_before_master",
+      "remember_failed": true
+    }
+  }
+}
+]]>
+    </programlisting>
+    </example>
+  </para>
+  <para>
+   Si vous exécutez une mise à jour dans n'importe quel cluster qui ne supporte
+   pas le partitionnement afin d'éviter les points chauds et les collisions,
+   vous devriez considérer l'utilisation du filtre sur les groupes de noeuds
+   pour conserver les mises à jour sur les tables fréquemment utilisées sur
+   un de ces noeuds. Ceci peut aider à réduire les collisions, et donc,
+   améliorer les performances.
+  </para>
  </section>
- 
 </chapter>
 
 <!-- Keep this comment at the end of the file
