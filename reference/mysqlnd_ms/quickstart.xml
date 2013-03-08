@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 04b11e621f6ccf857368d90262f051a8d40c865d Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 178c4659ebef16d92a8e21cb67938eaaaa9a01a1 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.quickstart" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -48,20 +48,26 @@
     <programlisting role="ini">
 <![CDATA[
 mysqlnd_ms.enable=1
-mysqlnd_ms.ini_file=/path/to/mysqlnd_ms_plugin.ini
+mysqlnd_ms.config_file=/path/to/mysqlnd_ms_plugin.ini
 ]]>
     </programlisting>
    </example>
   </para>
   <para>
    Le plugin utilise son propre fichier de configuration. Utilisez la directive
-   <link linkend="ini.mysqlnd-ms.ini-file">mysqlnd_ms.ini_file</link>
+   <link linkend="ini.mysqlnd-ms.config-file">mysqlnd_ms.config_file</link>
    pour indiquer le chemin complet vers le fichier de configuration du plugin.
-   Ce fichier doit être accessible en lecture à PHP.
+   Ce fichier doit être accessible en lecture à PHP (e.g. l'utilisateur
+   exécutant le serveur web). Veuillez noter que la directive de configuration
+   <link linkend="ini.mysqlnd-ms.config-file">mysqlnd_ms.config_file</link>
+   annule et remplace la directive
+   <link linkend="ini.mysqlnd-ms.ini-file">mysqlnd_ms.ini_file</link> depuis
+   la version 1.4.0. C'est une erreur courante que d'utiliser l'ancienne,
+   alors qu'elle n'est plus disponible comme directive de configuration.
   </para>
   <para>
    Créez un fichier de configuration pour le plugin. Indiquez son chemin complet dans
-   <link linkend="ini.mysqlnd-ms.ini-file">mysqlnd_ms.ini_file</link>.
+   <link linkend="ini.mysqlnd-ms.config-file">mysqlnd_ms.config_file</link>.
   </para>
   <para>
    Les <link linkend="mysqlnd-ms.plugin-ini-json">fichiers de configuration</link>
@@ -181,6 +187,18 @@ mysqlnd_ms.ini_file=/path/to/mysqlnd_ms_plugin.ini
 ]]>
     </programlisting>
    </example>
+  </para>
+  <para>
+   Le plugin tente de vous notifier des configurations invalides. Depuis la version 1.5.0,
+   il va émettre une alerte lors du démarrage de PHP si le fichier de configuration ne peut
+   être lu, s'il est vide, ou si l'analyse JSON échoue. Suivant votre configuration de PHP,
+   ces erreurs peuvent apparaître seulement dans des fichiers de log. Une autre validation
+   est effectuée lorsqu'une connexion est établie et que le fichier de configuration est
+   analysé pour y rechercher des sections valides. Le fait de définir la directive
+   <link linkend="ini.mysqlnd-ms.force-config-usage">mysqlnd_ms.force_config_usage</link>
+   peut vous aider à déboguer une configuration erronée. Voir aussi les
+   <link linkend="mysqlnd-ms.plugin-ini-json.debug_config">notes relatives au débogage
+   du fichier de configuration</link>.
   </para>
   
  </section>
@@ -766,6 +784,10 @@ $mysqli->close();
     requiert PHP 5.4.0 ou plus récent.
    </para>
   </note>
+  <para>
+   Veuillez également prendre en compte les restrictions abordées dans la section
+   sur les concepts de <link linkend="mysqlnd-ms.transaction">gestion des transactions</link>.
+  </para>
  </section>
  <section xml:id="mysqlnd-ms.quickstart.qos-consistency">
   <title>Niveau de service et consistence</title>
@@ -1682,7 +1704,15 @@ var_dump($res->fetch_assoc());
    le failover automatique et silencieux va soit tenter, en cas d'échec de
    basculer vers le maître au lieu d'émettre une erreur, soit tenter une
    connexion avec un autre esclave, suivant si la requête l'autorise, avant
-   de tenter une connexion vers le maître.
+   de tenter une connexion vers le maître. En raison du fait que le
+   <link linkend="mysqlnd-ms.failover">failover automatique</link> n'est pas
+   encore totalement robuste, ce sujet n'est pas abordé dans le démarrage
+   rapide. Au lieu de cela, les détails sont fournis dans la section
+   de concepts ci-dessous.
+   
+   is
+   not fool-proof, it is not discussed in the quickstart. Instead, details are given
+   in the concepts section below.
   </para>
   <para>
    <example>
@@ -1752,6 +1782,139 @@ if ($res) {
     </programlisting>
    </example>
   </para>
+ </section>
+ <section xml:id="mysqlnd-ms.quickstart.partitioning">
+  <title>Partitionnement et fragmentation</title>
+  <para>
+   Les clusters de base de données sont mis en place pour plusieurs raisons.
+   Les clusters peuvent améliorer la disponibilité, la tolérance aux pannes
+   mais aussi améliorer les performances en suivant une approche du type
+   "diviser pour mieux reigner", sachant que le travail est distribué sur plusieurs
+   machines. Le clustering est quelques fois combiné avec le partitionnement
+   et la fragmentation pour ensuite diviser une énorme tâche complexe en
+   des tâches plus petites et donc plus gérables.
+  </para>
+  <para>
+   Le plugin mysqlnd_ms a été conçu pour supporter une grande variété de clusters
+   de base de données MySQL. Certaines sortes de clusters de bases de données
+   ont des méthodes internes pour le partitionnement et la fragmentation,
+   les rendant ainsi transparentes à l'utilisation : le filtrage sur les tables
+   de réplication MySQL, et la fragmentation (application basée sur le partitionnement).
+  </para>
+  <para>
+   La réplication MySQL supporte le partitionnement sous la forme de filtres
+   qui vous permettent de créer des esclaves qui répliquent toutes les bases de
+   données ou une seule base de données (ou des tables) du maîtres. Il est ensuite
+   de la responsabilité de l'application de choisir un esclabe suivant les règles
+   du filtre. Vous pouvez utiliser soit le filtre
+   mysqlnd_ms <literal><link linkend="ini.mysqlnd-ms-plugin-config-v2.filter-node-groups">node_groups</link></literal>
+   pour supporter manuellement ce comportement, ou utiliser le filtre de table expérimental.
+ </para>
+ <para>
+  Le partitionnement ou la fragmentation manuelle est supporté via le filtre de groupage
+  des noeuds, ainsi qu'avec les astuces SQL depuis la version 1.5.0. Le filtre
+  node_groups vous permet d'assigner un nom symbolique à un groupe de serveurs maîtres ou esclabes.
+  Dans l'exemple, le maître <literal>master_0</literal> et <literal>slave_0</literal>
+  forment un groupe dont le nom est <literal>Partition_A</literal>. Il est ensuite
+  entièrement de votre responsabilité que de décider le contenu du groupe. Par exemple,
+  vous pouvez utiliser des groupes de noeuds pour la fragmentation, et utiliser
+  les noms des groupes pour adresse une fragmentation comme
+   like <literal>Shard_A_Range_0_100</literal>.
+ </para>
+ <para>
+   <example>
+    <title>Cluster de groupes de noeuds</title>
+    <programlisting role="ini">
+<![CDATA[
+ {
+  "myapp": {
+       "master": {
+            "master_0": {
+                "host": "localhost",
+                "socket": "\/tmp\/mysql.sock"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "simulate_slave_failure",
+                "port": "0"
+            },
+            "slave_1": {
+                "host": "127.0.0.1",
+                "port": 3311
+            }
+        },
+        "filters": {
+            "node_groups": {
+                "Partition_A" : {
+                    "master": ["master_0"],
+                    "slave": ["slave_0"]
+                }
+            },
+           "roundrobin": []
+        }
+    }
+}
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Partitionnement manuelle en utilisant des astuces SQL</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+function select($mysqli, $msg, $hint = '') {
+  /* Note : test faible, deux connexions vers deux serveurs peuvent avoir le même identifiant de thread */
+  $sql = sprintf("SELECT CONNECTION_ID() AS _thread, '%s' AS _hint FROM DUAL", $msg);
+  if ($hint) {
+    $sql = $hint . $sql;
+  }
+  if (!($res = $mysqli->query($sql))) {
+    printf("[%d] %s", $mysqli->errno, $mysqli->error);
+    return false;
+  }
+  $row =  $res->fetch_assoc();
+  printf("%d - %s - %s\n", $row['_thread'], $row['_hint'], $sql);
+  return true;
+}
+
+$mysqli = new mysqli("myapp", "user", "password", "database");
+if (!$mysqli)
+  /* Bien évidemment, votre gestionnaire d'erreurs est meilleur... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+/* Tous les esclaves sont autorisés */
+select($mysqli, "slave_0");
+select($mysqli, "slave_1");
+
+/* seuls les serveurs du groupe de noeuds "Partition_A" sont autorisés */
+select($mysqli, "slave_1", "/*Partition_A*/");
+select($mysqli, "slave_1", "/*Partition_A*/");
+?>
+]]>
+    </programlisting>
+    <screen>
+<![CDATA[
+6804 - slave_0 - SELECT CONNECTION_ID() AS _thread, 'slave1' AS _hint FROM DUAL
+2442 - slave_1 - SELECT CONNECTION_ID() AS _thread, 'slave2' AS _hint FROM DUAL
+6804 - slave_0 - /*Partition_A*/SELECT CONNECTION_ID() AS _thread, 'slave1' AS _hint FROM DUAL
+6804 - slave_0 - /*Partition_A*/SELECT CONNECTION_ID() AS _thread, 'slave1' AS _hint FROM DUAL
+]]>
+    </screen>
+   </example>
+  </para>
+ <para>
+  Par défaut, le plugin utilisera tous les serveurs maîtres et esclaves configurés
+  pour l'exécution de la requête. Mais si une requête commence avec une astuce SQL
+  comme <literal>/*node_group*/</literal>, le plugin ne va considérer que les serveurs
+  listés dans le <literal>node_group</literal> lors de l'exécution de la requête.
+  Aussi, les requêtes de type <literal>SELECT</literal> préfixées avec
+  <literal>/*Partition_A*/</literal> seront exécutées uniquement sur
+  <literal>slave_0</literal>.
+  </para>
+
  </section>
 </chapter>
 

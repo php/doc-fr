@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ --> 
-<!-- EN-Revision: 52ede7510c05926e32e27e3d4965159444d97635 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: af871c29a56de390dbc98f2d3844482296a75a2d Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.setup" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -391,8 +391,99 @@ $mysqli = new mysqli("localhost", "username", "password", "database");
     </programlisting>
    </example>
   </para>
+  <para xml:id="mysqlnd-ms.plugin-ini-json.debug_config">
+   La validité du fichier de configuration est vérifiée à la fois lors de
+   la lecture du fichier de configuration mais aussi plus tard, lors de
+   l'établissement d'une connexion. Le fichier de configuration est lu
+   durant le démarrage de PHP. A ce stade là, une extension PHP ne peut
+   afficher les messages d'erreurs proprement. Dans la plupart des cas, aucune
+   erreur n'est montrée, et une connexion peut échouer sans pour autant
+   avoir un message d'erreur adéquate. Ce problème a été résolu en version 1.5.0.
+  </para>
+  <para>
+   <example>
+    <title>Message d'erreur commun dans le cas d'une erreur dans le fichier de configuration
+     (à partir de la version 1.5.0)</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Warning: mysqli::mysqli(): (mysqlnd_ms) (mysqlnd_ms) Failed to parse config file [s1.json]. Please, verify the JSON in Command line code
+
+Warning: mysqli::mysqli(): (HY000/2002): php_network_getaddresses: getaddrinfo failed: Name or service not known in Command line code on line 1
+
+Warning: mysqli::query(): Couldn't fetch mysqli in Command line code on line 1
+
+Fatal error: Call to a member function fetch_assoc() on a non-object in Command line code on line 1
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   Depuis la version 1.5.0, les erreurs au démarrage sont mises en mémoire tampon,
+   et émises lorsqu'une tentative de connexion est réalisée. Utilisez la directive de
+   configuration
+   <link linkend="ini.mysqlnd-ms.force-config-usage"><literal>mysqlnd_ms.force_config_usage</literal></link>
+   pour définir le type d'erreyr à utiliser pour afficher les erreurs de la mémoire tampon.
+   Par défaut, une erreur de type <literal>E_WARNING</literal> sera émise.
+ </para>
+ <para>
+   <example>
+    <title>Validation renforcée du fichier de configuration depuis la version 1.5.0</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Warning: mysqli::mysqli(): (mysqlnd_ms) (mysqlnd_ms) Failed to parse config file [s1.json]. Please, verify the JSON in Command line code on line 1
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   Il peut être utile de définir 
+   <link linkend="ini.mysqlnd-ms.force-config-usage"><literal>mysqlnd_ms.force_config_usage = 1</literal></link>
+   lors du débogage des erreurs du fichier de configuration. Ceci ne va pas seulement définir
+   le type d'erreurs de démarrage mises en mémoire tampon à <literal>E_RECOVERABLE_ERROR</literal>
+   mais aussi va vous aider à détecter les noms de section erronés.
+  </para>
   <para>
    Voici une court explication sur les directives de configuration qui peuvent être utilisées.
+  </para>
+  <para>
+   <example>
+    <title>Erreur plus précise grâce à l'utilisation de <literal>mysqlnd_ms.force_config_usage=1</literal></title>
+    <programlisting role="ini">
+<![CDATA[
+mysqlnd_ms.force_config_usage=1
+]]>
+    </programlisting>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("invalid_section", "username", "password", "database");
+?>
+]]>
+    </programlisting>
+&example.outputs;
+    <screen>
+<![CDATA[
+Warning: mysqli::mysqli(): (mysqlnd_ms) Exclusive usage of configuration enforced but did not find the correct INI file section (invalid_section) in Command line code on line 1 line 1
+]]>
+    </screen>
+
+   </example>
   </para>
   <para>
    <variablelist>
@@ -1509,6 +1600,124 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
       </para>
      </listitem>
     </varlistentry>
+
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.filter-node-groups">
+     <term>
+      Filtre : <parameter>node_groups</parameter>
+      <type>object</type>
+     </term>
+     <listitem>
+      <para>
+       Le filtre <literal>node_groups</literal> vous permet de grouper
+       les noeuds de cluster et requêter les groupes sélectionnés, par exemple,
+       pour supporter le partitionnement de données. Le partitionnement de données
+       peut être requis pour la fragmentation manuelle, la copie primaire basée
+       sur les clusters fonctionnant avec plusieurs maîtres, ou pour éviter les
+       points chauds lors des mises à jour sur les clusters dépourvus en interne
+       de partitionnement. Le filtre est un filtre multiple qui retourne zéro, un
+       ou plusieurs serveurs. Ainsi, il doit être suivi d'autres filtres pour réduire
+       le nombre de candidats à un seul, pour l'exécution de la requête.
+      </para>
+       <informaltable>
+       <tgroup cols="3">
+        <colspec colwidth="1*"/>
+        <colspec colwidth="7*"/>
+        <colspec colwidth="2*"/>
+        <thead>
+         <row>
+          <entry>Mot clé</entry>
+          <entry>Description</entry>
+          <entry>Version</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+           <entry>
+             <literal>user defined node group name</literal>
+           </entry>
+           <entry>
+            <para>
+             Un ou plusieurs groupes de noeuds doivent être définis.
+             Un groupe de noeuds peut avoir un nom arbitraire, défini par
+             l'utilisateur. Le nom est utilisé en combinaison d'une astuce SQL
+             pour restreindre l'exécution de la requête aux noeuds listés
+             par le groupe de noeuds. Pour exécuter une requête sur un des serveurs
+             d'un groupe de noeuds, la requête doit commencer avec l'astuce SQL
+             <literal>/*user defined node group name*/</literal>.
+             Veuillez noter qu'aucun espace n'est autorisé autour de
+             <literal>user defined node group name</literal>. En raison du fait que
+             <literal>user defined node group name</literal> est utilisé tel que comme
+             partie d'une astuce SQL, vous devez choisir le nom valide avec le langage SQL.
+            </para>
+            <para>
+             Chaque entré du groupe de noeuds doit contenir une liste de serveurs
+             <literal>master</literal>. Les serveurs <literal>slave</literal> sont également
+             autorisés. Le fait de ne pas fournir de liste de <literal>master</literal> pour
+             un groupe de noeuds <literal>name_of_group</literal> va émettre une erreur de type
+             <constant>E_RECOVERABLE_ERROR</constant> comme celle-ci
+             <literal>(mysqlnd_ms) No masters configured in node group 'name_of_group' for 'node_groups' filter</literal>.
+            </para>
+            <para>
+             La liste des serveurs maîtres et esclaves doit correspondre, respectivement,
+             aux entrées de la liste des serveurs
+             <link linkend="ini.mysqlnd-ms-plugin-config-v2.master">global master</link>
+             et de <link linkend="ini.mysqlnd-ms-plugin-config-v2.slave">slave</link>.
+             Le fait de référencer un serveur inconnu d'une de ces listes va émettre une
+             erreur de type <constant>E_RECOVERABLE_ERROR</constant> comme celle-ci
+             <literal>(mysqlnd_ms) Unknown master 'server_alias_name' (section 'name_of_group') in 'node_groups' filter configuration</literal>.
+            </para>
+            <para>
+             <example>
+               <title>Partitionnement manuel</title>
+                <programlisting role="ini">
+<![CDATA[
+ {
+  "myapp": {
+       "master": {
+            "master_0": {
+                "host": "localhost",
+                "socket": "\/tmp\/mysql.sock"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.2.28",
+                "port": 3306
+            },
+            "slave_1": {
+                "host": "127.0.0.1",
+                "port": 3311
+            }
+        },
+        "filters": {
+            "node_groups": {
+                "Partition_A" : {
+                    "master": ["master_0"],
+                    "slave": ["slave_0"]
+                }
+            },
+           "roundrobin": []
+        }
+    }
+}
+]]>
+              </programlisting>
+             </example>
+            </para>
+            <para>
+             Veuillez noter que si un filtre chaîné génère une liste d'esclave
+             vide, et que la directive de configuration PHP
+             <literal>mysqlnd_ms.multi_master=0</literal> est utilisé,
+             le plugin peut émettre une alerte.
+            </para>
+          </entry>
+          <entry>Depuis 1.5.0.</entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </informaltable>
+     </listitem>
+    </varlistentry>
     
     <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.filter-qos">
      <term>
@@ -1830,10 +2039,9 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
             </para>
           </entry>
           <entry>
-           Depuis 1.4.0. Fonctionalité expérimentale. Cette fonctionalité
-           n'est disponible qu'avec les filtres <literal>random</literal> et
-           <literal>roundrobin</literal> de balance de charge.
-           Son comportement et sa syntaxe peuvent changer dans le futur.
+           Depuis 1.4.0. Cette fonctionalité n'est disponible qu'avec les filtres
+           <literal>random</literal> et <literal>roundrobin</literal> de balance de charge.
+           L'utilisation de cette fonctionalité est recommandée.
           </entry>
          </row>
          <row>
@@ -1858,10 +2066,8 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
             </para>
           </entry>
           <entry>
-           Depuis 1.4.0. Fonctionalité expérimentale. Cette fonctionalité n'est
-           disponible qu'avec les filtres <literal>random</literal> et <literal>roundrobin</literal>
-           de balance de charge. Le comportement et la syntaxe peuvent changer
-           dans le futur.
+           Depuis 1.4.0. Cette fonctionalité n'est disponible qu'avec les filtres
+           <literal>random</literal> et <literal>roundrobin</literal> de balance de charge.
           </entry>
          </row>
         </tbody>
@@ -2097,6 +2303,12 @@ $mysqli->set_charset("latin1");
        il offre des fonctionnalités supplémentaires en introduisant les
        <link linkend="mysqlnd-ms.qos-consistency">niveaux de service</link>.
       </para>
+      <para>
+       Toutes les configurations de
+       <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx-stickiness">transaction rigide</link>,
+       incluant <literal>trx_stickiness=on</literal>, seront écrasées par
+       <literal>master_on_write=1</literal>.
+      </para>
      </listitem>
     </varlistentry>
     <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.trx-stickiness">
@@ -2144,9 +2356,10 @@ $mysqli->set_charset("latin1");
        est la fonction <function>mysqli_autocommit</function>.
       </para>
       <para>
-       Malgré la configuration <literal>ser_stickiness=master</literal>, le plugin
+       Malgré la configuration <literal>trx_stickiness=master</literal>, le plugin
        ne tiendra pas compte d'une modification du mode <literal>autocommit</literal>
-       réalisée par une requête SQL comme <literal>SET AUTOCOMMIT=0</literal>.
+       réalisée par une requête SQL comme <literal>SET AUTOCOMMIT=0</literal> ou
+       <literal>BEGIN</literal>.
       </para>
       <para>
        <example>
@@ -2172,6 +2385,69 @@ $mysqli->set_charset("latin1");
 ]]>
         </programlisting>
        </example>
+      </para>
+      <para>
+       Depuis la version 1.5.0, le failover automatique ou silencieux est
+       désactivé pour la durée d'une transaction. Si les limites d'une
+       transaction ont été détectées proprement, la rigidité de la transaction
+       est activé et un serveur échoue, alors le plugin ne va pas tenter
+       d'utiliser le prochain serveur, s'il existe, suivant la politique
+       de failover configurée. L'utilisation doit gérer cette erreur manuellement.
+       Suivant la configuration, le plugin peut émettre une erreur de type
+       <literal>E_WARNING</literal> comme celle-ci
+       <literal>(mysqlnd_ms) Automatic failover is not permitted in the middle of a transaction</literal>.
+       Cette erreur peut ensuite être écrasée par un suivi des erreurs comme
+       <literal>(mysqlnd_ms) No connection selected by the last filter</literal>.
+       Ces erreurs seront générées par la fonction exécutant la requête qui a échouée.
+      </para>
+      <para>
+       <example>
+        <title>Aucun failover automatique, utilisation d'un gestionnaire d'erreurs</title>
+        <programlisting role="php">
+<![CDATA[
+<?php
+/* On suppose que le failover automatique est configuré */
+$mysqli = new mysqli("myapp", "username", "password", "database");
+
+/* Défini le statut interne du plugin à in_trx = 1 */
+$mysqli->autocommit(false);
+
+/* On suppose que le serveur échoue */
+if (!($res = $mysqli->query("SELECT 'Assume this query fails' AS _msg FROM DUAL"))) {
+ /* Gestion de l'échec de la transaction, le statut interne du plugin est toujours in_trx = 1 */
+ printf("[%d] %s", $mysqli->errno, $mysqli->error);
+ /*
+  Si vous utilisez l'autocommit() pour les transactions, il est préférable
+  de l'appeler comme ceci : autocommit(true). Sinon, le plugin pensera
+  que la transaction courante continue, et ainsi, toute modification
+  de connexion sera interdite.
+ */
+ $mysqli->autocommit(true);
+ /* De plus, vous pouvez vouloir démarrer une nouvelle transaction */
+ $mysqli->autocommit(false);
+}
+/* Maintenant, utilisation du latin1 */
+$mysqli->set_charset("latin1");
+?>
+]]>
+         </programlisting>
+       </example>
+      </para>
+      <para>
+       Si un serveur échoue au milieu d'une transaction, le plugin continue
+       à refuser le changement de connexions tant que la transaction courante
+       n'est pas terminée. Souvenez-vous que le plugin surveille les appels API
+       pour détecter les limites de la transaction. Aussi, vous devez, par exemple,
+       activer le mode autocommit pour finir la transaction courante
+       avant que le plugin ne continue à faire du balance de charge et
+       ainsi, ne change de serveur. De plus, vous voudriez vouloir démarrer
+       une nouvelle transaction immédiatement après, et désactiver l'autocommit.
+      </para>
+      <para>
+       Le fait de ne pas gérer les requêtes qui échouent, et de ne pas terminer
+       une transaction en échec utilisant des appels API, peuvent causer des
+       erreurs de ce type : <literal>Commands out of sync; you can't run this command now</literal>.
+       Aussi, il est important de gérer toutes les erreurs.
       </para>
      </listitem>
     </varlistentry>
