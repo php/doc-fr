@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8f1beeca1167fcf13cdae37d523cef0ccd12d7e6 Maintainer: dams Status: ready -->
+<!-- EN-Revision: e9d4e36814b3a781d55389337b3cafcd1413a43a Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongodb.createcollection" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -13,10 +13,9 @@
   <methodsynopsis>
    <modifier>public</modifier> <type>MongoCollection</type><methodname>MongoDB::createCollection</methodname>
    <methodparam><type>string</type><parameter>name</parameter></methodparam>
-   <methodparam choice="opt"><type>bool</type><parameter>capped</parameter><initializer>&false;</initializer></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>size</parameter><initializer>0</initializer></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>max</parameter><initializer>0</initializer></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>options</parameter></methodparam>
   </methodsynopsis>
+  
   <para>
    Cette méthode est utilisée pour créer des collections limitées
    ainsi que des collections nécessitant des options spéciales.
@@ -34,6 +33,7 @@ $collection = $db->command(array("create" => $name, "size" => $size, "capped" =>
    pour plus d'informations sur les commandes de base de données.
   </para>
  </refsect1>
+ 
  <refsect1 role="parameters">
   &reftitle.parameters;    
   <para>
@@ -47,38 +47,69 @@ $collection = $db->command(array("create" => $name, "size" => $size, "capped" =>
        Le nom de la collection.
       </para>
      </listitem>
-    </varlistentry>   
+    </varlistentry>
     <varlistentry>
      <term>
-      <parameter>capped</parameter>
+      <parameter>options</parameter>
      </term>
      <listitem>
       <para>
-       Si la collection est de taille fixe ou pas.
+       Un tableau contenant les options pour les collections. Chaque option
+       est son propre élément dans le tableau des options, dont le nom de l'option
+       listée ci-dessous est la clé de l'élément. Les options supportées dépendent
+       de la version du serveur MongoDB. Actuellement, les options suivantes
+       sont supportées :
       </para>
-     </listitem>
-    </varlistentry>   
-    <varlistentry>
-     <term>
-      <parameter>size</parameter>
-     </term>
-     <listitem>
       <para>
-       Si la collection est de taille fixe, sa taille, en octets.
+       <variablelist>
+        <varlistentry>
+         <term>
+          <parameter>capped</parameter>
+         </term>
+         <listitem>
+          <para>
+           Si la collection doit avoir une taille fixe.
+          </para>
+         </listitem>
+        </varlistentry>   
+        <varlistentry>
+         <term>
+          <parameter>size</parameter>
+         </term>
+         <listitem>
+          <para>
+           Si la collection a une taille fixe, la taille en octets.
+          </para>
+         </listitem>
+        </varlistentry>   
+        <varlistentry>
+         <term>
+          <parameter>max</parameter>
+         </term>
+         <listitem>
+          <para>
+           Si la collection a une taille fixe, le nombre maximum d'éléments
+           à stoquer dans la collection.
+          </para>
+         </listitem>
+        </varlistentry>   
+        <varlistentry>
+         <term>
+          <parameter>autoIndexId</parameter>
+         </term>
+         <listitem>
+          <para>
+           Si l'option capped vaut &true;, vous pouvez spécifier &false;
+           ici pour désactiver la création d'index automatique sur le champ
+           <literal>_id</literal>. Avant MongoDB 2.2, la valeur par défaut pour
+           <literal>autoIndexId</literal> était &false;.
+          </para>
+         </listitem>
+        </varlistentry>   
+       </variablelist>
       </para>
      </listitem>
-    </varlistentry>   
-    <varlistentry>
-     <term>
-      <parameter>max</parameter>
-     </term>
-     <listitem>
-      <para>
-       Si la collection est de taille fixe, le nombre maximal 
-       d'éléments à stocker dans la collection. 
-      </para>
-     </listitem>
-    </varlistentry>   
+    </varlistentry>
    </variablelist>
   </para>
  </refsect1>
@@ -110,10 +141,17 @@ $collection = $db->command(array("create" => $name, "size" => $size, "capped" =>
 <![CDATA[
 <?php
 
-$log = $db->createCollection("logger", true, 10*1024, 10);
+$log = $db->createCollection(
+    "logger",
+    array(
+        'capped' => true,
+        'size' => 10*1024,
+        'max' => 10
+    )
+);
 
 for ($i = 0; $i < 100; $i++) {
-    $log->insert(array("level" => WARN, "msg" => "Message simple #$i", "ts" => new MongoDate()));
+    $log->insert(array("level" => WARN, "msg" => "Message simple d'historisation #$i", "ts" => new MongoDate()));
 }
 
 $msgs = $log->find();
@@ -127,18 +165,58 @@ foreach ($msgs as $msg) {
    </programlisting>
    &example.outputs.similar;
    <screen>
-    Message simple #90
-    Message simple #91
-    Message simple #92
-    Message simple #93
-    Message simple #94
-    Message simple #95
-    Message simple #96
-    Message simple #97
-    Message simple #98
-    Message simple #99
+Message simple d'historisation #90
+Message simple d'historisation #91
+Message simple d'historisation #92
+Message simple d'historisation #93
+Message simple d'historisation #94
+Message simple d'historisation #95
+Message simple d'historisation #96
+Message simple d'historisation #97
+Message simple d'historisation #98
+Message simple d'historisation #99
    </screen>
   </example>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>1.4.0</entry>
+       <entry>
+        <para>
+         Dans les versions antérieures à 1.4.0, les options étaient toutes des arguments
+         de la méthode. La signature de la fonction dans ces anciennes versions était :
+        </para>
+        <para>
+         <methodsynopsis>
+          <modifier>public</modifier> <type>MongoCollection</type><methodname>MongoDB::createCollection</methodname>
+          <methodparam><type>string</type><parameter>name</parameter></methodparam>
+          <methodparam choice="opt"><type>bool</type><parameter>capped</parameter><initializer>&false;</initializer></methodparam>
+          <methodparam choice="opt"><type>int</type><parameter>size</parameter><initializer>0</initializer></methodparam>
+          <methodparam choice="opt"><type>int</type><parameter>max</parameter><initializer>0</initializer></methodparam>
+         </methodsynopsis>
+        </para>
+        <para>
+         La signification de ces options est la même que celle décrite ci-dessus,
+         dans l'argument <parameter>options</parameter>.
+        </para>
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
  </refsect1>
 </refentry>
 
