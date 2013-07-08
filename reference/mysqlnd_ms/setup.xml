@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ --> 
-<!-- EN-Revision: d047d502da41803d933e7a3ce3df197665c9d9aa Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 5a133dd1d92ee3b925227c0b91827b1499d07d60 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.setup" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -2461,6 +2461,133 @@ $mysqli->set_charset("latin1");
       </para>
      </listitem>
     </varlistentry>
+
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.transient_error">
+     <term>
+       <parameter>transient_error</parameter>
+       <type>object</type>
+     </term>
+     <listitem>
+      <para>
+       Cette option a été introduite en version 1.6.0.
+      </para>
+      <para>
+       Un noeud de cluster de bases de données peut émettre une erreur
+       passagère au client. Le client peut alors répéter l'opération sur le
+       même noeud, peut changer de noeud, ou peut annuler l'opération.
+       Par définition, il est résonnable pour un client de re-tenter
+       la même opération sur le même noeud avant de continuer.
+      </para>
+      <para>
+       <literal>PECL/mysqlnd_ms</literal> peut entrer dans une boucle de tentatives
+       à la place de l'application. En configuration l'option
+       <literal>transient_error</literal>, le plugin peut répéter l'opération
+       ayant échouée avec un code erreur spécifique pendant un certain nombre
+       de fois, avec une pause entre chaque tentative. Si l'erreur passagère
+       disparaît pendant l'exécution de la boucle, elle ne sera pas vue
+       de l'application. Sinon, l'erreur sera transmise à l'application à la
+       fin de la boucle.
+      </para>
+      <para>
+       <example>
+        <title>Boucle de tentative pour les erreurs passagères</title>
+        <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+       },
+       "transient_error": {
+          "mysql_error_codes": [
+            1297
+          ],
+          "max_retries": 2,
+          "usleep_retry": 100
+       }
+    }
+}
+]]>
+        </programlisting>
+      </example>
+     </para>
+      <informaltable>
+       <tgroup cols="3">
+        <colspec colwidth="1*"/>
+        <colspec colwidth="7*"/>
+        <colspec colwidth="2*"/>
+        <thead>
+         <row>
+          <entry>Clé</entry>
+          <entry>Description</entry>
+          <entry>Version</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry>
+           <literal>mysql_error_codes</literal>
+          </entry>
+          <entry>
+           <para>
+            Liste des codes erreurs passagères. Vous pouvez y inclure
+            n'importe quel code erreur MySQL. Il est possible de considérer
+            n'importe quelle erreur comme passagère, et pas seulement
+            l'erreur <literal>1297</literal> (<literal>HY000 (ER_GET_TEMPORARY_ERRMSG),
+            Message: Got temporary error %d '%s' from %s</literal>).
+            Avant d'ajouter d'autres codes erreurs, autre que
+            <literal>1297</literal>, à cette liste, assurez-vous que votre
+            cluster supporte une nouvelle tentative sans impacter le statut
+            de votre application.
+           </para>
+          </entry>
+          <entry>Depuis 1.6.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>max_retries</literal>
+          </entry>
+          <entry>
+           <para>
+            Le nombre de tentatives d'une opération échouant
+            avec une erreur passagère avant d'envoyer l'erreur
+            à l'utilisateur.
+           </para>
+           <para>
+             Par défaut : <literal>1</literal>
+           </para>
+          </entry>
+          <entry>Depuis 1.6.0.</entry>
+         </row>
+         <row>
+          <entry>
+           <literal>usleep_retry</literal>
+          </entry>
+          <entry>
+           <para>
+            Durée en millisecondes d'attente entre deux tentatives.
+            La valeur est passée à la fonction C <function>usleep</function>.
+           </para>
+           <para>
+             Par défaut : <literal>100</literal>
+           </para>
+          </entry>
+          <entry>Depuis 1.6.0.</entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </informaltable>
+     </listitem>
+    </varlistentry>
+    
    </variablelist>
   </para>
  </section>

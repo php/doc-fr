@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 0761e9d5e4a1130b2ed91b72fe661275f5ee6502 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 5a133dd1d92ee3b925227c0b91827b1499d07d60 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.concepts" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -664,6 +664,173 @@ version = 5.6.2-m5-log
    <literal>E_WARNING</literal> (voir ci-dessus), ou soit, s'il n'y a
    pas d'autres options, en investiguant les
    <link linkend="mysqlnd-ms.debugging">traces et l'historique de déboguage mysqlnd_ms</link>.
+  </para>
+ </section>
+
+ <section xml:id="mysqlnd-ms.transient_errors">
+  <title>Les erreurs passagères</title>
+  <para>
+   Quelques clusters de bases de données utilisent les erreurs passagères.
+   Une erreur passagère est une erreur temporaire qui normalement doit
+   disparaître rapidement. Par définition, il est sécurisé pour un client
+   d'ignorer une erreur passagère et de re-tenter l'opération en échec
+   sur le même serveur de base de données. La nouvelle tentative n'a
+   aucun effet secondaire. Les clients ne sont pas obligés de stopper
+   leurs travaux ou de basculer sur un autre serveur de base de données
+   immédiatement. Ils doivent plutôt entrer dans une boucle de tentatives
+   pour attendre que l'erreur disparaisse avant d'abandonner le serveur de
+   base de données au profit d'un autre. Les erreurs passagères peuvent
+   être observées, par exemple, lors de l'utilisation d'un cluster MySQL.
+   Mais elles ne sont pas liées à une solution de clusters spécifique.
+  </para>
+  <para>
+   <literal>PECL/mysqlnd_ms</literal> peut lancer une boucle de tentatives
+   automatiquement dans le cas d'erreurs passagères. Ce mécanisme permet de rendre
+   encore plus transparent la distribution, et ainsi, rend simple la migration
+   d'une application fonctionnant sur un seul serveur de base de données sur
+   un cluster de serveurs de bases de données sans avoir à changer le source
+   de l'application.
+  </para>
+  <para>
+   La boucle de tentatives automatique va répéter l'opération demandée
+   autant de fois que le nombre configuré, et effectuera une pause entre
+   les tentatives pendant une durée configurée. Si l'erreur disparaît pendant
+   la boucle, l'application ne la verra jamais. Sinon, l'erreur sera envoyée
+   à l'application afin qu'elle la gère.
+  </para>
+  <para>
+   Dans l'exemple ci-dessous, une erreur concernant une clé dupliquée
+   est provoquée pour que le plugin entre dans un cycle de deux nouvelles
+   tentatives avant de passer l'erreur à l'application. Entre les deux
+   tentatives, le plugin va attendre 100 millisecondes.
+  </para>
+  <para>
+   <example>
+    <title>Provoque une erreur passagère</title>
+<programlisting role="ini">
+<![CDATA[
+mysqlnd_ms.enable=1
+mysqlnd_ms.collect_statistics=1
+]]>
+    </programlisting>
+    <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "master": {
+            "master_0": {
+                "host": "localhost"
+            }
+        },
+        "slave": {
+            "slave_0": {
+                "host": "192.168.78.136",
+                "port": "3306"
+            }
+       },
+       "transient_error": {
+          "mysql_error_codes": [
+            1062
+          ],
+          "max_retries": 2,
+          "usleep_retry": 100
+       }
+    }
+}
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Boucle de tentative pour une erreur passagère</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "username", "password", "database");
+if (mysqli_connect_errno())
+  /* Bien évidemment, votre gestionnaire d'erreurs est bien meilleur... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
+    !$mysqli->query("CREATE TABLE test(id INT PRIMARY KEY)") ||
+    !$mysqli->query("INSERT INTO test(id) VALUES (1))")) {
+  printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+
+/* La boucle de tentatives est totalement transparente.
+   La vérification des statistiques est la seule façon de
+   voir les tentatives implicites */
+$stats = mysqlnd_ms_get_stats();
+printf("Tentatives sur l'erreur passagère avant de lancer l'erreur : %d\n", $stats['transient_error_retries']);
+
+/* Provoque une erreur concernant une clé dupliquée pour voir les statistiques changer */
+if (!$mysqli->query("INSERT INTO test(id) VALUES (1))")) {
+  printf("[%d] %s\n", $mysqli->errno, $mysqli->error);
+}
+
+$stats = mysqlnd_ms_get_stats();
+printf("Tentatives sur l'erreur passagère après le lancement de l'erreur : %d\n", $stats['transient_error_retries']);
+
+$mysqli->close();
+?>
+]]>
+    </programlisting>
+&example.outputs.similar;
+    <screen>
+<![CDATA[
+Tentatives sur l'erreur passagère avant de lancer l'erreur : 0
+[1062] Duplicate entry '1' for key 'PRIMARY'
+Tentatives sur l'erreur passagère après le lancement de l'erreur : 2
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   En raison du fait de l'exécution transparente d'un point de vue utilisateur
+   de la boucle de tentatives, l'exemple vérifie les
+   <link linkend="function.mysqlnd-ms-get-stats">statistiques</link> fournies par
+   le plugin pour en savoir plus.
+  </para>
+  <para>
+   Comme l'exemple le montre, le plugin peut considérer toutes les erreurs
+   comme passagères au regard de la sémantique des erreurs des serveurs
+   de base de données. La seule erreur que le serveur MySQL considère comme
+   temporaire est l'erreur code <constant>1297</constant>. Lorsque vous configurez
+   d'autres codes erreurs autre que la <constant>1297</constant>, assurez-vous
+   que votre configuration reflète la sémantique des codes erreurs de votre cluster.
+  </para>
+  <para>
+   Les appels mysqlnd C API suivants sont surveillés par le plugin pour vérifier
+   les erreurs passagères : <literal>query()</literal>,
+   <literal>change_user()</literal>, <literal>select_db()</literal>,
+   <literal>set_charset()</literal>, <literal>set_server_option()</literal>
+   <literal>prepare()</literal>, <literal>execute()</literal>,
+   <literal>set_autocommit()</literal>,
+   <literal>tx_begin()</literal>, <literal>tx_commit()</literal>,
+   <literal>tx_rollback()</literal>, <literal>tx_commit_or_rollback()</literal>.
+   Les appels API utilisateur ont des noms similaires.
+  </para>
+  <para>
+   La durée d'attente du plugin entre plusieurs tentatives dans la boucle
+   dépend de la fonction en question. Dans une boucle de tentative pour
+   <literal>query()</literal>, <literal>prepare()</literal> ou <literal>execute()</literal>,
+   la durée d'attente sera <literal>max_retries * usleep_retry</literal> millisecondes.
+  </para>
+  <para>
+   Cependant, les fonctions qui
+   <link linkend="mysqlnd-ms.pooling">contrôle le statut de la connexion</link>
+   sont dispatchées pour toutes les connexions. La configuration de la boucle
+   de tentative est appliquée à chaque connexion sur laquelle la commande est exécutée.
+   Aussi, une fonction peut interrompre l'exécution du programme plus longtemps qu'une
+   fonction qui est exécutée sur un seul serveur. Par exemple, <literal>set_autocommit()</literal>
+   est dispatché sur l'ensemble des connexions, et peut attendre
+   <literal>(max_retries * usleep_retry) * nombre_de_connexions_ouvertes)</literal>
+   millisecondes. Veuillez garder cela à l'esprit lorsque vous définissez une durée
+   élevée ainsi qu'un grand nombre de tentatives. L'utilisation de la configuration
+   par défaut (<literal>max_retries=1</literal>, <literal>usleep_retry=100</literal> et
+   <literal>lazy_connections=1</literal>) est vivement conseillé, car vous n'aurez jamais
+   de délai supérieur à 1 seconde.
   </para>
  </section>
  
