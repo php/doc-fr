@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 6a6061bbd4b1c78af2b50aba8ddd8fd5e4590b05 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 656d1610af1a960d87c8b7056e54d0d4c75fb123 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="intldateformatter.format" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -15,7 +15,7 @@
    &style.oop;
   </para>
   <methodsynopsis>
-   <type>string</type><methodname>IntlDateFormatter::format</methodname>
+   <modifier>public</modifier> <type>string</type><methodname>IntlDateFormatter::format</methodname>
    <methodparam><type>mixed</type><parameter>value</parameter></methodparam>
   </methodsynopsis>
   <para>
@@ -48,9 +48,21 @@
      <listitem>
       <para>
        La valeur à formater. Ce peut être un objet <classname>DateTime</classname>,
-       un &integer; représentant un timestamp Unix (nombre de secondes
-       depuis l'époque UTC), ou un &array; au format de sortie de la fonction
+       un objet <classname>IntlCalendar</classname>, un type <type>numeric</type>
+       représentant un (peut être fractionné) nombre de secondes depuis
+       l'époque ou un <type>array</type> au format de sortie de la fonction
        <function>localtime</function>.
+      </para>
+      <para>
+       Si un objet <classname>DateTime</classname> ou un objet
+       <classname>IntlCalendar</classname> est passé, son décalage horaire
+       ne sera pas considéré. L'objet devra être formaté en utilisant le
+       décalage horaire configuré pour ce formateur. Si vous souhaitez
+       utiliser le décalage horaire de l'objet à formater, la méthode
+       <function>IntlDateFormatter::setTimeZone</function> devra être
+       appelée avant le décalage horaire de l'objet. Vous pouvez aussi
+       utiliser la méthode <function>IntlDateFormatter::formatObject</function>
+       pour obtenir le même résultat.
       </para>
      </listitem>
     </varlistentry>
@@ -77,6 +89,14 @@
       </row>
      </thead>
      <tbody>
+      <row>
+       <entry>5.5.0/PECL 3.0.0</entry>
+       <entry>
+        Il est maintenant possible de passer un objet
+        <classname>IntlCalendar</classname> comme valeur du paramètre
+        <parameter>value</parameter>.
+       </entry>
+      </row>
       <row>
        <entry>5.3.4</entry>
        <entry>
@@ -137,6 +157,49 @@ Le premier format est affiché avec le modèle : 12/31/1969
 Le deuxième format est affiché avec le modèle : 12/31/1969
          ]]>
   </screen>
+  <example>
+   <title>Exemple avec un objet <classname>IntlCalendar</classname></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$tz = reset(iterator_to_array(
+        IntlTimeZone::createEnumeration('FR')));
+$formatter = IntlDateFormatter::create(
+        "fr_FR",
+        IntlDateFormatter::FULL,
+        IntlDateFormatter::FULL,
+        $tz,
+        IntlDateFormatter::GREGORIAN);
+
+$cal = IntlCalendar::createInstance($tz, '@calendar=islamic-civil');
+$cal->set(IntlCalendar::FIELD_MONTH, 8); //9ème mois, Ramadan
+$cal->set(IntlCalendar::FIELD_DAY_OF_MONTH, 1); //1er jour
+$cal->clear(IntlCalendar::FIELD_HOUR_OF_DAY);
+$cal->clear(IntlCalendar::FIELD_MINUTE);
+$cal->clear(IntlCalendar::FIELD_SECOND);
+$cal->clear(IntlCalendar::FIELD_MILLISECOND);
+
+echo "Dans l'année Islamique, le Ramadan commence le :\n\t",
+        $formatter->format($cal), "\n";
+
+//C'est le décalage horaire du formater qui est utilisé ici :
+$formatter->setTimeZone('Asia/Tokyo');
+echo "Après modification du décalage horaire :\n\t",
+        $formatter->format($cal), "\n";
+
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Dans l'année Islamique, le Ramadan commence le :
+    mardi 9 juillet 2013 19:00:00 heure avancée d’Europe centrale
+Après modification du décalage horaire :
+    mercredi 10 juillet 2013 02:00:00 heure normale du Japon
+
+]]>
+    </screen>
+  </example>
  </refsect1>
  
  <refsect1 role="seealso">
@@ -147,6 +210,7 @@ Le deuxième format est affiché avec le modèle : 12/31/1969
     <member><function>datefmt_parse</function></member>
     <member><function>datefmt_get_error_code</function></member>
     <member><function>datefmt_get_error_message</function></member>
+    <member><function>datefmt_format_object</function></member>
    </simplelist>
   </para>
  </refsect1>

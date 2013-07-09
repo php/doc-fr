@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 6a6061bbd4b1c78af2b50aba8ddd8fd5e4590b05 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 656d1610af1a960d87c8b7056e54d0d4c75fb123 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="intldateformatter.create" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -16,26 +16,28 @@
    &style.oop;
   </para>
   <methodsynopsis>
+   <modifier>public</modifier>
    <modifier>static</modifier>
    <type>IntlDateFormatter</type><methodname>IntlDateFormatter::create</methodname>
    <methodparam><type>string</type><parameter>locale</parameter></methodparam>
    <methodparam><type>int</type><parameter>datetype</parameter></methodparam>
    <methodparam><type>int</type><parameter>timetype</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>timezone</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>calendar</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>pattern</parameter></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>timezone</parameter><initializer>NULL</initializer></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>calendar</parameter><initializer>NULL</initializer></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>pattern</parameter><initializer>''</initializer></methodparam>
   </methodsynopsis>
   <para>
    &style.oop; (constructeur)
   </para>
   <constructorsynopsis>
+   <modifier>public</modifier>
    <methodname>IntlDateFormatter::__construct</methodname>
    <methodparam><type>string</type><parameter>locale</parameter></methodparam>
    <methodparam><type>int</type><parameter>datetype</parameter></methodparam>
    <methodparam><type>int</type><parameter>timetype</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>timezone</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>calendar</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>pattern</parameter></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>timezone</parameter><initializer>NULL</initializer></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>calendar</parameter><initializer>NULL</initializer></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>pattern</parameter><initializer>''</initializer></methodparam>
   </constructorsynopsis>
   <para>
    &style.procedural;
@@ -45,12 +47,12 @@
    <methodparam><type>string</type><parameter>locale</parameter></methodparam>
    <methodparam><type>int</type><parameter>datetype</parameter></methodparam>
    <methodparam><type>int</type><parameter>timetype</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>timezone</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>calendar</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>pattern</parameter></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>timezone</parameter><initializer>NULL</initializer></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>calendar</parameter><initializer>NULL</initializer></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>pattern</parameter><initializer>''</initializer></methodparam>
   </methodsynopsis>
   <para>
-   Crée un formateur de date
+   Crée un formateur de date.
   </para> 
  </refsect1>
  
@@ -62,7 +64,9 @@
      <term><parameter>locale</parameter></term>
      <listitem>
       <para>
-       La locale à utiliser pour formater et analyser.
+       La locale à utiliser pour formater et analyser ou &null;
+       pour utiliser la valeur spécifiée dans la configuration ini <link
+       linkend="ini.intl.default-locale">intl.default_locale</link>.
       </para>
      </listitem>
     </varlistentry>
@@ -75,6 +79,8 @@
        <constant>long</constant>, <constant>full</constant>). 
        C'est l'une des  
        <link linkend="intl.intldateformatter-constants">constantes IntlDateFormatter</link>.
+       Il peut aussi valoir &null;, auquel cas, le type de date par défaut d'ICU sera
+       utilisé.
       </para>
      </listitem>
     </varlistentry>
@@ -86,7 +92,9 @@
        <constant>short</constant>, <constant>medium</constant>, 
        <constant>long</constant>, <constant>full</constant>). 
        C'est l'une des  
-       <link linkend="intl.intldateformatter-constants">IntlDateFormatter constants</link>.
+       <link linkend="intl.intldateformatter-constants">constantes IntlDateFormatter</link>.
+       Il peut aussi valoir &null;, auquel cas, le type d'heure par défaut d'ICU sera
+       utilisé.
       </para>
      </listitem>
     </varlistentry>
@@ -94,7 +102,18 @@
      <term><parameter>timezone</parameter></term>
      <listitem>
       <para>
-       L'identifiant du fuseau horaire, et celui du système par défaut.
+       L'identifiant du fuseau horaire. Par défaut, (ce sera également la valeur
+       par défaut qui sera utilisée si &null; est fourni) ce sera celui retourné
+       par la fonction <function>date_default_timezone_get</function> ou, si applicable,
+       celui de l'objet <classname>IntlCalendar</classname> passé au paramètre
+       <parameter>calendar</parameter>.Cet identifiant doit être un identifiant
+       valide dans la base de données ICU, ou un identifiant représentant
+       une possible explicite, comme <literal>GMT-05:30</literal>.
+      </para>
+      <para>
+       Ce paramètre peut aussi être un objet
+       <classname>IntlTimeZone</classname> ou un objet
+       <classname>DateTimeZone</classname>.
       </para>
      </listitem>
     </varlistentry>
@@ -102,9 +121,17 @@
      <term><parameter>calendar</parameter></term>
      <listitem>
       <para>
-       Le calendrier à utiliser pour formater ou analyser. Par défaut,
-       c'est l'une des  
-       <link linkend="intl.intldateformatter-constants.calendartypes">constantes IntlDateFormatter</link>.
+       Calendrier à utiliser pour le formatage ou l'analyse. La valeur
+       par défaut est &null;, ce qui correspond à la constante
+       <constant>IntlDateFormatter::GREGORIAN</constant>. Peut être une
+       des <link
+       linkend="intl.intldateformatter-constants.calendartypes">constantes
+       de calendrier IntlDateFormatter</link> ou un <classname>IntlCalendar</classname>.
+       Tout objet <classname>IntlCalendar</classname> passé sera clôné ; il ne
+       sera pas modifié par <classname>IntlDateFormatter</classname>.
+       Il déterminera le type de calendrier utilisé (grégorien, islamique, persien, etc.)
+       et si &null; est fourni dans le paramètre <parameter>timezone</parameter>,
+       le fuseau horaire sera également utilisé.
       </para>
      </listitem>
     </varlistentry>
@@ -126,6 +153,50 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
+   L'objet <classname>IntlDateFormatter</classname> créé, ou &false; si une erreur
+   survient.
+  </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>5.5.0/PECL 3.0.0</entry>
+       <entry>
+        <para>
+         Un objet <classname>IntlCalendar</classname> est autorisé comme paramètre
+         <parameter>calendar</parameter>.
+        </para>
+        <para>
+         Des objects de type <classname>IntlTimeZone</classname> et de type
+         <classname>DateTimeZone</classname> sont autorisés comme paramètre
+         <parameter>timezone</parameter>.
+        </para>
+        <para>
+         Les identifiants de fuseaux horaires invalides (incluant les chaînes vides)
+         ne sont plus autorisés comme paramètre <parameter>timezone</parameter>.
+        </para>
+        <para>
+         Si &null; est fourni dans le paramètre <parameter>timezone</parameter>,
+         l'identifiant du fuseau horaire fourni par le paramètre
+         <function>date_default_timezone_get</function> sera utilisé au lieu
+         du fuseau horaire par défaut d'ICU.
+        </para>
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
   </para>
  </refsect1>
  

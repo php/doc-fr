@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: c672ec208a81a60850823b9e46318485c30bec6f Maintainer: yannick Status: ready -->
+<!-- EN-Revision: e5868a071fcd0db735dde2e50bd84ae7e8763602 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.curl-share-setopt" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>curl_share_setopt</refname>
-  <refpurpose>Définit une option pour un transfert cURL</refpurpose>
+  <refpurpose>Définit une option du gestionnaire partagé cURL</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -18,10 +18,8 @@
    <methodparam><type>string</type><parameter>value</parameter></methodparam>
   </methodsynopsis>
   <para>
-
+   Définit une option sur le gestionnaire partagé cURL fourni.
   </para>
-
-  &warn.undocumented.func;
 
  </refsect1>
 
@@ -32,7 +30,8 @@
     <term><parameter>sh</parameter></term>
     <listitem>
      <para>
-      
+      Un gestionnaire cURL retourné par la fonction
+      <function>curl_share_init</function>.
      </para>
     </listitem>
    </varlistentry>
@@ -40,7 +39,30 @@
     <term><parameter>option</parameter></term>
     <listitem>
      <para>
-      
+      <informaltable>
+        <tgroup cols="3">
+         <thead>
+          <row>
+           <entry valign="top">Option</entry>
+           <entry valign="top">Description</entry>
+          </row>
+         </thead>
+         <tbody>
+          <row>
+           <entry valign="top"><constant>CURLSHOPT_SHARE</constant></entry>
+           <entry valign="top">
+            Spécifie un type de données qui doivent être partagées.
+           </entry>
+          </row>
+          <row>
+           <entry valign="top"><constant>CURLSHOPT_UNSHARE</constant></entry>
+           <entry valign="top">
+            Spécifie un type de données qui ne doivent plus être partagées.
+           </entry>
+          </row>
+         </tbody>
+        </tgroup>
+       </informaltable>
      </para>
     </listitem>
    </varlistentry>
@@ -48,7 +70,41 @@
     <term><parameter>value</parameter></term>
     <listitem>
      <para>
-      
+      <informaltable>
+        <tgroup cols="3">
+         <thead>
+          <row>
+           <entry valign="top">Valeur</entry>
+           <entry valign="top">Description</entry>
+          </row>
+         </thead>
+         <tbody>
+          <row>
+           <entry valign="top"><constant>CURL_LOCK_DATA_COOKIE</constant></entry>
+           <entry valign="top">
+            Cookie de données partagées.
+           </entry>
+          </row>
+          <row>
+           <entry valign="top"><constant>CURL_LOCK_DATA_DNS</constant></entry>
+           <entry valign="top">
+            Cache DNS partagé. Notez que lorsque vous utilisez des
+            gestionnaires multiples cURL, chaque gestionnaire ajouté au
+            même gestionnaire multiple partage le cache DNS par défaut..
+           </entry>
+          </row>
+          <row>
+           <entry valign="top"><constant>CURL_LOCK_DATA_SSL_SESSION</constant></entry>
+           <entry valign="top">
+            Identifiants de session partagés SSL, réduisant le temps passé
+            sur la négociation SSL lors d'une reconnection sur le même serveur.
+            Notez que les identifiants de session SSL sont ré-utilisés
+            dans le même gestionnaire par défaut.
+           </entry>
+          </row>
+         </tbody>
+        </tgroup>
+       </informaltable>
      </para>
     </listitem>
    </varlistentry>
@@ -59,6 +115,50 @@
   &reftitle.returnvalues;
   <para>
    &return.success;
+  </para>
+ </refsect1>
+ 
+<refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>curl_share_setopt</function></title>
+    <para>
+     Cet exemple va créer un gestionnaire partagé cURL, y ajoute deux gestionnaires
+     cURL, puis, les exécute avec des cookies de données partagées.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Crée un gestionnaire partagé cURL et le définit pour partager les cookies de données
+$sh = curl_share_init();
+curl_share_setopt($sh, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
+
+// Initialise le premier gestionnaire cURL et y assigne le gestionnaire partagé
+$ch1 = curl_init("http://example.com/");
+curl_setopt($ch1, CURLOPT_SHARE, $sh);
+
+// Exécute le premier gestionnaire cURL
+curl_exec($ch1);
+
+// Initialise le secon gestionnaire cURL et y assigne le gestionnaire partagé
+$ch2 = curl_init("http://php.net/");
+curl_setopt($ch2, CURLOPT_SHARE, $sh);
+
+// Exécute le second gestionnaire cURL
+// Tous les cookies depuis le gestionnaire $ch1 sont partagés avec le gestionnaire $ch2
+curl_exec($ch2);
+
+// Ferme le gestionnaire partagé cURL
+curl_share_close($sh);
+
+// Ferme les gestionnaires cURL
+curl_close($ch1);
+curl_close($ch2);
+?>
+]]>
+    </programlisting>
+   </example>
   </para>
  </refsect1>
 
