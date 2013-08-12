@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8cb60427649bd4e817e5d08a8b8390d240f8e1b6 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: cba8ca2f8dc45d6d49e3df76acb1e49eff80077b Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.cubrid-affected-rows" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -14,6 +14,10 @@
   <methodsynopsis>
    <type>int</type><methodname>cubrid_affected_rows</methodname>
    <methodparam choice="opt"><type>resource</type><parameter>conn_identifier</parameter></methodparam>
+  </methodsynopsis>
+  <methodsynopsis>
+   <type>int</type><methodname>cubrid_affected_rows</methodname>
+   <methodparam choice="opt"><type>resource</type><parameter>req_identifier</parameter></methodparam>
   </methodsynopsis>
   <para>
    La fonction <function>cubrid_affected_rows</function> est utilisée pour
@@ -30,6 +34,10 @@
     <term><parameter>conn_identifier</parameter></term>
     <listitem><para>Le résultat. S'il n'est pas spécifié,
      le dernière résultat sera utilisé.</para></listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><parameter>req_identifier</parameter></term>
+    <listitem><para>Identifiant <function>cubrid_prepare</function>.</para></listitem>
    </varlistentry>
   </variablelist>
   </para>
@@ -57,21 +65,25 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-$conn = cubrid_connect("localhost", 33000, "demodb");
+$conn = cubrid_connect('localhost', 33000, 'demodb', 'dba', '');
+cubrid_execute($conn, "DROP TABLE IF EXISTS cubrid_test");
+cubrid_execute($conn, "CREATE TABLE cubrid_test (d varchar)");
+$sql_stmt = "INSERT INTO cubrid_test(d) VALUES('php-test')";
+$req = cubrid_prepare($conn, $sql_stmt);
 
-@cubrid_execute($conn, "DROP TABLE cubrid_test");
-cubrid_execute($conn, "CREATE TABLE cubrid_test (t varchar)");
-
-for ($i = 0; $i < 5; $i++) {
-    cubrid_execute($conn, "INSERT INTO cubrid_test(t) VALUES('cubrid_test')");
+for ($i = 0; $i < 10; $i++) {
+    cubrid_execute($req);
 }
+cubrid_commit($conn);
 
-cubrid_execute($conn, "DELETE FROM cubrid_test");
-
-$affected_num = cubrid_affected_rows();
-printf("Lignes supprimées : %d\n", $affected_num);
+$req = cubrid_execute($conn, "DELETE FROM cubrid_test WHERE d='php-test'", CUBRID_ASYNC);
+var_dump(cubrid_affected_rows());
+var_dump(cubrid_affected_rows($conn));
+var_dump(cubrid_affected_rows($req));
 
 cubrid_disconnect($conn);
+
+print "done!";
 ?>
 ]]>
    </programlisting>
