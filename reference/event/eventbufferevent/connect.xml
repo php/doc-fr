@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: d312d36634c438a386be60f0f81814f725121d37 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<refentry xml:id="eventbufferevent.connect" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <refnamediv>
+  <refname>EventBufferEvent::connect</refname>
+  <refpurpose>Connecte le descripteur de fichier du tampon d'événement à l'adresse fournie,
+   ou au socket UNIX</refpurpose>
+ </refnamediv>
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <modifier>public</modifier>
+   <type>bool</type>
+   <methodname>EventBufferEvent::connect</methodname>
+   <methodparam>
+    <type>string</type>
+    <parameter>addr</parameter>
+   </methodparam>
+  </methodsynopsis>
+  <para>
+   Connecte le descripteur de fichier du tampon d'événement à l'adresse fournie
+   (optionnellement, en fournissant le port), ou au socket UNIX.
+  </para>
+  <para>
+   Si le socket n'est pas assigné au tampon d'événements, cette méthode
+   alloue un nouveau socket et le rend non bloquant en interne.
+  </para>
+  <para>
+   Pour résoudre les noms DNS (de façon asynchrone), utilisez la méthode
+   <methodname>EventBufferEvent::connectHost</methodname>.
+  </para>
+ </refsect1>
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <variablelist>
+   <varlistentry>
+    <term>
+     <parameter>addr</parameter>
+    </term>
+    <listitem>
+     <para>
+      Doit contenir une adresse IP avec, optionnellement, le numéro du port,
+      ou un chemin vers le socket UNIX. Les formats reconnus sont :
+      <screen>
+<![CDATA[
+[IPv6Address]:port
+[IPv6Address]
+IPv6Address
+IPv4Address:port
+IPv4Address
+unix:path
+]]>
+      </screen>
+      Notez que le préfixe <literal>'unix:'</literal> n'est actuellement
+      pas sensible à la casse.
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </refsect1>
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Retourne &true; en cas de succès, &false; sinon.
+  </para>
+ </refsect1>
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <function>EventBufferEvent::connect</function></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+/*
+ * 1. Connexion à l'adresse 127.0.0.1 sur le port 80
+ * en appelant la méthode EventBufferEvent::connect().
+ *
+ * 2. Demande /index.cphp via HTTP/1.0
+ * en utilisant le tampon de sortie.
+ *
+ * 3. Lit la réponse de façon asynchrone, et l'affiche dans stdout.
+ */
+
+/* Fonction de rappel de lecture */
+function readcb($bev, $base) {
+    $input = $bev->getInput();
+
+    while (($n = $input->remove($buf, 1024)) > 0) {
+        echo $buf;
+    }
+}
+
+/* Fonction de rappel d'événement */
+function eventcb($bev, $events, $base) {
+    if ($events & EventBufferEvent::CONNECTED) {
+        echo "Connecté.\n";
+    } elseif ($events & (EventBufferEvent::ERROR | EventBufferEvent::EOF)) {
+        if ($events & EventBufferEvent::ERROR) {
+            echo "Erreur DNS : ", $bev->getDnsErrorString(), PHP_EOL;
+        }
+
+        echo "Fermeture\n";
+        $base->exit();
+        exit("Fait !\n");
+    }
+}
+
+$base = new EventBase();
+
+echo "étape 1\n";
+$bev = new EventBufferEvent($base, /* use internal socket */ NULL,
+    EventBufferEvent::OPT_CLOSE_ON_FREE | EventBufferEvent::OPT_DEFER_CALLBACKS);
+if (!$bev) {
+    exit("Echec lors de la création du socket bufferevent\n");
+}
+
+echo "étape 2\n";
+$bev->setCallbacks("readcb", /* writecb */ NULL, "eventcb", $base);
+$bev->enable(Event::READ | Event::WRITE);
+
+echo "étape 3\n";
+/* Envoi la demande */
+$output = $bev->getOutput();
+if (!$output->add(
+    "GET /index.cphp HTTP/1.0\r\n".
+    "Connection: Close\r\n\r\n"
+)) {
+    exit("Echec lors de l'ajout de la demande dans le tampon de sortie\n");
+}
+
+/* Connection à l'hôte de façon asynchrone.
+ * Nous connaissons l'IP, et donc, nous n'avons pas besoin de résolution DNS. */
+if (!$bev->connect("127.0.0.1:80")) {
+    exit("Impossible de se connecter à l'hôte\n");
+}
+
+/* Distribue les événements en attente */
+$base->dispatch();
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+étape 1
+étape 2
+étape 3
+Connecté.
+HTTP/1.1 200 OK
+Server: nginx/1.2.6
+Date: Sat, 09 Mar 2013 10:06:58 GMT
+Content-Type: text/html; charset=utf-8
+Connection: close
+X-Powered-By: PHP/5.4.11--pl2-gentoo
+
+sdfsdfsf
+Fermeture
+Fait !
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>Connexion à un socket UNIX, lecture de la réponse depuis le
+    serveur, et affichage dans une console</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class MyUnixSocketClient {
+    private $base, $bev;
+
+    function __construct($base, $sock_path) {
+        $this->base = $base;
+        $this->bev = new EventBufferEvent($base, NULL, EventBufferEvent::OPT_CLOSE_ON_FREE,
+            array ($this, "read_cb"), NULL, array ($this, "event_cb"));
+
+        if (!$this->bev->connect("unix:$sock_path")) {
+            trigger_error("Echec lors de la connexion au socket `$sock_path'", E_USER_ERROR);
+        }
+
+        $this->bev->enable(Event::READ);
+    }
+
+    function __destruct() {
+        if ($this->bev) {
+            $this->bev->free();
+            $this->bev = NULL;
+        }
+    }
+
+    function dispatch() {
+        $this->base->dispatch();
+    }
+
+    function read_cb($bev, $unused) {
+        $in = $bev->input;
+
+        printf("Réception de %ld octets\n", $in->length);
+        printf("----- données ----\n");
+        printf("%ld:\t%s\n", (int) $in->length, $in->pullup(-1));
+
+        $this->bev->free();
+        $this->bev = NULL;
+        $this->base->exit(NULL);
+    }
+
+    function event_cb($bev, $events, $unused) {
+        if ($events & EventBufferEvent::ERROR) {
+            echo "Erreur depuis bufferevent\n";
+        }
+
+        if ($events & (EventBufferEvent::EOF | EventBufferEvent::ERROR)) {
+            $bev->free();
+            $bev = NULL;
+        } elseif ($events & EventBufferEvent::CONNECTED) {
+            $bev->output->add("test\n");
+        }
+    }
+}
+
+if ($argc <= 1) {
+    exit("Le chemin vers le socket n'est pas fourni\n");
+}
+$sock_path = $argv[1];
+
+$base = new EventBase();
+$cl = new MyUnixSocketClient($base, $sock_path);
+$cl->dispatch();
+?>
+
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+Réception de 5 octets
+----- données ----
+5:  test
+]]>
+   </screen>
+  </example>
+ </refsect1>
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member>
+    <methodname>EventBufferEvent::connectHost</methodname>
+   </member>
+  </simplelist>
+ </refsect1>
+</refentry>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
