@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: f68abbe82cc5429cde1ff576e536956fb547f324 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: be1c862babddf0359d9660d11f67ae6b8b9ab247 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.ob-start">
@@ -13,9 +13,9 @@
   &reftitle.description;
   <methodsynopsis>
    <type>bool</type><methodname>ob_start</methodname>
-   <methodparam choice="opt"><type>callable</type><parameter>output_callback</parameter></methodparam>
+   <methodparam choice="opt"><type>callable</type><parameter>output_callback</parameter><initializer>&null;</initializer></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>chunk_size</parameter><initializer>0</initializer></methodparam>
-   <methodparam choice="opt"><type>bool</type><parameter>erase</parameter><initializer>true</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>flags</parameter><initializer><constant>PHP_OUTPUT_HANDLER_STDFLAGS</constant></initializer></methodparam>
   </methodsynopsis>
   <para>
    <function>ob_start</function> démarre la temporisation de sortie. 
@@ -143,13 +143,57 @@
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>erase</parameter></term>
+     <term><parameter>flags</parameter></term>
      <listitem>
       <para>
-       Si le paramètre optionnel <parameter>erase</parameter> est défini à
-       &false;, le tampon ne sera pas effacé tant que le script ne sera pas terminé.
-       Ceci aura pour effet d'émettre une notice et de retourner &false;
-       lors de l'appel aux fonctions d'affichage et de nettoyage.
+       Le paramètre <parameter>flags</parameter> est un masque qui contrôle
+       les opérations qui peuvent être effectuées sur le tampon de sortie.
+       Par défaut, il autorise le tampon de sortie à être nettoyé, envoyé
+       et supprimé, ce qui peut être défini explicitement avec les constantes
+       <constant>PHP_OUTPUT_HANDLER_CLEANABLE</constant> |
+       <constant>PHP_OUTPUT_HANDLER_FLUSHABLE</constant> |
+       <constant>PHP_OUTPUT_HANDLER_REMOVABLE</constant>, ou
+       <constant>PHP_OUTPUT_HANDLER_STDFLAGS</constant> comme alias.
+      </para>
+      <para>
+       Chaque drapeau contrôle l'accès à un jeu de fonctions, tel décrit
+       ci-dessous :
+       <informaltable>
+        <tgroup cols="2">
+         <thead>
+          <row>
+           <entry>Constante</entry>
+           <entry>Fonctions</entry>
+          </row>
+         </thead>
+         <tbody>
+          <row>
+           <entry><constant>PHP_OUTPUT_HANDLER_CLEANABLE</constant></entry>
+           <entry>
+            <function>ob_clean</function>,
+            <function>ob_end_clean</function> et
+            <function>ob_get_clean</function>.
+           </entry>
+          </row>
+          <row>
+           <entry><constant>PHP_OUTPUT_HANDLER_FLUSHABLE</constant></entry>
+           <entry>
+            <function>ob_end_flush</function>,
+            <function>ob_flush</function> et
+            <function>ob_get_flush</function>.
+           </entry>
+          </row>
+          <row>
+           <entry><constant>PHP_OUTPUT_HANDLER_REMOVABLE</constant></entry>
+           <entry>
+            <function>ob_end_clean</function>,
+            <function>ob_end_flush</function> et
+            <function>ob_get_flush</function>.
+           </entry>
+          </row>
+         </tbody>
+        </tgroup>
+       </informaltable>
       </para>
      </listitem>
     </varlistentry>
@@ -176,6 +220,21 @@
       </row>
      </thead>
      <tbody>
+      <row>
+       <entry>5.4.0</entry>
+       <entry>
+        Le troisième paramètre de la fonction <function>ob_start</function>
+        est passé d'un booléen appelé <parameter>erase</parameter>
+        (qui, s'il était défini à &false; va empécher le tampon de sortie
+        d'être effacé tant que le script n'a pas terminé son exécution)
+        en un entier appelé <parameter>flags</parameter>. Malheureusement,
+        cela conduit un cassure de la compatibilité de l'API pour les lignes
+        de code écrites avant PHP 5.4.0 qui utilisent ce troisième paramètre.
+        Voir les <link linkend="function.ob-start.flags-bc">exemples avec les
+        drapeaux</link> pour un exemple qui gère ce problème en permettant
+        une compatibilité avec les deux comportements.
+       </entry>
+      </row>
       <row>
        <entry>5.4.0</entry>
        <entry>
@@ -242,6 +301,26 @@ ob_end_flush();
 </html>
 ]]>
     </screen>
+   </example>
+  </para>
+
+  <para>
+   <example xml:id="function.ob-start.flags-bc">
+    <title>Crée un tampon de sortie in-effacable de sorte à être compatible avec PHP 5.3 et PHP 5.4</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+if (version_compare(PHP_VERSION, '5.4.0', '>=')) {
+  ob_start(null, 0, PHP_OUTPUT_HANDLER_STDFLAGS ^
+    PHP_OUTPUT_HANDLER_REMOVABLE);
+} else {
+  ob_start(null, 0, false);
+}
+
+?>
+]]>
+    </programlisting>
    </example>
   </para>
  </refsect1>
