@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 095653e0ce6242091a95f50dd0cdad6f73692211 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 6d1db2739b2d65998f9ae4bd565772681ed15514 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="language.operators" xmlns="http://docbook.org/ns/docbook">
@@ -45,15 +45,32 @@
    <literal>18</literal>.
   </para>
   <para>
-   Lorsque les opérateurs ont une précédence équivalente, c'est leur
-   associativité qui détermine s'ils sont évalués de droite à gauche ou
-   inversement. Voyez les exemples ci-après.
+   Lorsque les opérateurs ont une précédence égale, leur association
+   décide la façon dont les opérateurs sont groupés. Par exemple,
+   "-" est une association par la gauche, ainsi <literal>1 - 2 - 3</literal>
+   est groupé comme ceci <literal>(1 - 2) - 3</literal> et sera évalué
+   à <literal>-4</literal>. D'un autre côté, "=" est une association par la
+   droite, ainsi, <literal>$a = $b = $c</literal> est groupé comme ceci
+   <literal>$a = ($b = $c)</literal>.
+  </para>
+  
+  <para>
+   Les opérateurs de précédente égale qui ne sont pas associatifs,
+   ne peuvent pas être utilisés entre eux, par exemple,
+   <literal>1 &lt; 2 &gt; 1</literal> est égale en PHP. L'expression
+   <literal>1 &lt;= 1 == 1</literal> par contre, est égale, car l'opérateur
+   <literal>==</literal> a une précédence inférieure que l'opérateur
+   <literal>&lt;=</literal>.
+  </para>
+  <para>
+   L'utilisation des parenthèses, y compris lorsqu'elles ne sont pas nécessaires,
+   permettent de mieux lire le code en effectuant des groupements explicites
+   plutôt qu'imaginer la précédente des opérateurs et leurs associations.
   </para>
   <para>
    Le tableau qui suit liste les opérateurs par ordre de précédence, avec la
    précédence la plus élevée en haut. Les opérateurs sur la même ligne ont
-   une précédence équivalente (donc l'associativité décide de l'ordre de leur
-   évaluation).
+   une précédence équivalente (donc l'associativité décide du groupement).
    <table>
     <title>Précédence des opérateurs</title>
     <tgroup cols="2">
@@ -213,14 +230,6 @@
    </table>
   </para>
   <para>
-   Pour les opérateurs à précédence égale, l'associativité de gauche signifie que
-   l'expression est évaluée de gauche à droite, l'associativité de droite, l'inverse.
-   Pour les opérateurs dont la précédence est égale mais qui ne sont pas associatifs,
-   ils ne peuvent pas être associés avec eux-mêmes. Aussi, par exemple,
-   la structure <literal>1 &lt; 2 &gt; 1</literal>, est illégale en PHP.
-   Alors que la structure <literal>1 &lt;= 1 == 1</literal> est légale, car l'opérateur
-   <constant>T_IS_EQUAL</constant> a une précédence inférieure à l'opérateur
-   <constant>T_IS_SMALLER_OR_EQUAL</constant>.
    <example>
     <title>Associativité</title>
     <programlisting role="php">
@@ -233,15 +242,33 @@ $a = true ? 0 : true ? 1 : 2; // (true ? 0 : true) ? 1 : 2 = 2
 $a = 1;
 $b = 2;
 $a = $b += 3; // $a = ($b += 3) -> $a = 5, $b = 5
-
-// Le fait de mélanger ++ et + produit un comportement indéfini
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+   <para>
+    La précédence et l'association de l'opérateur ne détermine que
+    la façon dont les expressions sont groupées ; ils ne spécifient
+    pas l'ordre de l'évaluation. PHP ne spécifie pas (de manière générale)
+    l'ordre dans lequel une expression est évaluée et le code qui suppose
+    un ordre spécifique d'évaluation ne devrait pas exister, car le
+    comportement peut changer entre les différentes versions de PHP
+    ou suivant le code environnant.
+    <example>
+     <title>Ordre d'évaluation indéfini</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
 $a = 1;
-echo ++$a + $a++; // peut afficher 4 ou 5
+echo $a + $a++; // peut afficher 2 ou 3
+
+$i = 1;
+$array[$i] = $i++; // peut définir l'index 1 ou 2
 ?>
 ]]>
     </programlisting>
    </example>
-   Utiliser des parenthèses, même lorsque cela n'est pas requis, permet d'augmenter la lisibilité du code.
   </para>
   <note>
    <para>
@@ -466,8 +493,8 @@ class C {}
 $o = &new C;
 ?>
 ]]>
-      </programlisting>
-     </informalexample>
+     </programlisting>
+    </informalexample>
    </para>
    <para>
     Plus d'informations sur le références et leurs utilisations possibles peuvent être
@@ -2163,17 +2190,17 @@ var_dump($c instanceof stdClass); // $c est une ressource
 var_dump(FALSE instanceof stdClass);
 ?>
 ]]>
-     </programlisting>
-     &example.outputs;
-     <screen>
+    </programlisting>
+    &example.outputs;
+    <screen>
 <![CDATA[
 bool(false)
 bool(false)
 bool(false)
 PHP Fatal error:  instanceof expects an object instance, constant given
 ]]>
-     </screen>
-    </example>
+    </screen>
+   </example>
   </para>
   <para>
    Il y a quelques pièges à éviter. Avant PHP version 5.1.0,
