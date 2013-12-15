@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7da0357629d4f40105a314a9e63eff559bbeb351 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: ac78bae531756815da86f105c9a70f66cd48f417 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="function.hash-pbkdf2" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -50,7 +50,8 @@
      <term><parameter>salt</parameter></term>
      <listitem>
       <para>
-       Le salt à utiliser pour la dérivation.
+       Le salt à utiliser pour la dérivation. Cette valeur doit
+       être générée aléatoirement.
       </para>
      </listitem>
     </varlistentry>
@@ -67,9 +68,17 @@
      <term><parameter>length</parameter></term>
      <listitem>
       <para>
-       La longueur de la clé dérivée à afficher.
-       Si vaut <literal>0</literal>, la longueur de l'algorithme choisi
-       sera utilisé.
+       La longueur de la chaîne de sortie. Si le paramètre
+       <parameter>raw_output</parameter> vaut &true;, ce paramètre
+       correspondra à la longueur, en octets, de la clé dérivée ; si
+       le paramètre <parameter>raw_output</parameter> vaut &false;,
+       il correspondra à deux fois la longueur, en octets, de la clé
+       dérivée (vu que chaque octet de la clé est retournée sur
+       deux hexits).
+      </para>
+      <para>
+       Si <literal>0</literal> est passé, la sortie complète de l'algorithme
+       choisi sera utilisée.
       </para>
      </listitem>
     </varlistentry>
@@ -116,22 +125,27 @@
     <title>Exemple avec <function>hash_pbkdf2</function></title>
     <programlisting role="php">
 <![CDATA[
-   <?php
-   $password = "password";
-   $salt = "salt";
-   $hash = hash_pbkdf2("sha256", $password, $salt, 1, 20);
-   echo $hash;
-   ?>
-   ]]>
-     </programlisting>
-     &example.outputs;
-     <screen>
+<?php
+$password = "password";
+$iterations = 1000;
+
+// Génère un IV aléatoire en utilisant la fonction mcrypt_create_iv(),
+// openssl_random_pseudo_bytes() ou tout autre source aléatoire correspondante
+$salt = mcrypt_create_iv(16, MCRYPT_DEV_URANDOM);
+
+$hash = hash_pbkdf2("sha256", $password, $salt, $iterations, 20);
+echo $hash;
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
 <![CDATA[
-   120fb6cffcf8b32c43e7
-   ]]>
-     </screen>
-    </example>
-   </para>
+120fb6cffcf8b32c43e7
+]]>
+    </screen>
+   </example>
+  </para>
  </refsect1>
  
  <refsect1 role="notes">
@@ -139,11 +153,10 @@
   <caution>
    <para>
     La méthode PBKDF2 peut être utilisée pour hasher des mots de passe
-    pour le stockage (elle est approuvée pour cette utilisation).
-    Cependant, vous devez garder à l'esprit que
-    <constant>CRYPT_BLOWFISH</constant> est meilleur pour cet usage et
-    nous vous recommandons de l'utiliser au lieu de la fonction
-    <function>crypt</function>.
+    pour le stockage. Cependant, vous devez garder à l'esprit que
+    la fonction <function>password_hash</function> ou la fonction
+    <function>crypt</function> avec la constante <constant>CRYPT_BLOWFISH</constant>
+    est meilleur pour cet usage.
    </para>
   </caution>
  </refsect1>
@@ -153,6 +166,7 @@
   <para>
    <simplelist>
     <member><function>crypt</function></member>
+    <member><function>password_hash</function></member>
     <member><function>hash</function></member>
     <member><function>hash_algos</function></member>
     <member><function>hash_init</function></member>
