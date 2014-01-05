@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 196abbabb4f94cc5e9de0ace42e121e5fdb4de7f Maintainer: yannick Status: ready -->
+<!-- EN-Revision: d6da6ad11e81e7588c0875a47d431520bf6fd159 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="imagick.setimagetickspersecond">
@@ -13,11 +13,26 @@
   &reftitle.description;
   <methodsynopsis>
    <type>bool</type><methodname>Imagick::setImageTicksPerSecond</methodname>
-   <methodparam><type>int</type><parameter>ticks_per-second</parameter></methodparam>
+   <methodparam><type>int</type><parameter>ticks_per_second</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Configure le nombre e tick par seconde de l'image.
+   Ajuste la durée qu'une frame d'une image animée sera affichée.
   </para>
+  <note>
+   <para>
+    Pour les GIFs animés, cette méthode ne modifie pas le nombre de 'ticks'
+    par secondes, qui sera toujours défini à 100. Au lieu de celà, la méthode
+    va ajuster la durée d'affichage de la frame pour simuler une modification
+    du ticks par seconde.
+   </para>
+   <para>
+    Par exemple, pour un GIF animé où chaque frame est affichée pendant 20 ticks
+    (1/5ème d'une seconde), lorsque cette méthode est appelée sur chaque frame
+    de l'image avec un argument de <literal>50</literal>, les frames seront ajustées
+    pour s'afficher pendant 40 ticks (2/5ème d'une seconde) et l'animation sera jouée
+    à une vitesse de moitié moins par rapport à la vitesse originale.
+   </para>
+  </note>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -25,9 +40,11 @@
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>ticks_per-second</parameter></term>
+     <term><parameter>ticks_per_second</parameter></term>
      <listitem>
       <para>
+       La durée pendant laquelle une image sera affichée, exprimée en ticks par
+       seconde.
       </para>
      </listitem>
     </varlistentry>
@@ -39,6 +56,52 @@
   &reftitle.returnvalues;
   <para>
    &imagick.return.success;
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+    &reftitle.examples;
+  <para>
+   <example>
+    <title>Modification d'un GIF animé avec la méthode <function>Imagick::setImageTicksPerSecond</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// Modification d'un GIF animé pour que la première moitié du GIF soit jouée
+// à une vitesse moitié moindre, et que la seconde moitié soit jouée à une vitesse
+// double de la vitesse courante.
+
+$imagick = new Imagick(realpath("Test.gif"));
+$imagick = $imagick->coalesceImages();
+
+$totalFrames = $imagick->getNumberImages();
+
+$frameCount = 0;
+
+foreach ($imagick as $frame) {
+    $imagick->setImageTicksPerSecond(50);
+    
+    if ($frameCount < ($totalFrames / 2)) {
+        // Modification de la frame pour quelle s'affiche pendant deux fois plus de temps qu'actuellement
+        $imagick->setImageTicksPerSecond(50);
+    } else {
+
+        // Modification de la frame pour quelle s'affiche pendant deux fois moins de temps qu'actuellement
+        $imagick->setImageTicksPerSecond(200);
+    }
+
+    $frameCount++;
+}
+
+$imagick = $imagick->deconstructImages();
+
+$imagick->writeImages("/chemin/de/sauvegarde/output.gif", true);
+
+?>
+]]>
+    </programlisting>
+   </example>
   </para>
  </refsect1>
 
