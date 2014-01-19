@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: cd110607fd94ccea0f99a693be555a50ce5c6b1e Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 46854b1593fc9bf77d14db6fddcbfb73a20cbf86 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.oci-fetch-array" xmlns="http://docbook.org/ns/docbook">
@@ -22,6 +22,14 @@
    Cette fonction est appelée typiquement dans une boucle qui retourne
    &false; lorsqu'il n'y a plus de ligne de disponible.
   </para>
+  <para>
+   Si le paramètre <parameter>statement</parameter> correspond à un bloc PL/SQL
+   retourné par des jeux de résultats implicites Oracle Database 12c,
+   alors les lignes depuis tous les jeux de résultats seront récupérées
+   consécutivement. Si <parameter>statement</parameter> est retourné par
+   la fonction <function>oci_get_implicit_resultset</function>, alors seul
+   le sous-jeu de lignes d'une seule requête enfant sera retourné.
+  </para>
   &oci.datatypes;
  </refsect1>
 
@@ -33,6 +41,10 @@
      <term><parameter>statement</parameter></term>
      <listitem>
       &oci.arg.statement.id;
+       <para>
+        Peut également être un identifiant de requête retourné par
+        la fonction <function>oci_get_implicit_resultset</function>.
+       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
@@ -144,7 +156,7 @@ if (!$conn) {
 $stid = oci_parse($conn, 'SELECT department_id, department_name FROM departments');
 oci_execute($stid);
 
-while (($row = oci_fetch_array($stid, OCI_BOTH))) {
+while (($row = oci_fetch_array($stid, OCI_BOTH)) != false) {
     // Utilisez des noms de colonne en majuscule pour les indices des tableau associatif
     echo $row[0] . " and " . $row['DEPARTMENT_ID']   . " are the same<br>\n";
     echo $row[1] . " and " . $row['DEPARTMENT_NAME'] . " are the same<br>\n";
@@ -182,7 +194,7 @@ if (!$conn) {
 $stid = oci_parse($conn, 'SELECT id, description FROM mytab');
 oci_execute($stid);
 
-while (($row = oci_fetch_array($stid, OCI_NUM))) {
+while (($row = oci_fetch_array($stid, OCI_NUM)) != false) {
     echo $row[0] . "<br>\n";
     echo $row[1]->read(11) . "<br>\n"; // ceci affichera les 11 premiers octets depuis DESCRIPTION
 }
@@ -223,7 +235,7 @@ if (!$conn) {
 $stid = oci_parse($conn, 'SELECT id, description FROM mytab');
 oci_execute($stid);
 
-while (($row = oci_fetch_array($stid, OCI_ASSOC))) {
+while (($row = oci_fetch_array($stid, OCI_ASSOC)) != false) {
     echo $row['ID'] . "<br>\n";
     echo $row['DESCRIPTION']->read(11) . "<br>\n"; // ceci affichera les 11 premiers octets depuis DESCRIPTION
 }
@@ -256,7 +268,7 @@ if (!$conn) {
 
 $stid = oci_parse($conn, 'SELECT 1, null FROM dual');
 oci_execute($stid);
-while (($row = oci_fetch_array ($stid, OCI_ASSOC))) { // Ignore NULLs
+while (($row = oci_fetch_array ($stid, OCI_ASSOC)) != false) { // Ignore NULLs
     var_dump($row);
 }
 
@@ -270,7 +282,7 @@ Le code ci-dessus affiche :
 
 $stid = oci_parse($conn, 'SELECT 1, null FROM dual');
 oci_execute($stid);
-while (($row = oci_fetch_array ($stid, OCI_ASSOC+OCI_RETURN_NULLS))) { // Récupère NULLs
+while (($row = oci_fetch_array ($stid, OCI_ASSOC+OCI_RETURN_NULLS)) != false) { // Récupère NULLs
     var_dump($row);
 }
 
@@ -312,7 +324,7 @@ if (!$conn) {
 $stid = oci_parse($conn, 'SELECT id, description FROM mytab');
 oci_execute($stid);
 
-while (($row = oci_fetch_array($stid, OCI_ASSOC+OCI_RETURN_LOBS))) {
+while (($row = oci_fetch_array($stid, OCI_ASSOC+OCI_RETURN_LOBS)) != false) {
     echo $row['ID'] . "<br>\n";
     echo $row['DESCRIPTION'] . "<br>\n"; // contient la totalité de DESCRIPTION
 }
@@ -493,7 +505,7 @@ oci_execute($stid);
 // Exécute le REF CURSOR retourné et y récupère un identifiant de requête
 oci_execute($refcur);  
 echo "<table border='1'>\n";
-while ($row = oci_fetch_array($refcur, OCI_ASSOC+OCI_RETURN_NULLS)) {
+while (($row = oci_fetch_array($refcur, OCI_ASSOC+OCI_RETURN_NULLS)) != false) {
     echo "<tr>\n";
     foreach ($row as $item) {
         echo "    <td>".($item !== null ? htmlentities($item, ENT_QUOTES) : "")."</td>\n";
@@ -524,36 +536,99 @@ if (!$conn) {
     trigger_error(htmlentities($e['message'], ENT_QUOTES), E_USER_ERROR);
 }
 
+// Retrouve la version de la base de données
+preg_match('/Release ([0-9]+)\./', oci_server_version($conn), $matches);
+$oracleversion = $matches[1];
+
 // This is the query you want to execute
 $sql = 'SELECT city, postal_code FROM locations ORDER BY city';
 
-// Cette requête imbriquée sélectionne une sous partie du jeu de lignes depuis $sql.
+// Construit une requête imbriquée pour sélectionner un sous-jeu de lignes depuis $sql.
 // En environnement de production, assurez-vous de vous protéger des injections SQL
 // en concaténant les requêtes SQL
-$limit_sql = 
-   'select *
-    from ( select a.*, rownum as rnum
-        from (' . $sql . ') a
-        where rownum < :FIRST_ROW + :NUM_ROWS )
-    where rnum >= :FIRST_ROW';
+if ($oracleversion >= 12) {
+    // Utilisation de la syntaxe Oracle 12c OFFSET / FETCH NEXT
+    $sql = $sql . ' OFFSET :offset ROWS FETCH NEXT :numrows ROWS ONLY';
+} else {
+    // Les anciennes versions requièrent une syntaxe de requête comme ceci ou
+    // la requête de base a besoin d'être ré-écrite pour utiliser la fonction row_number()
+    $sql = "SELECT * FROM (SELECT A.*, ROWNUM AS MY_RNUM
+                           FROM ($sql) A
+                           WHERE ROWNUM <= :offset + :numrows)
+            WHERE MY_RNUM > :offset";
+}
 
-$first = 1;  //commence à la première ligne
-$num   = 5;  // retourne 5 lignes
-$stid = oci_parse($conn, $limit_sql);
-oci_bind_by_name($stid, ':FIRST_ROW', $first);
-oci_bind_by_name($stid, ':NUM_ROWS', $num);
+$offset  = 0;  // Ne pas traiter les premières lignes
+$numrows = 5;  // Retourne 5 lignes
+$stid = oci_parse($conn, $sql);
+oci_bind_by_name($stid, ':numrows', $numrows);
+oci_bind_by_name($stid, ':offset', $offset);
 oci_execute($stid);
 
-while (($row = oci_fetch_array($stid, OCI_ASSOC))) {
+while (($row = oci_fetch_array($stid, OCI_ASSOC + OCI_RETURN_NULLS)) != false) {
     echo $row['CITY'] . " " . $row['POSTAL_CODE'] . "<br>\n";
 }
 
 // Affiche :
-//    Beijing 190518x
-//    Bern 3095x
-//    Bombay 490231x
-//    Geneva 1730x
-//    Hiroshima 6823x
+//    Beijing 190518
+//    Bern 3095
+//    Bombay 490231
+//    Geneva 1730
+//    Hiroshima 6823
+
+oci_free_statement($stid);
+oci_close($conn);
+
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Exemple avec <function>oci_fetch_array</function> avec Oracle Database 12<emphasis>c</emphasis></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$conn = oci_connect('hr', 'welcome', 'localhost/pdborcl');
+if (!$conn) {
+    $e = oci_error();
+    trigger_error(htmlentities($e['message'], ENT_QUOTES), E_USER_ERROR);
+}
+
+// Requiert OCI8 2.0 et Oracle Database 12c
+// Voir aussi oci_get_implicit_resultset()
+$sql = 'DECLARE
+            c1 SYS_REFCURSOR;
+        BEGIN
+           OPEN c1 FOR SELECT city, postal_code FROM locations WHERE ROWNUM < 4 ORDER BY city;
+           DBMS_SQL.RETURN_RESULT(c1);
+           OPEN c1 FOR SELECT country_id FROM locations WHERE ROWNUM < 4 ORDER BY city;
+           DBMS_SQL.RETURN_RESULT(c1);
+        END;';
+
+$stid = oci_parse($conn, $sql);
+oci_execute($stid);
+
+// Note : oci_fetch_all et oci_fetch() ne peuvent être utilisées de cette façon
+echo "<table>\n";
+while (($row = oci_fetch_array($stid, OCI_ASSOC+OCI_RETURN_NULLS)) != false) {
+    echo "<tr>\n";
+    foreach ($row as $item) {
+        echo "  <td>".($item!==null?htmlentities($item, ENT_QUOTES|ENT_SUBSTITUTE):"")."</td>\n";
+    }
+    echo "</tr>\n";
+}
+echo "</table>\n";
+
+// Affiche :
+//    Beijing 190518
+//    Bern    3095
+//    Bombay  490231
+//    CN
+//    CH
+//    IN
 
 oci_free_statement($stid);
 oci_close($conn);

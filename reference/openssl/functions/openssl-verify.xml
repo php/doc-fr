@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 834e755b8d998407bda7643ac1cd576e2ea2a125 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 2d4b995d680332b66a53f8278439ba1d6454a9eb Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.openssl-verify">
@@ -16,7 +16,7 @@
    <methodparam><type>string</type><parameter>data</parameter></methodparam>
    <methodparam><type>string</type><parameter>signature</parameter></methodparam>
    <methodparam><type>mixed</type><parameter>pub_key_id</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>signature_alg</parameter><initializer>OPENSSL_ALGO_SHA1</initializer></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>signature_alg</parameter><initializer>OPENSSL_ALGO_SHA1</initializer></methodparam>
   </methodsynopsis>
   <para>
    <function>openssl_verify</function> vérifie que la signature
@@ -35,6 +35,7 @@
      <term><parameter>data</parameter></term>
      <listitem>
       <para>
+       La chaîne de données utilisé pour générer la signature
       </para>
      </listitem>
     </varlistentry>
@@ -42,6 +43,8 @@
      <term><parameter>signature</parameter></term>
      <listitem>
       <para>
+       Une chaîne brûte binaire, générée par la fonction
+       <function>openssl_sign</function> ou signification similaire
       </para>
      </listitem>
     </varlistentry>
@@ -49,6 +52,12 @@
      <term><parameter>pub_key_id</parameter></term>
      <listitem>
       <para>
+       <type>resource</type> - une clé, retourné par la fonction
+       <function>openssl_get_publickey</function>
+      </para>
+      <para>
+       <type>string</type> - une clé au format PEM, par exemple : "-----BEGIN PUBLIC KEY-----
+MIIBCgK..."
       </para>
      </listitem>
     </varlistentry>
@@ -56,8 +65,11 @@
      <term><parameter>signature_alg</parameter></term>
      <listitem>
       <para>
-       Pour plus d'informations, reportez-vous à la liste
-       des <link linkend="openssl.signature-algos">algorithmes de signature</link>.
+       <type>int</type> - une des <link linkend="openssl.signature-algos">signatures d'algorithmes</link>.
+      </para>
+      <para>
+       <type>string</type> - une chaîne valide retournée par la fonction <function>openssl_get_md_methods</function>,
+       par exemple : "sha1WithRSAEncryption" ou "sha512".
       </para>
      </listitem>
     </varlistentry>
@@ -107,11 +119,9 @@
 <?php
 // On suppose que $data et $signature contiennent les données à signer et
 // la signature.
+
 // Lecture de la clé publique depuis le certificat
-$fp = fopen("/src/openssl-0.9.6/demos/sign/cert.pem", "r");
-$cert = fread($fp, 8192);
-fclose($fp);
-$pubkeyid = openssl_get_publickey($cert);
+$pubkeyid = openssl_pkey_get_public("file://src/openssl-0.9.6/demos/sign/cert.pem");
 
 // indique si la signature est correcte
 $ok = openssl_verify($data, $signature, $pubkeyid);
@@ -124,6 +134,38 @@ if ($ok == 1) {
 }
 // libère les clés de la mémoire
 openssl_free_key($pubkeyid);
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Exemple avec <function>openssl_verify</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+//Données que vous souhaitez signer
+$data = 'my data';
+
+//Crée une nouvelle clé privée et publique
+$private_key_res = openssl_pkey_new(array(
+    "private_key_bits" => 2048,
+    "private_key_type" => OPENSSL_KEYTYPE_RSA,
+));
+$details = openssl_pkey_get_details($private_key_res);
+$public_key_res = openssl_pkey_get_public($details['key']);
+
+//Crée une signature
+openssl_sign($data, $signature, $private_key_res, "sha1WithRSAEncryption");
+
+//Vérifie la signature
+$ok = openssl_verify($data, $signature, $public_key_res, OPENSSL_ALGO_SHA1);
+if ($ok == 1) {
+    echo "valid";
+} elseif ($ok == 0) {
+    echo "invalide";
+} else {
+    echo "erreur : ".openssl_error_string();
+}
 ?>
 ]]>
     </programlisting>

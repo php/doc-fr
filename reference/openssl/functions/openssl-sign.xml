@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 2d4b995d680332b66a53f8278439ba1d6454a9eb Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.openssl-sign">
@@ -16,13 +16,14 @@
    <methodparam><type>string</type><parameter>data</parameter></methodparam>
    <methodparam><type>string</type><parameter role="reference">signature</parameter></methodparam>
    <methodparam><type>mixed</type><parameter>priv_key_id</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>signature_alg</parameter><initializer>OPENSSL_ALGO_SHA1</initializer></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>signature_alg</parameter><initializer>OPENSSL_ALGO_SHA1</initializer></methodparam>
   </methodsynopsis>
   <para>
    <function>openssl_sign</function> calcule la signature des données
-   <parameter>data</parameter> en utilisant l'algorithme SHA1 (hashing)
-   suivi du chiffrage avec la clé privée <parameter>priv_key_id</parameter>.
-   Notez que les données elles-mêmes ne sont pas chiffrées.
+   <parameter>data</parameter> en générant une signature digitale cryptographique
+   en utilisant la clé privée associée avec le paramètre
+   <parameter>priv_key_id</parameter>. Notez que les données elles-mêmes
+   ne sont pas chiffrées.
   </para>
  </refsect1>
 
@@ -34,6 +35,7 @@
      <term><parameter>data</parameter></term>
      <listitem>
       <para>
+       La chaîne de données que vous souhaitez signer.
       </para>
      </listitem>
     </varlistentry>
@@ -51,6 +53,11 @@
      <term><parameter>priv_key_id</parameter></term>
      <listitem>
       <para>
+       <type>resource</type> - une clé, retournée par la fonction
+       <function>openssl_get_privatekey</function>
+      </para>
+      <para>
+       <type>string</type> - une clé au format PEM
       </para>
      </listitem>
     </varlistentry>
@@ -58,8 +65,11 @@
      <term><parameter>signature_alg</parameter></term>
      <listitem>
       <para>
-       Pour plus d'informations, reportez-vous à la liste
-       des <link linkend="openssl.signature-algos">algorithmes de signature</link>.
+       <type>int</type> - une des <link linkend="openssl.signature-algos">signatures d'algorithmes</link>.
+      </para>
+      <para>
+       <type>string</type> - une chaîne valide retournée par la fonction
+       <function>openssl_get_md_methods</function>, par exemple : "sha256WithRSAEncryption" ou "sha384".
       </para>
      </listitem>
     </varlistentry>
@@ -107,17 +117,48 @@
 <![CDATA[
 <?php
 // On suppose que $data contient les données à signer
+
 // lecture de la clé publique pour chaque destinataire
-$fp = fopen("/src/openssl-0.9.6/demos/sign/key.pem", "r");
-$priv_key = fread($fp, 8192);
-fclose($fp);
-$pkeyid = openssl_get_privatekey($priv_key);
+$pkeyid = openssl_pkey_get_private("file://src/openssl-0.9.6/demos/sign/key.pem");
 
 // calcule de la signature
 openssl_sign($data, $signature, $pkeyid);
 
 // libère les clés de la mémoire
 openssl_free_key($pkeyid);
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Exemple avec <function>openssl_sign</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+//données que vous souhaitez signer
+$data = 'my data';
+
+//Crée une nouvelle clé privée et publique
+$new_key_pair = openssl_pkey_new(array(
+    "private_key_bits" => 2048,
+    "private_key_type" => OPENSSL_KEYTYPE_RSA,
+));
+openssl_pkey_export($new_key_pair, $private_key_pem);
+
+$details = openssl_pkey_get_details($new_key_pair);
+$public_key_pem = $details['key'];
+
+//Création de la signature
+openssl_sign($data, $signature, $private_key_pem, OPENSSL_ALGO_SHA256);
+
+//Sauvegarde pour utilisation ultérieur
+file_put_contents('private_key.pem', $private_key_pem);
+file_put_contents('public_key.pem', $public_key_pem);
+file_put_contents('signature.dat', $signature);
+
+//Vérification de la signature
+$r = openssl_verify($data, $signature, $public_key_pem, "sha256WithRSAEncryption");
+var_dump($r);
 ?>
 ]]>
     </programlisting>
