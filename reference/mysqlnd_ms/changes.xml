@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 97b95f3520a62026f95edfc4d79d7d0657e3af96 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: b51167b8eab37ef29b31301419075172d3b47ca6 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.changes" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -14,7 +14,7 @@
   Voir aussi le fichier <filename>CHANGES</filename> dans les sources
   de la distribution pour une liste complète des modifications.
  </para>
-
+ 
  <section xml:id="mysqlnd-ms.changes-one-six">
   <title xmlns="http://docbook.org/ns/docbook">Séries 1.6 PECL/mysqlnd_ms</title>
   <para>
@@ -27,7 +27,7 @@
     </listitem>
     <listitem>
      <simpara>
-      Motto/thème : Maintenance
+      Motto/thème : Maintenance et support initial de MySQL Fabric
      </simpara>
     </listitem>
    </itemizedlist>
@@ -38,18 +38,54 @@
     sont encore à un stade précoce. Les modifications peuvent survenir à
     n'importe quel moment sans aucun avertissement. Veuillez ne pas utiliser
     cette version dans un environnement de production.
-    </para>
-    <para>
-     La documentation peut ne pas refléter pour l'instant l'ensemble
-     des modifications.
-    </para>
+   </para>
+   <para>
+    La documentation peut ne pas refléter pour l'instant l'ensemble
+    des modifications.
+   </para>
   </note>
   <para>
    Correction de bogues
    <itemizedlist>
     <listitem>
      <para>
-      Aucun nouveau bogue rapporté
+      Modification refusée : #66616 R/W split fails : QOS with mysqlnd_get_last_gtid with built-in MySQL GTID
+      </para>
+      <para>
+       Ceci n'est pas un bogue dans l'implémentation du plugin, mais une limitation de
+       la fonctionalité côté serveur non considérée ni documentée auparavant. MySQL 5.6 built-in GTIDs
+       ne peut être utilisé pour assurer la consistence de la session lors de la lecture depuis
+       des esclaves, dans tous les cas. Dans le pire des cas, le plugin ne va pas considérer l'utilisation
+       des esclaves et se retournera vers le maître. Il n'y aura aucun résultat incorrect,
+       mais il n'y aura, non plus, aucun bénéfice de faire des vérification GTID.
+      </para>
+    </listitem>
+    <listitem>
+     <para>
+      Correction du bogue #66064 - la balance de charge aléatoire ingore le poids
+     </para>
+     <para>
+      En raison d'un bogue sur l'analyseur de configuration de la balance de charge
+      aléatoire, le poids du noeud était ignoré, si et seulement si le drapeau
+      sticky était défini.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Correction du bogue #65496 - Vérification incorrecte du délai de l'esclave
+     </para>
+     <para>
+      Le filtre de qualité de service ignorait les esclaves pour lesquels le lag
+      était de 0 seconde si un lag maximum était défini.
+      Malgré le fait qu'un esclave ne lag pas du tout, il était exclus de la liste
+      de la balance de charge si un âge maximal était défini par le filtre QoS.
+      Ceci était du à l'utilisation d'un opérateur de comparaison incorrect dans les sources
+      du filtre.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Correction du bogue #65408 - Echéc de la compilation avec -Werror=format-security
      </para>
     </listitem>
    </itemizedlist>
@@ -58,19 +94,58 @@
    Modification de fonctionalités
    <itemizedlist>
     <listitem>
-    <para>
-     Intorduction d'une boucle de tentatives automatique pour les
-     <link linkend="mysqlnd-ms.transient_errors">erreurs passagères</link> et les
-     <link linkend="function.mysqlnd-ms-get-stats">statistiques correspondantes</link>
-     pour compter le nombre de tentatives implicites. Quelques clusters
-     de bases de données distribuées utilisent les erreurs passagères pour
-     avertir le client de re-tenter son opération dans un moment. Le plus souvent,
-     le client est alors supposé stopper l'exécution (sleep) pendant un
-     court instant avant de re-tenter l'opération désirée. Le fait de passer
-     immédiatement à un autre noeud n'est pas nécessaire comme réponse à
-     ces erreurs. Il convient plutôt de lancer une boucle de tentative.
-     C'est une situation commune lors de l'utilisation d'un cluster MySQL.
+     <para>
+      Intorduction d'une boucle de tentatives automatique pour les
+      <link linkend="mysqlnd-ms.transient_errors">erreurs passagères</link> et les
+      <link linkend="function.mysqlnd-ms-get-stats">statistiques correspondantes</link>
+      pour compter le nombre de tentatives implicites. Quelques clusters
+      de bases de données distribuées utilisent les erreurs passagères pour
+      avertir le client de re-tenter son opération dans un moment. Le plus souvent,
+      le client est alors supposé stopper l'exécution (sleep) pendant un
+      court instant avant de re-tenter l'opération désirée. Le fait de passer
+      immédiatement à un autre noeud n'est pas nécessaire comme réponse à
+      ces erreurs. Il convient plutôt de lancer une boucle de tentative.
+      C'est une situation commune lors de l'utilisation d'un cluster MySQL.
      </para>
+    </listitem>
+    <listitem>
+     <para>
+      Introduction d'un <link linkend="mysqlnd-ms.quickstart.mysql_fabric">support basic</link>
+      le framework d'haute disponibilité et de fragmentation MySQL Fabric.
+     </para>
+     <para>
+      Attention, ce support est au stade pré-alpha. A la fois le framework
+      côté serveur et côté client sont supposés fonctionner normalement ; toutefois,
+      les tests n'ont pas été effectués avant la mise à disposition de la version
+      alpha du plugin. De plus, l'API peut être modifié sans aucune alerte préalable.
+     </para>
+     <para>
+      Sachant que c'est un travail en cours, le manuel peut ne pas refléter toutes les
+      limitations des fonctionalités, ainsi que les bogues connus.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Les
+      <link linkend="function.mysqlnd-ms-get-stats">statistiques</link>
+      pour surveiller Fabric XML RPC appellant <literal>sharding.lookup_servers</literal> :
+     <literal>fabric_sharding_lookup_servers_success</literal>,
+     <literal>fabric_sharding_lookup_servers_failure</literal>,
+     <literal>fabric_sharding_lookup_servers_time_total</literal>,
+     <literal>fabric_sharding_lookup_servers_bytes_total</literal>,
+     <literal>fabric_sharding_lookup_servers_xml_failure</literal>.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Nouvelles fonctions en relation avec MySQL Fabric :
+     <link linkend="function.mysqlnd-ms-fabric-select-shard">
+      <function>mysqlnd_ms_fabric_select_shard</function></link>,
+     <link linkend="function.mysqlnd-ms-fabric-select-global">
+      <function>mysqlnd_ms_fabric_select_global</function></link>,
+     <link linkend="function.mysqlnd-ms-dump-servers">
+      <function>mysqlnd_ms_dump_servers</function></link>.
+    </para>
     </listitem>
    </itemizedlist>
   </para>
@@ -157,7 +232,7 @@
       comportement est plus cohérent. Les astuces SQL seront toujours ignorées
       pour la durée de la transaction, si
       <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx-stickiness">les transactions
-      gluantes</link> sont actives.
+       gluantes</link> sont actives.
      </para>
      <para>
       Notez que la détection des limites des transactions continue d'être
@@ -171,7 +246,7 @@
       à la fonction <function>mysqlnd_ms_set_qos</function> échoueront
       lorsqu'effectués au milieu d'une transaction si
       <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx-stickiness">les transactions
-      gluantes</link> sont actives. Les swtiches de connexion ne sont pas
+       gluantes</link> sont actives. Les swtiches de connexion ne sont pas
       autorisées pour la durée d'une transaction. Le changement de qualité
       de service revient à qualifier un jeu de serveurs différent pour l'exécution
       de la requête, et donc, il se peut qu'il soit nécessaire de changer
@@ -185,41 +260,41 @@
    Modification de fonctionalités
    <itemizedlist>
     <listitem>
-    <para>
-     Introduction du filtre <literal>node_group</literal>.
-     Le filtre vous permet d'organiser les serveurs (maîtres et esclaves)
-     dans des groupes. Les requêtes peuvent être dirigées vers un
-     certain groupe de serveurs en préfixant la requête avec une
-     astuce/commentaire SQL qui contient le nom de configuration
-     du groupe. Les groupes peuvent être utilisés pour le partionnement
-     et le partage, mais aussi pour optimiser localement le cache.
-     Dans le cas du partage, le nom du groupe sera la clé du partage.
-     Toutes les requêtes pour une clé de partage donnée seront exécutées
-     sur le partage configuré. Notez qu'il est nécessaire qu'à la fois le
-     client et le serveur supportent le partage pour être utilisé avec mysqlnd_ms.
+     <para>
+      Introduction du filtre <literal>node_group</literal>.
+      Le filtre vous permet d'organiser les serveurs (maîtres et esclaves)
+      dans des groupes. Les requêtes peuvent être dirigées vers un
+      certain groupe de serveurs en préfixant la requête avec une
+      astuce/commentaire SQL qui contient le nom de configuration
+      du groupe. Les groupes peuvent être utilisés pour le partionnement
+      et le partage, mais aussi pour optimiser localement le cache.
+      Dans le cas du partage, le nom du groupe sera la clé du partage.
+      Toutes les requêtes pour une clé de partage donnée seront exécutées
+      sur le partage configuré. Notez qu'il est nécessaire qu'à la fois le
+      client et le serveur supportent le partage pour être utilisé avec mysqlnd_ms.
      </para>
     </listitem>
     <listitem>
-    <para>
-     Validation étendue du fichier de configuration lors du démarrage de PHP
-     (RINIT). Une erreur de niveau <constant>E_WARNING</constant> sera émise si le
-     fichier de configuration ne peut pas être lu (en raison d'un problème de
-     permissions par exemple), s'il est vide, ou si le fichier (JSON) ne peut être
-     analysé. Ces alertes peuvent apparaître dans les fichiers de log, suivant
-     la configuration de PHP.
-    </para>
-    <para>
-     Les distributions qui fournissent une installation pré-configurée, incluant
-     un exemple de fichier de configuration, doivent placer des <literal>{}</literal>
-     dans le fichier de configuration pour éviter ces alertes à propos d'un fichier
-     de configuration invalide.
+     <para>
+      Validation étendue du fichier de configuration lors du démarrage de PHP
+      (RINIT). Une erreur de niveau <constant>E_WARNING</constant> sera émise si le
+      fichier de configuration ne peut pas être lu (en raison d'un problème de
+      permissions par exemple), s'il est vide, ou si le fichier (JSON) ne peut être
+      analysé. Ces alertes peuvent apparaître dans les fichiers de log, suivant
+      la configuration de PHP.
      </para>
-    <para>
-     Les prochaines validations du fichier de configuration seront effectuées
-     lors de l'analyse des sections sur l'ouverture d'une connexion. Notez qu'il
-     peut y avoir des situations où un fichier invalide de configuration d'un plugin
-     n'émette pas la bonne alerte mais résulte en une erreur de connexion.
-    </para>
+     <para>
+      Les distributions qui fournissent une installation pré-configurée, incluant
+      un exemple de fichier de configuration, doivent placer des <literal>{}</literal>
+      dans le fichier de configuration pour éviter ces alertes à propos d'un fichier
+      de configuration invalide.
+     </para>
+     <para>
+      Les prochaines validations du fichier de configuration seront effectuées
+      lors de l'analyse des sections sur l'ouverture d'une connexion. Notez qu'il
+      peut y avoir des situations où un fichier invalide de configuration d'un plugin
+      n'émette pas la bonne alerte mais résulte en une erreur de connexion.
+     </para>
     </listitem>
     <listitem>
      <para>
@@ -248,7 +323,7 @@
       à la méthode <methodname>PDO::setAttribute</methodname>.
      </para>
     </listitem>
-     <listitem>
+    <listitem>
      <para>
       Introduction de <literal>trx_stickiness=on</literal>. Cette option
       <link linkend="ini.mysqlnd-ms-plugin-config-v2.trx-stickiness">trx_stickiness</link>
@@ -257,15 +332,15 @@
       consistence) autorise d'utiliser un esclave. Les transactions uniquement
       en lecture ont été introduites en MySQL 5.6, offrant un gain important
       en terme de performance.
-     </para>
+      </para>
     </listitem>
     <listitem>
-      <para>
-       Le support du cache des requêtes est considéré comme béta si vous
-       l'utilisez avec l'API <literal>mysqli</literal>. Il devrait fonctionner
-       parfaitement avec des clusters basés sur une copie primaire.
-       Pour toutes les autres APIs, cette fonctionalité est toujours expérimentale.
-      </para>
+     <para>
+      Le support du cache des requêtes est considéré comme béta si vous
+      l'utilisez avec l'API <literal>mysqli</literal>. Il devrait fonctionner
+      parfaitement avec des clusters basés sur une copie primaire.
+      Pour toutes les autres APIs, cette fonctionalité est toujours expérimentale.
+     </para>
     </listitem>
     <listitem>
      <para>
