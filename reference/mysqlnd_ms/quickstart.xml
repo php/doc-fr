@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 0761e9d5e4a1130b2ed91b72fe661275f5ee6502 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 0aa774414ae3ca9032fa586b59554dd66fc376df Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.quickstart" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -1084,9 +1084,13 @@ PHP Warning:  mysqli::query(): (mysqlnd_ms) No connection selected by the last f
     MySQL.
    </para>
    <para>
-    Depuis MySQL 5.6.5-m8, le serveur MySQL fournit des identifiants de
-    transaction globale. Cette fonctionnalité est supportée par
-    PECL/mysqlnd_ms 1.3.0-alpha ou supérieure.
+    Depuis la version admissible MySQL 5.6.5-m8, le serveur MySQL fournit des 
+    identifiants de transaction globale. Cette fonctionnalité est supportée par 
+    PECL/mysqlnd_ms 1.3.0-alpha ou supérieure. Toutefois, le jeu de 
+    fonctionnalités inclus dans la version finale de MySQL 5.6 est insuffisant 
+    pour supporter toutes les idées discutées ici. Veuillez vous référer à la 
+    <link linkend="mysqlnd-ms.gtid">section sur les concepts</link> pour plus 
+    de détails.
    </para>
   </note>
   <para>
@@ -1418,6 +1422,17 @@ var_dump($res->fetch_assoc());
   <para>
    <emphasis role="bold">Utilisation de la fonctionalité d'identifiant de transaction globale côté serveur</emphasis>
   </para>
+<note>
+   <title>Support serveur insuffisant dans MySQL 5.6</title>
+   <para>
+    Le greffon a été développé sur la base d'une version de pre-production de 
+    MySQL 5.6. Or il s'avère que les versions MySQL 5.6 publiées finalement ne 
+    fournissent pas des clients avec assez d'informations pour imposer la 
+    consistence des sessions basés sur les GTIDs. Veuillez vous référer à la 
+    <link linkend="mysqlnd-ms.gtid">section sur les concepts</link> pour plus 
+    de détails.
+   </para>
+  </note>
   <para>
    Depuis MySQL 5.6.5-m8, le système de réplication MySQL utilise des identifiants
    globaux de transaction côté serveur. Ces identifiants de transaction sont
@@ -1429,7 +1444,8 @@ var_dump($res->fetch_assoc());
   <para>
    Les clients peuvent continuer d'utiliser l'identifiant de transaction globale
    dans un but de consistence des sessions lors des opérations de lecture sur
-   les esclaves de réplication MySQL. L'algorithme fonctionne tel que décrit ci-après.
+   les esclaves de réplication MySQL dans certains cas mais pas dans tous! 
+   L'algorithme fonctionne tel que décrit ci-après.
    Des requêtes SQL différentes doivent être configurées pour
    <literal>fetch_last_gtid</literal> et <literal>check_for_gtid</literal>.
    Ces requêtes sont fournies ci-dessous. Notez que MySQL 5.6.5-m8 est une version
@@ -1919,6 +1935,136 @@ select($mysqli, "slave_1", "/*Partition_A*/");
   </para>
   
  </section>
+ 
+ <section xml:id="mysqlnd-ms.quickstart.mysql_fabric">
+  <title>MySQL Fabric</title>
+  <note>
+   <title>Version nécessaire et statut</title>
+   <para>
+    Le support de MySQL Fabric a commencé avec la version 1.6. Veuillez 
+    considérer l'implémentation actuelle comme une pré-alpha. La documentation 
+    est susceptible de ne pas lister toutes les fonctionnalités ou limitations. 
+    Le travail est en cours.
+   </para>
+   <para>
+    Le sharding est le seul cas actuelement supporté par le greffon.
+   </para>
+  </note>
+   <note>
+   <title>Les concepts de MySQL Fabric</title>
+   <para>
+    Veuillez vous référer au manuel de référence MySQL pour plus d'informations 
+    sur MySQL Fabric et comment le mettre en place. La documentation PHP suppose 
+    que vous êtes familier avec les concepts de bases et les idées derrière 
+    MySQL Fabric.
+   </para>
+  </note>
+  <para>
+   MySQL Fabric est un système pour gérer des fermes de serveurs MySQL afin 
+   d'obtenir de la haute disponibilité et optionnellement supporter le sharding. 
+   Techniquement, c'est un intergiciel de gestion et de monitoring de serveurs 
+   MySQL.
+  </para>
+  <para>
+   Les clients interrogent MySQL Fabric afin d'obtenir des listes de serveurs 
+   MySQL, leurs états et leurs rôles. Par exemple, les clients peuvent demander 
+   une liste des esclaves d'un groupe de réplication MySQL et savoir s'ils sont 
+   prêts pour gérer des requêtes. Un autre exemple est un cluster de serveurs 
+   MySQL shardés ou le client désire savoir quel shard interroger pour une table 
+   et une clé de shard donnée. Si configuré pour utiliser MySQL Fabric, le 
+   greffon utilise XML RPC au dessus de HTTP pour obtenir la liste à l'exécution 
+   depuis le hôte MySQL Fabric. L'appel de procédures à distance XML est fait en 
+   arrière plan et est transparent du point de vue du développeur.  
+  </para>
+  <para>
+   Au lieu de lister les serveurs MySQL directement dans les fichiers de 
+   configuration des greffons, cela contient juste la liste d'un ou plusieurs 
+   hôtes MySQL Fabric.
+  </para>
+    <para>
+   <example>
+    <title>Configuration du greffon: Des hôtes Fabric au lieu des serveurs MySQL</title>
+    <programlisting role="ini">
+<![CDATA[
+{
+    "myapp": {
+        "fabric": {
+            "hosts": [
+                {
+                    "host" : "127.0.0.1",
+                    "port" : 8080
+                }
+            ]
+        }
+    }
+}
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   Les utilisateurs utilisent les nouvelles fonctions 
+   <link linkend="function.mysqlnd-ms-fabric-select-shard">
+   <function>mysqlnd_ms_fabric_select_shard</function></link> et
+   <link linkend="function.mysqlnd-ms-fabric-select-global">
+   <function>mysqlnd_ms_fabric_select_global</function></link> pour basculer 
+   vers l'ensemble des serveurs responsables d'une clé de shard donné. Ensuite, 
+   le greffon choisit le serveur approprié pour exécuter les requêtes. Ce 
+   faisant, le greffon tient compte des règles de loadbalancing.
+  </para>
+  <para>
+   L'exemple suivant suppose que MySQL Fabric a été configuré pour sharder la 
+   table <literal>test.fabrictest</literal> en utilisant la colonne 
+   <literal>id</literal> comme clé de shard.
+  </para>
+  <para>
+   <example>
+    <title>Partitionnement manuel en utilisant les SQL hints</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$mysqli = new mysqli("myapp", "user", "password", "database");
+if (!$mysqli)
+  /* Bien sur, votre gestionnaire d'erreurs est meilleur... */
+  die(sprintf("[%d] %s\n", mysqli_connect_errno(), mysqli_connect_error()));
+
+/* Créer une table globale (disponible sur tous les shards) */
+mysqlnd_ms_fabric_select_global($mysqli, "test.fabrictest");
+if (!$mysqli->query("CREATE TABLE test.fabrictest(id INT NOT NULL PRIMARY KEY)"))
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+
+/* Basculer la connexion sur le bon shard et insérer un enregistrement */
+mysqlnd_ms_fabric_select_shard($mysqli, "test.fabrictest", 10);
+if (!($res = $mysqli->query("INSERT INTO fabrictest(id) VALUES (10)")))
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+
+/* Tenter de lire l'enregistrement nouvellement inséré */
+mysqlnd_ms_fabric_select_shard($mysqli, "test.fabrictest", 10);
+if (!($res = $mysqli->query("SELECT id FROM test WHERE id = 10")))
+ die(sprintf("[%d] %s\n", $mysqli->errno, $mysqli->error));
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   L'exemple précédent, une table shardé est créée, un enregistrement inséré et 
+   récupérer par la suite. Toutes les opérations en langage de définition de 
+   données SQL (DDL) sur une table shardé doivent être appliqués au groupe de 
+   serveur global. Avant de créer ou modifier une table shardé, 
+   <link linkend="function.mysqlnd-ms-fabric-select-global">
+   <function>mysqlnd_ms_fabric_select_global</function></link> est appelé pour 
+   basculer la connexion donnée vers les serveurs, du groupe global, 
+   correspondant. Les requêtes SQL de manipulation de données (DML) doivent 
+   être envoyés aux shards directement. La fonction 
+   <link linkend="function.mysqlnd-ms-fabric-select-shard">
+   <function>mysqlnd_ms_fabric_select_shard</function></link> permet de basculer 
+   la connexion vers les shards gérant la clé donnée.
+  </para>
+
+
+ </section>
+ 
 </chapter>
 
 <!-- Keep this comment at the end of the file
