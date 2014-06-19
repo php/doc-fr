@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 6e8d8b98a7ba7bad9e585465438fa47f163b7504 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 0e9eb8a8c76de2365decd77a46d96ddfeec2bac8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="language.functions" xmlns="http://docbook.org/ns/docbook">
@@ -184,10 +184,7 @@ recursion(3);
    linkend="functions.arguments.by-reference">le passage par référence</link>, et <link
    linkend="functions.arguments.default">des valeurs d'arguments par défaut</link>.
    <link linkend="functions.variable-arg-list">Une liste variable d'arguments</link>
-   est également supportée, voir la documentation sur les fonctions
-   <function>func_num_args</function>,
-   <function>func_get_arg</function>, et
-   <function>func_get_args</function> pour plus d'informations.
+   est également supportée.
   </para>
   <para>
    <example>
@@ -375,18 +372,175 @@ Préparer un bol de acidophilus framboise.
    
    <simpara>
     PHP supporte les fonctions à nombre d'arguments variable.
-    C'est très simple à utiliser, avec les fonctions
+    Ceci est implémenté en utilisant le mot clé 
+    <literal>...</literal> en PHP 5.6 et suivants, et
+    en utilisant les fonctions
     <function>func_num_args</function>,
     <function>func_get_arg</function> et
-    <function>func_get_args</function>.
+    <function>func_get_args</function> en PHP 5.5 et antérieurs.
    </simpara>
    
-   <simpara>
-    Aucune syntaxe particulière n'est nécessaire, et
-    la liste d'arguments doit toujours être fournie
-    explicitement avec la définition de la fonction, et se
-    comportera normalement.
-   </simpara>
+   <sect3 xml:id="functions.variable-arg-list.new">
+    <title><literal>...</literal> en PHP 5.6+</title>
+    
+    <para>
+     En PHP 5.6 et suivants, la liste des arguments peut inclure le
+     mot clé <literal>...</literal> pour indiquer que cette fonction accepte
+     un nombre variable d'arguments. Les arguments seront passés dans la variable
+     fournie sous forme d'un tableau ; par exemple :
+     
+     <example>
+      <title>Utilisation de <literal>...</literal></title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+function sum(...$numbers) {
+    $acc = 0;
+    foreach ($numbers as $n) {
+        $acc += $n;
+    }
+    return $acc;
+}
+
+echo sum(1, 2, 3, 4);
+?>
+]]>
+       </programlisting>
+       &example.outputs;
+       <screen>
+<![CDATA[
+10
+]]>
+       </screen>
+      </example>
+     </para>
+     
+     <para>
+      Vous pouvez aussi utiliser le mot clé <literal>...</literal> lors de l'appel
+      aux fonctions pour extraire le tableau, la variable
+      <classname>Traversable</classname> ou le litéral dans la liste d'arguments :
+      
+      <example>
+       <title>Utilisation de <literal>...</literal> pour fournir des arguments</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+function add($a, $b) {
+    return $a + $b;
+}
+
+echo add(...[1, 2])."\n";
+
+$a = [1, 2];
+echo add(...$a);
+?>
+]]>
+       </programlisting>
+       &example.outputs;
+       <screen>
+<![CDATA[
+3
+3
+]]>
+       </screen>
+      </example>
+     </para>
+     
+     <para>
+      Vous pouvez spécifier des arguments classiques avant le mot clé
+      <literal>...</literal>. Dans ce cas, seuls les arguments finaux
+      qui ne correspondent pas à un argument classique seront ajoutés
+      au tableau généré par <literal>...</literal>.
+     </para>
+     
+     <para>
+      Il est également possible d'ajouter un
+      <link linkend="language.oop5.typehinting">transtypage</link>
+      avant le mot clé <literal>...</literal>. Si ce transtypage est présent,
+      alors tous les arguments capturés par <literal>...</literal>
+      seront des objets de la classe visée.
+      
+      <example>
+       <title>Transtypage d'arguments variables</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+function total_intervals($unit, DateInterval ...$intervals) {
+    $time = 0;
+    foreach ($intervals as $interval) {
+        $time += $interval->$unit;
+    }
+    return $time;
+}
+
+$a = new DateInterval('P1D');
+$b = new DateInterval('P2D');
+echo total_intervals('d', $a, $b).' jours';
+
+// Ceci échouera, car null n'est pas un objet DateInterval.
+echo total_intervals('d', null);
+?>
+]]>
+       </programlisting>
+       &example.outputs;
+       <screen>
+<![CDATA[
+3 jours
+Catchable fatal error: Argument 2 passed to total_intervals() must be an instance of DateInterval, null given, called in - on line 14 and defined in - on line 2
+]]>
+       </screen>
+      </example>
+     </para>
+     
+     <para>
+      Pour finir, vous pouvez passer des arguments variables
+      <link linkend="functions.arguments.by-reference">par référence</link>
+      en préfixant le mot clé <literal>...</literal> d'un ET commercial
+      (<literal>&amp;</literal>).
+     </para>
+   </sect3>
+   
+   <sect3 xml:id="functions.variable-arg-list.old">
+    <title>Les anciennes versions de PHP</title>
+    
+    <para>
+     Aucune syntaxe spéciale n'est nécessaire pour spécifier qu'une fonction
+     est variable ; cependant, l'accès aux arguments de la fonction
+     nécessite l'utilisation des fonctions
+     <function>func_num_args</function>, <function>func_get_arg</function>
+     et <function>func_get_args</function>.
+    </para>
+    
+    <para>
+     Le premier exemple ci-dessus doit être implémenté comme ceci en PHP 5.5
+     et antérieurs :
+     
+     <example>
+      <title>Accès aux arguments variables en PHP 5.5 et antérieurs</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+function sum() {
+    $acc = 0;
+    foreach (func_get_args() as $n) {
+        $acc += $n;
+    }
+    return $acc;
+}
+
+echo sum(1, 2, 3, 4);
+?>
+]]>
+       </programlisting>
+       &example.outputs;
+       <screen>
+<![CDATA[
+10
+]]>
+       </screen>
+      </example>
+     </para>
+   </sect3>
    
   </sect2>
   
