@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 8c1fe071140833a8e90b266523ff26a32520c4e7 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.oci-field-is-null" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>oci_field_is_null</refname>
-  <refpurpose>Test si la valeur d'une colonne Oracle est &null;</refpurpose>
+  <refpurpose>Test si un champ de la ligne récupérée vaut &null;</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -17,8 +17,8 @@
    <methodparam><type>mixed</type><parameter>field</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Vérifie si le champ <parameter>field</parameter> donné, depuis la requête
-   <parameter>statement</parameter> est &null;.
+   Vérifie si le champ <parameter>field</parameter> donné de la ligne
+   courante de la requête <parameter>statement</parameter> vaut &null;.
   </para>
  </refsect1>
 
@@ -38,7 +38,7 @@
      <term><parameter>field</parameter></term>
      <listitem>
       <para>
-       Peut être un index de champ ou le nom d'un champ (en majuscule).
+       Peut être l'index du champ (en base 1) ou son nom.
       </para>
      </listitem>
     </varlistentry>
@@ -50,6 +50,50 @@
   &reftitle.returnvalues;
   <para>
    Retourne &true; si <parameter>field</parameter> vaut &null;, &false; sinon.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>oci_field_name</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// Création de la table avec :
+//   CREATE TABLE mytab (c1 NUMBER);
+//   INSERT INTO mytab VALUES (1);
+//   INSERT INTO mytab VALUES (NULL);
+
+$conn = oci_connect("hr", "hrpwd", "localhost/XE");
+if (!$conn) {
+    $m = oci_error();
+    trigger_error(htmlentities($m['message']), E_USER_ERROR);
+}
+
+$stid = oci_parse($conn, "SELECT * FROM mytab");
+oci_execute($stid);
+
+while (($row = oci_fetch_array($stid, OCI_RETURN_NULLS)) != false) {
+    $ncols = oci_num_fields($stid);
+    for ($col = 1; $col <= $ncols; $col++) {
+        var_dump(oci_field_is_null($stid, $col));
+    }    
+}
+
+// Affiche :
+//    bool(false)
+//    bool(true)
+
+oci_free_statement($stid);
+oci_close($conn);
+
+?>
+]]>
+    </programlisting>
+   </example>
   </para>
  </refsect1>
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 46854b1593fc9bf77d14db6fddcbfb73a20cbf86 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: e85d788eabb67456a5101afd7b994b69a495af4f Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.oci-fetch-array" xmlns="http://docbook.org/ns/docbook">
@@ -327,6 +327,10 @@ oci_execute($stid);
 while (($row = oci_fetch_array($stid, OCI_ASSOC+OCI_RETURN_LOBS)) != false) {
     echo $row['ID'] . "<br>\n";
     echo $row['DESCRIPTION'] . "<br>\n"; // contient la totalité de DESCRIPTION
+
+    // Dans une boucle, le fait de libérer la variable avant de récupérer une seconde
+    // ligne permet de réduire l'utilisation mémoire de PHP
+    unset($row); 
 }
 
 // Affiche :
@@ -525,7 +529,8 @@ oci_close($conn);
   </para>
   <para>
    <example>
-    <title>Exemple avec <function>oci_fetch_array</function> et un paramètre <literal>LIMIT</literal></title>
+    <title>Pagination avec <function>oci_fetch_array</function> en utilisant une requête
+     utilisant le paramètre <literal>LIMIT</literal></title>
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -540,22 +545,23 @@ if (!$conn) {
 preg_match('/Release ([0-9]+)\./', oci_server_version($conn), $matches);
 $oracleversion = $matches[1];
 
-// This is the query you want to execute
+// Requête pour la pagination
 $sql = 'SELECT city, postal_code FROM locations ORDER BY city';
 
-// Construit une requête imbriquée pour sélectionner un sous-jeu de lignes depuis $sql.
-// En environnement de production, assurez-vous de vous protéger des injections SQL
-// en concaténant les requêtes SQL
 if ($oracleversion >= 12) {
     // Utilisation de la syntaxe Oracle 12c OFFSET / FETCH NEXT
     $sql = $sql . ' OFFSET :offset ROWS FETCH NEXT :numrows ROWS ONLY';
 } else {
-    // Les anciennes versions requièrent une syntaxe de requête comme ceci ou
-    // la requête de base a besoin d'être ré-écrite pour utiliser la fonction row_number()
-    $sql = "SELECT * FROM (SELECT A.*, ROWNUM AS MY_RNUM
-                           FROM ($sql) A
+    // Les versions anciennes d'Oracle ont besoin d'une requête imbriquée
+    // pour sélectionner un sous-jeu depuis $sql. Ou, si la requête SQL
+    // est connue au moment du développement, utilisez plutôt une fonction
+    // row_number() au lieu de cette solution d'imbrication. Dans les
+    // environnements de production, assurez-vous d'éviter les injections
+    // SQL avec la concaténation.
+    $sql = "SELECT * FROM (SELECT a.*, ROWNUM AS my_rnum
+                           FROM ($sql) a
                            WHERE ROWNUM <= :offset + :numrows)
-            WHERE MY_RNUM > :offset";
+            WHERE my_rnum > :offset";
 }
 
 $offset  = 0;  // Ne pas traiter les premières lignes
@@ -600,7 +606,7 @@ if (!$conn) {
 // Requiert OCI8 2.0 et Oracle Database 12c
 // Voir aussi oci_get_implicit_resultset()
 $sql = 'DECLARE
-            c1 SYS_REFCURSOR;
+           c1 SYS_REFCURSOR;
         BEGIN
            OPEN c1 FOR SELECT city, postal_code FROM locations WHERE ROWNUM < 4 ORDER BY city;
            DBMS_SQL.RETURN_RESULT(c1);
