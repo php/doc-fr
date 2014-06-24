@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: fa909446a4cf15b5829ca87417db5ebcffc32a5c Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 4148bc245c90cbd97a98274d3120b5944e0ff220 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongocollection.deleteindex" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -23,48 +23,56 @@
 <?php
 
 public function deleteIndexes($keys) {
-  // toIndexString est une méthode protégée qui transforme les chaines, tableaux
-  // et objets en noms d'index
-  $index = $this->toIndexString($keys);
+  $indexName = $this->toIndexString($keys);
 
-  return $this->db->command(array("deleteIndexes" => $this->getName(), 
-    "index" => $index));
+  return $this->db->command(array(
+    "deleteIndexes" => $this->getName(),
+    "index" => $indexName,
+  ));
 }
 
 ?>
 ]]>
   </programlisting>
   <para>
-   Chaque index possède un nom unique à sa création. C'est l'utilisateur qui le précise en
-   général (avec l'option "name" de <function>MongoCollection::ensureIndex</function>) ou
-   alors il est généré par le pilote depuis une combinaisons de clés. Ce nom est alors utilisé
-   par <function>MongoCollection::deleteIndex</function>.
+   Chaque index se voit recevoir un nom unique lors de sa création.
+   Il est souvent généré par le driver, en se basant sur la clé de l'index,
+   et sur l'ordre ou le type de l'index, mais des noms personalisés peuvent
+   aussi être spécifiés avec la méthode <function>MongoCollection::createIndex</function>
+   (option <literal>"name"</literal>).
   </para>
   <para>
-   Malheureusement, la méthode <function>MongoCollection::ensureIndex</function> 
-   génère des noms très différents de la commande shell à cause de problèmes de compatibilité
-   ascendante, et <function>MongoCollection::deleteIndex</function> ne peut supprimer les index
-   dont les noms sont personnalisés. De ce fait, la meilleure manière de supprimer des index
-   créés via le shell ou avec des noms personnalisés est d'appeler directement la commande
-   <literal>deleteIndexes</literal> de la base de données.
+   Malheureusement, la méthode <function>MongoCollection::deleteIndex</function>
+   ne peut supprimer les indexes possédant un nom personalisé en raison d'une
+   compatibilité ascendante. Lorsqu'un argument est fourni, il est supposé être le nom
+   d'un seul champ dans un index croissant (i.e. le nom <literal>"x_1"</literal>
+   sera utilisé pour l'argument <literal>"x"</literal>). Si un tableau ou un objet
+   est fourni, un nom d'index est généré comme si l'argument avait été passé à
+   la méthode <function>MongoCollection::createIndex</function>.
   </para>
   <para>
-   Ainsi, si vous avez appelé un index "superfast query", vous ne pouvez le supprimer qu'avec
-   le driver PHP en exécutant :
+   Pour pouvoir supprimer un index possédant un nom personalisé avec le driver
+   PHP, la commande de base de données <literal>deleteIndexes</literal> doit être utilisée.
+   Actuellement, un index dont le nom est "myIndex" peut être supprimé avec le
+   driver PHP en exécutant :
   </para>
   <programlisting role="php">
 <![CDATA[
 <?php
 
-$db->command(array("deleteIndexes" => $collection->getName(), "index" => "superfast query"));
+$db->command(array(
+  "deleteIndexes" => $collection->getName(),
+  "index" => "myIndex",
+));
 
 ?>
 ]]>
   </programlisting>
   <para>
-   Pour trouver le nom d'un index, vous pouvez requêter la collection
-   <literal>system.indexes</literal> d'une base de données et chercher le champ
-   <literal>name</literal>.
+   Pour déterminer le nom d'un index avec le driver PHP, vous pouvez interroger
+   la collection <literal>system.indexes</literal> de la base de données,
+   et regarder le champ <literal>"name"</literal> de chaque résultat. Le champ
+   <literal>"ns"</literal> indiquera la collection dont l'index fait parti.
   </para>
  </refsect1>
 
@@ -78,7 +86,15 @@ $db->command(array("deleteIndexes" => $collection->getName(), "index" => "superf
      </term>
      <listitem>
       <para>
-       Le ou les champs dont il faut supprimer l'index.
+       Un tableau spécifiant les champs de l'index, comme clés. Pour chaque champ,
+       la valeur est soit la direction de l'index, soit le
+       <link xlink:href="&url.mongodb.dochub.indexes.types;">type d'index</link>.
+       Si la direction est spécifiée, la valeur <literal>1</literal> correspondra
+       à un sens croissant, et la valeur <literal>-1</literal>, au sens décroissant.
+      </para>
+      <para>
+       Si une chaîne de caractères est fournie, on supposera qu'il s'agit du nom
+       d'un seul champ d'un index croissant.
       </para>
      </listitem>
     </varlistentry>   
@@ -103,26 +119,38 @@ $db->command(array("deleteIndexes" => $collection->getName(), "index" => "superf
    <programlisting role="php">
 <![CDATA[
 <?php
+
 $m = new MongoClient();
 $c = $m->example->indices;
 
-// crée un index
-$c->ensureIndex(array("i"=>1));
-
-// supprime l'index
+// crée et supprime un index
+$c->createIndex(array("i"=>1));
 $c->deleteIndex("i");
 
-
-// créé un index à colonnes multiples
+// crée et supprime un index multi-clé
 $c->ensureIndex(array("j" => 1, "k" => 1));
-
-// supprime cet index
 $c->deleteIndex(array("j" => 1, "k" => 1));
+
 ?>
 ]]>
    </programlisting>
   </example>
  </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><methodname>MongoCollection::createIndex</methodname></member>
+   <member><methodname>MongoCollection::deleteIndexes</methodname></member>
+   <member><methodname>MongoCollection::toIndexString</methodname></member>
+   <member>
+    La documentation MongoDB sur les
+    <link xlink:href="&url.mongodb.dochub.indexes;">indexes</link> et les
+    <link xlink:href="&url.mongodb.dochub.indexes.types;">types d'indexes</link>.
+   </member>
+  </simplelist>
+ </refsect1>
+
 </refentry>
 <!-- Keep this comment at the end of the file
 Local variables:
