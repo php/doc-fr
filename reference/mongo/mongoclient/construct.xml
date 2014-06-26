@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 34575dba02e14db5c1a9e874b3fccfc5fbfab87b Maintainer: yannick Status: ready -->
+<!-- EN-Revision: adffd231a78f0c8e4e2c8eb24931e56d0830a629 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongoclient.construct" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -15,6 +15,7 @@
    <modifier>public</modifier> <methodname>MongoClient::__construct</methodname>
    <methodparam choice="opt"><type>string</type><parameter>server</parameter><initializer>"mongodb://localhost:27017"</initializer></methodparam>
    <methodparam choice="opt"><type>array</type><parameter>options</parameter><initializer>array("connect" => &true;)</initializer></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>driver_options</parameter></methodparam>
   </constructorsynopsis>
   <para>
    Si aucun paramètre n'est passé, la connexion se fera sur "localhost:27017" (ou ce qui
@@ -92,6 +93,61 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
        <itemizedlist>
         <listitem>
          <para>
+          <literal>"authMechanism"</literal>
+         </para>
+         <para>
+          Les mécanismes disponibles sont :
+          <informaltable>
+           <tgroup cols="3">
+            <thead>
+             <row>
+              <entry>authMechanism</entry>
+              <entry>Description</entry>
+              <entry>Disponibilité</entry>
+             </row>
+            </thead>
+            <tbody>
+             <row>
+              <entry>MONGODB-CR</entry>
+              <entry>Authentification en utilisant le mécanisme Challenge Response.
+               C'est la valeur par défaut.</entry>
+              <entry>Toutes les versions MongoDB</entry>
+             </row>
+             <row>
+              <entry>X509</entry>
+              <entry>Authentification en utilisant les certificats X509</entry>
+              <entry>MongoDB 2.6. Uniquement disponible lorsque
+               <xref linkend="book.openssl" /> est activé</entry>
+             </row>
+             <row>
+              <entry>PLAIN</entry>
+              <entry>Authentification en utilisant un nom d'utilisateur avec
+               un mot de passe en clair. Doit être utilisé sur des connexions
+               SSL. Habituellement utilisé par MongoDB pour s'identifier sur
+               des serveurs LDAP tierces</entry>
+              <entry>MongoDB Enterprise 2.4. Le driver doit avoir été compilé avec CyrusSASL2</entry>
+             </row>
+             <row>
+              <entry>GSSAPI</entry>
+              <entry>Authentification via les systèmes kerberos</entry>
+              <entry>MongoDB Enterprise 2.4. Le driver doit avoir été compilé avec CyrusSASL2</entry>
+             </row>
+            </tbody>
+           </tgroup>
+          </informaltable>
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <literal>"authSource"</literal>
+         </para>
+         <para>
+          Doit être défini au nom de la base de données dans laquelle
+          l'utilisateur est défini.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
           <literal>"connect"</literal>
          </para>
          <para>
@@ -131,37 +187,55 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
           <literal>"fsync"</literal>
          </para>
          <para>
-          Lorsque <literal>fsync</literal> est défini, toutes les opérations
-          en écriture sur la base de données ne seront terminées que lorsque
-          les écritures seront synchronisées avec le disque.
-          Ceci rend les opérations en écriture bien plus lentes,
-          mais garantie le succès de l'opération d'écriture ainsi que l'écriture
-          sur le disque. Si vous avez activé la journalisation dans MongoDB (par
-          défaut), alors la synchronisation ne surviendra que sur le
-          <emphasis>journal</emphasis>. Si la journalisation n'est pas activée,
-          alors l'utilisation de <literal>fsync</literal> nécessite une
-          écriture complère sur le disque.
+          Lorsque <literal>"fsync"</literal> est défini, toutes les opérations
+          en écriture seront bloquantes tant que la base de données ne les aura pas
+          écrites sur le disque. Ceci rend les opérations d'écriture plus lentes,
+          mais garantie que les écritures réussissent et que les opérations peuvent
+          être retrouvées dans le cas d'un échec total du système.
          </para>
-         <warning>
-          <para>
-           Veuillez <emphasis>ne pas utiliser</emphasis> cette option
-           sachant qu'elle est maintenant obsolète, mais utilisez
-           plutôt l'option <literal>journal</literal>, peut-être en
-           combinaison avec l'option <literal>w</literal>.
-          </para>
-         </warning>
+         <para>
+          Si le serveur MongoDB a son historisation d'activé, cette option est
+          identique à <emphasis>"journal"</emphasis>. Si l'historisation n'est
+          pas activée, cette option s'assure que les opérations d'écriture
+          seront synchronisées dans les fichiers de base de données sur le disque.
+         </para>
+         <note>
+          <simpara>
+           Si l'historisation est activée, les utilisateurs sont vivement
+           encouragés à utiliser l'option <literal>"journal"</literal>
+           plutôt que <literal>"fsync"</literal>. N'utilisez pas
+           <literal>"fsync"</literal> et <literal>"journal"</literal> en même
+           temps ; cela produirait une erreur.
+          </simpara>
+         </note>
         </listitem>
         <listitem>
          <para>
           <literal>"journal"</literal>
          </para>
          <para>
-          Lorsque <literal>journal</literal> est défini, toutes les opérations
-          d'écriture sur la base de données seront bloquantes tant que le serveur
-          de base de données n'a pas écrit le journal sur le disque. Cette option
-          rend les opérations d'écriture légèrement plus lentes, mais garantie
-          que les opérations en écriture réussissent, et que l'opération peut
-          retrouvée lors d'une erreur totale du système.
+          Lorsque <literal>"journal"</literal> est défini, toutes les opérations
+          en écriture seront bloquantes tant que la base de données n'aura pas
+          reflétée ces modifications dans le journal du disque. Ceci rend les
+          opérations en écriture plus lentes, mais garantie que les écritures
+          ont réussi et que les opérations peuvent être retrouvées en cas
+          d'échec total du système.
+         </para>
+         <note>
+          <simpara>
+           Si cette option est utilisée et que l'historisation est activée,
+           MongoDB 2.6+ va émettre une erreur, et l'écriture échouera ; les
+           anciennes versions de serveur vont simplement ignorer cette option.
+          </simpara>
+         </note>
+        </listitem>
+        <listitem>
+         <para>
+          <literal>"gssapiServiceName"</literal>
+         </para>
+         <para>
+          Défini le <link xlink:href="&url.mongodb.docs.kerberos.service-principal;">service principal Kerberos</link>.
+          Uniquement applicable lorsque authMechanism=GSSAPI. Par défaut, "mongodb".
          </para>
         </listitem>
         <listitem>
@@ -223,6 +297,16 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
         </listitem>
         <listitem>
          <para>
+          <literal>"secondaryAcceptableLatencyMS"</literal>
+         </para>
+         <para>
+          Lors d'une lecture depuis un secondaire (en utilisant ReadPreferences), ne pas
+          lire depuis les secondaires dont on sait que la latence dépasse
+          <literal>secondaryAcceptableLatencyMS</literal>. Par défaut, vaut <literal>15</literal>
+         </para>
+        </listitem>
+        <listitem>
+         <para>
           <literal>"socketTimeoutMS"</literal>
          </para>
          <para>
@@ -236,6 +320,8 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
             l'écriture.
            </simpara>
           </note>
+          Par défaut, vaut 30 secondes. Cette valeur peut également être définie
+          pour chaque curseur en utilisant la méthode <methodname>MongoCursor::timeout</methodname>.
          </para>
         </listitem>
         <listitem>
@@ -303,10 +389,19 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
        <itemizedlist>
         <listitem>
          <para>
+          <literal>"slaveOkay"</literal>
+         </para>
+         <para>
+          Obsolète. Veuillez utiliser plutôt les options de
+          <link linkend="mongo.readpreferences">préférence de lecture</link>.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
           <literal>"timeout"</literal>
          </para>
          <para>
-          Alias obsolète pour "connectTimeoutMS".
+          Alias obsolète pour <literal>"connectTimeoutMS"</literal>.
          </para>
         </listitem>
         <listitem>
@@ -314,7 +409,34 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
           <literal>"wTimeout"</literal>
          </para>
          <para>
-          Alias obsolète pour "wTimeoutMS".
+          Alias obsolète pour <literal>"wTimeoutMS"</literal>.
+         </para>
+        </listitem>
+       </itemizedlist>
+      </para>
+     </listitem>
+    </varlistentry>
+
+    <varlistentry>
+     <term>
+      <parameter>driver_options</parameter>
+     </term>
+     <listitem>
+      <para>
+       Un tableau d'options pour le driver MongoDB. Les options incluent les configurations
+       de connexions des <link linkend="mongo.connecting.context.ssl">options de contexte
+       pour SSL</link> ou les <link linkend="context.mongodb">fonctions de rappel de l'identification</link>.
+       <itemizedlist>
+        <listitem>
+         <para>
+          <literal>"context"</literal>
+         </para>
+         <para>
+          Le contexte de flux à attacher à toutes les nouvelles connexions. Ceci vous
+          permet, par exemple, de configurer les certificats SSL décrits sur la
+          page de la documentation sur les <link linkend="context.ssl">options de contexte SSL</link>.
+          Voir le tutorial sur la
+          <link linkend="mongo.connecting.context.ssl">connexion via SSL</link>.
          </para>
         </listitem>
        </itemizedlist>
@@ -422,7 +544,7 @@ $m = new MongoClient("mongodb:///tmp/mongodb-27017.sock,localhost:27017");
     l'authentification. Vous pouvez créer un utilisateur avec la commande shell
     Mongo suivante :
    </para>
-   <programlisting>
+   <programlisting role="shell">
 <![CDATA[
 > use admin
 switched to db admin
@@ -481,7 +603,7 @@ $m = new MongoClient($uri, array('replicaSet' => 'rs'));
     au secondaire préféré, comme défaut pour toutes les opérations
     en écriture :
    </para>
-   <programlisting>
+   <programlisting role="php">
 <![CDATA[
 <?php
 $m = new MongoClient("mongodb://localhost/?journal=true&readPreference=secondary");
@@ -491,7 +613,7 @@ $m = new MongoClient("mongodb://localhost/?journal=true&readPreference=secondary
    <para>
     Et maintenant, nous faisons la même chose mais via le tableau d'options :
    </para>
-   <programlisting>
+   <programlisting role="php">
 <![CDATA[
 <?php
 $options = array(
@@ -539,11 +661,32 @@ $m = new MongoClient($uri, array('replicaSet' => 'rs'));
      </thead>
      <tbody>
       <row>
+       <entry>1.5.0</entry>
+       <entry>
+        <para>
+         Ajout de <literal>"authMechanism"</literal>, <literal>"gssapiServiceName"</literal>
+         et <literal>"secondaryAcceptableLatencyMS"</literal>.
+        </para>
+       </entry>
+      </row>
+      <row>
        <entry>1.4.0</entry>
        <entry>
         <para>
-         Ajout de l'option <literal>"wTimeoutMS"</literal> en tant que remplacement
-         de l'option <literal>"wTimeout"</literal>.
+         Ajout de l'option <literal>"wTimeoutMS"</literal>, qui remplace
+         l'option <literal>"wTimeout"</literal>.
+        </para>
+        <para>
+         Emets une alerte de niveau <constant>E_DEPRECATED</constant> lorsque
+         <literal>"slaveOkay"</literal> ou <literal>"timeout"</literal> est utilisé.
+        </para>
+       </entry>
+      </row>
+      <row>
+       <entry>1.5.0</entry>
+       <entry>
+        <para>
+         Ajout de <literal>"authSource"</literal>.
         </para>
        </entry>
       </row>
