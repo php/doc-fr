@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: b51167b8eab37ef29b31301419075172d3b47ca6 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 5e6265f846011016807c9714cdad1c36418d1791 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.changes" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -94,8 +94,27 @@
    Modification de fonctionalités
    <itemizedlist>
     <listitem>
+    <para>
+     Ajout d'une abstraction padique des transactions distribuées.
+     Les transactions XA sont supportées en utilisant des appels SQL standarts.
+     Ceci est un inconvénient car les participans XA doivent être gérés manuellement.
+     PECL/mysqlnd_ms introduit des appels API pour contrôler les transactions XA
+     sur les serveurs MySQL. Lors de l'utilisation de nouvelles fonctions,
+     PECL/mysqlnd_ms agit comme un coordinateur de transaction. Après le début
+     d'une transaction distribuée, le plugin surveille tous les serveurs concernés
+     tant que la transaction ne s'est pas terminée, et envoie les requêtes SQL
+     appropriées sur les participants XA.
+     </para>
      <para>
-      Intorduction d'une boucle de tentatives automatique pour les
+      Ceci est utile, par exemple, lors de l'utilisation de Fabric et du partage.
+      Lors de l'utilisation de Fabric, les serveurs partagés concernés dans une
+      transaction peuvent ne pas être connus par avance. Aussi, le contrôle manuelle
+      d'une transaction qui touchent plusieurs serveurs partagés devient difficile.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Introduction d'une boucle de tentatives automatique pour les
       <link linkend="mysqlnd-ms.transient_errors">erreurs passagères</link> et les
       <link linkend="function.mysqlnd-ms-get-stats">statistiques correspondantes</link>
       pour compter le nombre de tentatives implicites. Quelques clusters
@@ -106,6 +125,22 @@
       immédiatement à un autre noeud n'est pas nécessaire comme réponse à
       ces erreurs. Il convient plutôt de lancer une boucle de tentative.
       C'est une situation commune lors de l'utilisation d'un cluster MySQL.
+     </para>
+    </listitem>
+    <listitem>
+    <para>
+     Introduit une boucle de re-tentative automatique pour les
+     <link linkend="mysqlnd-ms.transient_errors">erreurs transitoires</link> et les
+     <link linkend="function.mysqlnd-ms-get-stats">statistiques correspondantes</link>
+     pour compter le nombre de re-tentatives implicites. Quelques grappes de
+     bases de données distribuées utilisent les erreurs transitoires pour
+     toucher un client afin qu'il re-tente ses opérations un peu plus tard.
+     La plupart du temps, le client est alors supposé mettre en pause l'exécution
+     pendant une court instant avant de tenter de nouveau l'opération. 
+     Le passage immédiat au noeud suivant n'est pas nécessaire en
+     réponse à cette erreur. Au lieu de cela, une boucle de re-tentative
+     peut être mise en place. Ceci est une situation commune lors de l'utilisation
+     de grappe MySQL.
      </para>
     </listitem>
     <listitem>
