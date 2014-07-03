@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ --> 
-<!-- EN-Revision: 0aa774414ae3ca9032fa586b59554dd66fc376df Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 5e6265f846011016807c9714cdad1c36418d1791 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.setup" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -449,7 +449,7 @@ $mysqli = new mysqli("myapp", "username", "password", "database");
 Warning: mysqli::mysqli(): (mysqlnd_ms) (mysqlnd_ms) Failed to parse config file [s1.json]. Please, verify the JSON in Command line code on line 1
 ]]>
     </screen>
-  </example>
+   </example>
   </para>
   <para>
    Il peut être utile de définir 
@@ -1917,7 +1917,7 @@ function pick_server($connected, $query, $masters, $slaves, $last_used_connectio
           <entry>Depuis 1.5.0.</entry>
          </row>
         </tbody>
-        </tgroup>
+       </tgroup>
       </informaltable>
      </listitem>
     </varlistentry>
@@ -2784,6 +2784,408 @@ $mysqli->set_charset("latin1");
            </para>
           </entry>
           <entry>Depuis 1.6.0.</entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </informaltable>
+     </listitem>
+    </varlistentry>
+    
+    <varlistentry xml:id="ini.mysqlnd-ms-plugin-config-v2.xa">
+     <term>
+      <parameter>xa</parameter>
+      <type>object</type>
+     </term>
+     <listitem>
+      <para>
+       Cette option a été introduite en 1.6.0.
+      </para>
+      <para>
+       <note>
+        <title>Expérimental</title>
+        <para>
+         Cette fonctionnalité est actuellement en cours de développement.
+         Il peut y avoir des bogues ou des limitations dans la fonctionnalité.
+         Ne pas utiliser en environnement de production.
+        </para>
+       </note>
+      </para>
+      <informaltable>
+       <tgroup cols="2">
+        <colspec colwidth="2*"/>
+        <colspec colwidth="8*"/>
+        <thead>
+         <row>
+          <entry>Mot clé</entry>
+          <entry>Description</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry>
+           <literal>state_store</literal>
+          </entry>
+          <entry>
+           <informaltable>
+            <tgroup cols="2">
+             <colspec colwidth="2*"/>
+             <colspec colwidth="8*"/>
+             <thead>
+              <row>
+               <entry>Mot clé</entry>
+               <entry>Description</entry>
+              </row>
+             </thead>
+             <tbody>
+              <row>
+               <entry>
+                <literal>record_participant_credentials</literal>
+               </entry>
+               <entry>
+                <para>
+                 Si l'on doit stocker le nom d'utilisateur et le mot de passe
+                 d'un participant à une transaction globale dans la table
+                 des participants. Si désactivé, la collection des données incorrectes
+                 va utiliser le nom d'utilisateur et le mot de passe par défaut lors
+                 de la connexion aux participants. Tant que vous n'utilisez pas de
+                 nom d'utilisateur et de mot de passe différents pour chaque serveur
+                 MySQL, vous pouvez utiliser la configuration par défaut, faisant
+                 ainsi que vous ne stockerez pas d'informations sensibles dans le
+                 stockage de statut.
+                </para>
+                <para>
+                 Veuillez noter que le nom d'utilisateur et le mot de passe sont
+                 stockés en clear lors de l'utilisation du stockage de statut MySQL,
+                 qui est le seul moyen de stockage actuellement. Il en est de votre
+                 responsabilité de protéger cette information sensible.
+                </para>
+                <para>
+                 Par défaut : <literal>false</literal>
+                </para>
+               </entry>
+              </row>
+              <row>
+               <entry>
+                <literal>participant_localhost_ip</literal>
+               </entry>
+               <entry>
+                <para>
+                 Durant la collection des données incorrectes XA, le plugin peut trouver
+                 un serveur participant avec l'hôte <literal>localhost</literal> enregistré.
+                 Si la collection de données incorrectes prend place sur un autre hôte
+                 que celui enregistré pour le participant, alors le nom d'hôte
+                 <literal>localhost</literal> doit résoudre un hôte différent. Toutefois,
+                 lors de l'enregistrement de nom d'hôte de serveur participant dans le
+                 stockage de statut, au lieu d'utiliser la valeur <literal>localhost</literal>,
+                 vous pouvez utiliser l'adresse IP actuelle de <literal>localhost</literal>.
+                </para>
+                <para>
+                 La définition de <literal>participant_localhost_ip</literal> ne doit être
+                 considérée que si <literal>localhost</literal> ne peut être utilisé.
+                 D'un point de vue de la collection des données incorrectes uniquement,
+                 il est préférable de ne pas configurer de socket de connexion mais plutôt
+                 de fournir un adresse IP et un port pour un noeud.
+                </para>
+               </entry>
+              </row>
+              <row>
+               <entry>
+                <literal>mysql</literal>
+               </entry>
+               <entry>
+                <para>
+                 Le stockage de statut MySQL est le seul stockage de statut disponible.
+                </para>
+                <informaltable>
+                 <tgroup cols="2">
+                  <colspec colwidth="2*"/>
+                  <colspec colwidth="8*"/>
+                  <thead>
+                   <row>
+                    <entry>Mot clé</entry>
+                    <entry>Description</entry>
+                   </row>
+                  </thead>
+                  <tbody>
+                   <row>
+                    <entry>
+                     <literal>global_trx_table</literal>
+                    </entry>
+                    <entry>
+                     <para>
+                      Nom de la table MySQL utilisé pour stocker le statut d'une transaction
+                      globale entrant ou stoppée. Utilisez la requête SQL ci-dessous pour
+                      créer la table. Assurez-vous d'éditer le nom de la table pour la faire
+                      correspondre à votre configuration.
+                     </para>
+                     <para>
+                      <example>
+                       <title>Définition SQL pour la table de stockage MySQL de statut des transactions</title>
+                       <programlisting role="sql">
+<![CDATA[
+CREATE TABLE mysqlnd_ms_xa_trx (
+  store_trx_id int(11) NOT NULL AUTO_INCREMENT,
+  gtrid int(11) NOT NULL,
+  format_id int(10) unsigned NOT NULL DEFAULT '1',
+  state enum('XA_NON_EXISTING','XA_ACTIVE','XA_IDLE','XA_PREPARED','XA_COMMIT','XA_ROLLBACK') NOT NULL DEFAULT 'XA_NON_EXISTING',
+  intend enum('XA_NON_EXISTING','XA_ACTIVE','XA_IDLE','XA_PREPARED','XA_COMMIT','XA_ROLLBACK') DEFAULT 'XA_NON_EXISTING',
+  finished enum('NO','SUCCESS','FAILURE') NOT NULL DEFAULT 'NO',
+  modified timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  started datetime DEFAULT NULL,
+  timeout datetime DEFAULT NULL,
+  PRIMARY KEY (store_trx_id),
+  KEY idx_xa_id (gtrid,format_id,finished),
+  KEY idx_state (state)
+) ENGINE=InnoDB
+]]>
+                       </programlisting>
+                      </example>
+                     </para>
+                     <para>
+                      Par défaut : <literal>mysqlnd_ms_xa_trx</literal>
+                     </para>
+                    </entry>
+                   </row>
+                   <row>
+                    <entry>
+                     <literal>participant_table</literal>
+                    </entry>
+                    <entry>
+                     <para>
+                      Nom de la table MySQL utilisé pour stocker les participants à une transaction
+                      globale entrante ou stoppée. Utilisez la requête SQL ci-dessous pour créer la
+                      table. Assurez-vous d'éditer le nom de la table pour la faire correspondre
+                      à votre configuration.
+                     </para>
+                     <para>
+                      Le stockage des informations de connexion peut être activé ou désactivé
+                      en utilisant <literal>record_participant_credentials</literal>
+                     </para>
+                     <para>
+                      <example>
+                       <title>Définition SQL de la table de stockage MySQL de statut des transactions</title>
+                       <programlisting role="sql">
+<![CDATA[
+CREATE TABLE mysqlnd_ms_xa_participants (
+  fk_store_trx_id int(11) NOT NULL,
+  bqual varbinary(64) NOT NULL DEFAULT '',
+  participant_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+  server_uuid varchar(127) DEFAULT NULL,
+  scheme varchar(1024) NOT NULL,
+  host varchar(127) DEFAULT NULL,
+  port smallint(5) unsigned DEFAULT NULL,
+  socket varchar(127) DEFAULT NULL,
+  user varchar(127) DEFAULT NULL,
+  password varchar(127) DEFAULT NULL,
+  state enum('XA_NON_EXISTING','XA_ACTIVE','XA_IDLE','XA_PREPARED','XA_COMMIT','XA_ROLLBACK')
+   NOT NULL DEFAULT 'XA_NON_EXISTING',
+  health enum('OK','GC_DONE','CLIENT ERROR','SERVER ERROR') NOT NULL DEFAULT 'OK',
+  connection_id int(10) unsigned DEFAULT NULL,
+  client_errno smallint(5) unsigned DEFAULT NULL,
+  client_error varchar(1024) DEFAULT NULL,
+  modified timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (participant_id),
+  KEY idx_xa_bqual (bqual),
+  KEY idx_store_trx (fk_store_trx_id),
+  CONSTRAINT mysqlnd_ms_xa_participants_ibfk_1 FOREIGN KEY (fk_store_trx_id)
+    REFERENCES mysqlnd_ms_xa_trx (store_trx_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB
+]]>
+                       </programlisting>
+                      </example>
+                     </para>
+                     <para>
+                      Par défaut : <literal>mysqlnd_ms_xa_participants</literal>
+                     </para>
+                    </entry>
+                   </row>
+                   <row>
+                    <entry>
+                     <literal>garbage_collection_table</literal>
+                    </entry>
+                    <entry>
+                     <para>
+                      Nom de la table MySQL utilisé pour surveiller et synchroniser les exécutions
+                      de la collection des données incorrectes. Utilisez la requête SQL ci-dessous
+                      pour créer la table. Assurez-vous d'éditer le nom de la table pour la faire
+                      correspondre à votre configuration.
+                     </para>
+                     <para>
+                      <example>
+                       <title>Définition SQL pour la table MySQL de stockage de statut de la collection des données incorrectes</title>
+                       <programlisting role="sql">
+<![CDATA[
+CREATE TABLE mysqlnd_ms_xa_gc (
+  gc_id int(10) unsigned NOT NULL AUTO_INCREMENT,
+  gtrid int(11) NOT NULL,
+  format_id int(10) unsigned NOT NULL DEFAULT '1',
+  fk_store_trx_id int(11) DEFAULT NULL,
+  modified timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  attempts smallint(5) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (gc_id),
+  KEY idx_store_trx (gtrid,format_id,fk_store_trx_id)
+) ENGINE=InnoDB
+]]>
+                       </programlisting>
+                      </example>
+                     </para>
+                     <para>
+                      Par défaut : <literal>mysqlnd_ms_xa_gc</literal>
+                     </para>
+                    </entry>
+                   </row>
+                   <row>
+                    <entry>
+                     <literal>host</literal>
+                    </entry>
+                    <entry>
+                     <para>
+                      Nom d'hôte du serveur MySQL.
+                     </para>
+                    </entry>
+                   </row>
+                   <row>
+                    <entry>
+                     <literal>user</literal>
+                    </entry>
+                    <entry>
+                     <para>
+                      Nom de l'utilisateur à utiliser pour la connexion au serveur MySQL.
+                     </para>
+                    </entry>
+                   </row>
+                   <row>
+                    <entry>
+                     <literal>password</literal>
+                    </entry>
+                    <entry>
+                     <para>
+                      Mot de passe à utiliser pour le serveur MySQL.
+                     </para>
+                    </entry>
+                   </row>
+                   <row>
+                    <entry>
+                     <literal>db</literal>
+                    </entry>
+                    <entry>
+                     <para>
+                      Base de données qui contiendra les tables de collection des données
+                      incorrectes. Notez que vous devez d'abord créer les tables
+                      avant d'utiliser le plugin. Les tables ne seront pas
+                      créées pendant l'exécution et la collection des données incorrectes
+                      va échouer si les tables n'existent pas.
+                     </para>
+                    </entry>
+                   </row>
+                   <row>
+                    <entry>
+                     <literal>port</literal>
+                    </entry>
+                    <entry>
+                     <para>
+                      Port du serveur MySQL.
+                     </para>
+                    </entry>
+                   </row>
+                   <row>
+                    <entry>
+                     <literal>socket</literal>
+                    </entry>
+                    <entry>
+                     <para>
+                      Socket de domaine Unix pour le serveur MySQL.
+                      Notez que si vous avez plusieurs serveurs PHP,
+                      chacun d'eux va tenter de s'occuper de la collection
+                      des données incorrectes, et doit pouvoir se connecter
+                      au stockage de statut. Dans ce cas, vous devriez
+                      configurer l'adresse IP et le port pour le serveur
+                      de stockage de statut MySQL pour vous assurer
+                      que tous les serveurs PHP arrivent à le trouver.
+                     </para>
+                    </entry>
+                   </row>
+                  </tbody>
+                 </tgroup>
+                </informaltable>
+               </entry>
+              </row>
+             </tbody>
+            </tgroup>
+           </informaltable>
+          </entry>
+         </row>
+         <row>
+          <entry>
+           <literal>garbage_collection</literal>
+          </entry>
+          <entry>
+           <informaltable>
+            <tgroup cols="3">
+             <colspec colwidth="1*"/>
+             <colspec colwidth="7*"/>
+             <colspec colwidth="2*"/>
+             <thead>
+              <row>
+               <entry>Mot clé</entry>
+               <entry>Description</entry>
+               <entry>Version</entry>
+              </row>
+             </thead>
+             <tbody>
+              <row>
+               <entry>
+                <literal>max_retries</literal>
+               </entry>
+               <entry>
+                <para>
+                 Nombre maximal de collection de données incorrectes à tenter.
+                 Les valeurs autorisées vont de <literal>0</literal> à <literal>100</literal>.
+                 Une configuration à <literal>0</literal> signifie aucune limite,
+                 tant que le stockage de statut ne force une limite. Si le stockage
+                 de statut force une limite, on peut supposer que ce sera une valeur
+                 supérieure à <literal>100</literal>.
+                </para>
+                <para>
+                 Par défaut : <literal>5</literal>
+                </para>
+               </entry>
+               <entry>Depuis 1.6.0.</entry>
+              </row>
+              <row>
+               <entry>
+                <literal>probability</literal>
+               </entry>
+               <entry>
+                <para>
+                 Probabilité de collection de données incorrectes. La configuration
+                 de cette valeur n'a aucun effet. Cette fonctionnalité est en cours
+                 de développement.
+                </para>
+                <para>
+                 Par défaut : <literal>5</literal>
+                </para>
+               </entry>
+               <entry>Depuis 1.6.0.</entry>
+              </row>
+             </tbody>
+            </tgroup>
+           </informaltable>
+          </entry>
+         </row>
+         <row>
+          <entry>
+           <literal>rollback_on_close</literal>
+          </entry>
+          <entry>
+           <para>
+            Si une annulation automatique sur une transaction globale lorsque la connexion
+            est fermée.
+           </para>
+           <para>
+            Par défaut : <literal>true</literal>
+           </para>
+          </entry>
          </row>
         </tbody>
        </tgroup>
