@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: cd110607fd94ccea0f99a693be555a50ce5c6b1e Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<chapter xml:id="oci8.dtrace" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>OCI8 et le suivi dynamique DTrace</title>
+ <section>
+  <para>
+   OCI8 2.0 introduit DTrace qui peut être utilisé sur les systèles qui
+   supporte DTrace. Voir le <link linkend="features.dtrace">suivi dynamique
+   DTrace</link> pour un aperçu de PHP et DTrace.
+  </para>
+ </section>
+
+<section>
+ <title>Installation d'OCI8 avec le support DTrace</title>
+  <para>
+   Pour activer le support DTrace en PHP OCI8, vous devez compiler
+   OCI8 comme extension partagée, avec avoir configuré
+   <literal>PHP_DTRACE</literal>.
+  </para>
+  <para>
+   <informalexample>
+    <screen>
+<![CDATA[
+$ export PHP_DTRACE=yes
+$ pecl install oci8
+]]>
+    </screen>
+   </informalexample>
+  </para>
+  <para>
+   Editez votre fichier php.ini, définissez l'option
+   <link linkend="ini.extension-dir">extension_dir</link> pour correspondre
+   au dossier contenant le fichier <filename>oci8.so</filename> créé,
+   et activez l'extension en ajoutant :
+  </para>
+  <para>
+   <informalexample>
+    <screen>
+<![CDATA[
+extension=oci8.so
+]]>
+    </screen>
+   </informalexample>
+  </para>
+  <para>
+   Si vous installez PHP OCI8 2.0 depuis PECL en utilisant
+   <filename>phpize</filename> et
+   <filename>configure</filename> (au lieu de <filename>pecl</filename>),
+   vous devez définir <literal>PHP_DTRACE=yes</literal>. Ceci en raison
+   du fait que l'option <literal>--enable-dtrace</literal> sera ignoré par
+   une limitation du script <filename>configure</filename> du paquet PECL.
+  </para>
+
+  <para>
+   Voir <link linkend="install.pecl">l'installation d'une extension PECL</link>
+   pour les instructions générales d'installation PECL.
+  </para>
+ </section>
+
+ <section>
+  <title>Découverte statique DTrace en PHP OCI8</title>
+  <table>
+   <title>Les découvertes statiques suivantes sont disponibles en PHP OCI8</title>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>Nom de la découverte</entry>
+      <entry>Description de la découverte</entry>
+      <entry>Arguments de la découverte</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry><literal>oci8-connect-entry</literal></entry>
+      <entry>Initialisé par oci_connect(), oci_pconnect() et oci_new_connect().
+       Lancé avant que la connexion à la base de données ne soit établie.</entry>
+      <entry>char *<varname>username</varname>, char *<varname>dbname</varname>,
+       char *<varname>charset</varname>, long <varname>session_mode</varname>,
+       int <varname>persistent</varname>, int <varname>exclusive</varname></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-connect-return</literal></entry>
+      <entry>Lancé à la fin de la connexion.</entry>
+      <entry>void *<varname>connection</varname></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-check-connection</literal></entry>
+      <entry>Lancé si une erreur Oracle a fait que la connexion est devenue invalide.</entry>
+      <entry>void *<varname>connection</varname>, char *<varname>client_id</varname>, int <varname>is_open</varname>, long <varname>errcode</varname>, unsigned long <varname>server_status</varname></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-sqltext</literal></entry>
+      <entry>Lancé lorsque oci_parse() est exécuté.</entry>
+      <entry>void *<varname>connection</varname>, char *<varname>client_id</varname>, void *<varname>statement</varname>, char *<varname>sql</varname></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-connection-close</literal></entry>
+      <entry>Lancé lorsque la connexion à la base de données est totalement détruite.</entry>
+      <entry>void *<varname>connection</varname></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-error</literal></entry>
+      <entry>Lancé si une erreur Oracle survient.</entry>
+      <entry>int <varname>status</varname>, long <varname>errcode</varname></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-execute-mode</literal></entry>
+      <entry>Lancé lors d'un appel à <function>oci_execute</function> pour afficher le mode d'exécution.</entry>
+      <entry>void *<varname>connection</varname>, char *<varname>client_id</varname>, void *<varname>statement</varname>, unsigned int <varname>mode</varname></entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </table>
+  <para>
+   Ces découvertes sont utiles pour suivre les scripts OCI8.
+  </para>
+
+  <para>
+   Les variables <varname>connection</varname> et <varname>statement</varname>
+   sont des pointeurs vers les structures internes utilisées pour suivre les connexions
+   PHP et les requêtes exécutées.
+  </para>
+
+  <para>
+    La variable <varname>client_id</varname> est la valeur définie par
+    <function>oci_set_client_identifier</function>.
+  </para>
+
+  <para>
+  </para>
+
+  <para>
+  </para>
+
+  <para>
+  </para>
+
+
+  <para>
+   Le coeur de PHP a aussi des découvertes statiques.
+   Voir <link linkend="features.dtrace.static-probes">les découvertes statiques DTrace
+   dans le coeur PHP</link>.
+  </para>
+
+  <table>
+   <title>Découvertes DTrace pour le débogage interne en OCI8</title>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>Nom de la découverte</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry><literal>oci8-connect-expiry</literal></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-connect-lookup</literal></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-connect-p-dtor-close</literal></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-connect-p-dtor-release</literal></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-connect-type</literal></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-sesspool-create</literal></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-sesspool-stats</literal></entry>
+     </row>
+     <row>
+      <entry><literal>oci8-sesspool-type</literal></entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </table>
+  <para>
+   Ces découvertes sont utiles pour les mainteneurs OCI8. Référez-vous
+   au code source d'OCI8 pour les arguments et pour voir quand elles sont
+   lancées.
+  </para>
+ </section>
+
+ <section>
+  <title>Liste des découvertes statiques DTraceen PHP OCI8</title>
+  <para>
+   Pour lister toutes les découvertes disponibles, démarrez un processus PHP et exécutez :
+   <informalexample>
+    <programlisting>
+<![CDATA[
+# dtrace -l
+]]>
+    </programlisting>
+   </informalexample>
+  </para>
+  
+  <para>
+   L'affiche sera similaire à :
+   <informalexample>
+    <programlisting>
+<![CDATA[
+   ID   PROVIDER            MODULE                          FUNCTION NAME
+   [ . . . ]
+   17 phpoci22116           oci8.so   php_oci_dtrace_check_connection oci8-check-connection
+   18 phpoci22116           oci8.so                php_oci_do_connect oci8-connect-entry
+   19 phpoci22116           oci8.so         php_oci_persistent_helper oci8-connect-expiry
+   20 phpoci22116           oci8.so             php_oci_do_connect_ex oci8-connect-lookup
+   21 phpoci22116           oci8.so  php_oci_pconnection_list_np_dtor oci8-connect-p-dtor-close
+   22 phpoci22116           oci8.so  php_oci_pconnection_list_np_dtor oci8-connect-p-dtor-release
+   23 phpoci22116           oci8.so                php_oci_do_connect oci8-connect-return
+   24 phpoci22116           oci8.so             php_oci_do_connect_ex oci8-connect-type
+   25 phpoci22116           oci8.so          php_oci_connection_close oci8-connection-close
+   26 phpoci22116           oci8.so                     php_oci_error oci8-error
+   27 phpoci22116           oci8.so         php_oci_statement_execute oci8-execute-mode
+   28 phpoci22116           oci8.so              php_oci_create_spool oci8-sesspool-create
+   29 phpoci22116           oci8.so            php_oci_create_session oci8-sesspool-stats
+   30 phpoci22116           oci8.so            php_oci_create_session oci8-sesspool-type
+   31 phpoci22116           oci8.so          php_oci_statement_create oci8-sqltext
+]]>
+    </programlisting>
+   </informalexample>
+  </para>
+
+   <para>
+    Les valeurs de la colonne "Provider" affichent <literal>phpoci</literal>
+    suivi de l'identifiant du processus actuellement exécuté par PHP.
+   </para>
+
+   <para>
+    La colonne "Function" affiche les noms des fonctions C interne à PHP
+    où chaque fournisseur est situé.
+   </para>
+
+   <para>
+    Si un processus PHP n'est pas en cours d'exécution, alors aucune
+    découverte PHP ne sera affichée.
+   </para>
+ </section>
+
+ <section>
+  <title>Exemple de DTrace avec PHP OCI8</title>
+  <para>
+   Cet exemple montre les bases du langue de script DTrace D.
+   <example>
+    <title><filename>user_oci8_probes.d</filename> pour suivre toutes les découvertes statiques 
+     au niveau utilisation PHP OCI8 avec DTrace</title>
+    <programlisting>
+<![CDATA[
+#!/usr/sbin/dtrace -Zs
+
+#pragma D option quiet
+
+php*:::oci8-connect-entry
+{
+    printf("%lld: PHP connect-entry\n", walltimestamp);
+    printf("  credentials=\"%s@%s\"\n", arg0 ? copyinstr(arg0) : "", arg1 ? copyinstr(arg1) : "");
+    printf("  charset=\"%s\"\n", arg2 ? copyinstr(arg2) : "");
+    printf("  session_mode=%ld\n", (long)arg3);
+    printf("  persistent=%d\n", (int)arg4);
+    printf("  exclusive=%d\n", (int)arg5);
+}
+
+php*:::oci8-connect-return
+{
+    printf("%lld: PHP oci8-connect-return\n", walltimestamp);
+    printf("  connection=0x%p\n", (void *)arg0);
+}
+
+php*:::oci8-connection-close
+{
+    printf("%lld: PHP oci8-connect-close\n", walltimestamp);
+    printf("  connection=0x%p\n", (void *)arg0);
+}
+
+php*:::oci8-error
+{
+    printf("%lld: PHP oci8-error\n", walltimestamp);
+    printf("  status=%d\n", (int)arg0);
+    printf("  errcode=%ld\n", (long)arg1);
+}
+
+php*:::oci8-check-connection
+{
+    printf("%lld: PHP oci8-check-connection\n", walltimestamp);
+    printf("  connection=0x%p\n", (void *)arg0);
+    printf("  client_id=\"%s\"\n", arg1 ? copyinstr(arg1) : "");
+    printf("  is_open=%d\n", arg2);
+    printf("  errcode=%ld\n", (long)arg3);
+    printf("  server_status=%lu\n", (unsigned long)arg4);
+}
+
+php*:::oci8-sqltext
+{
+    printf("%lld: PHP oci8-sqltext\n", walltimestamp);
+    printf("  connection=0x%p\n", (void *)arg0);
+    printf("  client_id=\"%s\"\n", arg1 ? copyinstr(arg1) : "");
+    printf("  statement=0x%p\n", (void *)arg2);
+    printf("  sql=\"%s\"\n", arg3 ? copyinstr(arg3) : "");
+}
+
+php*:::oci8-execute-mode
+{
+    printf("%lld: PHP oci8-execute-mode\n", walltimestamp);
+    printf("  connection=0x%p\n", (void *)arg0);
+    printf("  client_id=\"%s\"\n", arg1 ? copyinstr(arg1) : "");
+    printf("  statement=0x%p\n", (void *)arg2);
+    printf("  mode=0x%x\n", arg3);
+}
+]]>
+    </programlisting>
+   </example>
+  </para>
+
+  <para>
+   Ce script utilise l'option <literal>-Z</literal> de <filename>dtrace</filename>,
+   lui permettant d'être exécutée lorsqu'il n'y a aucun processus
+   PHP en cours d'exécution. Si cette option est omis, le script
+   va vouloir se terminer immédiatement lorsqu'aucun exécutable PHP
+   n'est en cours de fonctionnement.
+  </para>
+
+  <para>
+   Sur les machines avec plusieurs CPU, l'ordre des découvertes semble
+   ne pas être séquentiel. Ceci dépend du CPU qui exécute les découvertes,
+   et le nombre de threads qui migrent des CPUs. L'affichage des
+   timestamps des découvertes peut aider à éviter toute confusion.
+  </para>
+
+  <para>
+   Le script suit tous les points de découvertes statiques niveau utilisateur
+   PHP OCI8 pendant la durée de l'exécution du script PHP. Exécution du script D :
+   <informalexample>
+    <programlisting>
+<![CDATA[
+# ./user_oci8_probes.d
+]]>
+    </programlisting>
+   </informalexample>
+  </para>
+
+  <para>
+   Exécutez un script PHP ou une application. Le script de surveillance D
+   affiche chaque argument de découvertes lancé. Par exemple, un simple
+   script PHP qui requête une table va produire les traces suivantes :
+   <informalexample>
+    <programlisting>
+<![CDATA[
+1381794982092854582: PHP connect-entry
+  credentials="hr@localhost/pdborcl"
+  charset=""
+  session_mode=0
+  persistent=0
+  exclusive=0
+1381794982183158766: PHP oci8-connect-return
+  connection=0x7f4a7907bfb8
+1381794982183594576: PHP oci8-sqltext
+  connection=0x7f4a7907bfb8
+  client_id="Chris"
+  statement=0x7f4a7907c2a0
+  sql="select * from employees"
+1381794982183783706: PHP oci8-execute-mode
+  connection=0x7f4a7907bfb8
+  client_id="Chris"
+  statement=0x7f4a7907c2a0
+  mode=0x20
+1381794982444344390: PHP oci8-connect-close
+  connection=0x7f4a7907bfb8
+]]>
+    </programlisting>
+   </informalexample>
+  </para>
+  
+  <para>
+   Lorsque la surveillance se termine, le script D peut s'arrêter avec la
+   combinaison <literal>^C</literal>.
+  </para>
+
+ </section>
+
+ <section>
+ <title>Voir aussi</title>
+ <simplelist>
+  <member><link linkend="features.dtrace">Le suivi dynamique DTrace</link></member>
+ </simplelist>
+</section>
+
+</chapter>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
+
