@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 58707c8b0487acbdf57ab86a8efd59dc9a529622 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<refentry xml:id="evtimer.construct" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <refnamediv>
+  <refname>EvTimer::__construct</refname>
+  <refpurpose>Construit un objet EvTimer watcher</refpurpose>
+ </refnamediv>
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <modifier>public</modifier>
+   <methodname>EvTimer::__construct</methodname>
+   <methodparam>
+    <type>double</type>
+    <parameter>after</parameter>
+   </methodparam>
+   <methodparam>
+    <type>double</type>
+    <parameter>repeat</parameter>
+   </methodparam>
+   <methodparam>
+    <type>callable</type>
+    <parameter>callback</parameter>
+   </methodparam>
+   <methodparam
+   choice="opt">
+    <type>mixed</type>
+    <parameter>data</parameter>
+    <initializer>&null;</initializer>
+   </methodparam>
+   <methodparam
+   choice="opt">
+    <type>int</type>
+    <parameter>priority</parameter>
+    <initializer>0</initializer>
+   </methodparam>
+  </methodsynopsis>
+  <para>
+   Construit un objet EvTimer watcher.
+  </para>
+ </refsect1>
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <variablelist>
+   <varlistentry>
+    <term>
+     <parameter>after</parameter>
+    </term>
+    <listitem>
+     <para>
+      Configure le time pour lancer le trigger après
+      <parameter>after</parameter> secondes.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term>
+     <parameter>repeat</parameter>
+    </term>
+    <listitem>
+     <para>
+      Si ce paramètre vaut <constant>0.0</constant>, alors le watcher
+      sera automatiquement stoppé lors de le délai maximal d'attente sera
+      atteint. Si ce paramètre est positif, alors le timer va automatiquement
+      lancer le trigger à chaque seconde suivante, et ce, tant qu'il ne sera
+      pas stoppé manuellement.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term>
+     <parameter>callback</parameter>
+    </term>
+    <listitem>
+     <para>
+      Voir les
+      <link linkend="ev.watcher-callbacks">fonctions de rappel Watcher</link>.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term>
+     <parameter>data</parameter>
+    </term>
+    <listitem>
+     <para>
+      Données personnalisées associées avec le watcher.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term>
+     <parameter>priority</parameter>
+    </term>
+    <listitem>
+     <para>
+      <link linkend="ev.constants.watcher-pri">Les priorités du Watcher</link>
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </refsect1>
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Retourne un objet EvTimer en cas de succès.
+  </para>
+ </refsect1>
+ <refsect1 role="examples">
+  &reftitle.examples;
+ <example>
+   <title>timers simples</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+// Crée et démarre un timer lancé après 2 secondes
+$w1 = new EvTimer(2, 0, function () {
+    echo "2 secondes passées\n";
+});
+
+// Crée et démarre un timer lancé après 2 secondes, et le répère toutes les secondes
+// tant que nous ne le stoppons pas manuellement
+$w2 = new EvTimer(2, 1, function ($w) {
+    echo "est appelé chaque seconde, est démarré après 2 secondes\n";
+    echo "itération = ", Ev::iteration(), PHP_EOL;
+
+    // Stop the watcher after 5 iterations
+    Ev::iteration() == 5 and $w->stop();
+    // Stop the watcher if further calls cause more than 10 iterations
+    Ev::iteration() >= 10 and $w->stop();
+});
+
+// Crée un time stoppé. Il sera inactif tant que nous ne le démarrons pas nous même
+$w_stopped = EvTimer::createStopped(10, 5, function($w) {
+    echo "Fonction de rappel du timer crée stoppé\n";
+
+    // Stop le watcher après 2 itérations
+    Ev::iteration() >= 2 and $w->stop();
+});
+
+// Boucle tant que Ev::stop() est appelé ou tant que tous les watchers ne s'arrêtent
+Ev::run();
+
+// Démarre et verrouille s'il est en fonctionnement
+$w_stopped->start();
+echo "Exécution d'une seule itération\n";
+Ev::run(Ev::RUN_ONCE);
+
+echo "Redémarre le second watcher et tente de gérer les mêmes événements, mais ne bloque pas\n";
+$w2->again();
+Ev::run(Ev::RUN_NOWAIT);
+
+$w = new EvTimer(10, 0, function() {});
+echo "Exécution d'une boucle bloquante\n";
+Ev::run();
+echo "FIN\n";
+?>
+]]>
+   </programlisting>
+  &example.outputs.similar;
+  <screen>
+<![CDATA[
+2 secondes passées
+est appelé chaque seconde, est démarré après 2 secondes
+itération = 1
+est appelé chaque seconde, est démarré après 2 secondes
+itération = 2
+est appelé chaque seconde, est démarré après 2 secondes
+itération = 3
+est appelé chaque seconde, est démarré après 2 secondes
+itération = 4
+est appelé chaque seconde, est démarré après 2 secondes
+itération = 5
+Exécution d'une seule itération
+Fonction de rappel du timer crée stoppé
+Redémarre le second watcher et tente de gérer les mêmes événements, mais ne bloque pas
+Exécution d'une boucle bloquante
+est appelé chaque seconde, est démarré après 2 secondes
+itération = 8
+est appelé chaque seconde, est démarré après 2 secondes
+itération = 9
+est appelé chaque seconde, est démarré après 2 secondes
+itération = 10
+FIN
+]]>
+  </screen>
+  </example>
+ </refsect1>
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member>
+    <methodname>EvTimer::createStopped</methodname>
+   </member>
+   <member>
+    <classname>EvPeriodic</classname>
+   </member>
+   <member>
+    <link xlink:href="http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#code_ev_timer_code_relative_and_opti">ev_timer - répétition d'un délai d'attente maximal</link>
+   </member>
+   <member>
+    <link xlink:href="http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#Be_smart_about_timeouts">Être intelligent avec les délais d'attente maximal</link>
+   </member>
+  </simplelist>
+ </refsect1>
+</refentry>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
