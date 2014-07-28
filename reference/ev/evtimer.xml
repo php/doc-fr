@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 58707c8b0487acbdf57ab86a8efd59dc9a529622 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<phpdoc:classref xml:id="class.evtimer" xmlns:phpdoc="http://php.net/ns/phpdoc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
+ <title>La classe EvTimer</title>
+ <titleabbrev>EvTimer</titleabbrev>
+ <partintro>
+<!-- {{{ EvTimer intro -->
+  <section xml:id="evtimer.intro">
+   &reftitle.intro;
+   <para>
+    Les watchers <classname>EvTimer</classname> sont des watchers relativement
+    simples qui génèrent un événement après une durée fournie, et, optionnellement,
+    se répète dans un intervalle régulier.
+   </para>
+   <para>
+    Les minuteurs sont basés sur un temps réel, aussi, si un minuteur enregistre
+    un événement qui se termine après une heure et ré-initialise l'horloge système
+    à <emphasis>Janvier de l'an passée</emphasis>, il sera de nouveau
+    hors délai après une heure (approximativement). "Approximativement"
+    car la détection des sauts dans le temps est dur, et certaines inexactitudes
+    sont inévitables.
+   </para>
+   <para>
+    Il est garantie que la fonction de rappel sera appelée uniquement après
+    l'expiration du délai maximal d'attente (et non exactement à ce moment précis,
+    aussi, sur des systèmes avec une horloge basse résolution, il se peut qu'un
+    petit délai ne soit introduit). Si plusieurs minuteurs deviennent
+    prêts pendant la même itération de boucle, alors celui dont les valeurs
+    du délai d'attente maximal sera la plus proche sera invoqué avant l'autre
+    ayant une priorité identique mais avec une valeur du délai d'attente plus
+    éloignée (mais ceci n'est plus vrai lorsqu'une fonction de rappel appelle
+    récursivement la méthode <methodname>EvLoop::run</methodname>).
+   </para>
+   <para>
+    Le minuteur lui-même va faire tout ce qu'il lui est possible pour ne pas
+    dériver, mais, si un minuteur est configuré pour se lancer toutes les
+    <constant>10</constant> secondes, alors il va normalement se lancer
+    à intervalle de <constant>10</constant> secondes exactement.
+    Cependant, si le script ne peut pas conserver le minuteur car il prend
+    plus de temps que ses <constant>10</constant> secondes, le minuteur
+    ne pourra se lancer pas plus d'une fois par itération de boucle
+    d'événements.
+   </para>
+  </section>
+<!-- }}} -->
+  <section xml:id="evtimer.synopsis">
+   &reftitle.classsynopsis;
+
+<!-- {{{ Synopsis -->
+   <classsynopsis>
+    <ooclass>
+     <classname>EvTimer</classname>
+    </ooclass>
+<!-- {{{ Class synopsis -->
+    <classsynopsisinfo>
+     <ooclass>
+      <classname>EvTimer</classname>
+     </ooclass>
+     <ooclass>
+      <modifier>extends</modifier>
+      <classname>EvWatcher</classname>
+     </ooclass>
+    </classsynopsisinfo>
+<!-- }}} -->
+    <classsynopsisinfo role="comment">&Properties;</classsynopsisinfo>
+    <fieldsynopsis>
+     <modifier>public</modifier>
+     <varname linkend="evtimer.props.repeat">repeat</varname>
+    </fieldsynopsis>
+    <fieldsynopsis>
+     <modifier>public</modifier>
+     <varname linkend="evtimer.props.remaining">remaining</varname>
+    </fieldsynopsis>
+    <classsynopsisinfo role="comment">&InheritedProperties;</classsynopsisinfo>
+    <xi:include xpointer="xmlns(db=http://docbook.org/ns/docbook) xpointer(id('evwatcher.synopsis')/descendant::db:fieldsynopsis)" />
+    <classsynopsisinfo role="comment">&Methods;</classsynopsisinfo>
+    <xi:include xpointer="xmlns(db=http://docbook.org/ns/docbook) xpointer(id('class.evtimer')/db:refentry/db:refsect1[@role='description']/descendant::db:methodsynopsis[1])" />
+    <classsynopsisinfo role="comment">&InheritedMethods;</classsynopsisinfo>
+    <xi:include xpointer="xmlns(db=http://docbook.org/ns/docbook) xpointer(id('class.evwatcher')/db:refentry/db:refsect1[@role='description']/descendant::db:methodsynopsis[1])" />
+   </classsynopsis>
+<!-- }}} -->
+  </section>
+<!-- {{{ EvTimer properties -->
+  <section xml:id="evtimer.props">
+   &reftitle.properties;
+   <variablelist>
+    <varlistentry xml:id="evtimer.props.repeat">
+     <term>
+      <varname>repeat</varname>
+     </term>
+     <listitem>
+      <para>
+       Si cette propriété vaut <constant>0.0</constant>, alors il sera automatiquement
+       stoppée une fois le délai maximal d'attente atteint. S'il est positif,
+       alors le minuteur sera automatiquement configuré à se lancer à chaque
+       seconde en suivant, tant qu'il ne sera pas stoppé manuellement.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="evtimer.props.remaining">
+     <term>
+      <varname>remaining</varname>
+     </term>
+     <listitem>
+      <para>
+       Retourne le temps restant avant que le minuteur ne se lance.
+       Si le minuteur est actif, alors ce temps sera relatif au temps de
+       la boucle d'événements courante, sinon, il sera relatif à la
+       valeur du délai d'attente maximal actuellement configuré.
+      </para>
+      <para>
+       Aussi, après l'instanciation d'un <classname>EvTimer</classname>
+       avec une valeur de <parameter>after</parameter> à
+       <constant>5.0</constant> et une valeur de <parameter>repeat</parameter>
+       à <constant>7.0</constant>, <varname>remaining</varname> retournera
+       <constant>5.0</constant>. Lorsque le minuteur est démarré, et qu'une
+       seconde se passe, <varname>remaining</varname> va retourner
+       <constant>4.0</constant>. lorsque le minuteur expire et qu'il est
+       redémarré, il retournera approximativement <constant>7.0</constant>
+       (probablement un peu moins sachant que l'onvocation de la fonction de rappel
+       prend un peu de temps aussi), et ainsi de suite.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </section>
+<!-- }}} -->
+ </partintro>
+
+ &reference.ev.entities.evtimer;
+
+</phpdoc:classref>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->

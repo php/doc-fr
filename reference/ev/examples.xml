@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 58707c8b0487acbdf57ab86a8efd59dc9a529622 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<chapter xml:id="ev.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ &reftitle.examples;
+ <example>
+  <title>Exemple de minuteurs</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+// Crée et démarre un minuteur qui se lance après 2 secondes
+$w1 = new EvTimer(2, 0, function () {
+    echo "2 secondes sont passées\n";
+});
+
+// Crée et lance un minuteur qui se lance après 2 seonces, et se répète toutes les secondes
+// tant qu'on ne le stoppe pas manuellement
+$w2 = new EvTimer(2, 1, function ($w) {
+    echo "est appelé chaque seconde, et est lancé après 2 secondes\n";
+    echo "itération = ", Ev::iteration(), PHP_EOL;
+
+    // Stoppe le watcher après 5 itérations
+    Ev::iteration() == 5 and $w->stop();
+    // Stoppe le watcher si les prochains appels provoquent plus de 10 itérations
+    Ev::iteration() >= 10 and $w->stop();
+});
+
+// Crée un minuteur stoppé. Il restera inactif tant que nous ne le démarrons pas nous même
+$w_stopped = EvTimer::createStopped(10, 5, function($w) {
+    echo "Fonction de rappel d'un minuteur créé arrêté\n";
+
+    // Stoppe le watcher après 2 itérations
+    Ev::iteration() >= 2 and $w->stop();
+});
+
+// Boucle tant que Ev::stop() n'est pas appelé ou que tous les watchers ne soient stoppés
+Ev::run();
+
+// Démarre et regarde si ca fonctionne
+$w_stopped->start();
+echo "Exécute une seule itération\n";
+Ev::run(Ev::RUN_ONCE);
+
+echo "Redémarre le second watcher et tente de gérer le même événement, mais ne bloque pas\n";
+$w2->again();
+Ev::run(Ev::RUN_NOWAIT);
+
+$w = new EvTimer(10, 0, function() {});
+echo "Exécution d'une boucle bloquante\n";
+Ev::run();
+echo "END\n";
+?>
+]]>
+  </programlisting>
+  &example.outputs.similar;
+  <screen>
+<![CDATA[
+2 secondes sont passées
+est appelé chaque seconde, et est lancé après 2 secondes
+itération = 1
+est appelé chaque seconde, et est lancé après 2 secondes
+itération = 2
+est appelé chaque seconde, et est lancé après 2 secondes
+itération = 3
+est appelé chaque seconde, et est lancé après 2 secondes
+itération = 4
+est appelé chaque seconde, et est lancé après 2 secondes
+itération = 5
+Exécute une seule itération
+Fonction de rappel d'un minuteur créé arrêté
+Redémarre le second watcher et tente de gérer le même événement, mais ne bloque pas
+Exécution d'une boucle bloquante
+est appelé chaque seconde, et est lancé après 2 secondes
+itération = 8
+est appelé chaque seconde, et est lancé après 2 secondes
+itération = 9
+est appelé chaque seconde, et est lancé après 2 secondes
+itération = 10
+END
+]]>
+  </screen>
+ </example>
+ <example>
+  <title>Minuteur périodique. Alerte toutes les 10.5 secondes</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+$w = new EvPeriodic(0., 10.5, NULL, function ($w, $revents) {
+    echo time(), PHP_EOL;
+});
+
+Ev::run();
+?>
+]]>
+  </programlisting>
+ </example>
+ <example>
+  <title>Minuteur périodique. Utilisation de la fonction de rappel de reprogrammation</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+// Alerte toutes les 10.5 secondes
+
+function reschedule_cb ($watcher, $now) {
+    return $now + (10.5. - fmod($now, 10.5));
+}
+
+$w = new EvPeriodic(0., 0., "reschedule_cb", function ($w, $revents) {
+    echo time(), PHP_EOL;
+});
+
+Ev::run();
+?>
+
+]]>
+  </programlisting>
+ </example>
+ <example>
+  <title>Minuteur périodique. Alerte toutes les 10.5 secondes, en commençant maintenant</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+// Alerte toutes les 10.5 secondes en commençant maintenant
+$w = new EvPeriodic(fmod(Ev::now(), 10.5), 10.5, NULL, function ($w, $revents) {
+    echo time(), PHP_EOL;
+});
+
+Ev::run();
+?>
+]]>
+  </programlisting>
+ </example>
+ <example>
+  <title>Attend que STDIN devienne accessible en lecture</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+// Attend que STDIN devienne accessible en lecture
+$w = new EvIo(STDIN, Ev::READ, function ($watcher, $revents) {
+    echo "STDIN est accessible en lecture\n";
+});
+
+Ev::run(Ev::RUN_ONCE);
+?>
+]]>
+  </programlisting>
+ </example>
+ <example>
+  <title>Utilisation de quelques I/O asynchrones pour accéder à un socket</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+/* Utilise quelques I/O asynchrone pour accéder à un socket */
+
+// L'extension `sockets' va continuer d'historiser les alertes
+// pour EINPROGRESS, EAGAIN/EWOULDBLOCK etc.
+error_reporting(E_ERROR);
+
+$e_nonblocking = array (/*EAGAIN or EWOULDBLOCK*/11, /*EINPROGRESS*/115);
+
+// Récupère le port pour le service WWW
+$service_port = getservbyname('www', 'tcp');
+
+// Récupère l'adresse IP pour l'hôte cible
+$address = gethostbyname('google.co.uk');
+
+// Crée un socket TCP/IP
+$socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+if ($socket === FALSE) {
+    echo "Echec de socket_create() : raison : "
+        .socket_strerror(socket_last_error()) . "\n";
+}
+
+// Défini le drapeau O_NONBLOCK
+socket_set_nonblock($socket);
+
+// On stoppe une fois le délai maximal d'attente atteint
+$timeout_watcher = new EvTimer(10.0, 0., function () use ($socket) {
+    socket_close($socket);
+    Ev::stop(Ev::BREAK_ALL);
+});
+
+// Effectue un requête HEAD lorsque le socket est accessible en écriture
+$write_watcher = new EvIo($socket, Ev::WRITE, function ($w)
+    use ($socket, $timeout_watcher, $e_nonblocking)
+{
+    // Stoppe le watcher timeout
+    $timeout_watcher->stop();
+    // Stoppe le watcher write
+    $w->stop();
+
+    $in = "HEAD / HTTP/1.1\r\n";
+    $in .= "Host: google.co.uk\r\n";
+    $in .= "Connection: Close\r\n\r\n";
+
+    if (!socket_write($socket, $in, strlen($in))) {
+        trigger_error("Echec lors de l'écriture de $in dans le socket", E_USER_ERROR);
+    }
+
+    $read_watcher = new EvIo($socket, Ev::READ, function ($w, $re)
+        use ($socket, $e_nonblocking)
+    {
+        // Le socket est accessible en lecture. recv() a reçu 20 octets en utilisant le mode non bloquant
+        $ret = socket_recv($socket, $out, 20, MSG_DONTWAIT);
+
+        if ($ret) {
+            echo $out;
+        } elseif ($ret === 0) {
+            // Tout a été lu
+            $w->stop();
+            socket_close($socket);
+            return;
+        }
+
+        // On attrappe EINPROGRESS, EAGAIN, ou EWOULDBLOCK
+        if (in_array(socket_last_error(), $e_nonblocking)) {
+            return;
+        }
+
+        $w->stop();
+        socket_close($socket);
+    });
+
+    Ev::run();
+});
+
+$result = socket_connect($socket, $address, $service_port);
+
+Ev::run();
+?>
+]]>
+  </programlisting>
+  &example.outputs.similar;
+  <screen>
+<![CDATA[
+HTTP/1.1 301 Moved Permanently
+Location: http://www.google.co.uk/
+Content-Type: text/html; charset=UTF-8
+Date: Sun, 23 Dec 2012 16:08:27 GMT
+Expires: Tue, 22 Jan 2013 16:08:27 GMT
+Cache-Control: public, max-age=2592000
+Server: gws
+Content-Length: 221
+X-XSS-Protection: 1; mode=block
+X-Frame-Options: SAMEORIGIN
+Connection: close
+
+
+]]>
+  </screen>
+ </example>
+ <example>
+  <title>Encapsule une boucle dans une autre</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+/*
+* Tente de récupérer une boucle d'événement encapsulable, et l'encapsule dans
+* une boucle d'événements par défaut. Si c'est possible, on utilise la boucle
+* par défaut. La boucle par défaut est stockée dans $loop_hi, alors que la boucle
+* encapsulable est stockée dans $loop_lo( qui est $loop_hi dans le cas où
+* aucune boucle encapsulable ne peut être utilisée).
+*
+* Exemple traduit en PHP de :
+* http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#Examples_CONTENT-9
+*/
+$loop_hi = EvLoop::defaultLoop();
+$loop_lo = NULL;
+$embed   = NULL;
+
+/*
+* Regarde s'il y a une chance d'en récupérer une qui fonctionne
+* (une valeur de drapeau à 0 signifie une auto-détection)
+*/
+$loop_lo = Ev::embeddableBackends() & Ev::recommendedBackends()
+    ? new EvLoop(Ev::embeddableBackends() & Ev::recommendedBackends())
+    : 0;
+
+if ($loop_lo) {
+    $embed = new EvEmbed($loop_lo, function () {});
+} else {
+    $loop_lo = $loop_hi;
+}
+?>
+]]>
+  </programlisting>
+ </example>
+ <example>
+  <title>Encapsule une boucle créée avec le backend kqueue dans la boucle par défaut</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+/*
+* Vérifie si kqueue est disponible mais non recommandé, et crée un backend kqueue
+* pour l'utiliser avec les sockets (ce qui fonctionne avec toutes les implentations kqueue).
+* Stocke la boucle d'événements kqueue/uniquement-socket dans loop_socket. (On peut
+* également utiliser EVFLAG_NOENV)
+*
+* Exemple repris depuis :
+* http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#Examples_CONTENT-9
+*/
+$loop        = EvLoop::defaultLoop();
+$socket_loop = NULL;
+$embed       = NULL;
+
+if (Ev::supportedBackends() & ~Ev::recommendedBackends() & Ev::BACKEND_KQUEUE) {
+    if (($socket_loop = new EvLoop(Ev::BACKEND_KQUEUE))) {
+        $embed = new EvEmbed($loop);
+    }
+}
+
+if (!$socket_loop) {
+    $socket_loop = $loop;
+}
+
+// Maintenant, on peut utiliser $socket_loop pour toutes les sockets, et $loop pour tout le reste
+?>
+]]>
+  </programlisting>
+ </example>
+ <example>
+  <title>Gestion du signal SIGTERM</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+$w = new EvSignal(SIGTERM, function ($watcher) {
+    echo "On reçoit un SIGTERM\n";
+    $watcher->stop();
+});
+
+Ev::run();
+?>
+]]>
+  </programlisting>
+ </example>
+ <example>
+  <title>Surveillance des modifications dans /var/log/messages</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+// Utilisation d'un intervalle de mise à jour de 10 secondes.
+$w = new EvStat("/var/log/messages", 8, function ($w) {
+    echo "Modification dans /var/log/messages\n";
+
+    $attr = $w->attr();
+
+    if ($attr['nlink']) {
+        printf("Taille courante : %ld\n", $attr['size']);
+        printf("atime actuel : %ld\n", $attr['atime']);
+        printf("mtime actuel : %ld\n", $attr['mtime']);
+    } else {
+        fprintf(STDERR, "Le fichier `messages` n'est plus ici !");
+        $w->stop();
+    }
+});
+
+Ev::run();
+?>
+]]>
+  </programlisting>
+ </example>
+ <example>
+  <title>Surveillance des modifications dans /var/log/messages. On regarde les modifications avec une seconde de délai</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+$timer = EvTimer::createStopped(0., 1.02, function ($w) {
+    $w->stop();
+
+    $stat = $w->data;
+
+    // 1 seconde après la dernière modification d'un fichier
+    printf("Taille actuelle : %ld\n", $stat->attr()['size']);
+});
+
+$stat = new EvStat("/var/log/messages", 0., function () use ($timer) {
+    // Réinitialise le watcher timer
+    $timer->again();
+});
+
+$timer->data = $stat;
+
+Ev::run();
+?>
+]]>
+  </programlisting>
+ </example>
+ <example>
+  <title>Modification du statut d'un processus</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+$pid = pcntl_fork();
+
+if ($pid == -1) {
+    fprintf(STDERR, "pcntl_fork a échoué\n");
+} elseif ($pid) {
+    $w = new EvChild($pid, FALSE, function ($w, $revents) {
+        $w->stop();
+
+        printf("Le processus %d est sorti avec un statut %d\n", $w->rpid, $w->rstatus);
+    });
+
+    Ev::run();
+
+    // Protection contre les Zombies
+    pcntl_wait($status);
+} else {
+    // On fork le fils
+    exit(2);
+}
+?>
+]]>
+  </programlisting>
+ </example>
+</chapter>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
