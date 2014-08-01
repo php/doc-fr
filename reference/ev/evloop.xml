@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 0aa774414ae3ca9032fa586b59554dd66fc376df Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<phpdoc:classref xml:id="class.evloop" xmlns:phpdoc="http://php.net/ns/phpdoc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
+ <title>La classe EvLoop</title>
+ <titleabbrev>EvLoop</titleabbrev>
+ <partintro>
+<!-- {{{ EvLoop intro -->
+  <section xml:id="evloop.intro">
+   &reftitle.intro;
+   <para>
+    Représente une boucle d'événements qui est toujours distincte de la
+    <emphasis>boucle par défaut</emphasis>. Contrairement à la
+    <emphasis>boucle par défaut</emphasis>, elle ne peut pas gérer les
+    watchers <classname>EvChild</classname>.
+   </para>
+   <para>
+    Lorsqu'on utilise les threads, nous devons créer une boucle par thread,
+    et utiliser la <emphasis>boucle par défaut</emphasis> dans le thread
+    parent.
+   </para>
+   <para>
+    La <emphasis>boucle d'événements par défaut</emphasis> est initialisée
+    automatiquement par <emphasis>Ev</emphasis>. Elle est accessible via les
+    méthodes de la classe <classname>Ev</classname> ou via la méthode
+    <methodname>EvLoop::defaultLoop</methodname>.
+   </para>
+  </section>
+<!-- }}} -->
+  <section xml:id="evloop.synopsis">
+   &reftitle.classsynopsis;
+
+<!-- {{{ Synopsis -->
+   <classsynopsis>
+    <ooclass>
+     <classname>EvLoop</classname>
+    </ooclass>
+<!-- {{{ Class synopsis -->
+    <classsynopsisinfo>
+     <ooclass>
+      <modifier>final</modifier>
+      <classname>EvLoop</classname>
+     </ooclass>
+    </classsynopsisinfo>
+<!-- }}} -->
+    <classsynopsisinfo role="comment">&Properties;</classsynopsisinfo>
+    <fieldsynopsis>
+     <modifier>public</modifier>
+     <varname linkend="evloop.props.data">data</varname>
+    </fieldsynopsis>
+    <fieldsynopsis>
+     <modifier>public</modifier>
+     <varname linkend="evloop.props.backend">backend</varname>
+    </fieldsynopsis>
+    <fieldsynopsis>
+     <modifier>public</modifier>
+     <varname linkend="evloop.props.is-default-loop">is_default_loop</varname>
+    </fieldsynopsis>
+    <fieldsynopsis>
+     <modifier>public</modifier>
+     <varname linkend="evloop.props.iteration">iteration</varname>
+    </fieldsynopsis>
+    <fieldsynopsis>
+     <modifier>public</modifier>
+     <varname linkend="evloop.props.pending">pending</varname>
+    </fieldsynopsis>
+    <fieldsynopsis>
+     <modifier>public</modifier>
+     <varname linkend="evloop.props.io-interval">io_interval</varname>
+    </fieldsynopsis>
+    <fieldsynopsis>
+     <modifier>public</modifier>
+     <varname linkend="evloop.props.timeout-interval">timeout_interval</varname>
+    </fieldsynopsis>
+    <fieldsynopsis>
+     <modifier>public</modifier>
+     <varname linkend="evloop.props.depth">depth</varname>
+    </fieldsynopsis>
+    <classsynopsisinfo role="comment">&Methods;</classsynopsisinfo>
+    <xi:include xpointer="xmlns(db=http://docbook.org/ns/docbook) xpointer(id('class.evloop')/db:refentry/db:refsect1[@role='description']/descendant::db:methodsynopsis[1])" />
+   </classsynopsis>
+<!-- }}} -->
+  </section>
+<!-- {{{ EvLoop properties -->
+  <section xml:id="evloop.props">
+   &reftitle.properties;
+   <variablelist>
+    <varlistentry xml:id="evloop.props.data">
+     <term>
+      <varname>data</varname>
+     </term>
+     <listitem>
+      <para>
+       Données personnalisées à attacher à la boucle
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="evloop.props.backend">
+     <term>
+      <varname>backend</varname>
+     </term>
+     <listitem>
+      <para>
+       <emphasis>Lecture seule</emphasis>. Les
+       <link linkend="ev.constants.watcher-backends">drapeaux du backend</link>
+       indiquant le backend d'événements en cours d'utilisation.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="evloop.props.is-default-loop">
+     <term>
+      <varname>is_default_loop</varname>
+     </term>
+     <listitem>
+      <para>
+       <emphasis>Lecture seule</emphasis>. &true; si c'est la boucle
+       d'événements par défaut.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="evloop.props.iteration">
+     <term>
+      <varname>iteration</varname>
+     </term>
+     <listitem>
+      <para>
+       Le compteur d'itération courant de la boucle. Voir la méthode
+       <methodname>Ev::iteration</methodname>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="evloop.props.pending">
+     <term>
+      <varname>pending</varname>
+     </term>
+     <listitem>
+      <para>
+       Le nombre de watchers en attente.
+       <constant>0</constant> indique qu'il n'y a aucun watcher en attente.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="evloop.props.io-interval">
+     <term>
+      <varname>io_interval</varname>
+     </term>
+     <listitem>
+      <para>
+       Une valeur haute pour <varname>io_interval</varname> permet à
+       <emphasis>libev</emphasis> de passer plus de temps à collecter
+       les événements <classname>EvIo</classname>, ainsi, plus d'événements
+       peuvent être gérés par itération, mais cela va augmenter la
+       latence. Les délais d'attente maximum (pour à la fois
+       <classname>EvPeriodic</classname> et <classname>EvTimer</classname>)
+       ne seront pas affectés. Le fait de définir cette option à une valeur
+       différente de zéro va introduire un appel à <literal>sleep()</literal>
+       supplémentaire dans la plupart des itérations de la boucle.
+       Le temps de pause assure que <emphasis>libev</emphasis>
+       ne va pas interroger <classname>EvIo</classname> plus d'une fois
+       pendant cet intervalle, en moyenne. La plupart des programmes
+       peuvent avoir des effets bénéfiques en définissant
+       <varname>io_interval</varname> à une valeur proche de
+       <constant>0.1</constant>, ce qui est en général suffisant pour les
+       serveurs interactifs (et non destinés aux jeux). Il n'y a généralement
+       aucun sens à définir cette valeur à une valeur inférieure à
+       <constant>0.01</constant>, sachant que l'on s'approche de la
+       granularité au niveau des durées de la plupart des systèmes.
+      </para>
+      <para>
+       Voir aussi les
+       <link xlink:href="http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#FUNCTIONS_CONTROLLING_EVENT_LOOPS">
+       fonctions contrôlant les boucles d'événements</link>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="evloop.props.timeout-interval">
+     <term>
+      <varname>timeout_interval</varname>
+     </term>
+     <listitem>
+      <para>
+       Une valeur haute pour <varname>timeout_interval</varname> permet à
+       <emphasis>libev</emphasis> de passer plus de temps à collecter les
+       délais maximales d'attente, mais à pour conséquence d'accroitre
+       la latence, le stress et l'inexactitude (la fonction de rappel
+       du watcher sera appelée plus tard). Les watchers <classname>EvIo</classname>
+       ne seront pas affectés. Le fait de définir cette valeur à une valeur non
+       nulle ne va introduire aucune surcharge supplémentaire à
+       <emphasis>libev</emphasis>. Voir aussi les
+       <link
+       xlink:href="http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#FUNCTIONS_CONTROLLING_EVENT_LOOPS">
+       fonctions contrôlant les boucles d'évéments</link>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="evloop.props.depth">
+     <term>
+      <varname>depth</varname>
+     </term>
+     <listitem>
+      <para>
+       La profondeur de la récursion. Voir la méthode
+       <methodname>Ev::depth</methodname>.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </section>
+<!-- }}} -->
+ </partintro>
+
+ &reference.ev.entities.evloop;
+
+</phpdoc:classref>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
