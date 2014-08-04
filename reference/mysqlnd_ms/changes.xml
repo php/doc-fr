@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 0f4adfde5189ff60798dedf838cb1f34f1529031 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: dd3aac4e4f59fd807a50fe0025516e29d6098171 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlnd-ms.changes" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -50,15 +50,15 @@
     <listitem>
      <para>
       Modification refusée : #66616 R/W split fails : QOS with mysqlnd_get_last_gtid with built-in MySQL GTID
-      </para>
-      <para>
-       Ceci n'est pas un bogue dans l'implémentation du plugin, mais une limitation de
-       la fonctionalité côté serveur non considérée ni documentée auparavant. MySQL 5.6 built-in GTIDs
-       ne peut être utilisé pour assurer la consistence de la session lors de la lecture depuis
-       des esclaves, dans tous les cas. Dans le pire des cas, le plugin ne va pas considérer l'utilisation
-       des esclaves et se retournera vers le maître. Il n'y aura aucun résultat incorrect,
-       mais il n'y aura, non plus, aucun bénéfice de faire des vérification GTID.
-      </para>
+     </para>
+     <para>
+      Ceci n'est pas un bogue dans l'implémentation du plugin, mais une limitation de
+      la fonctionalité côté serveur non considérée ni documentée auparavant. MySQL 5.6 built-in GTIDs
+      ne peut être utilisé pour assurer la consistence de la session lors de la lecture depuis
+      des esclaves, dans tous les cas. Dans le pire des cas, le plugin ne va pas considérer l'utilisation
+      des esclaves et se retournera vers le maître. Il n'y aura aucun résultat incorrect,
+      mais il n'y aura, non plus, aucun bénéfice de faire des vérification GTID.
+     </para>
     </listitem>
     <listitem>
      <para>
@@ -94,16 +94,41 @@
    Modification de fonctionalités
    <itemizedlist>
     <listitem>
-    <para>
-     Ajout d'une abstraction padique des transactions distribuées.
-     Les transactions XA sont supportées en utilisant des appels SQL standarts.
-     Ceci est un inconvénient car les participans XA doivent être gérés manuellement.
-     PECL/mysqlnd_ms introduit des appels API pour contrôler les transactions XA
-     sur les serveurs MySQL. Lors de l'utilisation de nouvelles fonctions,
-     PECL/mysqlnd_ms agit comme un coordinateur de transaction. Après le début
-     d'une transaction distribuée, le plugin surveille tous les serveurs concernés
-     tant que la transaction ne s'est pas terminée, et envoie les requêtes SQL
-     appropriées sur les participants XA.
+     <para>
+      Introduction d'un pool de connexion interne. Lors de l'utilisation de Fabric,
+      et du passage du groupe partagé A vers le groupe partagé B, nous remplaçons
+      la liste entière des maîtres et des esclaves. Ceci va perturber la logique
+      d'alignement des status de connexions ainsi que quelques filtres et leurs
+      informations en cache sur la liste des maîtres et des esclaves. La nouvelle
+      abstraction du pool de connexion interne permet d'informer les filtres des
+      modifications, leur permettant ainsi de mettre à jour leurs caches.
+     </para>
+     <para>
+      Par la suite, le pool peut également être utilisé pour réduire la charge
+      des connexions. Supposons que vous passez d'un groupe partagé à un autre,
+      et que vous revenez par la suite à la situation de départ. Chaque fois que
+      la bascule survient, la liste du pool de serveurs actifs (et de connexions)
+      est remplacée. Cependant, les connexions qui ne sont plus utilisées
+      ne sont pas nécessairement fermées immédiatement, mais conservées dans le
+      pool pour une utilisation ultérieure.
+     </para>
+     <para>
+      Notez que le pool de connexion est interne à ce moment là. Il existe
+      quelques nouvelles statistiques permettant de le surveiller. Cependant,
+      vous ne pouvez pas pour l'instant configurer la taille de ce pool.
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Ajout d'une abstraction padique des transactions distribuées.
+      Les transactions XA sont supportées en utilisant des appels SQL standarts.
+      Ceci est un inconvénient car les participans XA doivent être gérés manuellement.
+      PECL/mysqlnd_ms introduit des appels API pour contrôler les transactions XA
+      sur les serveurs MySQL. Lors de l'utilisation de nouvelles fonctions,
+      PECL/mysqlnd_ms agit comme un coordinateur de transaction. Après le début
+      d'une transaction distribuée, le plugin surveille tous les serveurs concernés
+      tant que la transaction ne s'est pas terminée, et envoie les requêtes SQL
+      appropriées sur les participants XA.
      </para>
      <para>
       Ceci est utile, par exemple, lors de l'utilisation de Fabric et du partage.
@@ -129,19 +154,19 @@
      </para>
     </listitem>
     <listitem>
-    <para>
-     Introduit une boucle de re-tentative automatique pour les
-     <link linkend="mysqlnd-ms.transient_errors">erreurs transitoires</link> et les
-     <link linkend="function.mysqlnd-ms-get-stats">statistiques correspondantes</link>
-     pour compter le nombre de re-tentatives implicites. Quelques grappes de
-     bases de données distribuées utilisent les erreurs transitoires pour
-     toucher un client afin qu'il re-tente ses opérations un peu plus tard.
-     La plupart du temps, le client est alors supposé mettre en pause l'exécution
-     pendant une court instant avant de tenter de nouveau l'opération. 
-     Le passage immédiat au noeud suivant n'est pas nécessaire en
-     réponse à cette erreur. Au lieu de cela, une boucle de re-tentative
-     peut être mise en place. Ceci est une situation commune lors de l'utilisation
-     de grappe MySQL.
+     <para>
+      Introduit une boucle de re-tentative automatique pour les
+      <link linkend="mysqlnd-ms.transient_errors">erreurs transitoires</link> et les
+      <link linkend="function.mysqlnd-ms-get-stats">statistiques correspondantes</link>
+      pour compter le nombre de re-tentatives implicites. Quelques grappes de
+      bases de données distribuées utilisent les erreurs transitoires pour
+      toucher un client afin qu'il re-tente ses opérations un peu plus tard.
+      La plupart du temps, le client est alors supposé mettre en pause l'exécution
+      pendant une court instant avant de tenter de nouveau l'opération. 
+      Le passage immédiat au noeud suivant n'est pas nécessaire en
+      réponse à cette erreur. Au lieu de cela, une boucle de re-tentative
+      peut être mise en place. Ceci est une situation commune lors de l'utilisation
+      de grappe MySQL.
      </para>
     </listitem>
     <listitem>
@@ -165,23 +190,23 @@
       Les
       <link linkend="function.mysqlnd-ms-get-stats">statistiques</link>
       pour surveiller Fabric XML RPC appellant <literal>sharding.lookup_servers</literal> :
-     <literal>fabric_sharding_lookup_servers_success</literal>,
-     <literal>fabric_sharding_lookup_servers_failure</literal>,
-     <literal>fabric_sharding_lookup_servers_time_total</literal>,
-     <literal>fabric_sharding_lookup_servers_bytes_total</literal>,
-     <literal>fabric_sharding_lookup_servers_xml_failure</literal>.
+      <literal>fabric_sharding_lookup_servers_success</literal>,
+      <literal>fabric_sharding_lookup_servers_failure</literal>,
+      <literal>fabric_sharding_lookup_servers_time_total</literal>,
+      <literal>fabric_sharding_lookup_servers_bytes_total</literal>,
+      <literal>fabric_sharding_lookup_servers_xml_failure</literal>.
      </para>
     </listitem>
     <listitem>
      <para>
       Nouvelles fonctions en relation avec MySQL Fabric :
-     <link linkend="function.mysqlnd-ms-fabric-select-shard">
-      <function>mysqlnd_ms_fabric_select_shard</function></link>,
-     <link linkend="function.mysqlnd-ms-fabric-select-global">
-      <function>mysqlnd_ms_fabric_select_global</function></link>,
-     <link linkend="function.mysqlnd-ms-dump-servers">
-      <function>mysqlnd_ms_dump_servers</function></link>.
-    </para>
+      <link linkend="function.mysqlnd-ms-fabric-select-shard">
+       <function>mysqlnd_ms_fabric_select_shard</function></link>,
+      <link linkend="function.mysqlnd-ms-fabric-select-global">
+       <function>mysqlnd_ms_fabric_select_global</function></link>,
+      <link linkend="function.mysqlnd-ms-dump-servers">
+       <function>mysqlnd_ms_dump_servers</function></link>.
+     </para>
     </listitem>
    </itemizedlist>
   </para>
@@ -368,7 +393,7 @@
       consistence) autorise d'utiliser un esclave. Les transactions uniquement
       en lecture ont été introduites en MySQL 5.6, offrant un gain important
       en terme de performance.
-      </para>
+     </para>
     </listitem>
     <listitem>
      <para>
