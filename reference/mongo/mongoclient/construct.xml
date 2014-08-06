@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: d2f03350deec90514f2fa4b2fd563323f1afbc31 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: f79489c9b3bd65aac58cc699f8087067674e1140 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongoclient.construct" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -169,7 +169,13 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
          </para>
          <para>
           Durée pendant laquelle une connexion peut rester ouverte avant
-          de se fermer, en millisecondes.
+          de se fermer, en millisecondes. Vaut par défaut <literal>60000</literal>
+          (60 secondes).
+         </para>
+         <para>
+          Si <literal>-1</literal> est spécifié, aucun délai maximal d'attente
+          de connexion ne sera appliqué et PHP va utiliser la valeur de
+          <link linkend="ini.default-socket-timeout">default_socket_timeout</link>.
          </para>
         </listitem>
         <listitem>
@@ -310,19 +316,27 @@ mongodb://[username:password@]host1[:port1][,host2[:port2:],...]/db
           <literal>"socketTimeoutMS"</literal>
          </para>
          <para>
-          La durée maximale de réception ou d'envoi sur un socket avant
-          d'échouer.
-          <note>
-           <simpara>
-            C'est une durée maximale côté client. Si une requête
-            <literal>insert</literal> survient sur <literal>"socketTimeoutMS"</literal>,
-            il n'y a aucun moyen de savoir si le serveur a bien reçu ou non
-            l'écriture.
-           </simpara>
-          </note>
-          Par défaut, vaut 30 secondes. Cette valeur peut également être définie
-          pour chaque curseur en utilisant la méthode <methodname>MongoCursor::timeout</methodname>.
+          La durée qu'une opération de socket (lecture ou écriture)
+          peut prendre avant d'atteindre le délai maximal d'attente, en
+          millisecondes. Par défaut, vaut <literal>30000</literal> (30 secondes).
          </para>
+         <para>
+          Si <literal>-1</literal> est spécifié, les opérations de socket
+          peuvent bloquer indéfiniement. Cette option peut également être
+          définie pour chaque opération en utilisant la méthode
+          <methodname>MongoCursor::timeout</methodname> pour les requêtes,
+          ou l'option <literal>"socketTimeoutMS"</literal> pour les méthodes
+          d'écriture.
+         </para>
+         <note>
+          <simpara>
+           Ceci est un délai d'attente maximal côté client. Si une opération
+           en écriture atteint le délai maximal d'attente, il n'y a aucune façon
+           de savoir si le serveur gère actuellement l'écriture ou non,
+           sachant que l'exception <classname>MongoCursorTimeoutException</classname>
+           sera émise au lieu de retourner un résultat d'écriture.
+          </simpara>
+         </note>
         </listitem>
         <listitem>
          <para>
