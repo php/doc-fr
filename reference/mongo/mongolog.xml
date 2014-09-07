@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: ebd6689db56f26f247af88b58df40e4124b91971 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 6b2eb216fd3b435212c79c31b4e024b6cd7c13e7 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <phpdoc:classref xml:id="class.mongolog" xmlns:phpdoc="http://php.net/ns/phpdoc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
@@ -15,19 +15,10 @@
    &reftitle.intro;
    <para>
     L'enregistrement de traces peut être utilisé pour récupérer des informations
-    détaillées sur les différentes activités du driver. Le mécanisme d'enregistrement
-    de traces utilisé par MongoLog émet tous les messages de log comme des
-    notices PHP. Suivant l'interface serveur utilisé, cela signifie qu'ils
-    peuvent être soit envoyés à strerr (avec PHP-CLI), soit envoyés dans
-    les logs d'erreurs du serveur web. Afin de permettre aux messages de logs
-    d'être affichés par PHP, leur niveau (E_NOTICE) doit être configuré.
-    Cela signifie que E_NOTICE doit faire parti du niveau error_reporting de
-    PHP et que display_errors doit valoir 1.
-   </para>
-   <para>
-    L'enregistrement de traces est désactivé par défaut. Cette classe vous
-    permet de les activer sur des niveaux spécifiques, et sur des parties
-    spécifiques du driver. Voici quelques exemples :
+    détaillées sur les différentes activités du driver. Par défaut, l'enregistrement
+    des traces est désactivé, mais cette classe vous permet d'activer des niveaux
+    spécifiques d'enregistrements pour différentes parties du driver.
+    Quelques exemples :
    </para>
    <programlisting role="php">
 <![CDATA[
@@ -41,14 +32,26 @@ MongoLog::setModule(MongoLog::ALL); // toutes les parties du driver
 MongoLog::setLevel(MongoLog::INFO);
 MongoLog::setModule(MongoLog::RS);
 
-// affiche les informations ainsi que les évènements serveur depuis les jeux de réplication
-// ainsi que sur les files d'attente de connexions
+// affiche les informations et le niveau de diagnostique des événements pour les
+// jeux de réplication et les connexions
 MongoLog::setLevel(MongoLog::INFO|MongoLog::FINE);
-MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
+MongoLog::setModule(MongoLog::RS|MongoLog::CON);
 
 ?>
 ]]>
    </programlisting>
+   <note>
+    <para>
+     Par défaut, MongoLog émet tous les messages d'enregistrement de traces
+     comme notices PHP. Suivant le <acronym>SAPI</acronym> utilisé, les messages
+     peuvent être envoyés à <literal>stderr</literal> (pour <acronym>CLI</acronym>)
+     ou au log d'erreurs du serveur Web. Si, après avoir configuré MongoLog,
+     les messages d'enregistrement de traces n'apparaissent pas comme prévus,
+     assurez-vous que <constant>E_NOTICE</constant> est inclus dans l'option
+     de configuration <link linkend="ini.error-reporting">error_reporting</link>
+     et que <link linkend="ini.display-errors">display_errors</link> vaut "on".
+    </para>
+   </note>
   </section>
 <!-- }}} -->
 
@@ -112,6 +115,12 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
      <modifier>const</modifier>
      <type>int</type>
      <varname linkend="mongolog.constants.pool">MongoLog::POOL</varname>
+     <initializer>1</initializer>
+    </fieldsynopsis>
+    <fieldsynopsis>
+     <modifier>const</modifier>
+     <type>int</type>
+     <varname linkend="mongolog.constants.con">MongoLog::CON</varname>
      <initializer>2</initializer>
     </fieldsynopsis>
     <fieldsynopsis>
@@ -133,15 +142,22 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
      <initializer>16</initializer>
     </fieldsynopsis>
 
-    <classsynopsisinfo role="comment">Fields</classsynopsisinfo>
+    <classsynopsisinfo role="comment">Champs</classsynopsisinfo>
     <fieldsynopsis>
-     <modifier>public</modifier>
-     <modifier></modifier>
+     <modifier>private</modifier>
+     <modifier>static</modifier>
+     <type>int</type>
+     <varname>callback</varname>
+    </fieldsynopsis>
+    <fieldsynopsis>
+     <modifier>private</modifier>
+     <modifier>static</modifier>
      <type>int</type>
      <varname>level</varname>
     </fieldsynopsis>
     <fieldsynopsis>
-     <modifier>public</modifier>
+     <modifier>private</modifier>
+     <modifier>static</modifier>
      <type>int</type>
      <varname>module</varname>
     </fieldsynopsis>
@@ -168,7 +184,7 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
       <term><constant>MongoLog::NONE</constant></term>
       <listitem>
        <simpara>
-        Constante permettant de désactiver l'enregistrement de traces.
+         Aucun enregistrement de traces n'est réalisé.
        </simpara>
       </listitem>
      </varlistentry>
@@ -176,7 +192,7 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
       <term><constant>MongoLog::ALL</constant></term>
       <listitem>
        <simpara>
-        Constantes pour l'enregistrement de toutes les traces.
+        Enregistre toutes les traces.
        </simpara>
       </listitem>
      </varlistentry>
@@ -194,8 +210,9 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
       <term><constant>MongoLog::WARNING</constant></term>
       <listitem>
        <simpara>
-        Permet d'afficher tous les messages émis suite à un
-        évènement exceptionnel mais qu'aucune exception n'a été émise.
+        Log les événements qui sont exceptionnels, mais pas assez pour
+        lancer une exception (i.e. erreurs de connexion qui peuvent être
+        corrigées).
        </simpara>
       </listitem>
      </varlistentry>
@@ -203,8 +220,9 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
       <term><constant>MongoLog::INFO</constant></term>
       <listitem>
        <simpara>
-        Trace les évènements qui peuvent intéresser les administrateurs,
-        mais qui ne sont pas particulièrement remarquables.
+        Log les événements qui peuvent intéresser les administrateurs,
+        mais qui ne sont pas noticiable (i.e. option d'analyse, étape
+        d'authentification).
        </simpara>
       </listitem>
      </varlistentry>
@@ -212,9 +230,10 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
       <term><constant>MongoLog::FINE</constant></term>
       <listitem>
        <simpara>
-        Enregistre les traces de la plupart des évènements survenus
-        sur le driver. Suivant le module ciblé, ce peut être très verbeux
-        et est avant tout prévu pour les débogages.
+        Log la plupart des événements que le driver produit (i.e. sélection
+        de serveur, communication avec un socket). Suivant le module dont
+        on enregistre les traces, ceci peut être très verbeux, et est principalement
+        prévu pour le débogage.
        </simpara>
       </listitem>
      </varlistentry>
@@ -228,6 +247,16 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
      <function>MongoLog::setModule</function>.
     </para>
     <variablelist>
+     <varlistentry xml:id="mongolog.constants.con">
+      <term><constant>MongoLog::CON</constant></term>
+      <listitem>
+       <simpara>
+        Log l'activité de la connexion. Création d'une nouvelle connexion,
+        authentification, les différents pings, l'atteinte des délais d'expiration,
+        etc..
+       </simpara>
+      </listitem>
+     </varlistentry>
      <varlistentry xml:id="mongolog.constants.io">
       <term><constant>MongoLog::IO</constant></term>
       <listitem>
@@ -242,7 +271,8 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
       <term><constant>MongoLog::PARSE</constant></term>
       <listitem>
        <simpara>
-        Analyseur de log serveur.
+        Log l'analyse de la chaîne de connexion et des options,
+        lors de la construction d'un <classname>MongoClient</classname>.
        </simpara>
       </listitem>
      </varlistentry>
@@ -250,9 +280,9 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
       <term><constant>MongoLog::POOL</constant></term>
       <listitem>
        <simpara>
-        Enregistre les traces de l'activité de file d'attente de connexions
-        (créer une nouvelle connexion, réutiliser une connexion, fermer
-        une connexion).
+        Précédemment utilisé pour enregistrer les traces de l'activité du
+        pool de connexion. Cette option est maintenant obsolète, et est un
+        alias de <constant>MongoLog::RS</constant>.
        </simpara>
       </listitem>
      </varlistentry>
@@ -261,7 +291,7 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
       <listitem>
        <simpara>
         Enregistre les traces de l'activité du jeu de réplication
-        (Erreur, ping, le fait de choisir d'autres serveurs pour la lecture, etc...).
+        (Erreur, sélection de la préférence de lecture, etc.).
        </simpara>
       </listitem>
      </varlistentry>
@@ -269,13 +299,40 @@ MongoLog::setModule(MongoLog::RS|MongoLog::POOL);
       <term><constant>MongoLog::SERVER</constant></term>
       <listitem>
        <simpara>
-        Modification des status du serveur de log. Détection du primaire,
-        secondaire, et de duplication.
+        Précédemment utilisé pour enregistrer les traces des modifications
+        de statut du serveur. Cette option est obsolète, en faveur de
+        <constant>MongoLog::RS</constant>.
        </simpara>
       </listitem>
      </varlistentry>
     </variablelist>
    </section>
+  </section>
+
+  <section role="changelog">
+   &reftitle.changelog;
+   <para>
+    <informaltable>
+     <tgroup cols="2">
+      <thead>
+       <row>
+        <entry>&Version;</entry>
+        <entry>&Description;</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry>1.3.0</entry>
+        <entry>
+         Ajout de <constant>MongoLog::CON</constant>,
+         et, désormais, <constant>MongoLog::POOL</constant> et
+         <constant>MongoLog::SERVER</constant> sont obsolètes.
+        </entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </informaltable>
+   </para>
   </section>
 
  </partintro>
