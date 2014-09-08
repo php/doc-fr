@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: f2c41f5da14b13f5209ff60958da9c75dc476cdd Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
+
+<refentry xml:id="function.ldap-modify-batch" xmlns="http://docbook.org/ns/docbook">
+ <refnamediv>
+  <refname>ldap_modify_batch</refname>
+  <refpurpose>Mets en lot des modifications et les exécute sur une entrée LDAP</refpurpose>
+ </refnamediv>
+ 
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>bool</type><methodname>ldap_modify_batch</methodname>
+   <methodparam><type>resource</type><parameter>link_identifier</parameter></methodparam>
+   <methodparam><type>string</type><parameter>dn</parameter></methodparam>
+   <methodparam><type>array</type><parameter>entry</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   Modifie une entrée existante dans un dossier LDAP. Permet
+   de spécifier de façon détaillée les modifications à effectuer.
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>link_identifier</parameter></term>
+     <listitem>
+      <para>
+       Un identifiant de lien LDAP, retourné par la fonction
+       <function>ldap_connect</function>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>dn</parameter></term>
+     <listitem>
+      <para>
+       Le nom unique de l'entrée LDAP.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>entry</parameter></term>
+     <listitem>
+      <para>
+       Un tableau qui spécifie les modifications à réaliser. Chaque entrée
+       de ce tableau est un tableau associatif contenant deux ou trois clés :
+       <literal>attrib</literal> correspond au nom de l'attribut à modifier,
+       <literal>modtype</literal> correspond au type de modification à réaliser,
+       et (suivant le type de modification) <literal>values</literal> correspond
+       à un tableau de valeurs d'attribut correspondant à la modification.
+      </para>
+      <para>
+       Les valeurs possibles pour <literal>modtype</literal> sont :
+       <variablelist>
+        <varlistentry>
+         <term><constant>LDAP_MODIFY_BATCH_ADD</constant></term>
+         <listitem>
+          <para>
+           Chaque valeur spécifiée via <literal>values</literal> est ajoutée
+           (comme valeur additionnelle) à l'attribut nommé par <literal>attrib</literal>.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><constant>LDAP_MODIFY_BATCH_REMOVE</constant></term>
+         <listitem>
+          <para>
+           Chaque valeur spécifiée via <literal>values</literal> est supprimée
+           depuis l'attribut nommée par <literal>attrib</literal>. Toutes les
+           valeurs de l'attribut n'étant pas présentes dans le tableau
+           <literal>values</literal> demeureront inchangées.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><constant>LDAP_MODIFY_BATCH_REMOVE_ALL</constant></term>
+         <listitem>
+          <para>
+           Toutes les valeurs sont supprimées depuis l'attribut nommé par
+           <literal>attrib</literal>. Une entrée <literal>values</literal>
+           n'a pas besoin d'être fournie.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><constant>LDAP_MODIFY_BATCH_REPLACE</constant></term>
+         <listitem>
+          <para>
+           Toutes les valeurs courantes de l'attribut nommé par
+           <literal>attrib</literal> sont remplacées avec les valeurs
+           spécifiées via le tableau <literal>values</literal>.
+          </para>
+         </listitem>
+        </varlistentry>
+       </variablelist>
+      </para>
+      <para>
+       Notez que toutes les valeurs de <literal>attrib</literal> doivent être
+       des chaînes de caractères, toutes les valeurs de <literal>values</literal>
+       doivent être un tableau de chaînes de caractères, et toutes les valeurs
+       de <literal>modtype</literal> doivent être une des constantes
+       LDAP_MODIFY_BATCH_*.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   &return.success;
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Ajout d'un numéro de téléphone à un contact</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$dn = "cn=John Smith,ou=Wizards,dc=example,dc=com";
+$modifs = [
+    [
+        "attrib"  => "telephoneNumber",
+        "modtype" => LDAP_MODIFY_BATCH_ADD,
+        "values"  => ["+1 555 555 1717"],
+    ],
+];
+ldap_modify_batch($connection, $dn, $modifs);
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Renomme un utilisateur</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$dn = "cn=John Smith,ou=Wizards,dc=example,dc=com";
+$modifs = [
+    [
+        "attrib"  => "sn",
+        "modtype" => LDAP_MODIFY_BATCH_REPLACE,
+        "values"  => ["Smith-Jones"],
+    ],
+    [
+        "attrib"  => "givenName",
+        "modtype" => LDAP_MODIFY_BATCH_REPLACE,
+        "values"  => ["Jack"],
+    ],
+];
+ldap_modify_batch($connection, $dn, $modifs);
+ldap_rename($connection, $dn, "cn=Jack Smith-Jones", NULL, TRUE);
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Ajoute deux adresses emails à un utilisateur</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$dn = "cn=Jack Smith-Jones,ou=Wizards,dc=example,dc=com";
+$modifs = [
+    [
+        "attrib"  => "mail",
+        "modtype" => LDAP_MODIFY_BATCH_ADD,
+        "values"  => [
+            "jack.smith@example.com",
+            "jack.smith-jones@example.com",
+        ],
+    ],
+];
+ldap_modify_batch($connection, $dn, $modifs);
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Modifie le mot de passe d'un utilisateur</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$dn = "cn=Jack Smith-Jones,ou=Wizards,dc=example,dc=com";
+$modifs = [
+    [
+        "attrib"  => "userPassword",
+        "modtype" => LDAP_MODIFY_BATCH_REMOVE,
+        "values"  => ["Tr0ub4dor&3"],
+    ],
+    [
+        "attrib"  => "userPassword",
+        "modtype" => LDAP_MODIFY_BATCH_ADD,
+        "values"  => ["correct horse battery staple"],
+    ],
+];
+ldap_modify_batch($connection, $dn, $modifs);
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Modifie le mot de passe d'un utilisateur (Active Directory)</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+function adifyPw($pw)
+{
+    return iconv("UTF-8", "UTF-16LE", '"' . $pw . '"');
+}
+
+$dn = "cn=Jack Smith-Jones,ou=Wizards,dc=ad,dc=example,dc=com";
+$modifs = [
+    [
+        "attrib"  => "unicodePwd",
+        "modtype" => LDAP_MODIFY_BATCH_REMOVE,
+        "values"  => [adifyPw("Tr0ub4dor&3")],
+    ],
+    [
+        "attrib"  => "unicodePwd",
+        "modtype" => LDAP_MODIFY_BATCH_ADD,
+        "values"  => [adifyPw("correct horse battery staple")],
+    ],
+];
+ldap_modify_batch($connection, $dn, $modifs);
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+</refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
