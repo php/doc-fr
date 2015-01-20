@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 79dcbe011fb254dcd92c597064571fe313362a09 Maintainer: gui Status: ready -->
+<!-- EN-Revision: 10b60deaa2e4353299a66e99eae0f06d53ddb661 Maintainer: gui Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="xsl.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -51,6 +51,92 @@
 </xsl:stylesheet>
 ]]>
     </programlisting>
+   </example>
+  </para>
+ </section>
+
+ <section xml:id="xsl.examples-errors">
+  <title>Gestion des erreurs avec les fonctions de gestion d'erreur libxml</title>
+  <para>
+   libxml fournit des fonctions pour gérer les erreurs qui peuvent être 
+   utilisées pour capturer et gérér celles ci lors du traitement XSLT.
+  </para>
+  <para>
+   <example>
+    <title>fruits.xml</title>
+    <para>Un fichier XML valide.</para>
+    <programlisting role="xml">
+<![CDATA[
+<fruits>
+ <fruit>Apple</fruit>
+ <fruit>Banana</fruit>
+ <fruit>Cherry</fruit>
+</fruits>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>fruits.xsl</title>
+    <para>Contient une expression select invalide.</para>
+    <programlisting role="xml">
+<![CDATA[
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+ <xsl:output method="html" encoding="utf-8" indent="no"/>
+ <xsl:template match="fruits">
+  <ul>
+   <xsl:apply-templates/>
+  </ul>
+ </xsl:template>
+ <xsl:template match="fruit">
+  <li><xsl:value-of select="THIS IS A DELIBERATE ERROR!"/></li>
+ </xsl:template>
+</xsl:stylesheet>
+]]>
+    </programlisting>
+   </example>
+   <example xml:id="xsl.examples-errors.capture">
+    <title>Collating and printing errors</title>
+    <para>
+     L'exemple ci dessous capture et affiche les erreurs libxml levées lors de 
+     l'appel <methodname>XSLTProcessor::importStyleSheet</methodname> avec une 
+     feuille de style contenant une erreur.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$xmldoc = new DOMDocument();
+$xsldoc = new DOMDocument();
+$xsl = new XSLTProcessor();
+
+$xmldoc->loadXML('fruits.xml');
+$xsldoc->loadXML('fruits.xsl');
+
+libxml_use_internal_errors(true);
+$result = $xsl->importStyleSheet($xsldoc);
+if (!$result) {
+    foreach (libxml_get_errors() as $error) {
+        echo "Libxml error: {$error->message}\n";
+    }
+}
+libxml_use_internal_errors(false);
+
+if ($result) {
+    echo $xsl->transformToXML($xmldoc);
+}
+
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+Libxml error: Invalid expression
+
+Libxml error: compilation error: file fruits.xsl line 9 element value-of
+Libxml error: xsl:value-of : could not compile select expression 'THIS IS A DELIBERATE ERROR!'
+]]>
+    </screen>
    </example>
   </para>
  </section>
