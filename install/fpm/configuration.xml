@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 1f983228aa30b62d4195b8df304ef6ffcbb0bfa2 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: f5f74fc4c173ed34873e2aba31917be2f4ccb4fb Maintainer: yannick Status: ready -->
 <!-- Reviewed: no Maintainer: itanea -->
 
 <sect1 xml:id="install.fpm.configuration" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -33,6 +33,8 @@
      <para>
       Chemin vers le fichier de journal. Par défaut:
       <literal>#INSTALL_PREFIX#/log/php-fpm.log</literal>.
+      Si défini à "syslog", le journal est envoyé vers syslogd au lieu d'être 
+      écrit dans un fichier local. 
      </para> 
     </listitem>
    </varlistentry>
@@ -48,6 +50,32 @@
      </para> 
     </listitem>
    </varlistentry>
+<varlistentry xml:id="syslog-facility">
+      <term>
+       <parameter>syslog.facility</parameter>
+       <type>string</type>
+      </term>
+      <listitem>
+       <para>
+        Utilisé pour spécifier quel type de programme écrit le message.
+        Valeur par défaut : daemon.
+       </para> 
+      </listitem>
+     </varlistentry>
+     <varlistentry xml:id="syslog-ident">
+      <term>
+       <parameter>syslog.ident</parameter>
+       <type>string</type>
+      </term>
+      <listitem>
+       <para>
+        Ajoute au début de chaque message.
+        Si vous avez de multiples instances FPM s'exécutant sur le même serveur,
+        vous pouvez changer la valeur par défaut afin qu'elle convient à vos besoins.
+        Valeur par défaut: php-fpm.
+       </para> 
+      </listitem>
+     </varlistentry>
    <varlistentry xml:id="emergency-restart-threshold">
     <term>
      <parameter>emergency_restart_threshold</parameter>
@@ -89,6 +117,33 @@
      </para> 
     </listitem>
    </varlistentry>
+     <varlistentry xml:id="process-max">
+      <term>
+       <parameter>process.max</parameter>
+       <type>int</type>
+      </term>
+      <listitem>
+       <para>
+        Le nombre maximum de processus que FPM va forker. Ceci a été conçu pour 
+        contrôler le nombre global de processus lors de l'utilisation d'un 
+        gestionnaire de processus dynamique avec beaucoup de pools. A utiliser avec attention.
+        Valeur par défaut : 0.
+       </para> 
+      </listitem>
+     </varlistentry>
+     <varlistentry xml:id="process-priority">
+      <term>
+       <parameter>process.priority</parameter>
+       <type>int</type>
+      </term>
+      <listitem>
+       <para>
+        Défini la priorité nice(2) à appliquer au processus principal (uniquement si défini)
+        La valeur peut varier de -19 (priorité haute) à 20 (priorité basse).
+        Valeur par défaut : non défini.
+       </para> 
+      </listitem>
+     </varlistentry>
    <varlistentry xml:id="daemonize">
     <term>
      <parameter>daemonize</parameter>
@@ -100,6 +155,59 @@
       débogage. Valeur par défaut: yes.
      </para> 
     </listitem>
+    <varlistentry xml:id="rlimit-files-master">
+      <term>
+       <parameter>rlimit_files</parameter>
+       <type>int</type>
+      </term>
+      <listitem>
+       <para>
+        Défini la rlimit pour les descripteurs de fichiers ouverts pour le 
+        processus principal.
+        Valeur par défaut: valeur du système.
+       </para> 
+      </listitem>
+     </varlistentry>
+     <varlistentry xml:id="rlimit-core-master">
+      <term>
+       <parameter>rlimit_core</parameter>
+       <type>int</type>
+      </term>
+      <listitem>
+       <para>
+        Défini la taille maximale de rlimit pour le processus principal.
+        Valeur par défaut : 0.
+       </para> 
+      </listitem>
+     </varlistentry>
+     <varlistentry xml:id="events-mechanism">
+      <term>
+       <parameter>events.mechanism</parameter>
+       <type>string</type>
+      </term>
+      <listitem>
+       <para>
+        Spécifie le gestionnaire d’événement que FPM va utiliser.
+        Sont disponible : select, pool, epoll, kqueue (*BSD), port (Solaris).
+        Valeur par défaut : non défini (détection automatique).
+       </para> 
+      </listitem>
+     </varlistentry>
+     <varlistentry xml:id="systemd-interval">
+      <term>
+       <parameter>systemd_interval</parameter>
+       <type>int</type>
+      </term>
+      <listitem>
+       <para>
+        Quand FPM est construit avec le support de systemd, spécifie 
+        l'intervalle en seconde, entre les notification de rapport de santé 
+        envoyé à systemd.
+        Définir à 0 pour désactiver.
+        Valeur par défaut : 10.
+       </para> 
+      </listitem>
+     </varlistentry>
    </varlistentry>
   </variablelist>
  </sect2>
@@ -143,11 +251,12 @@
     </term>
     <listitem>
      <para>
-      Liste d'adresses ipv4 des clients FastCGI autorisés à se connecter. C'est équivalent
+      Liste d'adresses IPv4 des clients FastCGI autorisés à se connecter. C'est équivalent
       à la variable d'environnement FCGI_WEB_SERVER_ADDRS dans le système FastCGI original de
       PHP (5.2.2+). N'a de sens qu'avec un socket tcp en écoute. Chaque adresse doit être séparée
       par une virgule. Si cette valeur n'est pas précisée, les connexions seront accceptées depuis
       toute adresse ip. Valeur par défaut: any.
+      Les adresses IPv6 sont autorisées depuis PHP 5.5.20 et 5.6.4.
      </para> 
     </listitem>
    </varlistentry>
@@ -187,6 +296,34 @@
      </para> 
     </listitem>
    </varlistentry>
+     <varlistentry xml:id="listen-acl-users">
+      <term>
+       <parameter>listen.acl_users</parameter>
+       <type>string</type>
+      </term>
+      <listitem>
+       <para>
+        Quand les listes de contrôle d'accès POSIX sont supportées, vous pouvez les définir en utilisant cette option.
+        Quand défini, <literal>listen.owner</literal> et <literal>listen.group</literal>
+        sont ignorés.
+        La valeur est une liste  de noms d'utilisateurs séparés par des virgules.
+        Disponible depuis PHP 5.6.5.
+       </para> 
+      </listitem>
+     </varlistentry>
+     <varlistentry xml:id="listen-acl-groups">
+      <term>
+       <parameter>listen.acl_groups</parameter>
+       <type>string</type>
+      </term>
+      <listitem>
+       <para>
+        Voir <literal>listen.acl_users</literal>.
+        La valeur est une liste de noms de groupes séparés par des virgules. 
+        Disponible depuis PHP 5.6.5.
+       </para> 
+      </listitem>
+     </varlistentry>
    <varlistentry xml:id="user">
     <term>
      <parameter>user</parameter>
@@ -395,7 +532,7 @@
     </term>
     <listitem>
      <para>
-      Affecte la rlimit pour les descripteurs de fichiers ouverts. Valeur par défaut: valeur du système.
+      Affecte la rlimit pour les descripteurs de fichiers ouverts des processus enfants de ce pool. Valeur par défaut: valeur du système.
      </para> 
     </listitem>
    </varlistentry>
@@ -406,7 +543,7 @@
     </term>
     <listitem>
      <para>
-      Affecte la taille maximale de rlimit. Valeurs possibles: 'unlimited' ou un entier
+      Affecte la taille maximale de rlimit des processus enfants de ce pool. Valeurs possibles: 'unlimited' ou un entier
       plus grand ou égal à 0. Valeur par défaut: valeur définie par le système.
      </para> 
     </listitem>
@@ -448,6 +585,33 @@
      </para> 
     </listitem>
    </varlistentry>
+     <varlistentry xml:id="clear-env">
+      <term>
+       <parameter>clear_env</parameter>
+       <type>boolean</type>
+      </term>
+      <listitem>
+       <para>
+        Nettoie l’environnent des agents FPM.
+        Prévient que des variables d’environnement arbitraire puissent atteindre les processus FPM par le nettoyage de l'environnement de ces agents avant que les variables  d’environnement spécifiée dans la configuration du pool ne soient ajoutées.
+        Disponible depuis PHP 5.4.27.
+       </para> 
+      </listitem>
+     </varlistentry>
+     <varlistentry xml:id="security-limit-extensions">
+      <term>
+       <parameter>security.limit_extensions</parameter>
+       <type>string</type>
+      </term>
+      <listitem>
+       <para>
+        Limite les extensions que le script principal FPM va être autorisé à analyser.
+        Ceci peut prévenir les erreurs de configuration coté serveur.
+        Vous pouvez limiter FPM à exécuter seulement les extensions .php pour prévenir que des utilisateurs malicieux utilisent d'autres extensions pour exécuter du code.
+        Valeur par défaut : .php.
+       </para> 
+      </listitem>
+     </varlistentry>
   </variablelist>
   <para>
    Il est possible de passer des variables d'environnement additionnelles et mettre à jour les paramètres
