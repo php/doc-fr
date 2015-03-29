@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: cb2e7b70b1354e5468e538720d59c37e273bc98e Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 0207f79751057862d135eddc1bc4c12278a62795 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongocommandcursor.construct" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -15,17 +15,17 @@
    <modifier>public</modifier> <methodname>MongoCommandCursor::__construct</methodname>
    <methodparam><type>MongoClient</type><parameter>connection</parameter></methodparam>
    <methodparam><type>string</type><parameter>ns</parameter></methodparam>
-   <methodparam choice="opt"><type>array</type><parameter>command</parameter><initializer>array()</initializer></methodparam>
+   <methodparam><type>array</type><parameter>command</parameter><initializer>array()</initializer></methodparam>
   </methodsynopsis>
   <para>
    Dans la plupart des cas, vous n'avez pas à créer un
-   <classname>MongoCommandCursor</classname> manuellement, mais plutôt
-   utiliser une méthode comme
+   <classname>MongoCommandCursor</classname> manuellement,
+   mais plutôt utiliser une méthode comme
    <methodname>MongoCollection::aggregateCursor</methodname> et
    <methodname>MongoCollection::parallelCollectionScan</methodname>. Cependant,
    si le serveur ajoute de nouvelles commandes qui peuvent retourner des
-   curseurs, alors la création manuelle de <classname>MongoCommandCursor</classname>
-   est nécessaire. Il est tout de même plus simple d'utiliser plutôt la méthode
+   curseurs, ce constructeur peut être utile en l'absence de méthodes
+   spécifiques. Il est tout de même plus simple d'utiliser la méthode
    <methodname>MongoCommandCursor::createFromDocument</methodname>.
   </para>
  </refsect1>
@@ -50,10 +50,11 @@
      </term>
      <listitem>
       <para>
-       Nom complet de la base de données et de la collection.
+       Nom complet de la base de données et de la collection
+       (i.e. <literal>"test.foo"</literal>).
       </para>
      </listitem>
-    </varlistentry>   
+    </varlistentry>
     <varlistentry>
      <term>
       <parameter>command</parameter>
@@ -73,6 +74,53 @@
   <para>
    Retourne le nouveau curseur.
   </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <classname>MongoCommandCursor</classname></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$m = new MongoClient;
+
+// Définit le pipeline d'agrégation
+$pipeline = [
+    [ '$group' => [
+        '_id' => '$country_code',
+        'timezones' => [ '$addToSet' => '$timezone' ]
+    ] ],
+    [ '$sort' => [ '_id' => 1 ] ],
+];
+
+// Construit un objet MongoCommandCursor
+$cursor = new MongoCommandCursor(
+    $m, // Objet MongoClient
+    'demo.cities', // Espace de noms
+    [
+        'aggregate' => 'cities',
+        'pipeline' => $pipeline,
+        'cursor' => [ 'batchSize' => 0 ],
+    ]
+);
+
+foreach($cursor as $result) {
+   …
+}
+?>
+]]>
+   </programlisting>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><function>MongoCommandCursor::createFromDocument</function></member>
+   <member><function>MongoCollection::aggregateCursor</function></member>
+   <member><function>MongoCollection::parallelCollectionScan</function></member>
+  </simplelist>
  </refsect1>
 
 </refentry>

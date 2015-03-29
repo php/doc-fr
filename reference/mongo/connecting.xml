@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: ad82d24105b67e06222f57be7ee3318d752a74cd Maintainer: yannick Status: ready -->
+<!-- EN-Revision: b1ab1b184052aa6f5c73f64fe6438e834cfd6e0d Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mongo.connecting" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -40,14 +40,28 @@ $mc = new MongoClient("mongodb://server1", array("ssl" => true));
    <programlisting role="php">
 <![CDATA[
 <?php
+$SSL_DIR = "/vagrant/certs/";
+$SSL_FILE = "CA_Root_Certificate.pem";
+
 $ctx = stream_context_create(array(
     "ssl" => array(
-        /* Optionnellement, vérification de l'identité du serveur, ainsi que sa certification par un CA de confiance */
-        "verify_peer"       => true,
+        /* Authorité de certification du certificat du serveur distant utilisé pour la signature */
+        "cafile"            => $SSL_DIR . "/" . $SSL_FILE,
+
+        /* On désactive les certificats auto-signés */
         "allow_self_signed" => false,
-        "cafile"            => "/vagrant/certs/ca.pem",
+
+        /* Vérifie le certificat d'apairage avec notre certificat racine d'authorité de certification */
+        "verify_peer"       => true, /* Default to false pre PHP 5.6 */
+
+        /* Vérifie le nom d'apairage (i.e. validation du nom d'hôte) */
+        /* Nous utilisons le nom d'hôte utilisé pour la connexion sur le noeud */
+        "verify_peer_name"  => true,
+
+        /* On vérifie que le certificat du serveur n'a pas expiré */
+        "verify_expiry"     => true, /* Seulement disponible avec le driver MongoDB PHP */
     ),
-));
+);
 
 $mc = new MongoClient(
     "mongodb://server1", 
@@ -57,6 +71,13 @@ $mc = new MongoClient(
 ?>
 ]]>
    </programlisting>
+   <note>
+    <para>
+     <literal>"verify_peer_name"</literal> est nouveau en PHP 5.6.0.
+     Le driver MongoDB, depuis la version 1.6.5, a porté cette fonctionalité
+     dans le driver lui-même, aussi, il fonctionne avec PHP 5.3 et 5.4 également.
+    </para>
+   </note>
   </example>
 
 
@@ -65,15 +86,23 @@ $mc = new MongoClient(
    <programlisting role="php">
 <![CDATA[
 <?php
+$SSL_DIR  = "/vagrant/certs/";
+$SSL_FILE = "CA_Root_Certificate.pem";
+
+MYCERT   = "/vagrant/certs/ca-signed-client.pem";
+
 $ctx = stream_context_create(array(
     "ssl" => array(
-        "local_cert" => "/vagrant/certs/client.pem",
-        /* Si le certificat que nous fournissons nécessite une passphrase, nous devons la définir ici */
-        "passphrase" => "My Passphrase for the local_cert",
+        "local_cert"        => $MYCERT,
+        /* Si le certificat que nous avons fourni a été encodé avec une phrase en guise de mot de passe, nous devons la définir ici */
+        "passphrase"        => "Ma phrase mot de passe ici pour le local_cert",
 
-        /* Optionnellement, vérification de l'identité du serveur */
-        "verify_peer" => true,
-        "cafile"      => "/vagrant/certs/ca.pem",
+        /* Optionnellement, on vérifie que le serveur est bien celui annoncé */
+        "cafile"            => $SSL_DIR . "/" . $SSL_FILE,
+        "allow_self_signed" => false,
+        "verify_peer"       => true,
+        "verify_peer_name"  => true,
+        "verify_expiry"     => true,
     ),
 ));
 
