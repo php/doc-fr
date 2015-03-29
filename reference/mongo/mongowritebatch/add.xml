@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 4eed9a5bb843ec9ddb75ab5007d82ba4fec16a09 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 13445ae645cc80ee9b69e10b8b3f94070b8d865b Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongowritebatch.add" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>MongoWriteBatch::add</refname>
-  <refpurpose>Ajoute une opération CRUD au lot</refpurpose>
+  <refpurpose>Ajoute une opération d'écriture dans un lot</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -16,16 +16,15 @@
    <methodparam><type>array</type><parameter>item</parameter></methodparam>
   </methodsynopsis>
   <para>
-   L'opération à ajouter au lot.
+   Ajoute une opération d'écriture dans un lot.
   </para>
   <para>
-   Si <parameter>$item</parameter> fait que le lot atteint les limites de
-   <link xlink:href="url.mongodb.dochub.maxWriteBatchSize">maxWriteBatchSize</link> ou
-   <link xlink:href="url.mongodb.dochub.maxBsonObjectSize">maxBsonObjectSize</link>,
-   un nouveau lot sera créé en interne et les lots seront envoyés un par un
-   lors de l'appel à <methodname>MongoWriteBatch::execute</methodname>.
+   Si le paramètre <parameter>$item</parameter> fait que le lot excède les limites
+   <link xlink:href="url.mongodb.dochub.maxWriteBatchSize">maxWriteBatchSize</link>
+   ou <link xlink:href="url.mongodb.dochub.maxBsonObjectSize">maxBsonObjectSize</link>,
+   le driver va, en interne, couper les lots en plusieurs commandes d'écriture
+   avant d'appeler la méthode <methodname>MongoWriteBatch::execute</methodname>.
   </para>
-
  </refsect1>
 
  <refsect1 role="parameters">
@@ -35,42 +34,57 @@
     <term><parameter>item</parameter></term>
     <listitem>
      <para>
+      Un tableau qui décrit une opération d'écriture. La structure de cette valeur
+      dépoend du type de l'opération du lot.
       <informaltable>
        <thead>
         <row>
-         <entry>Valeur</entry>
+         <entry>Type du lot</entry>
          <entry>Signification</entry>
         </row>
        </thead>
        <tbody>
         <row>
-         <entry>MongoWriteBatch::COMMAND_INSERT</entry>
-         <entry>Le document à ajouter</entry>
+         <entry><constant>MongoWriteBatch::COMMAND_INSERT</constant></entry>
+         <entry><simpara>Le document à ajouter.</simpara></entry>
         </row>
         <row>
-         <entry>MongoWriteBatch::COMMAND_UPDATE</entry>
+         <entry><constant>MongoWriteBatch::COMMAND_UPDATE</constant></entry>
          <entry>
+          <para>Opération brute de mise à jour.</para>
           <para>
-           Opération brute de mise à jour. Les clés requises
-           sont : array("q" => <link linkend="mongocollection.update.criteria">array("critère")</link>,
-           "u" => array("nouvelle donnée"))
+           Les clés requises sont <literal>"q"</literal> et <literal>"u"</literal>,
+           qui correspondent aux paramètres
+           <link linkend="mongocollection.update.criteria"><parameter>$criteria</parameter></link> et
+           <link linkend="mongocollection.update.new_object"><parameter>$new_object</parameter></link> de
+           <function>MongoCollection::update</function>, respectivement.
           </para>
           <para>
-           Optionnellement, les clés "multi" et "upsert" avec comme
-           valeurs des booléens
-          </para>
-          <para>
-           "upsert" : Si vaut &true;, crée un nouveau document lorsqu'aucun document ne
-           correspond aux critères de la requête. La valeur par défaut est
-           &false; ; aucun nouveau document ne sera créé lorsqu'aucune correspondance
-           n'est trouvée.
+           Les clés optionnelles sont <literal>"multi"</literal> et <literal>"upsert"</literal>,
+           qui correspondent aux options
+           <link linkend="mongocollection.update.multiple"><literal>"multiple"</literal></link> et
+           <link linkend="mongocollection.update.upsert"><literal>"upsert"</literal></link> pour
+           <function>MongoCollection::update</function>, respectivement.
+           Si on spécifiés, les deux options vaudront par défaut &false;.
           </para>
          </entry>
         </row>
         <row>
-         <entry>MongoWriteBatch::COMMAND_DELETE</entry>
+         <entry><constant>MongoWriteBatch::COMMAND_DELETE</constant></entry>
          <entry>
-          <simpara>Opération brute d'effacement. Les clés requises sont : array("q" => <link linkend="mongocollection.delete.criteria">array("critère")</link>, "limit" => 1)</simpara>
+          <para>Opération brute de suppression.</para>
+          <para>
+           Les clés requises sont : <literal>"q"</literal> et <literal>"limit"</literal>,
+           qui correspondent au paramètre
+           <link linkend="mongocollection.remove.criteria"><parameter>$criteria</parameter></link> et
+           à l'option <link linkend="mongocollection.remove.justone"><literal>"justOne"</literal></link>
+           de <function>MongoCollection::remove</function>, respectivement.
+          </para>
+          <para>
+           L'option <literal>"limit"</literal> est de type <type>integer</type> ;
+           cependant, MongoDB ne supporte que la valeur <literal>0</literal> (i.e. supprime tous
+           les documents correspondants) et la valeur <literal>1</literal> (i.e. supprime au moins
+           un document correspondant) pour le moment.</para>
          </entry>
         </row>
        </tbody>
