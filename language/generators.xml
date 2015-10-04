@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: c09f0b428b251513ae561545ad3a69d747ce0d68 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: e7c3d74e3369e87962da229da463c372474e4df2 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes Maintainer: pmartin -->
 
 <chapter xml:id="language.generators" xmlns="http://docbook.org/ns/docbook">
@@ -98,6 +98,18 @@ Nombres impairs à un seul chiffre depuis xrange() : 1 3 5 7 9
 ]]>
    </screen>
   </example>
+
+  <sect2 xml:id="language.generators.object">
+   <title>Les objets <classname>Generator</classname></title>
+   <para>
+    Lorsqu'une fonction générateur est appelée pour la première fois,
+    un objet de la classe interne <classname>Generator</classname> est
+    retournée. Cette objet implémente l'interface <classname>Iterator</classname>
+    de la même façon qu'un objet itérateur, qui avance uniquement, le ferait,
+    et fournit les méthodes qui peuvent être appelées pour manipuler le statut
+    du générateur, y compris l'envoi des valeurs et leurs retours.
+   </para>
+  </sect2>
  </sect1>
  
  <sect1 xml:id="language.generators.syntax">
@@ -182,8 +194,8 @@ foreach ($generator as $value) {
    <caution>
     <para>
      Si vous utilisez yield dans un contexte d'expression (par exemple, à droite 
-     d'un assignement), vous devez entourer l'instruction yield avec des parenthèses.
-     Par exemple, ceci est valide :
+     d'un assignement), vous devez entourer l'instruction yield avec des parenthèses
+     en PHP 5. Par exemple, ceci est valide :
     </para>
     
     <informalexample>
@@ -195,7 +207,7 @@ foreach ($generator as $value) {
     </informalexample>
     
     <para>
-     Mais ceci ne l'est pas, et entrainera une erreur d'analyse :
+     Mais ceci ne l'est pas, et entrainera une erreur d'analyse en PHP 5 :
     </para>
     
     <informalexample>
@@ -206,6 +218,10 @@ foreach ($generator as $value) {
      </programlisting>
     </informalexample>
     
+    <para>
+     Les restrictions sur les parenthèses ne sont pas appliquer en PHP 7.
+    </para>
+
     <para>
      Cette syntaxe peut être utilisée en conjonction de la méthode
      <methodname>Generator::send</methodname> sur les objets Générateur.
@@ -374,18 +390,108 @@ foreach (gen_reference() as &$number) {
      </screen>
     </example>
    </sect3>
+
+   <sect3 xml:id="control-structures.yield.from">
+    <title>Délégation du générateur via <command>yield from</command></title>
+
+    <para>
+     En PHP 7, la délégation du générateur vous permet d'obtenir les valeurs d'un
+     autre générateur, d'un objet <classname>Traversable</classname>, ou
+     d'un <type>array</type> en utilisant le mot clé <command>yield from</command>.
+     Le générateur externe va ainsi obtenir toutes les valeurs du générateur
+     interne, de l'objet, ou du tableau tant qu'il n'est pas invalide, après
+     quoi, l'exécution va continuer dans le générateur externe.
+    </para>
+
+    <para>
+     Si un générateur est utilisé avec l'expression <command>yield from</command>,
+     l'expression <command>yield from</command> va aussi retourner toute valeur
+     retournée par le générateur interne.
+    </para>
+
+    <example>
+     <title>Utilisation basique de <command>yield from</command></title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+function count_to_ten() {
+    yield 1;
+    yield 2;
+    yield from [3, 4];
+    yield from new ArrayIterator([5, 6]);
+    yield from seven_eight();
+    yield 9;
+    yield 10;
+}
+
+function seven_eight() {
+    yield 7;
+    yield from eight();
+}
+
+function eight() {
+    yield 8;
+}
+
+foreach (count_to_ten() as $num) {
+    echo "$num ";
+}
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+1 2 3 4 5 6 7 8 9 10 
+]]>
+     </screen>
+    </example>
+
+    <example>
+     <title><command>yield from</command> et les valeurs retournées</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+function count_to_ten() {
+    yield 1;
+    yield 2;
+    yield from [3, 4];
+    yield from new ArrayIterator([5, 6]);
+    yield from seven_eight();
+    return yield from nine_ten();
+}
+
+function seven_eight() {
+    yield 7;
+    yield from eight();
+}
+
+function eight() {
+    yield 8;
+}
+
+function nine_ten() {
+    yield 9;
+    return 10;
+}
+
+$gen = count_to_ten();
+foreach ($gen as $num) {
+    echo "$num ";
+}
+echo $gen->getReturn();
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+1 2 3 4 5 6 7 8 9 10
+]]>
+     </screen>
+    </example>
+   </sect3>
   </sect2>
-  
-  <sect2 xml:id="language.generators.object">
-   <title>Objets <classname>Generator</classname></title>
-   <para>
-    Lorsqu'une fonction générateur est appelée pour la première fois, un objet
-    de la classe interne <classname>Generator</classname> est retourné. Cet objet
-    implémente l'interface <classname>Iterator</classname> de la même façon
-    qu'un objet itérateur ne fonctionnant qu'en avançant le ferait.
-   </para>
-  </sect2>
-  
  </sect1>
  
  <sect1 xml:id="language.generators.comparison">
