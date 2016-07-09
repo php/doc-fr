@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: b1ab1b184052aa6f5c73f64fe6438e834cfd6e0d Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 42238e5d2034bb8a78988b0ffd395e8af19cd733 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mongo.connecting" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -508,6 +508,68 @@ $m = new MongoClient("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
   </simplesect>
   
  </section>
+
+ <section xml:id="mongo.connecting.persistent">
+  <title>Les connexions persistentes (version 1.3.0+)</title>
+
+  <para>
+   Toutes les version du driver depuis la version 1.3.0 utilisent les connexions
+   persistentes pour minimiser le nombre de connexions effectuées à chaque serveur
+   de base de données. Ces connexions sont sauvegardées par le processus PHP et
+   peuvent être réutilisées par plusieurs requêtes.
+  </para>
+
+  <para>
+   Avant la connexion au serveur de base de données, le driver va créer un hash pour
+   la connexion basé sur l'hôte, le port, le nom du jeux de réplication (s'il y en a),
+   tous les éléments d'authentification (i.e. le nom d'utilisateur, le mot de passe,
+   la base de données), ainsi que l'identifiant de processus. Si une connexion existe
+   déjà avec ce hash, elle sera utilisée au lieu de créer une nouvelle connexion associée
+   à ce hash. La fonction <function>MongoClient::getConnections</function> peut être
+   utilisée pour récupérer les informations à propos de chaque connexion persistente.
+   Par exemple :
+  </para>
+
+  <example xml:id="mongo.connecting.persistent-example">
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$m1 = new MongoClient('mongodb://localhost');
+$m2 = new MongoClient('mongodb://localhost');
+$m3 = new MongoClient('mongodb://user:pw@localhost');
+$m4 = new MongoClient('mongodb://127.0.0.1');
+$m5 = new MongoClient('mongodb://rs1.local:30017,rs2.local:30018/?replicaSet=rs');
+$m6 = new MongoClient('mongodb://sharding.local:40017');
+
+foreach (MongoClient::getConnections() as $conn) {
+    echo $conn['hash'], "\n";
+}
+
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+localhost:27017;-;X;15487
+localhost:27017;-;admin/user/c56c…8bbc;15487
+127.0.0.1:27017;-;X;15487
+rs1.local:30017;rs;X;15487
+rs2.local:30018;rs;X;15487
+sharding.local:40017;-;X;15487
+]]>
+   </screen>
+  </example>
+
+  <para>
+   Dans cet exemple, <literal>$m1</literal> et <literal>$m2</literal> ont le
+   même hash et partage une connexion persistente. Les connexions pour chacun
+   des autres instances MongoClient ont un hash unique, et utilisent leurs propres
+   sockets. Notez que "localhost" et "127.0.0.1" ne partagent pas le même hash ;
+   la résolution DNS n'est pas utilisée dans ce calcul.
+  </para>
+ </section>
  
  <section xml:id="mongo.connecting.pools">
   <title>File d'attente de connexion (version 1.2.0-1.2.12 *seulement*)</title>
@@ -633,8 +695,8 @@ $m = new MongoClient("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
   </section>
  </section>
  
- <section xml:id="mongo.connecting.persistent">
-  <title>Les connexions persistantes (version supérieure à 1.1.4 *uniquement*)</title>
+ <section xml:id="mongo.connecting.persistent.manual">
+  <title>Les connexions persistantes manuelles (version supérieure à 1.1.4 *uniquement*)</title>
   <note>
    <para>
     Cette section n'est pas pertinente pour les versions 1.2.0+. En 1.2.0+,
@@ -656,7 +718,7 @@ $m = new MongoClient("mongodb://username:password@/tmp/mongo-27017.sock:0/foo");
    Par exemple, ce programme simple se connecte à la base de données 1000 fois :
   </para>
   
-  <example xml:id="mongo.connecting.no-persistent-example">
+  <example xml:id="mongo.connecting.no-manual-persist-example">
    <programlisting role="php">
 <![CDATA[
 <?php
@@ -675,7 +737,7 @@ for ($i=0; $i<1000; $i++) {
    utiliser les connexions persistantes :
   </para>
   
-  <example xml:id="mongo.connecting.persistent-example">
+  <example xml:id="mongo.connecting.manual-persist-example">
    <programlisting role="php">
 <![CDATA[
 <?php
