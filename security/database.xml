@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 6bfcf7d9af614b4155c72e84814a61607be21229 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 0a7a550a651bf837463ea57270bdbd4697b66fb9 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="security.database" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -111,40 +111,90 @@
    seront stockées, et les déchiffrer lorsqu'elles seront relues. Voyez la
    suite pour des exemples d'utilisation de ce chiffrement.
   </simpara>
-  <simpara>
-   Dans le cas de données vraiment sensibles, si la représentation originale
-   n'est pas nécessaire (pour affichage, ou comparaison), utiliser un
-   hash est une bonne solution. L'exemple classique est le stockage de
-   mots de passe dans les bases de données, après les avoir passés au
-   en hashage de cryptage. Voyez la fonction <function>crypt</function>.
-  </simpara>
-  <example>
-   <title>Utiliser un mot de passe et MD5</title>
-   <programlisting role="php">
+  
+  <sect2 xml:id="security.database.storage.hashing">
+   <title>Hashage</title>
+   <simpara>
+    Dans le cas de données vraiment sensibles, si la représentation originale
+    n'est pas nécessaire (pour affichage, ou comparaison), utiliser un
+    hash est une bonne solution. L'exemple classique est le stockage de
+    mots de passe dans les bases de données, après les avoir passés au
+    en hashage de cryptage.
+   </simpara>
+   <simpara>
+    En PHP 5.5 ou supérieur, les fonctions <link linkend="ref.password">password</link>
+    fournissent une bonne façon de hasher les données sensibles et fonctionnent avec ces hashs.
+    En PHP 5.3.7+, la bibliothèque <link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="&url.password.compat;">
+    password_compat</link> peut également être utilsée.
+   </simpara>
+   <simpara>
+    La fonction <function>password_hash</function> est utilisée pour hasher une chaîne donnée
+    en utilisant l'algorithme le plus fort actuellement disponible et la fonction
+    <function>password_verify</function> vérifie si le mot de passe fourni correspond au
+    hash stocké en base de données.
+   </simpara>
+   <example>
+    <title>Hasher un champ mot de passe</title>
+    <programlisting role="php">
 <![CDATA[
 <?php
-// Stockage du mot de passe hashé
-// $random_chars récupéré en utilisant /dev/random
+
+// stockage du hash du mot de passe
+$query  = sprintf("INSERT INTO users(name,pwd) VALUES('%s','%s');",
+            pg_escape_string($username),
+            password_hash($password, PASSWORD_DEFAULT));
+$result = pg_query($connection, $query);
+
+// on vérifie si l'utilisateur a soumis le bon mot de passe
+$query = sprintf("SELECT pwd FROM users WHERE name='%s';",
+            pg_escape_string($username));
+$row = pg_fetch_assoc(pg_query($connection, $query));
+
+if ($row && password_verify($password, $row['pwd'])) {
+    echo 'Bonjour, ' . htmlspecialchars($username) . '!';
+} else {
+    echo 'L\'authentification a échoué pour ' . htmlspecialchars($username) . '.';
+}
+
+?>
+]]>
+      </programlisting>
+   </example>
+   <simpara>
+    Dans les anciennes versions de PHP, ceci pouvait être réalisé en utilisant la fonction
+    <function>crypt</function>.
+   </simpara>
+   <example>
+    <title>Hasher un mot de passe en utilisant la fonction <function>crypt</function>s</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// stockage du hash du mot de passe
+// $random_chars récupéré en utilisant, i.e. /dev/random
 $query  = sprintf("INSERT INTO users(name,pwd) VALUES('%s','%s');",
             pg_escape_string($username),
             pg_escape_string(crypt($password, '$2a$07$' . $random_chars . '$')));
 $result = pg_query($connection, $query);
 
-// Interroger le serveur pour comparer le mot de passe soumis
+// On vérifie si l'utilisateur a soumis le bon mot de passe
 $query = sprintf("SELECT pwd FROM users WHERE name='%s';",
             pg_escape_string($username));
 $row = pg_fetch_assoc(pg_query($connection, $query));
 
 if ($row && crypt($password, $row['pwd']) == $row['pwd']) {
-    echo 'Bienvenue, ' . htmlspecialchars($username) . '!';
+    echo 'Bonjour, ' . htmlspecialchars($username) . '!';
 } else {
-    echo 'Identification échouée pour ' . htmlspecialchars($username) . '.';
+    echo 'L\'authentification a échoué pour ' . htmlspecialchars($username) . '.';
 }
+
 ?>
 ]]>
-   </programlisting>
-  </example>
+      </programlisting>
+   </example>
+  </sect2>
  </sect1>
+ 
  <sect1 xml:id="security.database.sql-injection">
   <title>Injection SQL</title>
   <simpara>
@@ -180,17 +230,17 @@ $query  = "SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET $offset;"
 $result = pg_query($conn, $query);
 ?>
 ]]>
-    </programlisting>
-   </example>
-   Un utilisateur normal clique sur les boutons 'suivant' et 'précédent',
-   qui sont alors placés dans la variable <varname>$offset</varname>,
-   encodée dans l'<acronym>URL</acronym>. Le script s'attend à ce que la variable
-   <varname>$offset</varname> soit alors un nombre décimal. Cependant,
-   il est possible de modifier l'<acronym>URL</acronym> en ajoutant une nouvelle valeur,
-   au format <acronym>URL</acronym>, comme ceci :
-   <example>
-    <title>Exemple d'injection SQL</title>
-    <programlisting>
+     </programlisting>
+    </example>
+    Un utilisateur normal clique sur les boutons 'suivant' et 'précédent',
+    qui sont alors placés dans la variable <varname>$offset</varname>,
+    encodée dans l'<acronym>URL</acronym>. Le script s'attend à ce que la variable
+    <varname>$offset</varname> soit alors un nombre décimal. Cependant,
+    il est possible de modifier l'<acronym>URL</acronym> en ajoutant une nouvelle valeur,
+    au format <acronym>URL</acronym>, comme ceci :
+    <example>
+     <title>Exemple d'injection SQL</title>
+     <programlisting>
 <![CDATA[
 0;
 insert into pg_shadow(usename,usesysid,usesuper,usecatupd,passwd)
@@ -198,36 +248,36 @@ insert into pg_shadow(usename,usesysid,usesuper,usecatupd,passwd)
     from pg_shadow where usename='postgres';
 --
 ]]>
-    </programlisting>
-   </example>
-   Si cela arrive, le script va créer un nouveau super utilisateur.
-   Notez que la valeur <literal>0;</literal> sert à terminer la requête
-   originale et la terminer correctement.
-  </para>
-  <note>
-   <para>
-    C'est une technique répandue que de forcer l'analyseur SQL à ignorer le
-    reste de la requête, en utilisant les symboles <literal>--</literal> pour
-    mettre en commentaires.
+     </programlisting>
+    </example>
+    Si cela arrive, le script va créer un nouveau super utilisateur.
+    Notez que la valeur <literal>0;</literal> sert à terminer la requête
+    originale et la terminer correctement.
    </para>
-  </note>
-  <para>
-   Un moyen disponible pour accéder aux mots de passe est de contourner
-   la recherche de page. Ce que le pirate doit faire, c'est simplement
-   voir si une variable du formulaire est utilisée dans la requête, et
-   si elle est mal gérée. Ces variables peuvent avoir été configurées
-   dans une page précédente pour être utilisées dans les clauses
-   <literal>WHERE, ORDER BY, LIMIT</literal> et <literal>OFFSET</literal> des
-   requêtes <literal>SELECT</literal>. Si votre base de données supporte
-   les commandes <literal>UNION</literal>, le pirate peut essayer d'ajouter
-   une requête entière pour lister les mots de passe dans n'importe quelle
-   table. Utiliser la technique des mots de passe chiffrés est fortement
-   recommandé.
-   <example>
-    <title>
-     Liste d'articles ... et ajout de mot de passe
-    </title>
-    <programlisting role="php">
+   <note>
+    <para>
+     C'est une technique répandue que de forcer l'analyseur SQL à ignorer le
+     reste de la requête, en utilisant les symboles <literal>--</literal> pour
+     mettre en commentaires.
+    </para>
+   </note>
+   <para>
+    Un moyen disponible pour accéder aux mots de passe est de contourner
+    la recherche de page. Ce que le pirate doit faire, c'est simplement
+    voir si une variable du formulaire est utilisée dans la requête, et
+    si elle est mal gérée. Ces variables peuvent avoir été configurées
+    dans une page précédente pour être utilisées dans les clauses
+    <literal>WHERE, ORDER BY, LIMIT</literal> et <literal>OFFSET</literal> des
+    requêtes <literal>SELECT</literal>. Si votre base de données supporte
+    les commandes <literal>UNION</literal>, le pirate peut essayer d'ajouter
+    une requête entière pour lister les mots de passe dans n'importe quelle
+    table. Utiliser la technique des mots de passe chiffrés est fortement
+    recommandé.
+    <example>
+     <title>
+      Liste d'articles ... et ajout de mot de passe
+     </title>
+     <programlisting role="php">
 <![CDATA[
 <?php
 $query  = "SELECT id, name, inserted, size FROM products
@@ -254,20 +304,20 @@ union select '1', concat(uname||'-'||passwd) as name, '1971-01-01', '0' from use
    Si cette requête, exploitant les <literal>'</literal> et
    <literal>--</literal> est affectée à une variable utilisée dans
    <varname>$query</varname>, une injection SQL va se produire.
-  </para>
-  <para>
-   Les commandes <literal>UPDATE</literal> sont aussi sujettes à des
-   attaques de votre base de données. Ces requêtes peuvent aussi introduire
-   toute une nouvelle requête dans votre commande initiale. Mais en plus,
-   le pirate peut jouer sur la commande <literal>SET</literal>. Dans ce cas,
-   il doit connaître un peu votre base de données. Cela peut se deviner
-   en examinant les noms de variables dans les formulaires, ou simplement,
-   en testant les cas les plus classiques. Il n'y a pas beaucoup de
-   conventions de noms pour stocker des noms d'utilisateurs et des mots de
-   passe.
-   <example>
-    <title>Modifier un mot de passe ... et gain de droits!</title>
-    <programlisting role="php">
+   </para>
+   <para>
+    Les commandes <literal>UPDATE</literal> sont aussi sujettes à des
+    attaques de votre base de données. Ces requêtes peuvent aussi introduire
+    toute une nouvelle requête dans votre commande initiale. Mais en plus,
+    le pirate peut jouer sur la commande <literal>SET</literal>. Dans ce cas,
+    il doit connaître un peu votre base de données. Cela peut se deviner
+    en examinant les noms de variables dans les formulaires, ou simplement,
+    en testant les cas les plus classiques. Il n'y a pas beaucoup de
+    conventions de noms pour stocker des noms d'utilisateurs et des mots de
+    passe.
+    <example>
+     <title>Modifier un mot de passe ... et gain de droits!</title>
+     <programlisting role="php">
 <![CDATA[
 <?php
 $query= "UPDATE usertable SET pwd='$pwd' WHERE uid='$uid';";
@@ -297,13 +347,13 @@ $query = "UPDATE usertable SET pwd='hehehe', trusted=100, admin='yes' WHERE
 ]]>
     </programlisting>
    </example>
-  </para>
-  <para>
-   C'est un exemple terrible d'acquisition de droits d'administrateur sur un
-   serveur de base de données.
-   <example>
-    <title>Attaque d'un serveur de bases de données (MSSQL Server)</title>
-    <programlisting role="php">
+   </para>
+   <para>
+    C'est un exemple terrible d'acquisition de droits d'administrateur sur un
+    serveur de base de données.
+    <example>
+     <title>Attaque d'un serveur de bases de données (MSSQL Server)</title>
+     <programlisting role="php">
 <![CDATA[
 <?php
 $query  = "SELECT * FROM products WHERE id LIKE '%$prod%'";
@@ -334,83 +384,83 @@ $result = mssql_query($query);
    application fonctionnait en tant que <literal>sa</literal> et que le
    service MSSQLSERVER disposait de niveau de droits suffisant, le pirate
    dispose désormais d'un compte avec accès au serveur.
-  </para>
-  <note>
-   <para>
-    Certains des exemples ci-dessus sont spécifiques à certains serveurs de
-    bases de données. Cela n'empêche pas des attaques similaires d'être
-    possibles sur d'autres produits. Votre base de données sera alors
-    vulnérable d'une autre manière.
    </para>
-  </note>
-  <para>
-   <mediaobject>
-    <alt>Un exemple concernant l'injection SQL</alt>
-    <imageobject>
-     <imagedata fileref="en/security/figures/xkcd-bobby-tables.png" format="PNG"/>
-    </imageobject>
-   </mediaobject>
-   Image de <link xlink:href="&url.xkcd;327">xkcd</link>
-  </para>
-  
-  <sect2 xml:id="security.database.avoiding">
-   <title>Techniques de contournement</title>
-   <simpara>
-    Bien qu'il semble évident qu'un pirate doit posséder quelques connaissances
-    de l'architecture de la base de données afin de conduire avec succès une
-    attaque, il est souvent très simple de les obtenir. Par exemple, si la
-    base de données fait partie d'un paquet open source ou disponible publiquement,
-    ces informations sont complètement ouvertes et disponibles. Ces informations
-    peuvent aussi être divulgués pour des codes sources fermés - y compris si
-    ce code est encodé, occulté, ou compilé - aux travers des messages d'erreurs.
-    D'autres méthodes consistent à deviner l'utilisateur de table commune ainsi
-    que des noms des colonnes. Par exemple, un formulaire d'identification
-    qui utilise la table 'users' avec les colonnes de noms
-    'id', 'username', et 'password'.
-   </simpara>
-   <simpara>
-    Ces attaques sont généralement basées sur l'exploitation de code qui
-    n'est pas écrit de manière sécuritaire. N'ayez aucune confiance dans
-    les données qui proviennent de l'utilisateur, même si cela provient d'un
-    menu déroulant, d'un champ caché ou d'un cookie. Le premier exemple montre
-    comment une requête peut causer un désastre.
-   </simpara>
-   <itemizedlist>
-    <listitem>
-     <simpara>
-      Ne nous connectez jamais sur une base de données en tant que super
-      utilisateur ou propriétaire de la base. Utilisez toujours un utilisateur
-      adapté, avec des droits très limités.
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      Utilisez des requêtes préparées avec des variables liées. Elles sont
-      disponibles avec <link linkend="pdo.prepared-statements">PDO</link>,
-      <link linkend="mysqli.quickstart.prepared-statements">MySQLi</link>
-      ainsi que d'autres bibliotèques.
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      Vérifiez que les données ont bien le type attendu. <acronym>PHP</acronym> dispose
-      d'un éventail de fonction de validation large, depuis les plus
-      simples, de la section <link linkend="ref.var">Variables</link> et
-      la section <link linkend="ref.ctype">Caractères</link>
-      (e.g. <function>is_numeric</function>, <function>ctype_digit</function>
-      respectivement) aux fonctions avancées de
-      <link linkend="ref.pcre">Expression rationnelle Perl</link>.
-     </simpara>
-    </listitem>
-    <listitem>
-     <para>
-      Si l'application attend une entrée numérique, vérifiez vos données
-      avec la fonction <function>ctype_digit</function>, ou bien modifiez
-      automatiquement le type avec la fonction <function>settype</function>,
-      ou encore avec <function>sprintf</function>.
-      <example>
-       <title>Une navigation de fiches plus sécuritaire</title>
-       <programlisting role="php">
+   <note>
+    <para>
+     Certains des exemples ci-dessus sont spécifiques à certains serveurs de
+     bases de données. Cela n'empêche pas des attaques similaires d'être
+     possibles sur d'autres produits. Votre base de données sera alors
+     vulnérable d'une autre manière.
+    </para>
+   </note>
+   <para>
+    <mediaobject>
+     <alt>Un exemple concernant l'injection SQL</alt>
+     <imageobject>
+      <imagedata fileref="en/security/figures/xkcd-bobby-tables.png" format="PNG"/>
+     </imageobject>
+    </mediaobject>
+    Image de <link xlink:href="&url.xkcd;327">xkcd</link>
+   </para>
+   
+   <sect2 xml:id="security.database.avoiding">
+    <title>Techniques de contournement</title>
+    <simpara>
+     Bien qu'il semble évident qu'un pirate doit posséder quelques connaissances
+     de l'architecture de la base de données afin de conduire avec succès une
+     attaque, il est souvent très simple de les obtenir. Par exemple, si la
+     base de données fait partie d'un paquet open source ou disponible publiquement,
+     ces informations sont complètement ouvertes et disponibles. Ces informations
+     peuvent aussi être divulgués pour des codes sources fermés - y compris si
+     ce code est encodé, occulté, ou compilé - aux travers des messages d'erreurs.
+     D'autres méthodes consistent à deviner l'utilisateur de table commune ainsi
+     que des noms des colonnes. Par exemple, un formulaire d'identification
+     qui utilise la table 'users' avec les colonnes de noms
+     'id', 'username', et 'password'.
+    </simpara>
+    <simpara>
+     Ces attaques sont généralement basées sur l'exploitation de code qui
+     n'est pas écrit de manière sécuritaire. N'ayez aucune confiance dans
+     les données qui proviennent de l'utilisateur, même si cela provient d'un
+     menu déroulant, d'un champ caché ou d'un cookie. Le premier exemple montre
+     comment une requête peut causer un désastre.
+    </simpara>
+    <itemizedlist>
+     <listitem>
+      <simpara>
+       Ne nous connectez jamais sur une base de données en tant que super
+       utilisateur ou propriétaire de la base. Utilisez toujours un utilisateur
+       adapté, avec des droits très limités.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       Utilisez des requêtes préparées avec des variables liées. Elles sont
+       disponibles avec <link linkend="pdo.prepared-statements">PDO</link>,
+       <link linkend="mysqli.quickstart.prepared-statements">MySQLi</link>
+       ainsi que d'autres bibliotèques.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       Vérifiez que les données ont bien le type attendu. <acronym>PHP</acronym> dispose
+       d'un éventail de fonction de validation large, depuis les plus
+       simples, de la section <link linkend="ref.var">Variables</link> et
+       la section <link linkend="ref.ctype">Caractères</link>
+       (e.g. <function>is_numeric</function>, <function>ctype_digit</function>
+       respectivement) aux fonctions avancées de
+       <link linkend="ref.pcre">Expression rationnelle Perl</link>.
+      </simpara>
+     </listitem>
+     <listitem>
+      <para>
+       Si l'application attend une entrée numérique, vérifiez vos données
+       avec la fonction <function>ctype_digit</function>, ou bien modifiez
+       automatiquement le type avec la fonction <function>settype</function>,
+       ou encore avec <function>sprintf</function>.
+       <example>
+        <title>Une navigation de fiches plus sécuritaire</title>
+        <programlisting role="php">
 <![CDATA[
 <?php
 settype($offset, 'integer');
@@ -463,7 +513,7 @@ $query = sprintf("SELECT id, name FROM products ORDER BY name LIMIT 20 OFFSET %d
     n'est pas très utile par lui-même, mais au niveau des informations qu'il
     contient. Plus vous avez de détails, mieux c'est.
    </simpara>
-  </sect2>
+   </sect2>
  </sect1>
 </chapter>
 
