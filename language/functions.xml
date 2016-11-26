@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 740336ed228874ebc439334c41adcbef30734779 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 82d79c66531b3a08b781ac8c89c0c2f2fe4efb8f Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="language.functions" xmlns="http://docbook.org/ns/docbook">
@@ -32,7 +32,7 @@ function foo($arg_1, $arg_2, /* ..., */ $arg_n)
   <simpara>
    Tout code PHP, correct syntaxiquement, peut apparaître
    dans une fonction et dans des définitions de
-   <link linkend="keyword.class">classe</link>.
+   <link linkend="language.oop5.basic.class">classe</link>.
   </simpara>
   <para>
    Les noms de fonctions suivent les mêmes règles que les autres labels en PHP.
@@ -463,6 +463,35 @@ Préparer un bol de acidophilus framboise.
       </tbody>
      </tgroup>
     </informaltable>
+    
+    <warning>
+     <para>
+      Utiliser des alias pour les types scalaires ci-dessus n'est pas supporté.
+      A la place, ils sont traités comme noms de classe ou d'interface. Par
+      exemple, utiliser <literal>boolean</literal> comme paramètre ou
+      type retourné nécessite un argument ou une valeur retournée qui est une
+      &instanceof; la classe ou l'interface <literal>boolean</literal>, plutôt
+      que de type <type>bool</type> :
+     </para>
+     <para>
+      <example>
+       <programlisting role="php">
+<![CDATA[
+ <?php
+ function test(boolean $param) {}
+ test(true);
+ ?>
+ ]]>
+       </programlisting>
+       &example.outputs;
+       <screen>
+<![CDATA[
+ Fatal error: Uncaught TypeError: Argument 1 passed to test() must be an instance of boolean, boolean given, called in - on line 1 and defined in -:1
+ ]]>
+       </screen>
+      </example>
+     </para>
+    </warning>
    </sect3>
    
    <sect3 xml:id="functions.arguments.type-declaration.examples">
@@ -576,16 +605,18 @@ NULL
     </para>
     
     <para>
-     Il est possible d'activer un typage script fichier par fichier. Dans ce 
+     Il est possible d'activer un typage strict fichier par fichier. Dans ce 
      mode, seule une variable du type exact au type attendu dans la 
      déclaration sera acceptée sinon une exception du type 
      <classname>TypeError</classname> sera levée. La seule exception à cette 
      règle est qu'un entier (<type>integer</type>) peut être passé à une 
-     fonction attendant un nombre flottant (<type>float</type>).
+     fonction attendant un nombre flottant (<type>float</type>). Les appels
+     aux fonctions depuis des fonctions internes ne seront pas affectés par
+     la déclaration <literal>strict_types</literal>.
     </para>
     
     <para>
-     Pour activer le typage script, l'expression &declare; est utilisée avec la 
+     Pour activer le typage strict, l'expression &declare; est utilisée avec la 
      déclaration <literal>strict_types</literal> :
     </para>
     
@@ -643,12 +674,12 @@ Stack trace:
 #1 {main}
   thrown in - on line 4
 ]]>
-      </screen>
-     </example>
-     
-     <example>
-      <title>Typage faible</title>
-      <programlisting role="php">
+     </screen>
+    </example>
+    
+    <example>
+     <title>Typage faible</title>
+     <programlisting role="php">
 <![CDATA[
 <?php
 function sum(int $a, int $b) {
@@ -661,19 +692,19 @@ var_dump(sum(1, 2));
 var_dump(sum(1.5, 2.5));
 ?>
 ]]>
-      </programlisting>
-      &example.outputs;
-      <screen>
+     </programlisting>
+     &example.outputs;
+     <screen>
 <![CDATA[
 int(3)
 int(3)
 ]]>
-      </screen>
-     </example>
-     
-     <example>
-      <title>Capturer l'exception de type <classname>TypeError</classname></title>
-      <programlisting role="php">
+     </screen>
+    </example>
+    
+    <example>
+     <title>Capturer l'exception de type <classname>TypeError</classname></title>
+     <programlisting role="php">
 <![CDATA[
 <?php
 declare(strict_types=1);
@@ -690,16 +721,16 @@ try {
 }
 ?>
 ]]>
-      </programlisting>
-      &example.outputs;
-      <screen>
+     </programlisting>
+     &example.outputs;
+     <screen>
 <![CDATA[
 int(3)
 Erreur : Argument 1 passed to sum() must be of the type integer, float given, called in - on line 10
 ]]>
-      </screen>
-     </example>
-    </sect3>
+     </screen>
+    </example>
+   </sect3>
   </sect2>
   <sect2 xml:id="functions.variable-arg-list">
    <title>Nombre d'arguments variable</title>
@@ -1194,6 +1225,7 @@ Foo::$variable();  // Ceci appelle $foo->Variable(), lisant ainsi la $variable d
     <title>callables complexe</title>
     <programlisting role="php">
 <![CDATA[
+<?php
 class Foo
 {
     static function bar()
@@ -1208,9 +1240,9 @@ class Foo
 
 $func = array("Foo", "bar");
 $func(); // Affiche "bar"
-$f = array(new Foo, "baz");
+$func = array(new Foo, "baz");
 $func(); // Affiche "baz"
-$f = "Foo::bar";
+$func = "Foo::bar";
 $func(); // Affiche "bar" depuis PHP 7.0.0; avant, émettait une fatal error
 ]]>
     </programlisting>
@@ -1320,6 +1352,10 @@ $func(); // Affiche "bar" depuis PHP 7.0.0; avant, émettait une fatal error
    <link linkend="language.types.callback">fonctions de rappel</link>,
    mais leur utilisation n'est pas limitée à ce seul usage.
   </simpara>
+  <simpara>
+   Les fonctions anonymes sont implémentées en utilisant la classe
+   <link linkend="class.closure"><classname>Closure</classname></link>.
+  </simpara>
   
   <example>
    <title>Exemples avec des fonctions anonymes</title>
@@ -1376,18 +1412,18 @@ $message = 'hello';
 $example = function () {
     var_dump($message);
 };
-echo $example();
+$example();
 
 // Hérite $message
 $example = function () use ($message) {
     var_dump($message);
 };
-echo $example();
+$example();
 
 // La valeur de la variable héritée est définie lors que la fonction est 
 // définie non quand elle est appelée
 $message = 'world';
-echo $example();
+$example();
 
 // Réinitialisation de la variable message
 $message = 'hello';
@@ -1396,12 +1432,12 @@ $message = 'hello';
 $example = function () use (&$message) {
     var_dump($message);
 };
-echo $example();
+$example();
 
 // Le changement de valeur dans le contexte parent est reflété lors de 
 // l'appel de la fonction.
 $message = 'world';
-echo $example();
+$example();
 
 // Les fonctions anonymes peuvent accépté des arguments classiques
 $example = function ($arg) use ($message) {
@@ -1495,10 +1531,111 @@ print $mon_panier->getTotal(0.055) . "\n";
    </programlisting>
   </example>
   
-  <simpara>
-   Les fonctions anonymes sont implémentées en utilisant la classe
-   <link linkend="class.closure"><classname>Closure</classname></link>.
-  </simpara>
+  <example>
+   <title>Liage automatique de <literal>$this</literal></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+class Test
+{
+    public function testing()
+    {
+        return function() {
+            var_dump($this);
+        };
+    }
+}
+
+$object = new Test;
+$function = $object->testing();
+$function();
+    
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+object(Test)#1 (0) {
+}
+]]>
+    </screen>
+    &example.outputs.53;
+    <screen>
+<![CDATA[
+Notice: Undefined variable: this in script.php on line 8
+NULL]]>
+    </screen>
+  </example>
+  
+  <para>
+   Depuis PHP 5.4.0, lorsque déclaré dans le contexte d'une classe, la classe
+   courante est automatiquement liée, rendant <literal>$this</literal>
+   disponible dans le contexte de la fonction. Si ce liage automatique de
+   la classe courante n'est pas souhaitée, alors les
+   <link linkend="functions.anonymous-functions.static">fonctions anonymes
+    statiques</link> peuvent être utilisées à la place.
+  </para>
+  
+  <sect2 xml:id="functions.anonymous-functions.static">
+   <title>Les fonctions anonymes statiques</title>
+   <para>
+    Depuis PHP 5.4.0, les fonctions anonymes peuvent être déclarées statiquement.
+    Ceci permet de ne pas lier automatiquement la classe courante à la fonction.
+    Les objets peuvent aussi ne pas être liés lors de l'exécution.
+   </para>
+   <para>
+    <example>
+     <title>Tentative d'utiliser <literal>$this</literal> dans une fonction anonyme statique</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+
+new class {
+    function __construct()
+    {
+        (static function() {
+            var_dump($this);
+        })();
+    }
+};
+?>
+]]>
+      </programlisting>
+      &example.outputs;
+      <screen>
+<![CDATA[
+Notice: Undefined variable: this in %s on line %d
+NULL
+]]>
+      </screen>
+     </example>
+    </para>
+    
+    <para>
+     <example>
+      <title>Tentative de liage d'un objet à une fonction anonyme statique</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+
+(static function() {
+    // corps de la fonction
+})->call(new StdClass);
+?>
+]]>
+      </programlisting>
+      &example.outputs;
+      <screen>
+<![CDATA[
+Warning: Cannot bind an instance to a static closure in /in/sLLS9 on line 5
+]]>
+      </screen>
+     </example>
+    </para>
+  </sect2>
+  
   
   <sect2 role="changelog">
    &reftitle.changelog;
@@ -1515,8 +1652,8 @@ print $mon_panier->getTotal(0.055) . "\n";
        <row>
         <entry>5.4.0</entry>
         <entry>
-         <varname>$this</varname> peut désormais être utilisé
-         dans les fonctions anonymes.
+         Les fonctions anonymes peuvent utiliser <varname>$this</varname>, 
+         comme si déclarés statiquement.
         </entry>
        </row>
        <row>
