@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 3ce14fde5cd5f15171a7ed2b64fdc7bd652c3842 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: ce007084b5edb7ff9b481ae5921bd9fe549b2d67 Maintainer: yannick Status: ready -->
+<!-- CREDITS: DavidA. -->
 
 <refentry xml:id="function.list" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -21,6 +21,37 @@
    les variables <parameter>varname</parameter>, <parameter>...</parameter>
    sous forme de tableau, pour les assigner en une seule ligne.
   </para>
+  <note>
+   <para>
+    <function>list</function> fonctionne uniquement sur un tableau d'indice numérique et 
+    suppose que l'indice numérique commence à 0.
+   </para>
+  </note>
+  <warning>
+   <para>
+    Avec PHP 5, <function>list</function> assigne les valeurs commençant avec le paramètre le plus à droite. Avec PHP 7, <function>list</function> commence avec le paramètre le plus à gauche.
+   </para>
+   <para>
+   Si vous utilisez des variables simples, vous n'avez pas à vous en préoccuper.
+    Mais, si vous utilisez des tableaux avec des indices, vous vous attendrez 
+    généralement à ce que l'ordre des indices du tableau soit les mêmes que 
+    ceux écrit dans <function>list</function>, de la gauche,
+    vers la droit, ce qui n'est pas le cas dans PHP 5, qui
+    faisait l'assignation dans l'ordre inverse.
+   </para>
+   <para>
+    D'une manière générale, il est conseillé de ne pas se fier
+    à une commande spécifique d'exploitation, car cela pourrait changer à 
+    l'avenir.
+   </para>
+  </warning>
+  <warning>
+   <para>
+    La modification du tableau pendant l'exécution de  <function>list</function>
+    (par exemple <literal>list($a, $b) = $b</literal>) entraîne un 
+    comportement indéfini.
+   </para>
+  </warning>
  </refsect1>
  <refsect1 role="parameters">
   &reftitle.parameters;
@@ -41,6 +72,48 @@
   &reftitle.returnvalues;
   <para>
    Retourne le tableau assigné.
+  </para>
+ </refsect1>
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>7.0.0</entry>
+       <entry>
+        <link linkend="migration70.incompatible.variable-handling.list.order">
+         L'ordre dans lequel l'opération d'assignation est exécutée à changé.
+        </link>
+       </entry>
+      </row>
+      <row>
+       <entry>7.0.0</entry>
+       <entry>
+        <link linkend="migration70.incompatible.variable-handling.list.empty">
+         Les expressions de <function>list</function> ne peuvent plus être 
+         complètement vide.
+        </link>
+       </entry>
+      </row>
+      <row>
+       <entry>7.0.0</entry>
+       <entry>
+        <link linkend="migration70.incompatible.variable-handling.list.string">
+         Les chaînes de caractères ne peuvent plus être défaites.
+        </link>
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
   </para>
  </refsect1>
  <refsect1 role="examples">
@@ -145,6 +218,20 @@ var_dump($a);
      éléments, en comparaison avec l'ordre dans lequel ils ont été écrits dans
      la syntaxe de <function>list</function>) :
     </para>
+    &example.outputs.7;
+    <screen>
+<![CDATA[
+array(3) {
+  [0]=>
+  string(6) "coffee"
+  [1]=>
+  string(5) "brown"
+  [2]=>
+  string(8) "caffeine"
+}
+]]>
+    </screen>
+    &example.outputs.5;
     <screen>
 <![CDATA[
 array(3) {
@@ -159,31 +246,46 @@ array(3) {
     </screen>
    </example>
   </para>
- </refsect1>
- <refsect1 role="notes">
-  &reftitle.notes;
-  <warning>
-   <para>
-    <function>list</function> assigne les valeurs en commençant par la valeur
-    la plus à droite. Si vous utilisez ces variables, ce ne sera pas un problème.
-    Mais si vous utilisez des tableaux, vous serez surpris de voir que
-    <function>list</function> les affecte de droite à gauche.
-   </para>
-  </warning>
-  <warning>
-   <para>
-    La modification du tableau lors de l'exécution de la fonction
-    <function>list</function> (i.e. en utilisant la syntaxe
-    <literal>list($a, $b) = $b</literal>) conduit à un comportement
-    non-défini.
-   </para>
-  </warning>
-  <note>
-   <para>
-    <function>list</function> fonctionne uniquement avec des tableaux
-    à indexation numérique, et suppose que l'indexation commence à 0.
-   </para>
-  </note>
+  <para>
+   <example>
+    <title><function>list</function> et l'ordre de définition des index</title>
+    <simpara>
+     L'ordre dans lequel les indices d'un tableau sont traités par
+     <function>list</function> sont définis est non pertinent.
+    </simpara>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$foo = array(2 => 'a', 'foo' => 'b', 0 => 'c');
+$foo[1] = 'd';
+list($x, $y, $z) = $foo;
+var_dump($foo, $x, $y, $z);
+]]>
+    </programlisting>
+    <para>
+     Etant donné la sortie suivante (notez l'ordre des éléments comparés
+     et dans quel ordre ils ont été écrits dans la syntaxe 
+     de la <function>list</function>) :
+    </para>
+    <screen>
+<![CDATA[
+array(4) {
+  [2]=>
+  string(1) "a"
+  ["foo"]=>
+  string(1) "b"
+  [0]=>
+  string(1) "c"
+  [1]=>
+  string(1) "d"
+}
+string(1) "c"
+string(1) "d"
+string(1) "a"
+]]>
+    </screen>
+   </example>
+  </para>
  </refsect1>
  <refsect1 role="seealso">
   &reftitle.seealso;
