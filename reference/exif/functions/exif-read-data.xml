@@ -1,25 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: cff6fa6abc65d088f4e93aa35a09c38c000fe79f Maintainer: yannick Status: ready -->
+<!-- EN-Revision: b3286b26e00228f4b14eeb6e5a6ff05fe70ecb7e Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.exif-read-data" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>exif_read_data</refname>
-  <refpurpose>Lit les en-têtes <acronym>EXIF</acronym> dans les images <acronym>JPEG</acronym> ou <acronym>TIFF</acronym></refpurpose>
+  <refpurpose>Lit les en-têtes <acronym>EXIF</acronym> dans les images</refpurpose>
  </refnamediv>
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
    <type>array</type><methodname>exif_read_data</methodname>
-   <methodparam><type>string</type><parameter>filename</parameter></methodparam>
+   <methodparam><type>mixed</type><parameter>stream</parameter></methodparam>
    <methodparam choice="opt"><type>string</type><parameter>sections</parameter><initializer>&null;</initializer></methodparam>
    <methodparam choice="opt"><type>bool</type><parameter>arrays</parameter><initializer>false</initializer></methodparam>
    <methodparam choice="opt"><type>bool</type><parameter>thumbnail</parameter><initializer>false</initializer></methodparam>
   </methodsynopsis>
   <para>
    <function>exif_read_data</function> lit les en-têtes <acronym>EXIF</acronym>
-   des images <acronym>JPEG</acronym> et <acronym>TIFF</acronym>.
+   des images.
    Avec cette fonction, vous pouvez lire les données méta générées par les appareils photos
    numériques.
   </para>
@@ -77,11 +77,12 @@
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>filename</parameter></term>
+     <term><parameter>stream</parameter></term>
      <listitem>
       <para>
-       Le nom du fichier image à lire. Il ne peut pas
-       être une <acronym>URL</acronym>.
+       L'emplacement du fichier image. Il peut s'agir soit d'un chemin d'accès 
+       au fichier (les wrappers de flux sont également pris en charge comme 
+       d'habitude), soit d'un flux <type>resource</type>.
       </para>
      </listitem>
     </varlistentry>
@@ -198,6 +199,77 @@
      </thead>
      <tbody>
       <row>
+       <entry>7.2.0</entry>
+       <entry>
+        Le paramètre <parameter>filename</parameter> a été renommé
+        <parameter>stream</parameter> et prend désormais en charge les fichier 
+        locaux ou les ressources de flux.
+       </entry>
+      </row>
+      <row>
+       <entry>7.2.0</entry>
+       <entry>
+        La prise en charge des formats EXIF suivants a été ajoutée :
+       <itemizedlist>
+        <listitem>
+         <simpara>
+          Samsung
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          DJI
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          Panasonic
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          Sony
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          Pentax
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          Minolta
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          Sigma/Foveon
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          AGFA
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          Kyocera
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          Ricoh
+         </simpara>
+        </listitem>
+        <listitem>
+         <simpara>
+          Epson
+         </simpara>
+        </listitem>
+       </itemizedlist>
+       </entry>
+      </row>
+      <row>
        <entry>4.3.0</entry>
        <entry>
         Peut aussi lire les sections <acronym>IFD</acronym>
@@ -297,13 +369,88 @@ THUMBNAIL.Thumbnail.Height: 1
     </screen>
    </example>
   </para>
+  <para>
+   <example>
+    <title><function>exif_read_data</function> avec les flux disponible depuis PHP 7.2.0</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Ouvrir le fichier, cela devrait être en mode binaire
+$fp = fopen('/path/to/image.jpg', 'rb');
+
+if (!$fp) {
+    echo 'Error: Unable to open image for reading';
+    exit;
+}
+
+// Essayez de lire les en-têtes EXIF
+$headers = exif_read_data($fp);
+
+if (!$headers) {
+    echo 'Error: Unable to read exif headers';
+    exit;
+}
+
+// Afficher les entêtes 'COMPUTED'
+echo 'EXIF Headers:' . PHP_EOL;
+
+foreach ($headers['COMPUTED'] as $header => $value) {
+    printf(' %s => %s%s', $header, $value, PHP_EOL);
+}
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen role="php">
+<![CDATA[
+EXIF Headers:
+ Height => 576
+ Width => 1024
+ IsColor => 1
+ ByteOrderMotorola => 0
+ ApertureFNumber => f/5.6
+ UserComment =>
+ UserCommentEncoding => UNDEFINED
+ Copyright => Denis
+ Thumbnail.FileType => 2
+ Thumbnail.MimeType => image/jpeg
+]]>
+    </screen>
+   </example>
+  </para>
  </refsect1>
+ 
+ <refsect1 role="notes">
+  &reftitle.notes;
+  <note>
+   <para>
+    Si <link linkend="ref.mbstring">mbstring</link> est activé, EXIF va tenter 
+    de traiter l'Unicode et de choisir un jeu de caractères comme spécifié par
+    <link linkend="ini.exif.decode-unicode-motorola">exif.decode_unicode_motorola</link> et 
+    <link linkend="ini.exif.decode-unicode-intel">exif.decode_unicode_intel</link>. 
+    L'extension EXIF ne tentera pas de déterminer l'encodage de lui même, et il 
+    appartient à l'utilisateur de spécifier correctement l'encodage à utiliser 
+    pour le décodage en définissant l'une des deux directives INI avant 
+    d'appeler <function>exif_read_data</function>. 
+   </para>
+  </note>
+  <note>
+   <para>
+    Si le paramètre <parameter>stream</parameter> est utilisé pour passer un 
+    flux à la fonction, alors le flux doit être repositionnable. Notez que la 
+    position du pointeur d'un fichier n'est pas modifié après le retour de 
+    cette fonction.
+   </para>
+  </note>
+ </refsect1>
+ 
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
    <simplelist>
     <member><function>exif_thumbnail</function></member>
     <member><function>getimagesize</function></member>
+    <member><xref linkend="wrappers"/></member>
    </simplelist>
   </para>
  </refsect1>
