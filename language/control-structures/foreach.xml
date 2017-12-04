@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 4b824fda65773b3a907176feda258f278f6afac0 Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 239e96a218079d1211bbf7f1d73947039a00ab5e Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
 
 <sect1 xml:id="control-structures.foreach" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -43,7 +43,7 @@ foreach (array_expression as $key => $value){
  <para>
   <note>
    <para>
-    Lorsque <literal>foreach</literal> démarre, le pointeur interne
+    En PHP 5, lorsque <literal>foreach</literal> démarre, le pointeur interne
     du tableau est automatiquement ramené au premier
     élément du tableau. Cela signifie que vous n'aurez
     pas à faire appel à <function>reset</function> avant
@@ -51,8 +51,11 @@ foreach (array_expression as $key => $value){
    </para>
    <para>
     Vu que <literal>foreach</literal> utilise le pointeur interne
-    du tableau à chaque itération, il conviendra d'en tenir compte
+    du tableau en PHP 5 à chaque itération, il conviendra d'en tenir compte
     lors d'une utilisation future du tableau dans votre code.
+   </para>
+   <para>
+    En PHP 7, <literal>foreach</literal> n'utilise pas le pointeur de tableau interne.
    </para>
   </note>
  </para>
@@ -76,10 +79,47 @@ unset($value); // Détruit la référence sur le dernier élément
    </programlisting>
   </informalexample>
  </para>
+ <warning>
+  <para>
+   La référence de <literal>$value</literal> et le dernier élément du tableau
+   sont conservés après l'exécution de la boucle <literal>foreach</literal>.
+   Il est recommandé de les détruire en utilisant la fonction
+   <function>unset</function>. Sinon, vous ressentirez le 
+   comportement suivant :
+  </para>
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$arr = array(1, 2, 3, 4);
+foreach ($arr as &$value) {
+    $value = $value * 2;
+}
+// $arr est maintenant array(2, 4, 6, 8)
+
+// sans un unset($value), $value est toujours une référence au dernier élément: $arr[3]
+
+foreach ($arr as $key => $value) {
+    // $arr[3] sera mis à jour avec chaque valeur de $arr...
+    echo "{$key} => {$value} ";
+    print_r($arr);
+}
+// ...jusqu'à ce que finalement la valeur de deuxième à dernière soit copiée sur la dernière valeur
+
+// sortie :
+// 0 => 2 Array ( [0] => 2, [1] => 4, [2] => 6, [3] => 2 )
+// 1 => 4 Array ( [0] => 2, [1] => 4, [2] => 6, [3] => 4 )
+// 2 => 6 Array ( [0] => 2, [1] => 4, [2] => 6, [3] => 6 )
+// 3 => 6 Array ( [0] => 2, [1] => 4, [2] => 6, [3] => 6 )
+?>
+]]>
+   </programlisting>
+  </informalexample>
+ </warning>
  <para>
-  Le référencement de <literal>$value</literal> est seulement possible si
-  le tableau parcouru peut être référencé (i.e. si c'est une variable).
-  Le code suivant ne fonctionnera pas :
+  Avant PHP 5.5.0, le référencement de <literal>$value</literal> est possible 
+  que si le tableau itérer peut être référencé (c'est-à-dire s'il s'agit d'une 
+  variable). Le code suivant fonctionne uniquement à partir de PHP 5.5.0 :
   <informalexample>
   <programlisting role="php">
 <![CDATA[
@@ -92,14 +132,6 @@ foreach (array(1, 2, 3, 4) as &$value) {
   </programlisting>
   </informalexample>
  </para>
- <warning>
-  <para>
-   La référence de <literal>$value</literal> et le dernier élément du tableau
-   sont conservés après l'exécution de la boucle <literal>foreach</literal>.
-   Il est recommandé de les détruire en utilisant la fonction
-   <function>unset</function>.
-  </para>
- </warning>
  <para>
   <note>
    <para>
@@ -315,6 +347,44 @@ A: 3; B: 4; C:
    </informalexample>
   </para>
  </sect2>
+
+ <sect2 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>7.0.0</entry>
+       <entry>
+        <literal>foreach</literal> n'utilise plus le pointeur de tableau interne.
+       </entry>
+      </row>
+      <row>
+       <entry>5.5.0</entry>
+       <entry>
+        Le référencement de <literal>$value</literal> est pris en charge pour les 
+        expressions. Auparavant, seules les variables ont été prises en charge.
+       </entry>
+      </row>
+      <row>
+       <entry>5.5.0</entry>
+       <entry>
+        Le déballage des tableaux imbriqués avec <function>list</function> est pris en charge.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
+ </sect2>
+ 
 </sect1>
 
 <!-- Keep this comment at the end of the file
