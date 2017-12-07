@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: a2b30c956f0d837f46c4106dc4e7ba55f158ba75 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: a61987978df83d82f1da3b087aa3b43a6c5573b8 Maintainer: yannick Status: ready -->
+<!-- CREDITS: DavidA -->
 
 <sect1 xml:id="language.types.string">
  <title>Les chaînes de caractères</title>
@@ -18,7 +18,10 @@
  
  <note>
   <simpara>
-   Une &string; peut être d'une taille allant jusqu'à plus de 2Go (2147483647 octets maximum).
+   Depuis PHP 7.0.0, il n'y a plus de restriction sur la taille d'un <type>string</type>
+   sur les systèmes 64-bit. Sur les systèmes 32-bit et dans les précédentes 
+   versions une &string; peut être d'une taille allant
+   jusqu'à plus de 2Go (2147483647 octets maximum).
   </simpara>
  </note>
  
@@ -116,7 +119,7 @@ echo 'Les variables ne seront pas $traitees $ici';
    
    <para>
     Si la &string; est entourée de guillemets doubles ("), PHP interprétera
-    plus de séquences d'échappement comme des caractères spéciaux :
+    les séquences d'échappement suivantes pour les caractères spéciaux :
    </para>
    
    <table>
@@ -171,7 +174,9 @@ echo 'Les variables ne seront pas $traitees $ici';
        <entry><literal>\[0-7]{1,3}</literal></entry>
        <entry>
         La séquence de caractères correspondant à cette expression rationnelle
-        est un caractère, en notation octale
+        est un caractère, en notation octale, qui débordera
+        silencieusement pour s'adapter à un octet
+        (e.g. "\400" === "\000")
        </entry>
       </row>
       <row>
@@ -179,6 +184,15 @@ echo 'Les variables ne seront pas $traitees $ici';
        <entry>
         La séquence de caractères correspondant à cette expression rationnelle
         est un caractère, en notation hexadécimale
+       </entry>
+      </row>
+      <row>
+       <entry><literal>\u{[0-9A-Fa-f]+}</literal></entry>
+       <entry>
+        la séquence de caractères correspondant à
+        l'expression régulière est un codepoint Unicode, qui
+        sera la sortie de la chaîne de caractères
+        représentant le codepoint UTF-8 (ajouté dans PHP 7.0.0)
        </entry>
       </row>
      </tbody>
@@ -238,15 +252,12 @@ echo 'Les variables ne seront pas $traitees $ici';
      sera émise à la dernière ligne.
     </simpara>
     
-    <para>
-     Heredoc ne peut être utilisé pour initialiser les proriétés d'une classe.
-     Depuis PHP 5.3, cette limitation ne s'applique qu'aux Heredoc qui contiennent
-     des variables.
-    </para>
+    
     
     <example>
      <title>Exemple invalide</title>
      <programlisting role="php">
+     <!-- Ceci est un exemple INVALIDE -->
 <![CDATA[
 <?php
 class foo {
@@ -254,10 +265,31 @@ class foo {
 bar
     EOT;
 }
+// L'identifiant ne doit pas être indenté
 ?>
 ]]>
      </programlisting>
     </example>
+        <example>
+     <title>Exemple valide</title>
+     <programlisting role="php">
+      <!-- Ceci est un exemple VALIDE -->
+<![CDATA[
+<?php
+class foo {
+    public $bar = <<<EOT
+bar
+EOT;
+}
+?>
+]]>
+     </programlisting>
+    </example>
+    <para>
+     Heredoc ne peut être utilisé pour initialiser les propriétés d'une classe.
+     Depuis PHP 5.3, cette limitation ne s'applique qu'aux Heredoc qui contiennent
+     des variables.
+    </para>
    </warning>
    
    <para>
@@ -286,7 +318,7 @@ class foo
     var $foo;
     var $bar;
 
-    function foo()
+    function __construct()
     {
         $this->foo = 'Foo';
         $this->bar = array('Bar1', 'Bar2', 'Bar3');
@@ -425,7 +457,7 @@ class foo
     public $foo;
     public $bar;
 
-    function foo()
+    function __construct()
     {
         $this->foo = 'Foo';
         $this->bar = array('Bar1', 'Bar2', 'Bar3');
@@ -451,15 +483,6 @@ Maintenant, j'affiche quelques {$foo->bar[1]}.
 Ceci ne devrait pas afficher un 'A' : \x41]]>
     </screen>
    </example>
-   
-   <note>
-    <para>
-     Contrairement à Heredoc, Nowdoc peut être utilisé dans
-     n'importe quel contexte de données statiques. L'exemple
-     typique est l'initialisation de proriétés ou de constantes
-     de classe :
-    </para>
-   </note>
    
    <example>
     <title>Exemple avec des données statiques</title>
@@ -526,6 +549,8 @@ echo "Il a bu du jus de $juice.".PHP_EOL;
 
 // Invalide. "s" est un caractère valide dans un nom de variable, mais la variable est $juice.
 echo "Il a bu du jus constitué de $juices.";
+// Valide. Il est explicitement spécifié la fin du nom de la variable en l'encadrant par des accolades
+echo "Il a bu du jus contitué de ${juice}s.";
 ?>
 ]]>
      </programlisting>
@@ -534,6 +559,7 @@ echo "Il a bu du jus constitué de $juices.";
 <![CDATA[
 Il a bu du jus de pomme.
 Il a bu du jus constitué de .
+Il a bu du jus constitué de pommes.
 ]]>
      </screen>
     </informalexample>
@@ -587,6 +613,31 @@ Robert Paulsen a dit bonjour aux .
     </example>
     
     <simpara>
+      Depuis PHP 7.1.0 les indices numériques <emphasis>negatifs</emphasis>  
+     sont aussi supportés.
+    </simpara>
+
+    <example><title>Indices numériques négatifs</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$string = 'string';
+echo "Le personnage à l'index -2 est $string[-2].", PHP_EOL;
+$string[-3] = 'o';
+echo "Change le caractère à l'index -3 par o donne $string.", PHP_EOL;
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+Le personnage à l'index -2 est n.
+Change le caractère à l'index -3 par o donne strong.
+]]>
+     </screen>
+    </example>
+
+    <simpara>
      Pour tout ce qui est plus complexe, vous devriez utiliser la
      syntaxe complexe.
     </simpara>
@@ -626,7 +677,6 @@ echo "This is { $great}";
 
 // Fonctionne, affiche : This is fantastic
 echo "This is {$great}";
-echo "This is ${great}";
 
 // Fonctionne
 echo "This square is {$square->width}00 centimeters broad."; 
@@ -682,7 +732,7 @@ $foo = new foo();
 $bar = 'bar';
 $baz = array('foo', 'bar', 'baz', 'quux');
 echo "{$foo->$bar}\n";
-echo "{$foo->$baz[1]}\n";
+echo "{$foo->{$baz[1]}}\n";
 ?>
 ]]>
      </programlisting>
@@ -746,7 +796,17 @@ echo "I'd like an {${beers::$ale}}\n";
     <function>substr</function> et <function>substr_replace</function>
     peuvent être utilisées lorsque vous voulez extraire ou remplacer plus d'un caractère.
    </para>
-   
+   <note>
+    <simpara>
+     Depuis PHP 7.1.0, les offsets négatifs dans les chaînes
+     de caractères sont aussi supportées
+     Cela spécifie l'offset en partant de la fin de la chaîne de caractères.
+     Anciennement, l'index négatif emettait <constant>E_NOTICE</constant> pour la lecture for reading
+     (soumission d'une chaîne vide) et
+     <constant>E_WARNING</constant> pour l'écriture
+     (laissant la chaîne inchangée).
+    </simpara>
+   </note>
    <note>
     <simpara>
      On peut également accéder à une chaîne en utilisant des accolades, comme ceci :
@@ -760,10 +820,10 @@ echo "I'd like an {${beers::$ale}}\n";
      la chaîne est complétée par des espaces jusqu'à cette position.
      Les positions sont toujours converties en valeur entière.
      Les types de positions invalides produisent une alerte <constant>E_NOTICE</constant>.
-     Les positions négatives produisent une alerte <constant>E_NOTICE</constant> en écriture,
-     mais retournent une chaîne vide en lecture.
+  
      Seul le premier caractère d'une chaîne assignée est utilisé.
-     Assigner une chaîne vide assigne le caractère NULL.
+Depuis PHP 7.1.0, assigner une chaîne vide lève une erreur fatale.
+     Anciennement, cela affectait à NULL.
     </simpara>
    </warning>
 
@@ -775,7 +835,13 @@ echo "I'd like an {${beers::$ale}}\n";
      sur un seul octet, comme ISO-8859-1.
     </simpara>
    </warning>
-   
+   <note>
+    <simpara>
+     Depuis PHP 7.1.0, appliquer un index vide sur une chaîne lève une 
+     erreur fatale. 
+     Anciennement, la chaîne était silencieusement convertie en un tableau.
+    </simpara>
+   </note>
    <example>
     <title>Quelques exemples de chaînes</title>
     <programlisting role="php">

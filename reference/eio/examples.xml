@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 377cbed58017458cd07b087a70d26624def218a4 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: ff4c97050881f69e37bc44cd4034c268566e376d Maintainer: yannick Status: ready -->
+<!-- CREDITS: DavidA -->
 
 <chapter xml:id="eio.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  &reftitle.examples;
@@ -246,6 +246,51 @@ string(10) "mkdir data"
    </screen>
  </example>
  </para>
+ 
+ <para>
+  <example>
+   <title>Utilisation de  eio avec l'extension event</title>
+   <programlisting role="php"><![CDATA[
+<?php
+$base = new EventBase();
+
+// Retourne le flux d'interrogation eio.
+// Notez que cette variable doit être active tant que la boucle d'événements est en cours d'exécution.
+$eio_stream = eio_get_event_stream();
+
+// Lie le flux d'interrogation eio à la boucle d'événement.
+$poll_event = new Event($base, $eio_stream, Event::READ, function () {
+  if (eio_nreqs()) {
+    eio_poll();
+  }
+});
+$poll_event->add();
+
+// Ajoute le job eio
+eio_nop(EIO_PRI_DEFAULT, function () {
+  echo "eio_nop\n";
+});
+
+// Ajout les événements
+$timer = Event::timer($base, function () {
+  echo "2 seconds elapsed\n";
+});
+$timer->add(2);
+
+// Envoi les événements.
+$base->dispatch();
+?>
+]]></programlisting>
+
+&example.outputs.similar;
+<screen>
+ <![CDATA[
+eio_nop
+2 seconds elapsed
+ ]]>
+ </screen>
+</example>
+</para>
  
 </chapter>
 
