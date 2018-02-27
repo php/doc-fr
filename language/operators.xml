@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 3339c9e3f2353466fc291322d4980fa9e98c908e Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 995eaea8640022c0337a0e5d1bcab4a9df92d8e2 Maintainer: yannick Status: ready -->
+<!-- CREDITS: DAnnebicque -->
 
 <chapter xml:id="language.operators" xmlns="http://docbook.org/ns/docbook">
  <title>Les opérateurs</title>
@@ -184,6 +184,7 @@
         <literal>===</literal> 
         <literal>!==</literal> 
         <literal>&lt;&gt;</literal>
+        <literal>&lt;=&gt;</literal>
        </entry>
        <entry>
         <link linkend="language.operators.comparison">comparaison</link>
@@ -225,6 +226,13 @@
        </entry>
       </row>
       <row>
+        <entry>right</entry>
+        <entry><literal>??</literal></entry>
+        <entry>
+         <link linkend="language.operators.comparison">comparaison</link>
+        </entry>
+       </row>
+      <row>
        <entry>gauche</entry>
        <entry><literal>? :</literal></entry>
        <entry>
@@ -247,7 +255,6 @@
         <literal>^=</literal> 
         <literal>&lt;&lt;=</literal> 
         <literal>&gt;&gt;=</literal>
-        <literal>=&gt;</literal>
        </entry>
        <entry>
         <link linkend="language.operators.assignment">affectation</link>
@@ -273,11 +280,6 @@
        <entry>
         <link linkend="language.operators.logical">logique</link>
        </entry>
-      </row>
-      <row>
-       <entry>gauche</entry>
-       <entry><literal>,</literal></entry>
-       <entry>plusieurs utilisations</entry>
       </row>
      </tbody>
     </tgroup>
@@ -323,6 +325,30 @@ $array[$i] = $i++; // peut définir l'index 1 ou 2
 ]]>
     </programlisting>
    </example>
+   <example>
+     <title><literal>+</literal>, <literal>-</literal> et <literal>.</literal> ont la même priorité</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$x = 4;
+// cette ligne peut entraîner une sortie inattendue:
+echo "x moins un est égal " . $x-1 . ", en tout cas j'espère\n";
+// parce que c'est évalué comme la ligne suivante:
+echo (("x moins un est égal " . $x) - 1) . ", en tout cas j'espère\n";
+// la priorité désiré peut être renforcée en utilisant les paranthèses. :
+echo "x moins un est égal " . ($x-1) . ", en tout cas j'espère\n";
+?>
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+-1, en tout cas j'espère
+-1, en tout cas j'espère
+x moins un est égal 3, en tout cas j'espère
+]]>
+     </screen>
+    </example>
   </para>
   <note>
    <para>
@@ -352,6 +378,13 @@ $array[$i] = $i++; // peut définir l'index 1 ou 2
      </row>
     </thead>
     <tbody>
+     <row>
+      <entry>+$a</entry>
+      <entry>Identité</entry>
+      <entry>Conversion de <varname>$a</varname> vers <type>int</type> ou <type>float</type>, 
+       selon le plus approprié.
+      </entry>
+     </row>
      <row>
       <entry>-$a</entry>
       <entry>Négation</entry>
@@ -383,7 +416,7 @@ $array[$i] = $i++; // peut définir l'index 1 ou 2
      </row>
      <row>
       <entry>$a % $b</entry>
-      <entry>Modulo</entry>
+      <entry>Modulus</entry>
       <entry>
        Reste de <varname>$a</varname> divisé par <varname>$b</varname>.
       </entry>
@@ -401,11 +434,13 @@ $array[$i] = $i++; // peut définir l'index 1 ou 2
    L'opérateur de division ("/") retourne une valeur à virgule flottante
    sauf si les 2 opérandes sont des entiers (ou une &string; qui a été convertie
    en entiers) et que leur division est exacte (i.e. a pour reste 0), auquel cas une valeur
-   entière sera retournée.
+   entière sera retournée. Pour la division entière, voir
+   <function>intdiv</function>.
   </simpara>
   <simpara>
    Les opérandes du modulo sont converties en entiers (en supprimant la partie
    décimale) avant exécution.
+   Pour le modulo sur des nombres décimaux, voir <function>fmod</function>.
   </simpara>
   <para>
    Le résultat de l'opération modulo <literal>%</literal> a le même signe que
@@ -457,11 +492,6 @@ $a = ($b = 4) + 5;
 ]]>
     </programlisting>
    </informalexample>
-  </para>
-  <para>
-   Pour les <type>arrays</type>, affecter une valeur à une clé donnée est effectué au moyen
-   de l'opérateur "=&gt;". La <link linkend="language.operators.precedence">précédence</link>
-   de cet opérateur est la même que celle des opérateurs d'affectation.
   </para>
   <para>
    En plus du simple opérateur d'affectation, il existe des
@@ -1226,10 +1256,11 @@ Expression : 0 = -4 << 62
   </para>
   <warning>
    <para>
-    Décaler des entiers par des valeurs supérieures ou égales à la taille 
-    maximum des entiers supportés par le système peut induire un comportement 
-    non prévu. En d'autres mots, ne décalez pas plus de 31 bits sur un système 
-    32 bits, ou plus de 63 bits sur un système 64 bits. 
+    Sur les versions précédente à PHP 7.0, décaler des entiers par des valeurs 
+    supérieures ou égales à la taille maximum des entiers supportés par le 
+    système, ou par des nombres négatifs, peut induire un comportement non prévu.
+En d'autres mots, si vous utilisez PHP 5.x, ne décalez pas plus de 31 bits 
+    sur un système 32 bits, ou plus de 63 bits sur un système 64 bits. 
    </para>
    <para>
     Utilisez les fonctions de l'extension <link linkend="book.gmp">gmp</link> 
@@ -1329,22 +1360,14 @@ Expression : 0 = -4 << 62
      </row>
       <row>
        <entry>$a &lt;=&gt; $b</entry>
-       <entry>Opérateur combiné</entry>
+       <entry>Combiné</entry>
        <entry>
         Un entier inférieur, égal ou supérieur à zéro lorsque
         <varname>$a</varname> est respectivement inférieur, égal, ou
         supérieur à <varname>$b</varname>. Disponible depuis PHP 7.
        </entry>
       </row>
-      <row>
-       <entry>$a ?? $b ?? $c</entry>
-       <entry>Opérateur d'union nul</entry>
-       <entry>
-        Retourne la première opérande depuis la gauche vers la droite
-        qui existe, et différent de &null;. Si rien n'existe, &null; sera
-        retourné. Disponible depuis PHP 7.
-       </entry>
-      </row>
+     
     </tbody>
    </tgroup>
   </table>
@@ -1645,6 +1668,75 @@ echo ((true ? 'true' : false) ? 't' : 'f');
     </para>
    </note>
   </sect2>
+  
+  
+  <sect2 xml:id="language.operators.comparison.coalesce">
+    <title>Opérateur de fusion Null</title>
+    <para>
+     Il existe également l'opérateur "??" (ou fusion null), disponible depuis 
+     PHP 7.
+     <example>
+      <title>Assigner une valeur par défaut</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+// Exemple d'utilisation pour: Opérateur de fusion Null
+$action = $_POST['action'] ?? 'default';
+
+// le code ci-dessus est équivalent à cette structure if/else 
+if (isset($_POST['action'])) {
+    $action = $_POST['action'];
+} else {
+    $action = 'default';
+}
+
+?>
+]]>
+      </programlisting>
+     </example>
+     L'expression <literal>(expr1) ?? (expr2)</literal> retourne
+     <replaceable>expr2</replaceable> si <replaceable>expr1</replaceable> est
+     &null;, et <replaceable>expr1</replaceable> dans les autre cas.
+    </para>
+    <para>
+     En particulier, cet opérateur n'émets pas de notice si
+     la partie gauche n'existe pas, exactement comme <function>isset</function>. 
+     Ceci est particulièrement utile pour les clés des tableaux.
+    </para>
+    <note>
+     <simpara>
+      Veuillez noter que l'opérateur null de fusion est une expression, et qu'il
+       ne s'évalue pas comme une variable, mais comme le résultat d'une expression.
+      Il est important de le savoir si vous souhaitez renvoyer une variable 
+      par référence.
+      L'expression <literal>return $foo ?? $bar;</literal>
+      est un retour par référence qui ne fonctionne donc pas, et emet un warning.
+     </simpara>
+    </note>
+    <note>
+     <para>
+    Veuillez noter que l'opérateur de fusion null permet une imbrication simple:
+      <example>
+       <title>Imbrication de l'opération de fusion null</title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+
+$foo = null;
+$bar = null;
+$baz = 1;
+$qux = 2;
+
+echo $foo ?? $bar ?? $baz ?? $qux; // sortie 1
+
+?>
+]]>
+       </programlisting>
+      </example>
+     </para>
+    </note>
+   </sect2>
+  
  </sect1>
  
  <sect1 xml:id="language.operators.errorcontrol">
@@ -1992,7 +2084,7 @@ $d = (true  or  foo());
 // Agit comme : ($e = (false || true))
 $e = false || true;
 
-// La constante false est affectée à $f, puis, true est ignoré
+// La constante false est affectée à $f avant que l'opération "or" apparaisse
 // Agit comme : (($f = false) or true)
 $f = false or true;
 
@@ -2005,7 +2097,7 @@ var_dump($e, $f);
 // Agit comme : ($g = (true && false))
 $g = true && false;
 
-// La constante true est affectée à $h, puis, false est ignoré
+// La constante true est affectée à $h avant que l'opération "and" apparaisse
 // Agit comme : (($h = true) and false)
 $h = true and false;
 
@@ -2127,6 +2219,10 @@ var_dump($c);
 $c = $b + $a; // Union de $b et $a
 echo "Union de \$b et \$a : \n";
 var_dump($c);
+
+$a += $b; // Union de $a += $b est $a and $b
+echo "Union de \$a += \$b: \n";
+var_dump($a);
 ?>
 ]]>
     </programlisting>
@@ -2150,6 +2246,15 @@ array(3) {
   ["b"]=>
   string(6) "fraise"
   ["c"]=>
+  string(6) "cerise"
+}
+Union de $a += $b:
+array(3) {
+  'a' =>
+  string(5) "pomme"
+  'b' =>
+  string(6) "banane"
+  'c' =>
   string(6) "cerise"
 }
 ]]>

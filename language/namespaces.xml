@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 666758d72bb59946d4c8d95e48321d66c7b544b7 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 27e86fd791a1b083db2e08a37ce3443bd93cf13c Maintainer: yannick Status: ready -->
+<!-- CREDITS: DAnnebicque -->
 
 <chapter xml:id="language.namespaces" xmlns="http://docbook.org/ns/docbook"
  version="1.1">
@@ -25,6 +25,26 @@
    <literal>/home/greg/foo.txt</literal>. Le même principe s'applique aux
    espaces de noms dans le monde de la programmation.
   </simpara>
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>7.0.0</entry>
+       <entry>
+        Ajout du groupe de déclarations use
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
   <simpara>
    Dans le monde PHP, les espaces de noms sont conçus pour résoudre deux problèmes
    que rencontrent les auteurs de bibliothèques et d'applications lors de la réutilisation
@@ -109,7 +129,7 @@ namespace MonProjet;
 
 const CONNEXION_OK = 1;
 class Connexion { /* ... */ }
-function connecte() { /* ... */  }
+function connecte() { /* ... */ }
 
 ?>
 ]]>
@@ -488,14 +508,6 @@ function funcname()
 }
 const constname = "namespaced";
 
-include 'example1.php';
-
-$a = 'classname';
-$obj = new $a; // affiche classname::__construct
-$b = 'funcname';
-$b(); // affiche funcname
-echo constant('constname'), "\n"; // affiche global
-
 /* Note que si vous utilisez des guillemets doubles, "\\nomdelespacedenoms\\classname" doit être utilisé */
 $a = '\nomdelespacedenoms\classname';
 $obj = new $a; // affiche nomdelespacedenoms\classname::__construct
@@ -741,10 +753,10 @@ $obj = new \Another\untruc; // instantie un objet de la classe Another\untruc
 <?php
 namespace Languages;
 
-class Greenlandic
+function toGreenlandic
 {
     use Languages\Danish;
-    ...
+    // ...
 }
 ?>
 ]]>
@@ -758,6 +770,41 @@ class Greenlandic
     </para>
    </note>
   </sect2>
+  <sect2 xml:id="language.namespaces.importing.group">
+   <title>Déclaration du groupe <literal>use</literal></title>
+   <para>
+    Depuis PHP 7.0, les classes, fonctions et constantes
+    peuvant être importées depuis
+    le même &namespace; peuvent être regroupées dans une
+    seule instruction  &use.namespace;.
+   </para>
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// Code avant PHP 7
+use some\namespace\ClassA;
+use some\namespace\ClassB;
+use some\namespace\ClassC as C;
+
+use function some\namespace\fn_a;
+use function some\namespace\fn_b;
+use function some\namespace\fn_c;
+
+use const some\namespace\ConstA;
+use const some\namespace\ConstB;
+use const some\namespace\ConstC;
+
+// Code avec PHP 7+
+use some\namespace\{ClassA, ClassB, ClassC as C};
+use function some\namespace\{fn_a, fn_b, fn_c};
+use const some\namespace\{ConstA, ConstB, ConstC};
+]]>
+    </programlisting>
+   </informalexample>
+  </sect2>
+  
  </sect1>
  <sect1 xml:id="language.namespaces.global">
   <title>Espace de noms global</title>
@@ -880,6 +927,15 @@ if (is_array('hi')) { // affiche "n'est pas un tableau"
       </para>
      </listitem>
     </varlistentry>
+    <varlistentry>
+     <term>Nom Relatif</term>
+     <listitem>
+      <para>
+       C'est un identifiant commençant par <literal>namespace</literal>, tel que
+       <literal>namespace\Foo\Bar</literal>.
+      </para>
+     </listitem>
+    </varlistentry>
    </variablelist>
   </para>
   <para>
@@ -887,41 +943,64 @@ if (is_array('hi')) { // affiche "n'est pas un tableau"
    <orderedlist>
     <listitem>
      <simpara>
-      Les appels à des espaces de noms absolus pour des fonctions, classes ou constantes
-      sont résolus à la compilation. Par exemple, 
-      <literal>new \A\B</literal> utilise la classe <literal>A\B</literal>.
+      Les noms absolus se traduisent toujours par les noms sans le séparateur de namespace.
+      Par exemple, <literal>\A\B</literal> se traduit par <literal>A\B</literal>.
      </simpara>
     </listitem>
     <listitem>
      <simpara>
-      Tous les noms qui ne sont pas absolus sont traduits durant la compilation à
-      l'aide des règles d'importation. Par exemple, si le nom <literal>A\B\C</literal>
-      est importé sous l'alias <literal>C</literal>, un appel à 
-      <literal>C\D\e()</literal> est traduit en un appel à <literal>A\B\C\D\e()</literal>.
+      Tous les noms qui ne sont pas absolus sont traduit avec 
+       le <literal>namespace</literal> remplacé par le namespace courant. 
+      Si le nom apparait dans le namespace global, le prefixe
+      <literal>namespace\</literal> est retiré. Par exemple  <literal>namespace\A</literal>
+      dans le namespace <literal>X\Y</literal> se traduit par <literal>X\Y\A</literal>. 
+      Le même nom dans le namespace global se traduit par <literal>A</literal>.
+          </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Pour les noms absolus, le premier segment est traduit
+      en accord avec la class/namespace de la table d'importation.
+      Par exemple, si le namespace <literal>A\B\C</literal> est importé comme <literal>C</literal>, le nom <literal>C\D\E</literal> est traduit par <literal>A\B\C\D\E</literal>.
      </simpara>
     </listitem>
     <listitem>
      <simpara>
-      Dans un nom de domaine, tous les noms qualifiés qui ne sont pas traduits
-      à l'aide des règles d'importation sont préfixés avec l'espace de noms courant.
-      Par exemple, si un appel à <literal>C\D\e()</literal> est effectué dans l'espace
-      de noms <literal>A\B</literal>, il est traduit en <literal>A\B\C\D\e()</literal>.
+      Pour les noms absolus, si aucune règle d'import ne
+      s'applique, le namespace courant est préfixé par le nom.
+      Par exemple le nom <literal>C\D\E</literal> dans le namespace <literal>A\B</literal>,
+est traduit par <literal>A\B\C\D\E</literal>.
      </simpara>
     </listitem>
     <listitem>
      <simpara>
-      Les classes non qualifiées sont traduites durant la compilation en fonction 
-      des règles d'importations (le nom complet remplace les noms courts). Par exemple,
-      si l'espace de noms <literal>A\B\C</literal> est importé sous le nom C, 
-      <literal>new C()</literal> est remplacé par <literal>new A\B\C()</literal>.
+      Pour les noms absolus, le nom est traduit en lien avec la table courante d'importation pour le type de symbol respectif.
+      Cela signifie qu'un nom ressemblant à une classe est traduit en accord avec la table d'importation des
+      class/namespace, les noms de fonctions en utilisant la
+      table d'importation des fonctions, et les constantes en
+      utilisant la table d'importation des constantes.
+ Par exemple, après 
+      <literal>use A\B\C;</literal> un usage tel que <literal>new C()</literal> correspond au nom
+      <literal>A\B\C()</literal>. De la même manière, après  <literal>use function A\B\fn;</literal> un usage tel que <literal>fn()</literal> correspond au nom <literal>A\B\fn</literal>.
+     </simpara>
+    </listitem>
+     <listitem>
+     <simpara>
+      Pour les noms relatifs, si aucune règle ne s'applique, et que le nom
+      fait référence à une classe, le namespace courant sert de préfixe. 
+      Par exemple <literal>new C()</literal> dans le namespace
+      <literal>A\B</literal> correspond au nom <literal>A\B\C</literal>.
      </simpara>
     </listitem>
     <listitem>
      <simpara>
-      Dans un espace de noms, tel que A\B, les appels à des fonctions sans qualification
-      sont résolus à la compilation. Voici comment un appel à <literal>foo()</literal> 
-      est résolu :
+      pour les noms relatifs, si aucune règle ne s'applique, et que le nom
+      fait référence à une fonction ou une constante, et que le code est en
+      dehors du namespace global, the nom est résolu par l'execution.
+      Supposons que le code est dans le namespace
+ <literal>A\B</literal>, voici comme un appel à la fonction <literal>foo()</literal> est résolu :
      </simpara>
+
       <orderedlist>
        <listitem>
         <simpara>
@@ -936,48 +1015,6 @@ if (is_array('hi')) { // affiche "n'est pas un tableau"
         </simpara>
        </listitem>
       </orderedlist>
-    </listitem>
-    <listitem>
-     <simpara>
-      Dans un espace de noms, e.g. <literal>A\B</literal>, un appel
-      à une classe qualifiée ou non qualifiée (pas absolue) est résolu
-      à l'exécution. Voici comment un appel à <literal>new C()</literal>
-      ou à <literal>new D\E()</literal> est résolu.
-      Pour <literal> new C()</literal> :
-     </simpara>
-     <orderedlist>
-      <listitem>
-       <simpara>
-        Il recherche une classe dans l'espace de noms courant : 
-        <literal>A\B\C</literal>.
-       </simpara>
-      </listitem>
-      <listitem>
-       <simpara>
-        Il appelle l'autoload pour <literal>A\B\C</literal>.
-       </simpara>
-      </listitem>
-     </orderedlist>
-     <simpara>
-      Pour <literal> new D\E()</literal>:
-     </simpara>
-     <orderedlist>
-      <listitem>
-       <simpara>
-        Il recherche une classe dans l'espace de noms courant : 
-        <literal>A\B\D\E</literal>.
-       </simpara>
-      </listitem>
-      <listitem>
-       <simpara>
-        Il appelle l'autoload pour <literal>A\B\D\E</literal>.
-       </simpara>
-      </listitem>
-     </orderedlist>
-     <simpara>
-      Pour référencer une classe globale dans l'espace de noms global,
-      son nom absolu <literal>new \C()</literal> doit être utilisé.
-     </simpara>
     </listitem>
    </orderedlist>
   </para>
@@ -1123,7 +1160,7 @@ A\B::foo();   // appelle la méthode "foo" de la classe "B" de l'espace de noms 
     </listitem>
     <listitem>
      <simpara>
-      <link linkend="language.namespaces.faq.nofuncconstantuse">Ni les fonctions, 
+      <link linkend="language.namespaces.faq.nofuncconstantuse">Avant PHP 5.6, ni les fonctions, 
       ni les constantes ne peuvent être importées avec 
       la commande <literal>use</literal></link>
      </simpara>
@@ -1477,10 +1514,10 @@ namespace mes\trucs\nested {
    </para>
   </sect2>
   <sect2 xml:id="language.namespaces.faq.nofuncconstantuse">
-   <title>Ni les fonctions, ni les constantes ne peuvent être importées avec 
+   <title>Avant PHP 5.6, ni les fonctions, ni les constantes ne peuvent être importées avec 
    la commande <literal>use</literal></title>
    <para>
-    Les seuls éléments qui sont affectés par la commande <literal>use</literal> 
+    Avant PHP 5.6, les seuls éléments qui sont affectés par la commande <literal>use</literal> 
     sont les espaces de noms et les classes. Afin de réduire le nom d'une 
     constante ou d'une fonction, il faut l'importer dans un espace de noms.
     <informalexample>
@@ -1496,6 +1533,8 @@ nom\func();
      ]]>
      </programlisting>
     </informalexample>
+    Tel que dans PHP 5.6, l'utilisation d'alias ou l'import de 
+    fonction et de constante est autorisé.
    </para>
   </sect2>
   <sect2 xml:id="language.namespaces.faq.quote">
