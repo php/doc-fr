@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: e7c3d74e3369e87962da229da463c372474e4df2 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes Maintainer: pmartin -->
+<!-- EN-Revision: 3f74beaf6b9dfb3b1edf07b9598d21f9e94f7b4e Maintainer: yannick Status: ready -->
+<!-- CREDITS: DAnnebicque -->
 
 <chapter xml:id="language.generators" xmlns="http://docbook.org/ns/docbook">
  <title>Generators</title>
@@ -136,10 +136,12 @@ Nombres impairs à un seul chiffre depuis xrange() : 1 3 5 7 9
   
   <note>
    <para>
-    Un générateur ne peut pas retourner de valeur : si vous tentez
-    de retourner une valeur depuis un générateur, une erreur de compilation sera émise.
-    Une structure <command>return</command> vide est une syntaxe valide dans
-    un générateur et fera terminer le générateur.
+    Dans PHP 5, un générateur ne devrait pas retourner de valeur : si vous tentez
+    de retourner une valeur depuis un générateur, une erreur de compilation pourrait être émise.
+    Une structure <command>return</command> vide etait une syntaxe valide dans
+    un générateur et aurait fait terminer le générateur.
+    Depuis PHP 7.0, un générateur peut retourner des valeurs,
+    qui peuvent être récupérées en utilisant <methodname>Generator::getReturn</methodname>.
    </para>
   </note>
   
@@ -408,6 +410,64 @@ foreach (gen_reference() as &$number) {
      l'expression <command>yield from</command> va aussi retourner toute valeur
      retournée par le générateur interne.
     </para>
+    
+    <caution>
+     <title>Stocker dans un tableau (e.g. avec <function>iterator_to_array</function>)</title>
+
+      <para>
+       <command>yield from</command> ne réinitialise pas les
+       clés. Il préseve les clés retournées par l'objet
+       <classname>Traversable</classname>, ou <type>array</type>. 
+       Donc, certaines valeurs peuvent partager une clé commune avec d'autres <command>yield</command> ou
+       <command>yield from</command>, qui, lors de l'insertion
+       dans un tableau, écrasera les anciennes valeurs avec cette clé.
+      </para>
+
+      <para>
+       Un cas fréquent où cela est important est <function>iterator_to_array</function>
+        renvoyant un tableau avec clé par défaut, conduisant à
+       des résultats éventuellement inattendus.
+        <function>iterator_to_array</function> a un second paramètre
+        <parameter>use_keys</parameter> qui peut être défini sur &false; 
+       pour collecter toutes les valeurs en ignorant les clés
+       renvoyées par le <classname>Generator</classname>.
+      </para>
+     
+      <example>
+       <title><command>yield from</command> avec <function>iterator_to_array</function></title>
+       <programlisting role="php">
+<![CDATA[
+<?php
+function from() {
+    yield 1; // clé 0
+    yield 2; // clé 1
+    yield 3; // clé 2
+}
+function gen() {
+    yield 0; // clé 0
+    yield from from(); // clés 0-2
+    yield 4; // clé 1
+}
+// met à false le second paramètre pour avoir un tableau [0, 1, 2, 3, 4]
+var_dump(iterator_to_array(gen()));
+?>
+]]>
+       </programlisting>
+       &example.outputs;
+       <screen>
+<![CDATA[
+array(3) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(4)
+  [2]=>
+  int(3)
+}
+]]>
+       </screen>
+      </example>
+    </caution>
 
     <example>
      <title>Utilisation basique de <command>yield from</command></title>
@@ -572,9 +632,8 @@ class LineIterator implements Iterator {
    Cependant, cette flexibilité a un coût : les générateurs sont des itérateurs
    n'allant que vers l'avant, et ils ne peuvent pas être ré-initialisés une fois
    leur parcours commencé. Cela signifie également que le même générateur ne peut
-   pas être utilisé à plusieurs reprises : le générateur devra être soit reconstruit
-   en appelant une nouvelle fois la fonction générateur, soit clôné via le mot
-   clé <link linkend="language.oop5.cloning">clone</link>.
+   pas être utilisé à plusieurs reprises : le générateur devra être reconstruit
+   en appelant une nouvelle fois la fonction générateur.
   </para>
  </sect1>
 </chapter>
