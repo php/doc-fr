@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: afc3f34c682418a582b0f9199db0bac4a087821f Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3e98008f28e920f2469bcfe83df71a63b6b07008 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.mail" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -16,7 +16,7 @@
    <methodparam><type>string</type><parameter>to</parameter></methodparam>
    <methodparam><type>string</type><parameter>subject</parameter></methodparam>
    <methodparam><type>string</type><parameter>message</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>additional_headers</parameter></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>additional_headers</parameter></methodparam>
    <methodparam choice="opt"><type>string</type><parameter>additional_parameters</parameter></methodparam>
   </methodsynopsis>
   <para>
@@ -90,7 +90,7 @@
      <term><parameter>additional_headers</parameter> (optionnel)</term>
      <listitem>
       <para>
-       Chaîne à insérer à la fin des en-têtes du mail.
+       <type>String</type> ou <type>array</type> à insérer à la fin des en-têtes du mail.
       </para>
       <para>
        Ce paramètre est typiquement utilisé pour ajouter des en-têtes supplémentaires
@@ -100,6 +100,20 @@
        être d'abord nettoyées afin de ne pas injecter des données non désirées
        dans les en-têtes.
       </para>
+      <para>
+       Si un <type>array</type> est passé, ses clés sont les noms d'en-tête et 
+       ses valeurs sont les valeurs d'en-tête respectives.
+      </para>
+      <note>
+       <para>
+        Avant PHP 5.4.42 et 5.5.27, respectivement, 
+        <parameter>additional_headers</parameter> n'avait pas de protection 
+        d'injection en-tête de messagerie. Par conséquent, les utilisateurs 
+        doivent s'assurer que les en-têtes spécifiés sont sûrs et contiennent 
+        uniquement des en-têtes. C'est à dire ne jamais démarrer le corps du 
+        courrier en mettant plusieurs sauts.
+       </para>
+      </note> 
       <note>
        <para>
         Lors de l'envoi d'un mail, le mail <emphasis>doit</emphasis>
@@ -195,6 +209,21 @@
      </thead>
      <tbody>
       <row>
+       <entry>7.2.0</entry>
+       <entry>
+        Le paramètre <parameter>additional_headers</parameter> accepte maintenant 
+        les <type>array</type>.
+       </entry>
+      </row>
+      <row>
+       <entry>5.4.42, 5.5.27</entry>
+       <entry>
+        La protection par injection d'en-tête a été ajoutée pour le paramètre 
+        <parameter>additional_headers</parameter>. Cela signifie que plusieurs 
+        sauts consécutifs ne sont plus autorisés.
+       </entry>
+      </row>
+      <row>
        <entry>4.2.3</entry>
        <entry>
         Le paramètre <parameter>additional_parameters</parameter> est désactivé dans le
@@ -254,6 +283,30 @@ mail('caffeinated@example.com', 'Mon Sujet', $message);
     </programlisting>
    </example>
    <example>
+    <title>Envoi d'un mail avec un <type>array</type> d'en-têtes supplémentaires</title>
+    <para>
+     Cet exemple envoie le même courrier que l'exemple ci-dessus, mais passe 
+     les en-têtes supplémentaires en tant que tableau (disponible depuis PHP 
+     7.2.0).
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$to      = 'nobody@example.com';
+$subject = 'the subject';
+$message = 'hello';
+$headers = array(
+    'From' => 'webmaster@example.com',
+    'Reply-To' => 'webmaster@example.com'
+    'X-Mailer' => 'PHP/' . phpversion()
+);
+
+mail($to, $subject, $message, $headers);
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
     <title>Envoi d'un mail avec un paramètre de ligne de commande additionnel</title>
     <para>
      Le paramètre <parameter>additional_parameters</parameter>
@@ -279,8 +332,7 @@ mail('caffeinated@example.com', 'Mon Sujet', $message);
 <![CDATA[
 <?php
      // Plusieurs destinataires
-     $to  = 'aidan@example.com' . ', '; // notez la virgule
-     $to .= 'wez@example.com';
+     $to  = 'johny@example.com, sally@example.com'; // notez la virgule
 
      // Sujet
      $subject = 'Calendrier des anniversaires pour Août';
@@ -309,14 +361,14 @@ mail('caffeinated@example.com', 'Mon Sujet', $message);
      ';
 
      // Pour envoyer un mail HTML, l'en-tête Content-type doit être défini
-     $headers  = 'MIME-Version: 1.0' . "\r\n";
-     $headers .= 'Content-type: text/html; charset=iso-8859-1' . "\r\n";
+     $headers['MIME-Version'] = '1.0';
+     $headers['Content-type'] = 'text/html; charset=iso-8859-1';
 
      // En-têtes additionnels
-     $headers .= 'To: Mary <mary@example.com>, Kelly <kelly@example.com>' . "\r\n";
-     $headers .= 'From: Anniversaire <anniversaire@example.com>' . "\r\n";
-     $headers .= 'Cc: anniversaire_archive@example.com' . "\r\n";
-     $headers .= 'Bcc: anniversaire_verif@example.com' . "\r\n";
+     $headers['To'] = 'Mary <mary@example.com>, Kelly <kelly@example.com>';
+     $headers['From'] = 'Anniversaire <anniversaire@example.com>';
+     $headers['Cc'] = 'anniversaire_archive@example.com';
+     $headers['Bcc'] = 'anniversaire_verif@example.com';
 
      // Envoi
      mail($to, $subject, $message, $headers);
