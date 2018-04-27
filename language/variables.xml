@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 41060e691dc09b9b190e2181123dbc8286e05843 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 7b3702d15ce8ddeee4023106ce1f89269c468e88 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="language.variables" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -536,8 +536,9 @@ function test()
    <note>
     <para>
      Les variables statiques doivent être déclarées comme dans l'exemple ci-dessus.
-     Tenter d'assigner des valeurs à ces variables qui sont le résultat d'expressions
-     causera une erreur d'analyse.
+     À partir de PHP 5.6 vous pouvez affecter des valeurs à ces variables qui sont 
+     le résultat d'expressions, mais vous ne pouvez pas utiliser une fonction ici, 
+     ce qui va provoquer une erreur d'analyse.
     </para>
     <para>
      <example>
@@ -547,8 +548,8 @@ function test()
 <?php
 function foo(){
     static $int = 0;          // correct
-    static $int = 1+2;        // faux  (car c'est une expression)
-    static $int = sqrt(121);  // faux  (car c'est aussi une expression)
+    static $int = 1+2;        // correct  (depuis PHP 5.6)
+    static $int = sqrt(121);  // faux  (car c'est une fonction)
 
     $int++;
     echo $int;
@@ -771,6 +772,16 @@ echo "$a $bonjour";
    est un tableau.
   </simpara>
   
+   <caution>
+    <simpara>
+     Déréférencer une propriété de variable qui est un tableau a différente 
+     sémantique entre PHP 5 et PHP 7. 
+     <link linkend="migration70.incompatible.variable-handling.indirect">Le Guide de migration PHP 7.0</link> 
+     inclut d'autres détails sur les types d'expressions qui ont changé, et 
+     comment placer des accolades pour éviter toute ambiguïté.
+    </simpara>
+   </caution>
+
   <simpara>
    Les accolades peuvent aussi être utilisées, pour clairement délimiter
    le nom de la propriété. Ceci est utile lors de l'accès à des valeurs
@@ -796,15 +807,14 @@ $foo = new foo();
 $bar = 'bar';
 $baz = array('foo', 'bar', 'baz', 'quux');
 echo $foo->$bar . "\n";
-echo $foo->$baz[1] . "\n";
+echo $foo->{$baz[1]} . "\n";
 
 $start = 'b';
 $end   = 'ar';
 echo $foo->{$start . $end} . "\n";
 
 $arr = 'arr';
-echo $foo->$arr[1] . "\n";
-echo $foo->{$arr}[1] . "\n";
+echo $foo->{$arr[1]} . "\n";
 ?>
 ]]>
     </programlisting>
@@ -814,7 +824,6 @@ echo $foo->{$arr}[1] . "\n";
      I am bar.
      I am bar.
      I am r.
-     I am B.
     </screen>
    </example>
   </para>
@@ -1112,6 +1121,19 @@ setcookie("Panier[$compte]", $item, time()+3600);
     Lisez également le chapitre sur les
     <link linkend="language.types">types</link>.
    </para>
+    <para>
+     HTTP étant un protocole texte, la plupart, sinon tous, le contenu qui vient 
+     dans les <link linkend="language.variables.superglobals">tableaux Superglobaux</link>, 
+     comme <varname>$_POST</varname> et <varname>$_GET</varname> restera en tant 
+     que chaînes. PHP n'essaiera pas de convertir des valeurs en un type spécifique.
+     Dans l'exemple ci-dessous, <varname>$_GET["var1"]</varname> contiendra la 
+     chaîne "null" et <varname>$_GET["var2"]</varname>, la chaîne "123".
+     <programlisting>
+<![CDATA[
+/index.php?var1=null&var2=123
+]]>
+      </programlisting>
+    </para>
   </sect2>
   
   <sect2 xml:id="language.variables.external.changelog">
