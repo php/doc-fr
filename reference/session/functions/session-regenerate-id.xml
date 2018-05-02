@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 73f204de3d42053aff3c10f5bc291023eb897942 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: b8758b0605e80c4e3610137b7502a6abeea5c69b Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.session-regenerate-id">
@@ -15,7 +15,7 @@
   &reftitle.description;
   <methodsynopsis>
    <type>bool</type><methodname>session_regenerate_id</methodname>
-   <methodparam choice="opt"><type>bool</type><parameter>delete_old_session</parameter><initializer>false</initializer></methodparam>
+   <methodparam choice="opt"><type>bool</type><parameter>delete_old_session</parameter><initializer>&false;</initializer></methodparam>
   </methodsynopsis>
   <para>
    <function>session_regenerate_id</function> va remplacer l'identifiant
@@ -27,6 +27,23 @@
    est active, la sortie pour affichage doit commencer après l'appel à la fonction
    <function>session_regenerate_id</function>. Sinon, l'ancien ID de session sera utilisé.
   </para>
+  <warning>
+   <para>
+    Le session_regenerate_id actuel ne gère pas bien le réseau instable.
+    Par ex. réseau mobile et WiFi. Par conséquent, vous pouvez rencontrer une 
+    perte de session en appelant session_regenerate_id.
+   </para>
+   <para>
+    Vous ne devez pas détruire les anciennes données de session immédiatement, 
+    mais devez utiliser l'horodatage de destruction et contrôler l'accès à 
+    l'ancien ID de session. Sinon, l'accès simultané à la page peut entraîner un 
+    état incohérent, ou vous avez peut-être perdu la session, ou il peut 
+    provoquer la condition de course côté client (navigateur) et peut créer de 
+    nombreux ID de session inutilement. La suppression immédiate de données de 
+    session désactive également la détection et la prévention d'attaque de 
+    détournement de session.
+   </para>
+  </warning>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -38,6 +55,9 @@
       <listitem>
        <para>
         Si l'on doit effacer l'ancien fichier de session associé ou pas.
+        Vous ne devez pas supprimer l'ancienne session si vous avez besoin 
+        d'éviter les courses causées par la suppression ou de détecter/éviter 
+        les attaques de détournement de session.
        </para>
       </listitem>
      </varlistentry>
@@ -65,18 +85,25 @@
      </thead>
      <tbody>
       <row>
-       <entry>4.3.3</entry>
+       <entry>7.0.0</entry>
        <entry>
-        Avant cette version, si les cookies de session sont activés,
-        l'utilisation de <function>session_regenerate_id</function>
-        provoquera également un nouveau cookie de session avec le nouvel
-        identifiant de session.
+        <function>session_regenerate_id</function> enregistre les anciennes 
+        données de session avant la fermeture.
        </entry>
       </row>
       <row>
        <entry>5.1.0</entry>
        <entry>
         Ajout du paramètre <parameter>delete_old_session</parameter>.
+       </entry>
+      </row>
+      <row>
+       <entry>4.3.3</entry>
+       <entry>
+        Avant cette version, si les cookies de session sont activés,
+        l'utilisation de <function>session_regenerate_id</function>
+        provoquera également un nouveau cookie de session avec le nouvel
+        identifiant de session.
        </entry>
       </row>
      </tbody>
@@ -93,11 +120,32 @@
     <programlisting role="php">
 <![CDATA[
 <?php
+// Note: ce code ne fonctionne pas complètement, c'est un exemple!
+
 session_start();
+
+// Vérifier l'horodatage de destruction
+if (isset($_SESSION['destroyed'])
+    && $_SESSION['destroyed'] < time() - 300) {
+    // Ne devrait pas se produire habituellement. Cela pourrait être une attaque 
+    // ou en raison d'un réseau instable. Supprimez tout l'état d'authentification 
+    // de cette session utilisateurs.
+    remove_all_authentication_flag_from_active_sessions($_SESSION['userid']);
+    throw(new DestroyedSessionAccessException);
+}
+
 
 $old_sessionid = session_id();
 
+// Définir l'horodatage de déstruction
+$_SESSION['destroyed'] = time(); // Depuis PHP 7.0.0 et supérieur, session_regenerate_id () enregistre les anciennes données de session
+
+// Il suffit d'appeler session_regenerate_id() peut entraîner la perte de session, etc.
+// Voir l'exemple suivant.
 session_regenerate_id();
+
+// La nouvelle session n'a pas besoin du timestamp de destruction
+unset($_SESSION['destroyed']);
 
 $new_sessionid = session_id();
 
@@ -110,6 +158,75 @@ print_r($_SESSION);
     </programlisting>
    </example>
   </para>
+
+  <para>
+   Le module de session actuel ne gère pas bien le réseau instable. Vous devez 
+   gérer l'ID de session pour éviter la perte de session par session_regenerate_id.
+  </para>
+
+  <para>
+   <example>
+    <title>Eviter la perte de session par <function>session_regenerate_id</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Note: ce code ne fonctionne pas complètement, c'est un exemple!
+// my_session_start() et my_session_regenerate_id() évitent les sessions perdues 
+// par le réseau instable. En outre, ce code peut empêcher l'exploitation de 
+// session volée par les attaquants.
+
+function my_session_start() {
+    session_start();
+    if (isset($_SESSION['destroyed'])) {
+       if ($_SESSION['destroyed'] < time()-300) {
+           // Ne devrait pas se produire habituellement. Cela pourrait être une 
+           // attaque ou en raison d'un réseau instable. Supprimez tout l'état 
+           // d'authentification de cette session utilisateurs.
+            remove_all_authentication_flag_from_active_sessions($_SESSION['userid']);
+           throw(new DestroyedSessionAccessException);
+       }
+       if (isset($_SESSION['new_session_id'])) {
+           // Pas encore complètement expiré. Pourrait être perdu cookie par réseau instable.
+           // Essayez à nouveau de définir le cookie d'ID de session approprié.
+           // Remarque: n'essayez pas de redéfinir l'ID de session si vous 
+           // souhaitez supprimer l'état d'authentification.
+           session_commit();
+           session_id($_SESSION['new_session_id']);
+           // Nouvel ID de session doit exister
+           session_start();
+           return;
+       }
+   }
+}
+
+function my_session_regenerate_id() {
+    // Le nouvel ID de session est requis pour définir l'ID de session approprié 
+    // lorsque l'ID de session n'est pas défini en raison d'un réseau instable.
+    $new_session_id = session_create_id();
+    $_SESSION['new_session_id'] = $new_session_id;
+    
+    // Définie le timestamp de destruction
+    $_SESSION['destroyed'] = time();
+    
+    // Ecrit et ferme la session courante
+    session_commit();
+
+    // Démarre la session avec un nouvel ID
+    session_id($new_session_id);
+    ini_set('session.use_strict_mode', 0);
+    session_start();
+    ini_set('session.use_strict_mode', 1);
+    
+    // La nouvelle session n'en a pas besoin
+    unset($_SESSION['destroyed']);
+    unset($_SESSION['new_session_id']);
+}
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  
  </refsect1>
 
  <refsect1 role="seealso">
@@ -117,7 +234,10 @@ print_r($_SESSION);
   <para>
    <simplelist>
     <member><function>session_id</function></member>
+    <member><function>session_create_id</function></member>
     <member><function>session_start</function></member>
+    <member><function>session_destroy</function></member>
+    <member><function>session_reset</function></member>
     <member><function>session_name</function></member>
    </simplelist>
   </para>
