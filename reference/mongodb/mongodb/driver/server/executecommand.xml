@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: dcfd0933c0adfb15d1efafa5c553b2e57c03d3a0 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 6ef92afe13024b70aa9d75a80edc19a20bb9262e Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongodb-driver-server.executecommand" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -15,22 +15,31 @@
    <modifier>final</modifier> <modifier>public</modifier> <type>MongoDB\Driver\Cursor</type><methodname>MongoDB\Driver\Server::executeCommand</methodname>
    <methodparam><type>string</type><parameter>db</parameter></methodparam>
    <methodparam><type>MongoDB\Driver\Command</type><parameter>command</parameter></methodparam>
-   <methodparam choice="opt"><type>MongoDB\Driver\ReadPreference</type><parameter>readPreference</parameter></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>options</parameter><initializer>array()</initializer></methodparam>
   </methodsynopsis>
   <para>
-   Exécute une commande <parameter>command</parameter> sur ce serveur.
+   Exécute une commande sur ce serveur.
   </para>
-  <note>
-   <para>
-    Le paramètre <parameter>readPreference</parameter> ne contrôle pas le serveur
-    sur lequel le driver va envoyer la commande ; la commande va toujours être
-    exécutée sur l'objet serveur. A la place, il pourra être utilisé lors de
-    l'envoi de la commande vers un secondaire (depuis un jeu de connexion de
-    réplication, et non sur un serveur unique) ou sur un noeud mongo pour assurer
-    que le driver définisse le protocole wire adéquat ou ajoute les préférences
-    de lecture à la commande du document, respectivement.
-   </para>
-  </note>
+  <para>
+   This method applies no special logic to the command. Although this method
+   accepts <literal>"readConcern"</literal> and
+   <literal>"writeConcern"</literal> options, which will be incorporated into
+   the command document, those options will not default to corresponding values
+   from the <link linkend="mongodb-driver-manager.construct-uri">MongoDB
+   Connection URI</link> nor will the MongoDB server version be taken into
+   account. Users are therefore encouraged to use specific read and/or write
+   command methods if possible.
+   
+   Cette méthode n'applique aucune logique spéciale à la commande. Bien que 
+   cette méthode accepte les options <literal>"readConcern"</literal> et 
+   <literal>"writeConcern"</literal>, qui seront incorporées dans le document 
+   de commande, ces options ne seront pas par défaut aux valeurs correspondantes 
+   de l'<link linkend="mongodb-driver-manager.construct-uri">URI de connexion MongoDB</link>, 
+   ni la version du serveur MongoDB ne sera pris en compte. Les utilisateurs sont 
+   donc encouragés à utiliser des méthodes de commande de lecture et/ou d'écriture 
+   spécifiques si possible.
+  </para>
+  &mongodb.note.server.readpreference;
  </refsect1>
 
  <refsect1 role="parameters">
@@ -38,7 +47,31 @@
   <variablelist>
    &mongodb.parameter.db;
    &mongodb.parameter.command;
-   &mongodb.parameter.readPreference;
+   <varlistentry>
+    <term><parameter>options</parameter></term>
+    <listitem>
+     <para>
+      <table>
+       <title>options</title>
+       <tgroup cols="3">
+        <thead>
+         <row>
+          <entry>Option</entry>
+          <entry>Type</entry>
+          <entry>Description</entry>
+         </row>
+        </thead>
+        <tbody>
+         &mongodb.option.readConcern;
+         &mongodb.option.readPreference;
+         &mongodb.option.session;
+         &mongodb.option.writeConcern;
+        </tbody>
+       </tgroup>
+      </table>
+     </para>
+    </listitem>
+   </varlistentry>
   </variablelist>
  </refsect1>
 
@@ -50,6 +83,7 @@
  <refsect1 role="errors">
   &reftitle.errors;
   <simplelist>
+   &mongodb.throws.session-unacknowledged;
    &mongodb.throws.std;
    <member>Lance une exception <classname>MongoDB\Driver\Exception\RuntimeException</classname>
     si une erreur survient (i.e. commande invalide, l'envoi d'une commande en écriture sur
@@ -57,23 +91,43 @@
   </simplelist>
  </refsect1>
 
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>1.4.4</entry>
+       <entry>
+        <classname>MongoDB\Driver\Exception\InvalidArgumentException</classname>
+        sera lancé si l'option <literal>"session"</literal> est utilisée
+        conjointement avec une préoccupation d&#39;écriture non reconnu.
+       </entry>
+      </row>
+      <row>
+       <entry>1.4.0</entry>
+       <entry>
+        Le troisième paramètre est maintenant un tableau
+        d'<parameter>options</parameter>. Pour la compatibilité ascendante, 
+        ce paramateur acceptera toujours un objet <classname>MongoDB\Driver\ReadPreference</classname>.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
+ </refsect1>
+
  <refsect1 role="notes">
   &reftitle.notes;
-  <note>
-   <para>
-    Cette méthode ne prend pas de paramètre
-    <classname>MongoDB\Driver\WriteConcern</classname>. Pour les commandes en écriture (e.g.
-    <link xlink:href="&url.mongodb.docs;reference/command/findAndModify/">findAndModify</link>
-    en MongoDB 3.2+), la préoccupation en écriture doit être inclue dans la commande
-    <parameter>command</parameter> du document.
-   </para>
-   <para>
-    Il est de la responsabilité de l'appelant de s'assurer que le serveur soit
-    capable d'exécuter la commande. Par exemple, l'exécution d'une opération
-    en écriture sur un secondaire (mis à part pour les bases de données "local")
-    échouera.
-   </para>
-  </note>
+  &mongodb.note.server.write;
  </refsect1>
 
  <refsect1 role="seealso">
@@ -81,7 +135,9 @@
   <simplelist>
    <member><classname>MongoDB\Driver\Command</classname></member>
    <member><classname>MongoDB\Driver\Cursor</classname></member>
-   <member><classname>MongoDB\Driver\ReadPreference</classname></member>
+   <member><function>MongoDB\Driver\Server::executeReadCommand</function></member>
+   <member><function>MongoDB\Driver\Server::executeReadWriteCommand</function></member>
+   <member><function>MongoDB\Driver\Server::executeWriteCommand</function></member>
    <member><function>MongoDB\Driver\Manager::executeCommand</function></member>
   </simplelist>
  </refsect1>
