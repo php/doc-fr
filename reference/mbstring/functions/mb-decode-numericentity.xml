@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 4d2ed4ef0bd24c3f2f8810ea899dd06bac4420e6 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: b8758b0605e80c4e3610137b7502a6abeea5c69b Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.mb-decode-numericentity" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -16,6 +16,7 @@
    <methodparam><type>string</type><parameter>str</parameter></methodparam>
    <methodparam><type>array</type><parameter>convmap</parameter></methodparam>
    <methodparam choice="opt"><type>string</type><parameter>encoding</parameter><initializer>mb_internal_encoding()</initializer></methodparam>
+   <methodparam choice="opt"><type>bool</type><parameter>is_hex</parameter><initializer>&false;</initializer></methodparam>
   </methodsynopsis>
   <para>
    Convertit la chaîne d'entités HTML <parameter>str</parameter> en chaîne.
@@ -77,6 +78,74 @@ $convmap = array (
 // Ajoutez offsetN à la valeur, et faites un ET bit-à-bit avec maskN, puis
 // il convertit la valeur obtenue en entité numérique
 ?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>L'exemple <parameter>convmap</parameter> échappe la chaîne JavaScript    </title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+function escape_javascript_string($str) {
+  $map = [
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,0,0, // 49
+          0,0,0,0,0,0,0,0,1,1,
+          1,1,1,1,1,0,0,0,0,0,
+          0,0,0,0,0,0,0,0,0,0,
+          0,0,0,0,0,0,0,0,0,0,
+          0,1,1,1,1,1,1,0,0,0, // 99
+          0,0,0,0,0,0,0,0,0,0,
+          0,0,0,0,0,0,0,0,0,0,
+          0,0,0,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1, // 149
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1, // 199
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1,
+          1,1,1,1,1,1,1,1,1,1, // 249
+          1,1,1,1,1,1,1, // 255
+          ];
+  // L'encodage de char est UTF-8
+  $mblen = mb_strlen($str, 'UTF-8');
+  $utf32 = bin2hex(mb_convert_encoding($str, 'UTF-32', 'UTF-8'));
+  for ($i=0, $encoded=''; $i < $mblen; $i++) {
+      $u = substr($utf32, $i*8, 8);
+      $v = base_convert($u, 16, 10);
+      if ($v < 256 && $map[$v]) {
+        $encoded .= '\\x'.substr($u, 6,2);
+      } else if ($v == 2028) {
+        $encoded .= '\\u2028';
+      } else if ($v == 2029) {
+        $encoded .= '\\u2029';
+      } else {
+        $encoded .= mb_convert_encoding(hex2bin($u), 'UTF-8', 'UTF-32');
+      }
+   }
+   return $encoded;
+}
+ 
+// Données de tests
+$convmap = [ 0x0, 0xffff, 0, 0xffff ];
+$msg = '';
+for ($i=0; $i < 1000; $i++) {
+  // chr() ne peut pas générer de données correctes UTF-8 plus grande valeur que 128, utilisez mb_decode_numericentity().
+  $msg .= mb_decode_numericentity('&#'.$i.';', $convmap, 'UTF-8');
+}
+ 
+// var_dump($msg);
+var_dump(escape_javascript_string($msg));
 ]]>
     </programlisting>
    </example>
