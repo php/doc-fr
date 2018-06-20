@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 637c29c81a694e3e9f1d6293bd7af230050e5499 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: b694084174d9bb9432d5ae0d405e43482e6cfb67 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="pool.collect" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -12,12 +12,12 @@
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <modifier>public</modifier> <type>void</type><methodname>Pool::collect</methodname>
-   <methodparam><type>Callable</type><parameter>collector</parameter></methodparam>
+   <modifier>public</modifier> <type>int</type><methodname>Pool::collect</methodname>
+   <methodparam choice="opt"><type>Callable</type><parameter>collector</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Autorise le Pool à collecter les références déterminées
-   à être des données incorrectes par le collecteur fourni.
+   Permet au pool de collecter des références déterminées pour être collectée 
+   par le collecteur donné optionnellement.
   </para>
  </refsect1>
 
@@ -28,7 +28,9 @@
     <term><parameter>collector</parameter></term>
     <listitem>
      <para>
-      Un collecteur
+      Un collecteur pouvant être appelé retournant une valeur booléenne pour 
+      déterminer si la tâche peut être collectée ou non. Ce n'est que dans de 
+      rares cas qu'un collecteur personnalisé doit être utilisé.
      </para>
     </listitem>
    </varlistentry>
@@ -38,7 +40,32 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
- void
+ Nombre de tâches restantes dans le pool à collecter.
+  </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>v3</entry>
+       <entry>
+        Un entier est maintenant retourné, et le paramètre 
+        <parameter>collector</parameter> est maintenant facultatif.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
   </para>
  </refsect1>
 
@@ -46,84 +73,21 @@
   &reftitle.examples;
   <para>
    <example>
-    <title>Création de Pools</title>
+    <title>Un exemple de base de <methodname>Pool::collect</methodname></title>
     <programlisting role="php">
 <![CDATA[
 <?php
-class MyWork extends Stackable {
-    public function __construct() {
-        $this->complete = false;
-    }
+$pool = new Pool(4);
 
-    public function run() {
-        printf(
-            "Hello from %s in Thread #%lu\n", 
-            __CLASS__, $this->worker->getThreadId());
-        $this->complete = true;
-    }
-
-    public function isComplete() { 
-        return $this->complete; 
-    }
-
-    protected $complete;
+for ($i = 0; $i < 15; ++$i) {
+    $pool->submit(new class extends Threaded {});
 }
 
-class MyWorker extends Worker {
-    
-    public function __construct(Something $something) {
-        $this->something = $something;
-    }
-    
-    public function run() {
-        /** ... **/
-    }
-}
+while ($pool->collect()); // blocks until all tasks have finished executing
 
-$pool = new Pool(8, \MyWorker::class, [new Something()]);
-$pool->submit(new MyWork());
-
-usleep(1000);
-
-$pool->collect(function($work){
-    return $work->isComplete();
-});
-var_dump($pool);
-?>
+$pool->shutdown();
 ]]>
     </programlisting>
-    &example.outputs;
-    <screen>
-<![CDATA[
-Hello from MyWork in Thread #140222468777728
-object(Pool)#1 (6) {
-  ["size":protected]=>
-  int(8)
-  ["class":protected]=>
-  string(8) "MyWorker"
-  ["workers":protected]=>
-  array(1) {
-    [0]=>
-    object(MyWorker)#4 (1) {
-      ["something"]=>
-      object(Something)#5 (0) {
-      }
-    }
-  }
-  ["work":protected]=>
-  array(0) {
-  }
-  ["ctor":protected]=>
-  array(1) {
-    [0]=>
-    object(Something)#2 (0) {
-    }
-  }
-  ["last":protected]=>
-  int(1)
-}
-]]>
-    </screen>
    </example>
   </para>
  </refsect1>

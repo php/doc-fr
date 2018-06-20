@@ -1,23 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 50849115569da4ebf240f73d68923995881f9653 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: b694084174d9bb9432d5ae0d405e43482e6cfb67 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="pool.submitTo" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Pool::submitTo</refname>
-  <refpurpose>Soumet un objet pour exécution</refpurpose>
+  <refpurpose>Soumet une tâche à un worker spécifique pour exécution</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <modifier>public</modifier> <type>integer</type><methodname>Pool::submitTo</methodname>
-   <methodparam><type>integer</type><parameter>worker</parameter></methodparam>
+   <modifier>public</modifier> <type>int</type><methodname>Pool::submitTo</methodname>
+   <methodparam><type>int</type><parameter>worker</parameter></methodparam>
    <methodparam><type>Threaded</type><parameter>task</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Soumet l'objet au worker spécifié dans le Pool
+   Soumet la tâche au worker spécifié dans le Pool. Les travailleurs sont 
+   indexés à partir de 0, et n'existera que si le pool a besoin de les créer 
+   (puisque les threads sont générés paresseusement).
   </para>
  </refsect1>
 
@@ -28,7 +30,7 @@
     <term><parameter>worker</parameter></term>
     <listitem>
      <para>
-      Le worker pour exécution
+      Le worker où empiler la tâche, indexé à partir de <literal>0</literal>.
      </para>
     </listitem>
    </varlistentry>
@@ -46,7 +48,7 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   L'identifiant du Worker qui a accepté l'objet
+   L'identifiant du Worker qui a accepté la tâche.
   </para>
  </refsect1>
 
@@ -54,72 +56,42 @@
   &reftitle.examples;
   <para>
    <example>
-    <title>Soumission d'une tâche</title>
+    <title>Soumission d'une tâche à un worker spécifique</title>
     <programlisting role="php">
 <![CDATA[
 <?php
-class MyWork extends Threaded {
-    
+class Task extends Threaded {
     public function run() {
-        /* ... */
+        var_dump(Thread::getCurrentThreadID());
     }
 }
 
-class MyWorker extends Worker {
-    
-    public function __construct(Something $something) {
-        $this->something = $something;
-    }
-    
-    public function run() {
-        /** ... **/
-    }
+
+$pool = new Pool(2);
+
+$pool->submit(new Task());
+
+for ($i = 0; $i < 5; ++$i) {
+    $pool->submitTo(0, new Task()); // empilez toutes les tâches sur le premier worker
 }
 
-$pool = new Pool(8, \MyWorker::class, [new Something()]);
-$pool->submit(new MyWork());
-var_dump($pool);
+$pool->submitTo(1, new Task()); // Impossible d'empiler la tâche sur le deuxième worker car il n'existe pas encore
+
+$pool->shutdown();
 ?>
 ]]>
     </programlisting>
     &example.outputs;
     <screen>
 <![CDATA[
-object(Pool)#1 (6) {
-  ["size":protected]=>
-  int(8)
-  ["class":protected]=>
-  string(8) "MyWorker"
-  ["workers":protected]=>
-  array(1) {
-    [0]=>
-    object(MyWorker)#4 (1) {
-      ["something"]=>
-      object(Something)#5 (0) {
-      }
-    }
-  }
-  ["work":protected]=>
-  array(1) {
-    [0]=>
-    object(MyWork)#3 (1) {
-      ["worker"]=>
-      object(MyWorker)#5 (1) {
-        ["something"]=>
-        object(Something)#6 (0) {
-        }
-      }
-    }
-  }
-  ["ctor":protected]=>
-  array(1) {
-    [0]=>
-    object(Something)#2 (0) {
-    }
-  }
-  ["last":protected]=>
-  int(1)
-}
+int(4475011072)
+int(4475011072)
+int(4475011072)
+int(4475011072)
+int(4475011072)
+int(4475011072)
+
+Fatal error: Uncaught Exception: The selected worker (1) does not exist in %s:%d
 ]]>
     </screen>
    </example>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 6fea35d31f3be3cdab8aa93c521fb8bfd362d367 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: ca9602752af2f35a8ecfb37da56d1084e778b611 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <book xml:id="book.pthreads" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -10,63 +10,90 @@
  <preface xml:id="intro.pthreads">
   &reftitle.intro;
   <para>
-   pthreads est une API orientée objet qui permet le multi-threading en espace utilisateur
-   en PHP. Il inclut tous les outils nécessaires pour créer des applications multi-threadées.
+   pthreads est une API orientée objet qui apporte tous les outils nécessaires pour 
+   le multi-threading en PHP. 
    Les applications PHP peuvent créer, lire, écrire, exécuter
    et synchroniser des Threads, des Workers, et des objets Threaded.
   </para>
+  <warning>
+   <para>
+    L'extension pthreads ne peut pas être utilisée dans un environnement de 
+    serveur Web. Le Threading en PHP est donc limité aux applications basées 
+    sur CLI uniquement.
+   </para>
+  </warning>
+  <warning>
+   <para>
+    pthreads (v3) peut être utilisé uniquement avec PHP 7.2+ à cause d'un 
+    mode ZTS dangereux en PHP 7.0 et 7.1.
+   </para>
+  </warning>
   <para>
-    Un objet Threaded :
-    Un objet Threaded est la fonctionnalité de base qui permet d'utiliser pthreads. Il expose 
-   des méthodes de synchronisation ainsi que divers interfaces utile pour le développeur.
+   La classe <classname>Threaded</classname> constitue la base de la 
+   fonctionnalité qui permet à pthreads de fonctionner. Il expose les méthodes 
+   de synchronisation et quelques interfaces utiles pour le programmeur.
   </para>
   <para>
-   Un objet Thread : L'utilisateur peut implémenter un thread en étendant la déclaration Thread
-   fournie par pthreads et en implémentant la méthode run. N'importe quel membre peut écrire et lire dans n'importe quel contexte
-   avec une référence au Thread, n'importe quel contexte peut aussi exécuter n'importe quelle
-   méthode publique et protégée. La méthode run de l'implémentation est exécutée dans un thread
-   séparé lorsque la méthode start de l'implémentation est appelée depuis le contexte (Thread
-   ou Processus) qui l'a créé. Seul le contexte qui crée un thread peut le démarre ou le rejoindre.
+   La classe <classname>Thread</classname> permet de créer des threads en 
+   l'étendant simplement et en implémentant une méthode <literal>run</literal>. 
+   Tous les membres peuvent être écrits et lus par n'importe quel contexte avec 
+   une référence au thread. Tout contexte peut également exécuter toutes les 
+   méthodes publiques et protégées. Le corps de la méthode run sera exécuté 
+   dans un thread séparé lorsque la méthode <methodname>Thread::start</methodname> 
+   de l'implémentation est appelée à partir du contexte qui l'a créé. Seul le 
+   contexte qui crée un thread peut le démarrer et le rejoindre.
   </para>
   <para>
-   Un objet Worker : Un Thread Worker a un statut persistant, et sera disponible depuis l'appelant
-   pour le démarrer tant que l'objet ne sort pas du scope, ou qu'il n'est pas explicitement éteint.
-   N'importe quel contexte avec une référence peut empiler des objets dans le Worker
-   qui sera exécuté par le Worker dans un Thread séparé. La méthode run d'un Worker est exécutée
-   avant les objets de la pile, ainsi, il peut initialiser les ressources dont les objets
-   auront besoin.
+   La classe <classname>Worker</classname> a un état persistant et sera 
+   disponible à partir de l'appel à <methodname>Thread::start</methodname> (une 
+   méthode héritée) jusqu'à ce que l'objet soit hors de portée, ou soit 
+   explicitement arreté (via <methodname>Worker::shutdown</methodname>). Tout 
+   contexte avec une référence à l'objet Worker peut empiler des tâches sur le 
+   Worker (via <methodname>Worker::stack</methodname>), où ces tâches seront 
+   exécutées par le Worker dans un thread séparé. La méthode 
+   <literal>run</literal> d'un objet worker est exécutée avant tout objet de la 
+   pile du worker, ce qui permet aux ressources d'être initialisées pour que 
+   les objets à exécuter puissent les utiliser.
   </para>
   <para>
-    Un Pool:
-    Un Pool de Worker threadés peut être utilités pour distribuer des objets Threaded sur les 
-    Workers. La classe Pool implémente cette fonctionnalité et tient compte des références de facon 
-    saine.
-    Introduite dans la version v1.0.0, l'implémentation de Pool est la plus simple et efficiente 
-    facon d'utiliser de nombreux threads.
+   La classe <classname>Pool</classname> est utilisée pour créer un groupe de 
+   worker pour distribuer des objets <classname>Threaded</classname> parmi eux. 
+   Il est le moyen le plus facile et le plus efficace d'utiliser plusieurs 
+   threads dans les applications PHP.
   </para>
   <caution>
    <para>
-    Pool est un objet PHP classique, et donc ses instances ne doivent pas être partagés entre les 
-    contextes.
+    La classe <classname>Pool</classname> n'étend pas la classe 
+   <classname>Threaded</classname>, et donc les objets basés sur pool sont 
+   considérés comme des objets PHP normaux. En tant que tel, ses instances ne d
+   doivent pas être partagées entre des contextes différents.
    </para>
   </caution>
   <para>
-   Synchronisation : Tous les objets que pthreads crée possèdent un mécanisme de synchronisation de
-   la forme (familier pour les programmeurs Java) ::wait et ::notify. L'appel à ::wait sur un objet fera
-   que le contexte attendra qu'un autre contexte appelle ::notify sur le même objet. Ceci permet une
-   synchronisation puissante entre les objets Threadés en PHP.
+   La classe <classname>Volatile</classname> est nouvelle pour pthreads v3. 
+   Elle est utilisée pour désigner les propriétés <classname>Threaded</classname> 
+   mutable des classes <classname>Threaded</classname> (car celles-ci sont 
+   désormais immuables par défaut). Elle est également utilisé pour stocker 
+   des tableaux PHP dans des contextes <classname>Threaded</classname>.
+  </para>
+  <para>
+   La synchronisation est une capacité importante lors du Threading. Tous les 
+   objets créés par pthreads ont été construits en synchronisation dans la 
+   forme (qui sera familière aux programmeurs Java) de
+   <methodname>Threaded::wait</methodname> et
+   <methodname>Threaded::notify</methodname>. L'appel de 
+   <methodname>Threaded::wait</methodname> sur un objet entraînera le contexte 
+   à attendre qu'un autre contexte appelle
+   <methodname>Threaded::notify</methodname> sur le même objet. Ce mécanisme 
+   permet une synchronisation puissante entre les objets 
+   <classname>Threaded</classname> en PHP.
   </para>
   <caution>
    <para>
-    Tout objet prévu pour être utilisé dans une partie multi-threadé de votre application doit 
-    étendre Treaded.
+    Tout objet prévu pour être utilisé dans une partie multi-threadé de votre 
+    application doit étendre <classname>Threaded</classname>.
    </para>
   </caution>
-  <para>
-   Modificateurs de méthode : Les méthodes protégées des objets Threadés sont protégées par pthreads,
-   aussi, uniquement un contexte peut appeler cette méthode à la fois. Les méthodes privées des objets
-   Threadés peuvent seulement être appelées depuis l'objet Threadé pendant l'exécution.
-  </para>
   <para>
    Stockage des données : En règle générale, tous les types de données pouvant être linéarisés peuvent
    être utilisés comme membre d'un objet Threadé, ils peuvent être lus, et écrits depuis n'importe quel
@@ -120,6 +147,7 @@
  &reference.pthreads.pool;
  &reference.pthreads.mutex;
  &reference.pthreads.cond;
+ &reference.pthreads.volatile;
  
 </book>
 
