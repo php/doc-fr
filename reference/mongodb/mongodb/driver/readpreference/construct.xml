@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 20e3046af35c1716b12167542c07e974cb5537bd Maintainer: yannick Status: ready -->
+<!-- EN-Revision: b06b5b0830a671a89e8dda2df615f72b4a1262f1 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongodb-driver-readpreference.construct" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>MongoDB\Driver\ReadPreference::__construct</refname>
-  <refpurpose>Description</refpurpose>
+  <refpurpose>Créer un nouveau ReadPreference</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
    <modifier>final</modifier> <modifier>public</modifier> <methodname>MongoDB\Driver\ReadPreference::__construct</methodname>
-   <methodparam><type>string</type><parameter>readPreference</parameter></methodparam>
-   <methodparam choice="opt"><type>array</type><parameter>tagSets</parameter></methodparam>
+   <methodparam><type>string|integer</type><parameter>mode</parameter></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>tagSets</parameter><initializer>&null;</initializer></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>options</parameter><initializer>array()</initializer></methodparam>
   </methodsynopsis>
   <para>
-
+   Construit un nouveau <classname>MongoDB\Driver\ReadPreference</classname>, qui est un objet de valeur immuable.
   </para>
 
  </refsect1>
@@ -26,10 +27,69 @@
   &reftitle.parameters;
   <variablelist>
    <varlistentry>
-    <term><parameter>readPreference</parameter></term>
+    <term><parameter>mode</parameter></term>
     <listitem>
      <para>
-      
+      <table>
+       <title>Mode de préférence de lecture</title>
+       <tgroup cols="2">
+        <thead>
+         <row>
+          <entry>Valeur</entry>
+          <entry>Description</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry><constant>MongoDB\Driver\ReadPreference::RP_PRIMARY</constant> ou <literal>"primary"</literal></entry>
+          <entry>
+           <para>
+            Toutes les opérations lues à partir du jeu de réplicas actuel primaire. 
+            Il s'agit de la préférence de lecture par défaut pour MongoDB.
+           </para>
+          </entry>
+         </row>
+         <row>
+          <entry><constant>MongoDB\Driver\ReadPreference::RP_PRIMARY_PREFERRED</constant> ou <literal>"primaryPreferred"</literal></entry>
+          <entry>
+           <para>
+            Dans la plupart des situations, les opérations sont lues à partir du 
+            primaire, mais si il n'est pas disponible, les opérations sont lues à 
+            partir d'un membre secondaire.
+           </para>
+          </entry>
+         </row>
+         <row>
+          <entry><constant>MongoDB\Driver\ReadPreference::RP_SECONDARY</constant> ou <literal>"secondary"</literal></entry>
+          <entry>
+           <para>
+            Toutes les opérations sont lues à partir des membres secondaires du jeu 
+            de réplicas.
+           </para>
+          </entry>
+         </row>
+         <row>
+          <entry><constant>MongoDB\Driver\ReadPreference::RP_SECONDARY_PREFERRED</constant> ou <literal>"secondaryPreferred"</literal></entry>
+          <entry>
+           <para>
+            Dans la plupart des cas, les opérations sont lues par des membres 
+            secondaires, mais si aucun membre secondaire n'est disponible, les 
+            opérations sont lues à partir du primaire.
+           </para>
+          </entry>
+         </row>
+         <row>
+          <entry><constant>MongoDB\Driver\ReadPreference::RP_NEAREST</constant> ou <literal>"nearest"</literal></entry>
+          <entry>
+           <para>
+            Opérations lues à partir du membre du jeu de réplicas ayant la latence 
+            réseau la moins élevée, quel que soit le type du membre.
+           </para>
+          </entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </table>
      </para>
     </listitem>
    </varlistentry>
@@ -37,24 +97,128 @@
     <term><parameter>tagSets</parameter></term>
     <listitem>
      <para>
-      
+      Les jeux de tag vous permettent de cibler des opérations de lecture sur des 
+      membres spécifiques d'un jeu de réplicas. Ce paramètre doit être un tableau de 
+      tableaux associatifs, qui contiennent chacun zéro ou plusieurs paires 
+      clé/valeur. Lors de la sélection d'un serveur pour une opération de lecture, 
+      le pilote tente de sélectionner un nœud comportant toutes les balises d'un 
+      ensemble (c'est-à-dire le tableau associatif de paires clé/valeur). Si la 
+      sélection échoue, le pilote essaiera les jeux suivants. Un jeu de balises vide 
+      (<literal>array()</literal>) correspond à n'importe quel nœud et peut être 
+      utilisé comme secours.
+     </para>
+     <para>
+      Les tags ne sont pas compatibles avec le mode 
+      <constant>MongoDB\Driver\ReadPreference::RP_PRIMARY</constant> et, en général, 
+      s'appliquent uniquement lors de la sélection d'un membre secondaire d'un jeu 
+      pour une opération de lecture. Toutefois, le mode 
+      <constant>MongoDB\Driver\ReadPreference::RP_NEAREST</constant>, lorsqu'il est 
+      combiné avec un jeu de balises, sélectionne le membre correspondant avec la 
+      latence réseau la plus basse. Ce membre peut être primaire ou secondaire.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><parameter>options</parameter></term>
+    <listitem>
+     <para>
+      <table>
+       <title>options</title>
+       <tgroup cols="3">
+        <thead>
+         <row>
+          <entry>Option</entry>
+          <entry>Type</entry>
+          <entry>Description</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry>maxStalenessSeconds</entry>
+          <entry>&integer;</entry>
+          <entry>
+           <para>
+            Spécifie un décalage de réplication maximal, ou  "obsolescence", pour 
+            les lectures des secondaires. Lorsque l'obsolescence estimée d'un 
+            secondaire dépasse cette valeur, le pilote cesse de l'utiliser pour les 
+            opérations de lecture.
+           </para>
+           <para>
+            Si elle est spécifiée, l'obsolescence maximale doit être un entier signé 
+            32 bits supérieur ou égal à 
+            <constant>MongoDB\Driver\ReadPreference::SMALLEST_MAX_STALENESS_SECONDS</constant>.
+           </para>
+           <para>
+            Par défaut, 
+            <constant>MongoDB\Driver\ReadPreference::NO_MAX_STALENESS</constant>, 
+            ce qui signifie que le pilote ne prendra pas en compte le décalage d'un 
+            secondaire lors du choix de l'endroit où diriger une opération de 
+            lecture.
+           </para>
+           <para>
+            Cette option n'est pas compatible avec le mode 
+            <constant>MongoDB\Driver\ReadPreference::RP_PRIMARY</constant>. 
+            La spécification d'une obsolescence maximale requiert également que 
+            toutes les instances MongoDB du déploiement utilisent MongoDB 3.4+. Une 
+            exception sera levée au moment de l'exécution si toutes les instances de 
+            MongoDB dans le déploiement sont d'une version de serveur plus ancienne.
+           </para>
+          </entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </table>
      </para>
     </listitem>
    </varlistentry>
   </variablelist>
  </refsect1>
 
- <refsect1 role="returnvalues">
-  &reftitle.returnvalues;
-  <para>
-   
-  </para>
- </refsect1>
-
  <refsect1 role="errors">
   &reftitle.errors;
+  <simplelist>
+   &mongodb.throws.argumentparsing;
+   <member>Lève une exception <classname>MongoDB\Driver\Exception\InvalidArgumentException</classname> si <parameter>mode</parameter> est incorrect.</member>
+   <member>Lève une exception <classname>MongoDB\Driver\Exception\InvalidArgumentException</classname> si <parameter>tagSets</parameter> est fourni pour une préférence de lecture primaire ou est incorrect (c.-à-d. pas un tableau de zéro ou plus de documents).</member>
+   <member>Lève une exception <classname>MongoDB\Driver\Exception\InvalidArgumentException</classname> si l'option <literal>"maxStalenessSeconds"</literal> est fournie pour une préférence de lecture primaire ou est hors de la plage.</member>
+  </simplelist>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
   <para>
-   
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>1.3.0</entry>
+       <entry>
+        <para>
+         L'argument <parameter>mode</parameter> accepte maintenant une valeur de 
+         chaîne, ce qui est compatible avec l'option URI 
+         <literal>"readPreference"</literal> pour 
+         <function>MongoDB\Driver\Manager::__construct</function>
+        </para>
+       </entry>
+      </row>
+      <row>
+       <entry>1.2.0</entry>
+       <entry>
+        <para>
+         Ajout d'un troisième argument d'<parameter>options</parameter>, qui prend 
+         en charge l'option <literal>"maxStalenessSeconds"</literal> .
+        </para>
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
   </para>
  </refsect1>
 
@@ -67,7 +231,14 @@
 <![CDATA[
 <?php
 
-/* ... */
+/* Préférez un noeud secondaire mais retombez sur un primaire. */
+var_dump(new MongoDB\Driver\ReadPreference(MongoDB\Driver\ReadPreference::RP_SECONDARY_PREFERRED));
+
+/* Préférez un noeud dans le centre de données de New York avec la latence la plus basse. */
+var_dump(new MongoDB\Driver\ReadPreference(MongoDB\Driver\ReadPreference::RP_NEAREST, [['dc' => 'ny']]));
+
+/* Nécessite un nœud secondaire dont le décalage de réplication se trouve dans les deux minutes */
+var_dump(new MongoDB\Driver\ReadPreference(MongoDB\Driver\ReadPreference::RP_SECONDARY, null, ['maxStalenessSeconds' => 120]));
 
 ?>
 ]]>
@@ -75,7 +246,28 @@
    &example.outputs.similar;
    <screen>
 <![CDATA[
-...
+object(MongoDB\Driver\ReadPreference)#1 (1) {
+  ["mode"]=>
+  string(18) "secondaryPreferred"
+}
+object(MongoDB\Driver\ReadPreference)#1 (2) {
+  ["mode"]=>
+  string(7) "nearest"
+  ["tags"]=>
+  array(1) {
+    [0]=>
+    object(stdClass)#2 (1) {
+      ["dc"]=>
+      string(2) "ny"
+    }
+  }
+}
+object(MongoDB\Driver\ReadPreference)#1 (2) {
+  ["mode"]=>
+  string(9) "secondary"
+  ["maxStalenessSeconds"]=>
+  int(120)
+}
 ]]>
    </screen>
   </example>
@@ -85,7 +277,7 @@
  <refsect1 role="seealso">
   &reftitle.seealso;
   <simplelist>
-   <member></member>
+   <member><link xlink:href="&url.mongodb.docs.readpreference;">Read Preference reference</link></member>
   </simplelist>
  </refsect1>
 

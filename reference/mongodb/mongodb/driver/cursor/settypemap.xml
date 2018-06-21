@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7050d96265255c11615116e462e3eec0c068e2a6 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 8b0b6b72fac737d9ec0cb50ce33640eac2558ae4 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongodb-driver-cursor.settypemap" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -16,7 +16,9 @@
    <methodparam><type>array</type><parameter>typemap</parameter></methodparam>
   </methodsynopsis>
   <para>
-
+   Définit la 
+   <link linkend="mongodb.persistence.typemaps">configuration de mappage de type</link> 
+   à utiliser lors de la désérialisation des résultats BSON en valeurs PHP.
   </para>
 
  </refsect1>
@@ -24,28 +26,34 @@
  <refsect1 role="parameters">
   &reftitle.parameters;
   <variablelist>
-   <varlistentry>
-    <term><parameter>typemap</parameter></term>
-    <listitem>
-     <para>
-      
-     </para>
-    </listitem>
-   </varlistentry>
+   &mongodb.parameter.typeMap;
   </variablelist>
  </refsect1>
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   
+   &return.void;
   </para>
  </refsect1>
 
  <refsect1 role="errors">
   &reftitle.errors;
+  <simplelist>
+   &mongodb.throws.argumentparsing;
+  </simplelist>
   <para>
-   
+   Lors de l'itération sur le curseur, les exceptions suivantes peuvent également 
+   être levées en raison d'une configuration de mappage de type incorrecte :
+   <simplelist>
+    <member>
+     Lève une exception 
+     <classname>MongoDB\Driver\Exception\InvalidArgumentException</classname> si 
+     une classe dans le mappage de type ne peut pas être instanciée ou 
+     n'implémente pas
+     <interfacename>MongoDB\BSON\Unserializable</interfacename>.
+    </member>
+   </simplelist>
   </para>
  </refsect1>
 
@@ -58,7 +66,19 @@
 <![CDATA[
 <?php
 
-/* ... */
+$manager = new MongoDB\Driver\Manager("mongodb://localhost:27017");
+
+$bulk = new MongoDB\Driver\BulkWrite;
+$id = $bulk->insert(['x' => 1]);
+$manager->executeBulkWrite('db.collection', $bulk);
+
+$query = new MongoDB\Driver\Query(['_id' => $id]);
+$cursor = $manager->executeQuery('db.collection', $query);
+$cursor->setTypeMap(['root' => 'array']);
+
+foreach ($cursor as $document) {
+    var_dump($document);
+}
 
 ?>
 ]]>
@@ -66,7 +86,15 @@
    &example.outputs.similar;
    <screen>
 <![CDATA[
-...
+array(2) {
+  ["_id"]=>
+  object(MongoDB\BSON\ObjectId)#6 (1) {
+    ["oid"]=>
+    string(24) "56424fb76118fd3267180741"
+  }
+  ["x"]=>
+  int(1)
+}
 ]]>
    </screen>
   </example>
@@ -76,7 +104,7 @@
  <refsect1 role="seealso">
   &reftitle.seealso;
   <simplelist>
-   <member></member>
+   <member><xref linkend="mongodb.persistence"/></member>
   </simplelist>
  </refsect1>
 

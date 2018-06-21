@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 046fee4c67d27889c5765baee304c689ef725544 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 61f9e84aa71378ccf3958a6c20d3a8017392562c Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongodb-driver-writeresult.getwriteconcernerror" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>MongoDB\Driver\WriteResult::getWriteConcernError</refname>
-  <refpurpose>Description</refpurpose>
+  <refpurpose>Retourne toute erreur de WriteConcern qui s'est produite</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -29,15 +29,15 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   
+   Retourne un <classname>MongoDBDriverWriteConcernError</classname> si une erreur de préoccupation d'écriture a été rencontrée pendant l'opération d'écriture, et &null; sinon.
   </para>
  </refsect1>
 
  <refsect1 role="errors">
   &reftitle.errors;
-  <para>
-   
-  </para>
+  <simplelist>
+   &mongodb.throws.argumentparsing;
+  </simplelist>
  </refsect1>
 
 
@@ -49,7 +49,18 @@
 <![CDATA[
 <?php
 
-/* ... */
+$manager = new MongoDB\Driver\Manager("mongodb://rs1.example.com,rs2.example.com/?replicaSet=myReplicaSet");
+
+$bulk = new MongoDB\Driver\BulkWrite;
+$bulk->insert(['x' => 1]);
+
+$writeConcern = new MongoDB\Driver\WriteConcern(2, 1);
+
+try {
+    $manager->executeBulkWrite('db.collection', $bulk, $writeConcern);
+} catch(MongoDB\Driver\Exception\BulkWriteException $e) {
+    var_dump($e->getWriteResult()->getWriteConcernError());
+}
 
 ?>
 ]]>
@@ -57,7 +68,17 @@
    &example.outputs.similar;
    <screen>
 <![CDATA[
-...
+object(MongoDB\Driver\WriteConcernError)#6 (3) {
+  ["message"]=>
+  string(33) "waiting for replication timed out"
+  ["code"]=>
+  int(64)
+  ["info"]=>
+  object(stdClass)#7 (1) {
+    ["wtimeout"]=>
+    bool(true)
+  }
+}
 ]]>
    </screen>
   </example>
@@ -67,7 +88,8 @@
  <refsect1 role="seealso">
   &reftitle.seealso;
   <simplelist>
-   <member></member>
+   <member><classname>MongoDB\Driver\WriteConcern</classname></member>
+   <member><link xlink:href="&url.mongodb.docs.writeconcern;">Référence Write Concern</link></member>
   </simplelist>
  </refsect1>
 

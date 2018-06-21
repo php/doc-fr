@@ -1,22 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 20e3046af35c1716b12167542c07e974cb5537bd Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 2c423ff085531b5a614c7b10c2d8cf957cdda808 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
-<refentry xml:id="bson-serializable.bsonserialize" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+<refentry xml:id="mongodb-bson-serializable.bsonserialize" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
-  <refname>BSON\Serializable::bsonSerialize</refname>
-  <refpurpose>Description</refpurpose>
+  <refname>MongoDB\BSON\Serializable::bsonSerialize</refname>
+  <refpurpose>Fournit un tableau ou un document à sérialiser en tant que BSON</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <modifier>abstract</modifier> <modifier>public</modifier> <type>ReturnType</type><methodname>BSON\Serializable::bsonSerialize</methodname>
+   <modifier>abstract</modifier> <modifier>public</modifier> <type>array|object</type><methodname>MongoDB\BSON\Serializable::bsonSerialize</methodname>
    <void />
   </methodsynopsis>
   <para>
-
+   Appelé pendant la sérialisation de l'objet à BSON. La méthode doit retourner 
+   un &array; ou <classname>stdClass</classname>.
+  </para>
+  <para>
+   Les documents racine (par exemple, un 
+   <interfacename>MongoDB\BSON\Serializable</interfacename> passé à 
+   <function>MongoDB\BSON\fromPHP</function>) seront toujours sérialisés en tant 
+   que document BSON. Pour les valeurs de champ, les tableaux associatifs et les 
+   instances <classname>stdClass</classname> seront sérialisés en tant que 
+   document BSON et les tableaux séquentiels (c'est-à-dire les index numériques 
+   séquentiels commençant à <literal>0</literal>) seront sérialisés en tant que 
+   tableau BSON.
+  </para>
+  <para>
+   Les utilisateurs sont encouragés à inclure une propriété <property>_id</property> 
+   (par exemple un <classname>MongoDB\BSON\ObjectId</classname> initialisé dans 
+   votre constructeur) lors du renvoi de données pour un document racine BSON; 
+   sinon, le pilote ou la base de données devra générer un 
+   <classname>MongoDB\BSON\ObjectId</classname> lors de l'insertion ou de la 
+   upserting du document, respectivement.
   </para>
 
  </refsect1>
@@ -29,27 +48,35 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   
+   &array; ou <classname>stdClass</classname> à sérialiser en tant que tableau ou document BSON.
   </para>
  </refsect1>
-
- <refsect1 role="errors">
-  &reftitle.errors;
-  <para>
-   
-  </para>
- </refsect1>
-
 
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>Exemple avec <function>BSON\Serializable::bsonSerialize</function></title>
+   <title><function>MongoDB\BSON\Serializable::bsonSerialize</function> renvoyant un tableau associatif pour le document racine</title>
    <programlisting role="php">
 <![CDATA[
 <?php
 
-/* ... */
+class MyDocument implements MongoDB\BSON\Serializable
+{
+    private $id;
+
+    function __construct()
+    {
+        $this->id = new MongoDB\BSON\ObjectId;
+    }
+
+    function bsonSerialize()
+    {
+        return ['_id' => $this->id, 'foo' => 'bar'];
+    }
+}
+
+$bson = MongoDB\BSON\fromPHP(new MyDocument);
+echo MongoDB\BSON\toJSON($bson), "\n";
 
 ?>
 ]]>
@@ -57,17 +84,105 @@
    &example.outputs.similar;
    <screen>
 <![CDATA[
-...
+{ "_id" : { "$oid" : "56cccdcada14d8755a58c591" }, "foo" : "bar" }
+]]>
+   </screen>
+  </example>
+  
+
+  <example>
+   <title><function>MongoDB\BSON\Serializable::bsonSerialize</function> renvoyant un tableau séquentiel pour le document racine</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+class MyArray implements MongoDB\BSON\Serializable
+{
+    function bsonSerialize()
+    {
+        return [1, 2, 3];
+    }
+}
+
+$bson = MongoDB\BSON\fromPHP(new MyArray);
+echo MongoDB\BSON\toJSON($bson), "\n";
+
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+{ "0" : 1, "1" : 2, "2" : 3 }
+]]>
+   </screen>
+  </example>
+
+  <example>
+   <title><function>MongoDB\BSON\Serializable::bsonSerialize</function> renvoyant un tableau associatif pour le champ de document</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+class MyDocument implements MongoDB\BSON\Serializable
+{
+    function bsonSerialize()
+    {
+        return ['foo' => 'bar'];
+    }
+}
+
+$value = ['document' => new MyDocument];
+$bson = MongoDB\BSON\fromPHP($value);
+echo MongoDB\BSON\toJSON($bson), "\n";
+
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+{ "document" : { "foo" : "bar" } }
+]]>
+   </screen>
+  </example>
+
+  <example>
+   <title><function>MongoDB\BSON\Serializable::bsonSerialize</function> renvoyant un tableau séquentiel pour le champ de document</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+class MyArray implements MongoDB\BSON\Serializable
+{
+    function bsonSerialize()
+    {
+        return [1, 2, 3];
+    }
+}
+
+$value = ['array' => new MyArray];
+$bson = MongoDB\BSON\fromPHP($value);
+echo MongoDB\BSON\toJSON($bson), "\n";
+
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+{ "array" : [ 1, 2, 3 ] }
 ]]>
    </screen>
   </example>
  </refsect1>
 
-
  <refsect1 role="seealso">
   &reftitle.seealso;
   <simplelist>
-   <member></member>
+   <member><function>MongoDB\BSON\Unserializable::bsonUnserialize</function></member>
+   <member><interfacename>MongoDB\BSON\Persistable</interfacename></member>
+   <member><xref linkend="mongodb.persistence"/></member>
   </simplelist>
  </refsect1>
 

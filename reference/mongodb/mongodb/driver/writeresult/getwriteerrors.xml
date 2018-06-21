@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 20e3046af35c1716b12167542c07e974cb5537bd Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 61f9e84aa71378ccf3958a6c20d3a8017392562c Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongodb-driver-writeresult.getwriteerrors" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>MongoDB\Driver\WriteResult::getWriteErrors</refname>
-  <refpurpose>Description</refpurpose>
+  <refpurpose>Retourne toutes les erreurs d'écriture qui se sont produites</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <modifier>final</modifier> <modifier>public</modifier> <type>ReturnType</type><methodname>MongoDB\Driver\WriteResult::getWriteErrors</methodname>
+   <modifier>final</modifier> <modifier>public</modifier> <type>array</type><methodname>MongoDB\Driver\WriteResult::getWriteErrors</methodname>
    <void />
   </methodsynopsis>
   <para>
@@ -29,27 +29,47 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   
+   Retourne un tableau d'objets <classname>MongoDBDriverWriteError</classname> 
+   pour toutes les erreurs d'écriture rencontrées pendant l'opération 
+   d'écriture. Le tableau sera vide si aucune erreur d'écriture n'est survenue.
   </para>
  </refsect1>
 
  <refsect1 role="errors">
   &reftitle.errors;
-  <para>
-   
-  </para>
+  <simplelist>
+   &mongodb.throws.argumentparsing;
+  </simplelist>
  </refsect1>
 
 
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>Exemple avec <function>MongoDB\Driver\WriteResult::getWriteErrors</function></title>
+   <title><function>MongoDB\Driver\WriteResult::getWriteErrors</function> avec une seule erreur</title>
    <programlisting role="php">
 <![CDATA[
 <?php
 
-/* ... */
+$manager = new MongoDB\Driver\Manager;
+
+/* Par défaut, les opérations d'écriture en bloc sont exécutées en série dans 
+ * l'ordre et l'exécution s'arrêtera après la première erreur.
+ */
+$bulk = new MongoDB\Driver\BulkWrite;
+$bulk->insert(['_id' => 1]);
+$bulk->insert(['_id' => 2]);
+$bulk->insert(['_id' => 2]);
+$bulk->insert(['_id' => 3]);
+$bulk->insert(['_id' => 4]);
+$bulk->insert(['_id' => 4]);
+
+try {
+    $result = $manager->executeBulkWrite('db.collection', $bulk);
+} catch (MongoDB\Driver\Exception\BulkWriteException $e) {
+    var_dump($e->getWriteResult()->getWriteErrors());
+}
+
 
 ?>
 ]]>
@@ -57,7 +77,77 @@
    &example.outputs.similar;
    <screen>
 <![CDATA[
-...
+array(1) {
+  [0]=>
+  object(MongoDB\Driver\WriteError)#5 (4) {
+    ["message"]=>
+    string(81) "E11000 duplicate key error collection: db.collection index: _id_ dup key: { : 2 }"
+    ["code"]=>
+    int(11000)
+    ["index"]=>
+    int(2)
+    ["info"]=>
+    NULL
+  }
+}
+]]>
+   </screen>
+  </example>
+  <example>
+   <title><function>MongoDB\Driver\WriteResult::getWriteErrors</function> avec plusieurs erreurs</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$manager = new MongoDB\Driver\Manager;
+
+/* L'option "ordered" peut être utilisée pour permettre aux opérations 
+ * d'écriture en bloc de continuer à s'exécuter après la première erreur.
+ */
+$bulk = new MongoDB\Driver\BulkWrite(['ordered' => false]);
+$bulk->insert(['_id' => 1]);
+$bulk->insert(['_id' => 2]);
+$bulk->insert(['_id' => 2]);
+$bulk->insert(['_id' => 3]);
+$bulk->insert(['_id' => 4]);
+$bulk->insert(['_id' => 4]);
+
+try {
+    $result = $manager->executeBulkWrite('db.collection', $bulk);
+} catch (MongoDB\Driver\Exception\BulkWriteException $e) {
+    var_dump($e->getWriteResult()->getWriteErrors());
+}
+
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+array(2) {
+  [0]=>
+  object(MongoDB\Driver\WriteError)#5 (4) {
+    ["message"]=>
+    string(81) "E11000 duplicate key error collection: db.collection index: _id_ dup key: { : 2 }"
+    ["code"]=>
+    int(11000)
+    ["index"]=>
+    int(2)
+    ["info"]=>
+    NULL
+  }
+  [1]=>
+  object(MongoDB\Driver\WriteError)#6 (4) {
+    ["message"]=>
+    string(81) "E11000 duplicate key error collection: db.collection index: _id_ dup key: { : 4 }"
+    ["code"]=>
+    int(11000)
+    ["index"]=>
+    int(5)
+    ["info"]=>
+    NULL
+  }
+}
 ]]>
    </screen>
   </example>
@@ -67,7 +157,7 @@
  <refsect1 role="seealso">
   &reftitle.seealso;
   <simplelist>
-   <member></member>
+   <member><classname>MongoDB\Driver\WriteError</classname></member>
   </simplelist>
  </refsect1>
 

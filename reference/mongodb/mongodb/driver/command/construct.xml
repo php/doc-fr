@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96a83dfde6057568f3afeb5f8202a0b71e6190ad Maintainer: yannick Status: ready -->
+<!-- EN-Revision: a39444187c0bae97b6d1d953abdbe05a83e5c04a Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongodb-driver-command.construct" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -14,9 +14,20 @@
   <methodsynopsis>
    <modifier>final</modifier> <modifier>public</modifier> <methodname>MongoDB\Driver\Command::__construct</methodname>
    <methodparam><type>array|object</type><parameter>document</parameter></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>commandOptions</parameter></methodparam>
   </methodsynopsis>
   <para>
-
+   Construit un nouveau <classname>MongoDB\Driver\Command</classname>, qui est 
+   un objet valeur immuable qui représente une commande de base de données. 
+   La commande peut alors être exécutée avec
+   <methodname>MongoDB\Driver\Manager::executeCommand</methodname>.
+  </para>
+  <para>
+   Le document de commande complet, qui inclut le nom de la commande et ses 
+   options, doit être exprimé dans le paramètre <parameter>document</parameter>. 
+   Le paramètre <parameter>commandOptions</parameter> est utilisé uniquement 
+   pour spécifier les options liées à l'exécution de la commande et le résultat
+   <classname>MongoDB\Driver\Cursor</classname>.
   </para>
 
  </refsect1>
@@ -28,7 +39,49 @@
     <term><parameter>document</parameter></term>
     <listitem>
      <para>
-      La commande complète à construire.
+      Le document de commande complet, qui sera envoyé au serveur.
+     </para>
+    </listitem>
+   </varlistentry>
+   
+   <varlistentry>
+    <term><parameter>commandOptions</parameter></term>
+    <listitem>
+     <note>
+      <simpara>
+       N'utilisez pas ce paramètre pour spécifier les options décrites dans la 
+       référence de la commande dans le manuel MongoDB. Ce paramètre ne doit 
+       être utilisé que pour les options explicitement énumérées ci-dessous.
+      </simpara>
+     </note>
+     <para>
+      <table>
+       <title>commandOptions</title>
+       <tgroup cols="3">
+        <thead>
+         <row>
+          <entry>Option</entry>
+          <entry>Type</entry>
+          <entry>&Description;</entry>
+         </row>
+        </thead>
+        <tbody>
+         <row>
+          <entry>maxAwaitTimeMS</entry>
+          <entry><type>integer</type></entry>
+          <entry>
+           <para>
+            Entier positif indiquant la limite de temps en millisecondes pour 
+            que le serveur bloque une opération getMore si aucune donnée n'est 
+            disponible. Cette option ne doit être utilisée qu'en conjonction 
+            avec les commandes qui retournent un curseur à queue (par exemple 
+            <link xlink:href="&url.mongodb.docs;changeStreams/">Change Streams</link>).
+           </para>
+          </entry>
+         </row>
+        </tbody>
+       </tgroup>
+      </table>
      </para>
     </listitem>
    </varlistentry>
@@ -40,6 +93,33 @@
   <simplelist>
    &mongodb.throws.argumentparsing;
   </simplelist>
+ </refsect1>
+ 
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>1.4.0</entry>
+       <entry>
+        <para>
+         Ajout d'un deuxième argument <parameter>commandOptions</parameter>, qui 
+         prend en charge l'option <literal>"maxAwaitTimeMS"</literal>.
+        </para>
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
  </refsect1>
 
 
@@ -109,6 +189,46 @@ array(13) {
 }
 
 ]]>
+   </screen>
+  </example>
+  
+  <example>
+   <title>Exemple avec <function>MongoDB\Driver\Command::__construct</function></title>
+   <para>
+    Les commandes peuvent également accepter des options, dans le cadre de la 
+    structure normale que vous créez pour envoyer au serveur. Par exemple, 
+    l'option <literal>maxTimeMS</literal> peut être passée avec la plupart des 
+    commandes pour restreindre la durée pendant laquelle une commande spécifique 
+    peut s'exécuter sur le serveur.
+   </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$manager = new MongoDB\Driver\Manager("mongodb://localhost:27017");
+$command = new MongoDB\Driver\Command(
+    array(
+        "distinct" => "beer",
+        "key" => "beer_name",
+        "maxTimeMS" => 10,
+    )
+);
+
+try {
+    $cursor = $manager->executeCommand("beerdb", $command);
+    $response = $cursor->toArray()[0];
+} catch(MongoDB\Driver\Exception\Exception $e) {
+    echo $e->getMessage(), "\n";
+    exit;
+}
+var_dump($response);
+
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+    operation exceeded time limit
    </screen>
   </example>
  </refsect1>

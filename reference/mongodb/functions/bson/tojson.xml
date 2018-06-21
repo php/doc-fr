@@ -1,36 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 20e3046af35c1716b12167542c07e974cb5537bd Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 2c423ff085531b5a614c7b10c2d8cf957cdda808 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
-<refentry xml:id="function.bson-tojson" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+<refentry xml:id="function.mongodb.bson-tojson" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
-  <refname>BSON\toJSON</refname>
-  <refpurpose>Description</refpurpose>
+  <refname>MongoDB\BSON\toJSON</refname>
+  <refpurpose>Retourne la représentation JSON étendue héritée d'une valeur BSON</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <type>ReturnType</type><methodname>BSON\toJSON</methodname>
+   <type>string</type><methodname>MongoDB\BSON\toJSON</methodname>
    <methodparam><type>string</type><parameter>bson</parameter></methodparam>
   </methodsynopsis>
   <para>
-
+   Convertit une chaîne BSON en sa <link xlink:href="&url.mongodb.docs.extendedjson;">représentation JSON étendue héritée</link>.
   </para>
-
-  &warn.undocumented.func;
-
+  <note>
+   <simpara>
+    Il existe plusieurs formats JSON pour représenter BSON. Cette fonction 
+    implémente le  "strict mode" défini dans 
+    <link xlink:href="&url.mongodb.docs.extendedjson;">MongoDB Extended JSON</link>, 
+    qui a été remplacé par les formats canoniques et étendues définis dans la 
+    <link xlink:href="&url.mongodb.specs.extendedjson;">spécification JSON étendue</link>
+    et implémenté par <function>MongoDB\BSON\toCanonicalExtendedJSON</function> 
+    et <function>MongoDB\BSON\toRelaxedExtendedJSON</function>, respectivement.
+   </simpara>
+  </note>
+  <warning>
+   <simpara>
+    <link xlink:href="&url.json;">JSON</link> ne prend pas en charge 
+    <link linkend="language.types.float.nan"><constant>NAN</constant></link> et 
+    <link linkend="function.is-infinite"><constant>INF</constant></link> et le 
+    format JSON étendu de MongoDB ne définit pas une autre représentation pour 
+    ces valeurs (<link xlink:href="&url.mongodb.libbson;">libbson</link> va 
+    produire <literal>nan</literal> et <literal>inf</literal> littérallement, 
+    qui ne peuvent pas être analysés comme JSON valide). Si vous travaillez avec 
+    BSON qui peut contenir des nombres non finis, utilisez svp 
+    <function>MongoDB\BSON\toCanonicalExtendedJSON</function> ou  
+    <function>MongoDB\BSON\toRelaxedExtendedJSON</function>.
+   </simpara>
+  </warning>
  </refsect1>
 
  <refsect1 role="parameters">
   &reftitle.parameters;
   <variablelist>
    <varlistentry>
-    <term><parameter>bson</parameter></term>
+    <term><parameter>bson</parameter> (<type>string</type>)</term>
     <listitem>
      <para>
-      
+      Valeur BSON à convertir.
      </para>
     </listitem>
    </varlistentry>
@@ -40,27 +62,81 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   
+   La valeur JSON convertie.
   </para>
+ </refsect1>
+
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <simplelist>
+   &mongodb.throws.bson.unexpected;
+  </simplelist>
  </refsect1>
 
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>Exemple avec <function>BSON\toJSON</function></title>
+   <title>Exemple avec <function>MongoDB\BSON\toJSON</function></title>
    <programlisting role="php">
 <![CDATA[
 <?php
 
-/* ... */
+$documents = [
+    [ 'null' => null ],
+    [ 'boolean' => true ],
+    [ 'string' => 'foo' ],
+    [ 'int32' => 123 ],
+    [ 'int64' => 4294967295 ],
+    [ 'double' => 1.0, ],
+    [ 'nan' => NAN ],
+    [ 'pos_inf' => INF ],
+    [ 'neg_inf' => -INF ],
+    [ 'array' => [ 'foo', 'bar' ]],
+    [ 'document' => [ 'foo' => 'bar' ]],
+    [ 'oid' => new MongoDB\BSON\ObjectId('56315a7c6118fd1b920270b1') ],
+    [ 'dec128' => new MongoDB\BSON\Decimal128('1234.5678') ],
+    [ 'binary' => new MongoDB\BSON\Binary('foo', MongoDB\BSON\Binary::TYPE_GENERIC) ],
+    [ 'date' => new MongoDB\BSON\UTCDateTime(1445990400000) ],
+    [ 'timestamp' => new MongoDB\BSON\Timestamp(1234, 5678) ],
+    [ 'regex' => new MongoDB\BSON\Regex('pattern', 'i') ],
+    [ 'code' => new MongoDB\BSON\Javascript('function() { return 1; }') ],
+    [ 'code_ws' => new MongoDB\BSON\Javascript('function() { return a; }', ['a' => 1]) ],
+    [ 'minkey' => new MongoDB\BSON\MinKey ],
+    [ 'maxkey' => new MongoDB\BSON\MaxKey ],
+];
+
+foreach ($documents as $document) {
+    $bson = MongoDB\BSON\fromPHP($document);
+    echo MongoDB\BSON\toJSON($bson), "\n";
+}
 
 ?>
 ]]>
    </programlisting>
-   &example.outputs.similar;
+   &example.outputs;
    <screen>
 <![CDATA[
-...
+{ "null" : null }
+{ "boolean" : true }
+{ "string" : "foo" }
+{ "int32" : 123 }
+{ "int64" : 4294967295 }
+{ "double" : 1.0 }
+{ "nan" : nan }
+{ "pos_inf" : inf }
+{ "neg_inf" : -inf }
+{ "array" : [ "foo", "bar" ] }
+{ "document" : { "foo" : "bar" } }
+{ "oid" : { "$oid" : "56315a7c6118fd1b920270b1" } }
+{ "dec128" : { "$numberDecimal" : "1234.5678" } }
+{ "binary" : { "$binary" : "Zm9v", "$type" : "00" } }
+{ "date" : { "$date" : 1445990400000 } }
+{ "timestamp" : { "$timestamp" : { "t" : 5678, "i" : 1234 } } }
+{ "regex" : { "$regex" : "pattern", "$options" : "i" } }
+{ "code" : { "$code" : "function() { return 1; }" } }
+{ "code_ws" : { "$code" : "function() { return a; }", "$scope" : { "a" : 1 } } }
+{ "minkey" : { "$minKey" : 1 } }
+{ "maxkey" : { "$maxKey" : 1 } }
 ]]>
    </screen>
   </example>
@@ -70,7 +146,11 @@
  <refsect1 role="seealso">
   &reftitle.seealso;
   <simplelist>
-   <member></member>
+   <member><function>MongoDB\BSON\fromJSON</function></member>
+   <member><function>MongoDB\BSON\toCanonicalExtendedJSON</function></member>
+   <member><function>MongoDB\BSON\toRelaxedExtendedJSON</function></member>
+   <member><link xlink:href="&url.mongodb.docs.extendedjson;">MongoDB JSON Etendu</link></member>
+   <member><link xlink:href="&url.mongodb.docs.bson;">MongoDB BSON</link></member>
   </simplelist>
  </refsect1>
 

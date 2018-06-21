@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 82607a90f72d95d526928865eeb27b3f9417b137 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: f8eaba87286faca36f476045f0f751e41a94f75e Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <phpdoc:classref xml:id="class.mongodb-driver-cursor" xmlns:phpdoc="http://php.net/ns/phpdoc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
@@ -20,9 +20,6 @@
     <methodname>MongoDB\Driver\Manager::executeCommand</methodname> ou
     <methodname>MongoDB\Driver\Manager::executeQuery</methodname>.
    </para>
-   <para>
-
-   </para>
   </section>
 <!-- }}} -->
 
@@ -35,6 +32,7 @@
 
 <!-- {{{ Class synopsis -->
     <classsynopsisinfo>
+     <modifier>final</modifier>
      <ooclass>
       <classname>MongoDB\Driver\Cursor</classname>
      </ooclass>
@@ -52,6 +50,217 @@
 
   </section>
 
+  <section xml:id="mongodb-driver-cursor.examples">
+   &reftitle.examples;
+
+   <example xml:id="mongodb-driver-cursor.examples.foreach">
+    <title>Lecture d'un jeu de résultats</title>
+    <para>
+     <methodname>MongoDB\Driver\Manager::executeCommand</methodname> et
+     <methodname>MongoDB\Driver\Manager::executeQuery</methodname> les deux 
+     renvoient leur (s) résultat (s) en tant qu'objet <classname>MongoDB\Driver\Cursor</classname>.
+     Cet objet peut être utilisé pour itérer au sein du jeu de résultats de la 
+     commande ou de la requête.
+    </para>
+    <para>
+     Parce que <classname>MongoDB\Driver\Cursor</classname> implémente l'interface
+     <interfacename>Traversable</interfacename>, vous pouvez simplement itérer 
+     sur le jeu de résultats avec
+     <link linkend="control-structures.foreach"><literal>foreach</literal></link>.
+    </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$manager = new MongoDB\Driver\Manager();
+
+/* Insérez des documents afin que notre requête renvoie des informations */
+$bulkWrite = new MongoDB\Driver\BulkWrite;
+$bulkWrite->insert(['name' => 'Ceres', 'size' => 946, 'distance' => 2.766]);
+$bulkWrite->insert(['name' => 'Vesta', 'size' => 525, 'distance' => 2.362]);
+$manager->executeBulkWrite("test.asteroids", $bulkWrite);
+
+/* Requête pour tous les éléments de la collection */
+$query = new MongoDB\Driver\Query( [] );
+
+/* Interrogez la collection  "asteroids" de la base de données "test" */
+$cursor = $manager->executeQuery("test.asteroids", $query);
+
+/* $cursor contient maintenant un objet qui entoure le jeu de résultats. 
+ * Utilisez foreach() pour itérer sur tous les résultats */
+foreach($cursor as $document) {
+    print_r($document);
+}
+
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+stdClass Object
+(
+    [_id] => MongoDB\BSON\ObjectId Object
+        (
+            [oid] => 5a4cff2f122d3321565d8cc2
+        )
+
+    [name] => Ceres
+    [size] => 946
+    [distance] => 2.766
+)
+stdClass Object
+(
+    [_id] => MongoDB\BSON\ObjectId Object
+        (
+            [oid] => 5a4cff2f122d3321565d8cc3
+        )
+
+    [name] => Vesta
+    [size] => 525
+    [distance] => 2.362
+}
+]]>
+    </screen>
+   </example>
+
+   <example xml:id="mongodb-driver-cursor.examples.tailable">
+    <title>Lecture d'un jeu de résultats pour un curseur à queue</title>
+    <para>
+     Les <link xlink:href="&url.mongodb.docs;core/tailable-cursors">curseurs à queue</link>
+     sont un type spécial de curseur MongoDB qui permet au client de lire 
+     quelques résultats et d'attendre jusqu'à ce que plus de documents 
+     deviennent disponibles. Ces curseurs sont principalement utilisés avec
+     <link xlink:href="&url.mongodb.docs;core/capped-collections">Capped Collections</link>
+     et <link xlink:href="&url.mongodb.docs;changeStreams">Change Streams</link>.
+    </para>
+    <para>
+     Bien que les curseurs normaux puissent être parcourus une fois avec 
+     <literal>foreach</literal>, cette approche ne fonctionnera pas avec les 
+     curseurs à queue. Lorsque <literal>foreach</literal> est utilisé avec un
+     curseur à queue, la boucle s'arrêtera à la fin du jeu de résultats initial. 
+     Tenter de continuer l'itération sur le curseur avec une seconde 
+     <literal>foreach</literal> lèverait une exception, car PHP tente de 
+     rembobiner le curseur. Comme pour les objets result dans d'autres pilotes 
+     de base de données, les curseurs dans MongoDB prennent uniquement en charge 
+     l'itération en avant, ce qui signifie qu'ils ne peuvent pas être rembobinés.
+    </para>
+    <para>
+     Afin de lire en continu à partir d'un curseur de queue, l'objet Cursor doit 
+     être enveloppé avec un <classname>IteratorIterator</classname>. Cela permet 
+     à l'application de contrôler directement l'itération du curseur, d'éviter 
+     de rembobiner par inadvertance le curseur et de décider quand attendre les 
+     nouveaux résultats ou arrêter complètement l'itération.
+    </para>
+    <para>
+     Afin de démontrer un curseur en action, deux scripts seront utilisés: un 
+     "Producer" et un "Consumer". Le script Producer créera une nouvelle collection 
+     plafonnée à l'aide de la  commande 
+     <link xlink:href="&url.mongodb.docs.command;create">Create</link> et 
+     procédera à l'insertion d'un nouveau document dans cette collection 
+     chaque seconde.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$manager = new MongoDB\Driver\Manager;
+
+$manager->executeCommand('test', new MongoDB\Driver\Command([
+    'create' => 'asteroids',
+    'capped' => true,
+    'size' => 1048576,
+]));
+
+while (true) {
+    $bulkWrite = new MongoDB\Driver\BulkWrite;
+    $bulkWrite->insert(['createdAt' => new MongoDB\BSON\UTCDateTime]);
+    $manager->executeBulkWrite('test.asteroids', $bulkWrite);
+
+    sleep(1);
+}
+
+?>
+]]>
+    </programlisting>
+    <para>
+     Avec le script Producer toujours en cours d'exécution, un deuxième script 
+     consommateur peut être exécuté pour lire les documents insérés à l'aide 
+     d'un curseur de queue, indiqué par les options <literal>tailable</literal> 
+     et <literal>awaitData</literal> à 
+     <function>MongoDB\Driver\Query::__construct</function>.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$manager = new MongoDB\Driver\Manager;
+
+$query = new MongoDB\Driver\Query([], [
+    'tailable' => true,
+    'awaitData' => true,
+]);
+
+$cursor = $manager->executeQuery('test.asteroids', $query);
+
+$iterator = new IteratorIterator($cursor);
+
+$iterator->rewind();
+
+while (true) {
+    if ($iterator->valid()) {
+        $document = $iterator->current();
+        printf("Consumed document created at: %s\n", $document->createdAt);
+    }
+
+    $iterator->next();
+}
+
+?>
+]]>
+    </programlisting>
+    <para>
+     Le script consommateur va commencer par imprimer rapidement tous les 
+     documents disponibles dans la collection plafonnée (comme si 
+     <literal>foreach</literal> avait été utilisé); toutefois, il ne se 
+     terminera pas à la fin du jeu de résultats initial. Étant donné que 
+     le curseur est en file d'attente, l'appel de 
+     <function>IteratorIterator::next</function> se bloque et attend des 
+     résultats supplémentaires. <function>IteratorIterator::valid</function> 
+     est également utilisé pour vérifier s'il y a effectivement des données 
+     disponibles à lire à chaque étape.
+    </para>
+    <note>
+     <simpara>
+      Cet exemple utilise l'option de requête <literal>awaitData</literal> pour 
+      indiquer au serveur de bloquer pendant une courte période (par exemple une 
+      seconde) à la fin du jeu de résultats avant de retourner une réponse au 
+      pilote. Ceci est utilisé pour empêcher le pilote d'interroger agressivement 
+      le serveur lorsqu'il n'y a aucun résultat disponible. L'option 
+      <literal>maxAwaitTimeMS</literal> peut être utilisée conjointement avec 
+      <literal>tailable</literal> et <literal>awaitData</literal> pour spécifier 
+      la durée pendant laquelle le serveur doit se bloquer lorsqu'il atteint la 
+      fin du jeu de résultats.
+     </simpara>
+    </note>
+   </example>
+  </section>
+
+  <section role="errors">
+   &reftitle.errors;
+   <simpara>
+    Lors de l'itération sur l'objet Cursor, les données BSON sont converties en variables PHP. Cette itération peut provoquer les exceptions suivantes:
+   </simpara>
+   <simplelist>
+    <member>
+     Lèle une exception
+     <classname>MongoDB\Driver\Exception\InvalidArgumentException</classname> si 
+     une classe dans le mappage de type ne peut pas être instanciée ou 
+     n'implémente pas <interfacename>MongoDB\BSON\Unserializable</interfacename>.
+    </member>
+    &mongodb.throws.bson.unexpected;
+   </simplelist>
+  </section>
  </partintro>
 
  &reference.mongodb.mongodb.driver.entities.cursor;

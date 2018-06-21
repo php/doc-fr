@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 82607a90f72d95d526928865eeb27b3f9417b137 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 14f834fa0328e3c9651abd1d0b9b023cb21106fa Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongodb-driver-cursor.isdead" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>MongoDB\Driver\Cursor::isDead</refname>
-  <refpurpose>Vérifie si un curseur est toujours disponible</refpurpose>
+  <refpurpose>Vérifie si le curseur peut avoir des résultats supplémentaires</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -16,7 +16,16 @@
    <void />
   </methodsynopsis>
   <para>
-
+    Vérifie si le curseur peut avoir des résultats supplémentaires disponibles à 
+   lire. Un curseur est initialement "alive" mais peut devenir "dead" pour l'une 
+   des raisons suivantes :
+   <simplelist>
+    <member>L'avancement d'un curseur "non-tailable" n'a pas retourné un document</member>
+    <member>Le curseur a rencontré une erreur</member>
+    <member>Le curseur a lu son dernier lot à l'achèvement</member>
+    <member>Le curseur a atteint sa limite configurée</member>
+   </simplelist>
+   Ceci est principalement utile avec les curseurs de queue.
   </para>
 
  </refsect1>
@@ -29,15 +38,16 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   
+   Retourne &true; si des résultats supplémentaires ne sont pas disponibles, 
+   et &false; sinon.
   </para>
  </refsect1>
 
  <refsect1 role="errors">
   &reftitle.errors;
-  <para>
-   
-  </para>
+  <simplelist>
+   &mongodb.throws.argumentparsing;
+  </simplelist>
  </refsect1>
 
 
@@ -49,7 +59,30 @@
 <![CDATA[
 <?php
 
-/* ... */
+$manager = new MongoDB\Driver\Manager("mongodb://localhost:27017");
+$query = new MongoDB\Driver\Query([]);
+
+$bulk = new MongoDB\Driver\BulkWrite;
+$bulk->insert(['x' => 1]);
+$bulk->insert(['x' => 2]);
+$bulk->insert(['x' => 3]);
+$manager->executeBulkWrite('db.collection', $bulk);
+
+$cursor = $manager->executeQuery('db.collection', $query);
+
+$iterator = new IteratorIterator($cursor);
+
+$iterator->rewind();
+var_dump($cursor->isDead());
+
+$iterator->next();
+var_dump($cursor->isDead());
+
+$iterator->next();
+var_dump($cursor->isDead());
+
+$iterator->next();
+var_dump($cursor->isDead());
 
 ?>
 ]]>
@@ -57,18 +90,13 @@
    &example.outputs.similar;
    <screen>
 <![CDATA[
-...
+bool(false)
+bool(false)
+bool(false)
+bool(true)
 ]]>
    </screen>
   </example>
- </refsect1>
-
-
- <refsect1 role="seealso">
-  &reftitle.seealso;
-  <simplelist>
-   <member></member>
-  </simplelist>
  </refsect1>
 
 </refentry>
