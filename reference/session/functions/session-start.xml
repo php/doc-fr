@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: d53c79d392b1e9e9295ae33795b3f851983d12db Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: ef9b464ad778b0e470d536c1e4a2a011f203e165 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.session-start">
@@ -13,7 +13,7 @@
   &reftitle.description;
   <methodsynopsis>
    <type>bool</type><methodname>session_start</methodname>
-   <void/>
+   <methodparam choice="opt"><type>array</type><parameter>options</parameter><initializer>array()</initializer></methodparam>
   </methodsynopsis>
   <para>
    <function>session_start</function> crée une session ou
@@ -47,6 +47,30 @@
   </para>
  </refsect1>
 
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <variablelist>
+   <varlistentry>
+    <term><parameter>options</parameter></term>
+    <listitem>
+     <para>
+      S'il est fourni, il s'agit d'un tableau associatif d'options qui remplacera 
+      <link linkend="session.configuration">les directives de configuration de session</link> 
+      actuellement définies.
+      Les clés ne doivent pas inclure le préfixe <literal>session.</literal>.
+     </para>
+     <para>
+      En plus de l'ensemble normal des directives de configuration, une option 
+      <literal>read_and_close</literal> peut également être fournie. Si la 
+      valeur est définie sur &true;, cela entraîne la fermeture immédiate de 
+      la session après la lecture, ce qui évite tout blocage inutile si les 
+      données de session ne sont pas modifiées.
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </refsect1>
+
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
@@ -66,7 +90,21 @@
       </row>
      </thead>
      <tbody>
-       <row>
+      <row>
+       <entry>7.1.0</entry>
+       <entry>
+        <function>session_start</function> retourne maintenant &false; et 
+        n'initialise plus <varname>$_SESSION</varname> lorsqu'il n'a pas pu 
+        démarrer la session.
+       </entry>
+      </row>
+      <row>
+       <entry>7.0.0</entry>
+       <entry>
+        Le paramètre <parameter>options</parameter> a été ajouté.
+       </entry>
+      </row>
+      <row>
        <entry>5.3.0</entry>
        <entry>
         Si une session n'arrive pas à démarrer, alors &false; est retourné.
@@ -89,9 +127,12 @@
 
  <refsect1 role="examples">
   &reftitle.examples;
+  <refsect2>
+   <title>Un exemple de session de base</title>
+   
   <para>
    <example>
-    <title>Création d'une session : <filename>page1.php</filename></title>
+    <title><filename>page1.php</filename></title>
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -146,6 +187,41 @@ echo '<br /><a href="page1.php">page 1</a>';
     </programlisting>
    </example>
   </para>
+  </refsect2>
+  <refsect2>
+   <title>Fournir des options à <function>session_start</function></title>
+
+   <example>
+    <title>Remplacement de la durée de vie du cookie</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Cela envoie un cookie persistant qui dure une journée.
+session_start([
+    'cookie_lifetime' => 86400,
+]);
+?>
+]]>
+    </programlisting>
+   </example>
+
+   <example>
+    <title>Lecture de la session et fermeture</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Si nous savons que nous n'avons pas besoin de changer 
+// quoi que ce soit dans la session, nous pouvons juste 
+// lire et fermer tout de suite pour éviter de verrouiller 
+// le fichier de session et bloquer d'autres pages
+session_start([
+    'cookie_lifetime' => 86400,
+    'read_and_close'  => true,
+]);
+]]>
+    </programlisting>
+   </example>
+  </refsect2>
  </refsect1>
 
  <refsect1 role="notes">
