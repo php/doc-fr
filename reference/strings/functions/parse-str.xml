@@ -1,43 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: afc3f34c682418a582b0f9199db0bac4a087821f Maintainer: yannick Status: ready -->
+<!-- EN-Revision: b84e653f7b2e6f6fbbcf8fa445921f73989f3fc0 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.parse-str">
  <refnamediv>
   <refname>parse_str</refname>
-  <refpurpose>Analyse une requête HTTP</refpurpose>
+  <refpurpose>Analyse une chaîne de caractères d'une variable</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
    <type>void</type><methodname>parse_str</methodname>
-   <methodparam><type>string</type><parameter>str</parameter></methodparam>
-   <methodparam choice="opt"><type>array</type><parameter role="reference">arr</parameter></methodparam>
+   <methodparam><type>string</type><parameter>encoded_string</parameter></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter role="reference">result</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Analyse la chaîne de caractères <parameter>str</parameter> comme s'il
+   Analyse la chaîne de caractères <parameter>encoded_string</parameter> comme s'il
    s'agissait des paramètres passés via l'URL. Toutes les variables
-   qu'elle y repère sont alors créées, avec leurs valeurs respectives.
+   qu'elle y repère sont alors créées, avec leurs valeurs respectives (ou
+   dans le tableau si <parameter>result</parameter> est fourni).
   </para>
-  <note>
-   <para>
-    Pour accéder à l'URL appelante <literal>QUERY_STRING</literal>, vous devez
-    utiliser la variable
-    <varname>$_SERVER['QUERY_STRING']</varname>.
-    Il est aussi intéressant de lire la section sur les
-    <link linkend="language.variables.external">variables de sources externes</link>.
-   </para>
-  </note>
-  <note>
-   <para>
-    La configuration de <link linkend="ini.magic-quotes-gpc">magic_quotes_gpc</link>
-    affecte l'affichage de cette fonction car <function>parse_str</function> utilise
-    le même mécanisme que PHP utilise pour propager les variables <varname>$_GET</varname>,
-    <varname>$_POST</varname>, etc.
-   </para>
-  </note>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -45,7 +29,7 @@
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>str</parameter></term>
+     <term><parameter>encoded_string</parameter></term>
      <listitem>
       <para>
        La chaîne d'entrée.
@@ -53,12 +37,29 @@
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>arr</parameter></term>
+     <term><parameter>result</parameter></term>
      <listitem>
       <para>
-       Si le second paramètre <parameter>arr</parameter> est fourni,
-       les variables y seront stockées, sous forme d'index de tableau.
+       Si le second paramètre <parameter>result</parameter> est fourni,
+       les variables y seront stockées, sous forme d'un tableau indexé.
       </para>
+      <warning>
+       <para>
+        L'utilisation de cette fonction sans le paramètre <parameter>result</parameter> 
+        est trés fortement <emphasis>découragé</emphasis> et <emphasis>déconseillé</emphasis> 
+        à partir de PHP 7.2.
+       </para>
+       <para>
+        La définition dynamique des variables dans la portée de la fonction souffre 
+        exactement des mêmes problèmes que 
+        <link linkend="ini.register-globals">register_globals</link>.
+       </para>
+       <para>
+        Lisez la section sur la sécurité de 
+        <link linkend="security.globals">l'utilisation des registres globaux</link> 
+        expliquant pourquoi c'est dangereux.
+       </para>
+      </warning>
      </listitem>
     </varlistentry>
    </variablelist>
@@ -72,6 +73,31 @@
   </para>
  </refsect1>
 
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>7.2.0</entry>
+       <entry>
+        L'utilisation de <function>parse_str</function> sans le second argument 
+        émet une note <constant>E_DEPRECATED</constant>.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
+ </refsect1>
+
  <refsect1 role="examples">
   &reftitle.examples;
   <para>
@@ -81,21 +107,68 @@
 <![CDATA[
 <?php
 $str = "first=value&arr[]=foo+bar&arr[]=baz";
-parse_str($str);
-echo $first;  // value
-echo $arr[0]; // foo bar
-echo $arr[1]; // baz
 
+// Recommandé
 parse_str($str, $output);
 echo $output['first'];  // value
 echo $output['arr'][0]; // foo bar
 echo $output['arr'][1]; // baz
 
+// Déconseillé
+parse_str($str);
+echo $first;  // value
+echo $arr[0]; // foo bar
+echo $arr[1]; // baz
 ?>
 ]]>
     </programlisting>
    </example>
   </para>
+  <para>   
+   Parce que les variables en PHP ne peuvent pas avoir des points et des 
+   espaces dans leurs noms, ceux-ci sont convertis en soulignements. La même 
+   chose s'applique à la dénomination des noms de clés respectifs en cas d'utilisation 
+   de cette fonction avec le paramètre de <parameter>result</parameter> .
+   <example>
+    <title>Déformation des nom par <function>parse_str</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+parse_str("My Value=Something");
+echo $My_Value; // Something
+
+parse_str("My Value=Something", $output);
+echo $output['My_Value']; // Something
+?>
+]]>
+    </programlisting>
+   </example>
+  </para> 
+ </refsect1>
+  <refsect1 role="notes">
+  &reftitle.notes;
+
+  <note>
+   <para>
+    Toutes les variables créées (ou les valeurs retournées dans le tableau si le second paramètre est défini) sont déjà <function>urldecode</function>.
+   </para>
+  </note>
+  <note>
+   <para>
+    Pour obtenir le <literal>QUERY_STRING</literal> actuel, vous pouvez utiliser 
+    la variable <varname>$_SERVER['QUERY_STRING']</varname>. En outre, vous voudrez 
+    peut-être lire la section sur les 
+    <link linkend="language.variables.external"> variables de sources externes</link>.
+   </para>
+  </note>
+  <note>
+   <para>
+    Le paramètre <link linkend="ini.magic-quotes-gpc">magic_quotes_gpc</link> 
+    affecte la sortie de cette fonction, car <function>parse_str</function> 
+    utilise le même mécanisme que celui utilisé par PHP pour remplir les variables 
+    <varname>$_GET</varname>, <varname>$_POST</varname>, etc.
+   </para>
+  </note>
  </refsect1>
 
  <refsect1 role="seealso">
@@ -105,7 +178,6 @@ echo $output['arr'][1]; // baz
     <member><function>parse_url</function></member>
     <member><function>pathinfo</function></member>
     <member><function>http_build_query</function></member>
-    <member><function>get_magic_quotes_gpc</function></member>
     <member><function>urldecode</function></member>
    </simplelist>
   </para>
