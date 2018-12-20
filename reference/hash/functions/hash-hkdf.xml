@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 1fed7cc0df0588f15e6490787ef9fcf7cf7b16f2 Maintainer: jbnahan Status: ready -->
+<!-- Reviewed: no -->
+
+<refentry xml:id="function.hash-hkdf" xmlns="http://docbook.org/ns/docbook"  xmlns:xlink="http://www.w3.org/1999/xlink">
+ <refnamediv>
+  <refname>hash_hkdf</refname>
+  <refpurpose>Génère une dérivation de clé HKDF Generate depuis une clé fournis</refpurpose>
+ </refnamediv>
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>string</type><methodname>hash_hkdf</methodname>
+   <methodparam><type>string</type><parameter>algo</parameter></methodparam>
+   <methodparam><type>string</type><parameter>ikm</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>length</parameter><initializer>0</initializer></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>info</parameter><initializer>''</initializer></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>salt</parameter><initializer>''</initializer></methodparam>
+  </methodsynopsis>
+
+ </refsect1>
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>algo</parameter></term>
+     <listitem>
+      <para>
+       Nom de l'algorithme de hachage sélectioné (par exemple : "sha256", "sha512",
+       "haval160,4", etc...)
+       Voir <function>hash_algos</function> pour une liste d'algorithmes supporté.
+       <note>
+        <para>
+         Les fonctions de hachages qui ne sont pas cryptographique sont interdite.
+        </para>
+       </note>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>ikm</parameter></term>
+     <listitem>
+      <para>
+       Données (Input keying material) en binaire qui serviront au clavetage.
+       Ne peut pas être vide.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>length</parameter></term>
+     <listitem>
+      <para>
+       Longueur désiré des données de sortie en octets.
+       Ne peut être plus grand que 255 fois la taille de la fonction de hachage.
+      </para>
+      <para>
+       Si <parameter>length</parameter> vaut <literal>0</literal>, la longueur des
+       données de sortie sera par défaut la taille de la function de hachage choisie
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>info</parameter></term>
+     <listitem>
+      <para>
+       Information sous forme de &string; spécifique à l'Application/contexte.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>salt</parameter></term>
+     <listitem>
+      <para>
+       Sel à utiliser lors de la dérivation.
+      </para>
+      <para>
+       Bien qu'optionel, ajouté un sel aléatoire augmente de façon significative la
+       robustesse de HKDF.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Retourne un &string; contenant une représentation binaire brut de la clé dérivé
+   (aussi connue sous le nom de output keying material - OKM) ; ou &false; en cas d'échec.
+  </para>
+ </refsect1>
+
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <para>
+   Une <constant>E_WARNING</constant> sera émise si <parameter>ikm</parameter>
+   est vide, <parameter>algo</parameter> est inconnue/pas cryptographique,
+   <parameter>length</parameter> est moins que <literal>0</literal> ou trop grand
+   (plus grand que 255 fois la taille de la fonction de hachage).
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>hash_hkdf</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Génère une clé aléatoire, et un sel pour la renvorcer lors de la dérivation.
+$inputKey = random_bytes(32);
+$salt = random_bytes(16);
+
+// Dérive une paire de clés séparé, utilisant les mêmes données crée juste avant.
+$encryptionKey = hash_hkdf('sha256', $inputKey, 32, 'aes-256-encryption', $salt);
+$authenticationKey = hash_hkdf('sha256', $inputKey, 32, 'sha-256-authentication', $salt);
+
+var_dump($encryptionKey !== $authenticationKey); // bool(true)
+?>
+]]>
+    </programlisting>
+    <para>
+     L'exemple ci-dessus produit une paire de clés séparé, qui convient à la création
+     d'une construction chiffrer-puis-HMAC (encrypt-then-HMAC), en utilisant AES-256
+     et SHA-256 pour le chiffrement et l'authentification respectivement.
+    </para>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>hash_pbkdf2</function></member>
+    <member><link xlink:href="&url.rfc;5869">RFC 5869</link></member>
+    <member><link xlink:href="&url.git.hub;narfbg/hash_hkdf_compat">userland implementation</link></member>
+   </simplelist>
+  </para>
+ </refsect1>
+
+</refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
