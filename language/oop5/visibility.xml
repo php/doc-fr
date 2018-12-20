@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: a9f96e8c83e989c5edca55ccb36ed9b7579d8a44 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 70fb482c26ecfb7b95b1484ebb73a14f272c9871 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
  <sect1 xml:id="language.oop5.visibility" xmlns="http://docbook.org/ns/docbook">
   <title>Visibilité</title>
   <para>
-   La visibilité d'une propriété ou d'une méthode peut être définie en préfixant
-   sa déclaration avec un mot-clé : <emphasis>public</emphasis>,
-   <emphasis>protected</emphasis>, ou <emphasis>private</emphasis>.
-   Les éléments déclarés comme publics peuvent être utilisés par n'importe quelle partie
-   du programme. L'accès aux éléments protégés est limité à la classe elle-même, ainsi
-   qu'aux classes qui en héritent.
-   L'accès aux éléments privés est uniquement réservé à la classe qui les a défini.
+    La visibilité d'une propriété, d'une méthode ou (à partir de PHP 7.1.0) une constante peut
+   être définie en préfixant sa déclaration avec un mot-clé : <emphasis>public</emphasis>,
+   <emphasis>protected</emphasis>, ou
+   <emphasis>private</emphasis>.
+   Les éléments déclarés comme publics sont accessible partout.
+   L'accès aux éléments protégés est limité à la classe elle-même, ainsi
+   qu'aux classes qui en héritent et parente.
+   L'accès aux éléments privés est uniquement réservé à la classe qui les a définie.
   </para>
   
   <sect2 xml:id="language.oop5.visiblity-members">
@@ -57,7 +58,8 @@ $obj->printHello(); // Affiche Public, Protected et Private
  */
 class MyClass2 extends MyClass
 {
-    // On peut redéclarer les éléments publics ou protégés, mais pas ceux privés
+    // On peut redéclarer les propriétés publics ou protégés, mais pas ceux privés
+    public $public = 'Public2'
     protected $protected = 'Protected2';
 
     function printHello()
@@ -72,7 +74,7 @@ $obj2 = new MyClass2();
 echo $obj2->public; // Fonctionne
 echo $obj2->protected; // Erreur fatale
 echo $obj2->private; // Indéfini
-$obj2->printHello(); // Affiche Public, Protected2 et Indéfini
+$obj2->printHello(); // Affiche Public2, Protected2 et Undefined (Indéfini)
 
 ?>
 ]]>
@@ -182,9 +184,75 @@ class Foo extends Bar
     }
 }
 
-$myFoo = new foo();
+$myFoo = new Foo();
 $myFoo->test(); // Bar::testPrivate
                 // Foo::testPublic
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </sect2>
+  
+  <sect2 xml:id="language.oop5.visiblity-constants">
+   <title>Constant Visibility</title>
+   <para>
+    À partir de PHP 7.1.0, les constantes de classes peuvent être définies comme
+    public, privée, ou protégée. Les constantes déclaré sans mot clé de visibilité
+    explicite sont définies en tant que public.
+   </para>
+   <para>
+    <example>
+     <title>Déclaration de constantes à partir de PHP 7.1.0</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+/**
+ * Déclarons MyClass
+ */
+class MyClass
+{
+    // Déclarons une constante public
+    public const MY_PUBLIC = 'public';
+
+    // Déclarons une constante protégée
+    protected const MY_PROTECTED = 'protected';
+
+    // Déclarons une constante privée
+    private const MY_PRIVATE = 'private';
+
+    public function foo()
+    {
+        echo self::MY_PUBLIC;
+        echo self::MY_PROTECTED;
+        echo self::MY_PRIVATE;
+    }
+}
+
+$myclass = new MyClass();
+MyClass::MY_PUBLIC; // Fonctionne
+MyClass::MY_PROTECTED; // Erreur fatale
+MyClass::MY_PRIVATE; // Erreur fatale
+$myclass->foo(); // Public, Protégée et Privée fonctionne
+
+
+/**
+ * Define MyClass2
+ */
+class MyClass2 extends MyClass
+{
+    // This is public
+    function foo2()
+    {
+        echo self::MY_PUBLIC;
+        echo self::MY_PROTECTED;
+        echo self::MY_PRIVATE; // Erreur fatale
+    }
+}
+
+$myclass2 = new MyClass2;
+echo MyClass2::MY_PUBLIC; // Fonctionne
+$myclass2->foo2(); // Public et Protégée fonctionne, mais pas Privée
 ?>
 ]]>
      </programlisting>
