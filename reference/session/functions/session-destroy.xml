@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 894b3c74d9a9e4c6100139cabaa7c97eb2e294c0 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.session-destroy">
@@ -23,13 +23,50 @@
    de session, la fonction <function>session_start</function> doit être 
    appelée de nouveau.
   </simpara>
+  <note>
+   <simpara>
+    Vous n'avez pas besoin d'appeler <function>session_destroy</function>
+    depuis le programme généralement.
+    Nettoyer le tableau $_SESSION plutôt que de détruire les données de session.
+   </simpara>
+  </note>
   <para>
-   Pour détruire complètement une session, lorqu'on déconnecte un utilisateur par exemple,
+   Pour détruire complètement une session,
    l'identifiant de la session doit également être effacé. Si un cookie est utilisé
    pour propager l'identifiant de session (comportement par défaut), alors le cookie
    de session doit être effacé. La fonction <function>setcookie</function>
    peut être utilisée pour cela.
   </para>
+  <para>
+   Quand <link linkend="ini.session.use-strict-mode">session.use_strict_mode</link>
+   est activé. Vous n'avez pas besoin d'effacer le cookies d'ID de session
+   obsolète car le module de session n'accepte pas les cookies d'ID de sessions
+   quand il n'y a pas données associer avec ces ID de sessions et définira un
+   nouvel cookie d'ID de session.
+   Activer <link linkend="ini.session.use-strict-mode">session.use_strict_mode</link>
+   est recommandé pour tous les sites.
+  </para>
+  <warning>
+   <para>
+    La suppression immédiate d'une session peut causer des résultats innatandus.
+    Quand il y a des requêtes simultanées, les autres connexions peuvent
+    soudainement perdre des données de session. Par exemple des requêtes
+    depuis JavaScript et/ou des requêtes depuis des liens URL.
+   </para>
+   <para>
+    Bien que le module de session actuel n'accepte pas un cookie d'ID de session
+    vide, mais la suppression immédiate de session peut provoquer un cookie
+    d'ID de session vide à cause d'une condition de concurrence côté client 
+    (navigateur). Ceci provoquera la création de beaucoup d'ID de session
+    inutile par le client.
+   </para>
+   <para>
+    Pour éviter ceci, vous devez définir un horodatage à $_SESSION et
+    refuser l'accès à toutes les dates ultérieures. Ou assurer vous que votre
+    applicatio n'a pas de requêtes simultanées. Ceci s'applique aussi à
+    <function>session_regenerate_id</function>.
+   </para>
+  </warning>
  </refsect1>
 
  <refsect1 role="returnvalues">
@@ -90,6 +127,9 @@ session_destroy();
   &reftitle.seealso;
   <para>
    <simplelist>
+    <member><link linkend="ini.session.use-strict-mode">session.use_strict_mode</link></member>
+    <member><function>session_reset</function></member>
+    <member><function>session_regenerate_id</function></member>
     <member><function>unset</function></member>
     <member><function>setcookie</function></member>
    </simplelist>
