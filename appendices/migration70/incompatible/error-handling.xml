@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 44b298ee5daf7c79a8e63c7e80ffe65232822838 Maintainer: jbnahan Status: ready -->
+<!-- Reviewed: no -->
+
+<sect2 xml:id="migration70.incompatible.error-handling">
+ <title>Modifications apportées à la gestion des erreurs et des exceptions</title>
+
+ <para>
+  De nombreuses erreurs fatales et récupérables ont été converties en exceptions 
+  dans PHP 7. Ces exceptions d'erreur héritent de la classe <classname>Error</classname>, 
+  qui implémente elle-même l'interface <classname>Throwable</classname> (la nouvelle 
+  interface de base dont toutes les exceptions héritent).
+ </para>
+
+ <para>
+  Cela signifie que les gestionnaires d'erreurs personnalisés peuvent ne plus être 
+  déclenchés car des exceptions peuvent être levées à la place (provoquant de 
+  nouvelles erreurs irrécupérables pour les exceptions <classname>Error</classname> 
+  non interceptée).
+ </para>
+
+ <para>
+  Une description plus complète de la façon dont les erreurs fonctionnent en PHP 7 
+  se trouve <link linkend="language.errors.php7"> sur la page des erreurs PHP 7</link>. 
+  Ce guide de migration énumérera simplement les modifications qui affectent la 
+  compatibilité descendante.
+ </para>
+
+ <sect3 xml:id="migration70.incompatible.error-handling.set-exception-handler">
+  <title>
+   <function>set_exception_handler</function> n'est plus garanti de recevoir des objets <classname>Exception</classname>
+  </title>
+
+  <para>
+   Le code qui implémente un gestionnaire d'exceptions inscrit avec 
+   <function>set_exception_handler</function> à l'aide d'une déclaration de type 
+   <classname>Exception</classname> provoquera une erreur fatale lorsqu'un objet 
+   <classname>Error</classname> est levé.
+  </para>
+
+  <para>
+   Si le gestionnaire doit travailler à la fois sur PHP 5 et 7, vous devez 
+   supprimer la déclaration de type du gestionnaire, tandis que le code qui est migré 
+   pour travailler sur PHP 7 exclusivement peut simplement remplacer la déclaration 
+   de type <classname>Exception</classname> par <classname>Throwable</classname>.
+  </para>
+
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+// Code pour PHP 5 qui va se briser.
+function handler(Exception $e) { ... }
+set_exception_handler('handler');
+
+// Compatible PHP 5 et 7.
+function handler($e) { ... }
+
+// PHP 7 seulement.
+function handler(Throwable $e) { ... }
+?>
+]]>
+   </programlisting>
+  </informalexample>
+ </sect3>
+
+ <sect3 xml:id="migration70.incompatible.error-handling.constructors">
+  <title>Les constructeurs internes lèvent toujours des exceptions en cas d'échec</title>
+
+  <para>
+   Auparavant, certaines classes internes retournaient &null; ou un objet 
+   inutilisable lorsque le constructeur échouait. Toutes les classes internes 
+   lèveront maintenant une <classname>Exception</classname> dans ce cas de la 
+   même manière que les classes d'utilisateurs.
+  </para>
+ </sect3>
+
+ <sect3 xml:id="migration70.incompatible.error-handling.parse">
+  <title>Les erreurs d'analyse lèvent une <classname>ParseError</classname></title>
+
+  <para>
+   Les erreurs d'analyseur lèvent maintenant un objet <classname>ParseError</classname>. 
+   La gestion des erreurs pour <function>eval</function> doit maintenant inclure 
+   un bloc &catch; qui peut gérer cette erreur.
+  </para>
+ </sect3>
+
+ <sect3 xml:id="migration70.incompatible.error-handling.strict">
+  <title>Changements de gravité des avis E_STRICT</title>
+
+  <para>
+   Tous les avis <constant>E_STRICT</constant> ont été reclassés à d'autres niveaux. 
+   La constante <constant>E_STRICT</constant> est conservée, donc les appels comme 
+   <literal>error_reporting(E_ALL|E_STRICT)</literal> ne provoquera pas d'erreur.
+  </para>
+  <para>
+   <table>
+    <title>Changements de gravité des avis <constant>E_STRICT</constant></title>
+     <tgroup cols="2">
+      <thead>
+       <row>
+        <entry>Situation</entry>
+        <entry>Nouveau niveau/comportement</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry>Indexation par une ressource</entry>
+        <entry><constant>E_NOTICE</constant></entry>
+       </row>
+       <row>
+        <entry>Méthodes statiques abstraites</entry>
+        <entry>Avis supprimé, déclenche aucune erreur</entry>
+       </row>
+       <row>
+        <entry> "Redéfinir" un constructeur</entry>
+        <entry>Avis supprimé, déclenche aucune erreur</entry>
+       </row>
+       <row>
+        <entry>Incompatibilité de signature pendant l'héritage</entry>
+        <entry><constant>E_WARNING</constant></entry>
+       </row>
+       <row>
+        <entry>Même propriété (compatible) dans deux traits utilisés</entry>
+        <entry>Avis supprimé, déclenche aucune erreur</entry>
+       </row>
+       <row>
+        <entry>Accès à une propriété statique non statiquement</entry>
+        <entry><constant>E_NOTICE</constant></entry>
+       </row>
+       <row>
+        <entry>Seules les variables doivent être attribuées par référence</entry>
+        <entry><constant>E_NOTICE</constant></entry>
+       </row>
+       <row>
+        <entry>Seules les variables doivent être transmises par référence</entry>
+        <entry><constant>E_NOTICE</constant></entry>
+       </row>
+       <row>
+        <entry>Appel de méthodes non statiques statiquement</entry>
+        <entry><constant>E_DEPRECATED</constant></entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+   </para>
+ </sect3>
+</sect2>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
