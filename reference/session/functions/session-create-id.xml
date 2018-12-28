@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: efd6aa8b0c567335996c6a27b2fbd264b30f90f8 Maintainer: jbnahan Status: ready -->
+<!-- Reviewed: no -->
+
+<refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.session-create-id">
+ <refnamediv>
+  <refname>session_create_id</refname>
+  <refpurpose>Créer un nouvel ID de session</refpurpose>
+ </refnamediv>
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>string</type><methodname>session_create_id</methodname>
+   <methodparam choice="opt"><type>string</type><parameter>prefix</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   <function>session_create_id</function> est utilisé pour créer un nouvel
+   ID de session pour la session courante. Ceci retourne un ID de
+   session sans colision.
+  </para>
+  <para>
+   Si la session n'est pas active, la vérification de colision est omise.
+  </para>
+  <para>
+   L'ID de session est créé en accord avec les paramètres php.ini.
+  </para>
+  <para>
+   Il est important d'utiliser le même ID utilisateur de votre serveur web
+   pour le script de tâche de Ramasse-miettes (Garbage Collection).
+   Sans quoi, vous risquez d'avoir des problèmes de permissions particulièrement
+   avec les gestionnaires de sauvegarde des fichiers.
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>prefix</parameter></term>
+      <listitem>
+       <para>
+        Si <parameter>prefix</parameter> est spécifié, le nouvel ID de session
+        est préfixé par <parameter>prefix</parameter>. Pas tous
+        les charactères sont autorisés dans l'ID de session. Les charactères
+        parmis <literal>a-z A-Z 0-9 , (virgule) et -
+        (moins)</literal> sont autorisés..
+       </para> 
+      </listitem>
+     </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   <function>session_create_id</function> retourne un nouvel ID de session
+   sans colision pour la session courante. Si c'est utilisé sans une session
+   active, la vérification de colision est omise.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple de <function>session_create_id</function> avec <function>session_regenerate_id</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Ma fonction de session start support la gestion d'horodatage
+function my_session_start() {
+    session_start();
+    // N'autorise pas l'utilisation des anciens ID de session
+    if (!empty($_SESSION['deleted_time']) && $_SESSION['deleted_time'] < time() - 180) {
+        session_destroy();
+        session_start();
+    }
+}
+
+// Ma fonction de regénération d'ID
+function my_session_regenerate_id() {
+    // Appel à session_create_id() quand la session est active
+    // pour être sûr qu'il n'y a pas de colision.
+    if (session_status() != PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    // AVERTISSEMENT: N'utiliser jamais des chaînes confidentielle comme préfix !
+    $newid = session_create_id('myprefix-');
+    // Définit l'horodatage de suppression.
+    // Les données de session ne doivent pas être supprimer immédiatement pour certaines raisons.
+    $_SESSION['deleted_time'] = time();
+    // Termine la session
+    session_commit();
+    // Assurez vous d'accepter les ID de session définit par l'utilisateur
+    // NOTE: Vous devez activer use_strict_mode pour les opérations normales.
+    ini_set('session.use_strict_mode', 0);
+    // Définir un nouvel ID de session personalisé
+    session_id($newid);
+    // Démarrage avec un ID de session personalisé
+    session_start();
+}
+
+// Assurez vous que use_strict_mode est activé.
+// use_strict_mode est obligatoire pour des raisons de sécurités.
+ini_set('session.use_strict_mode', 1);
+my_session_start();
+
+// L'ID de session doit être regénéré quand
+//  - Un utilisateur se connecte
+//  - Un utilisateur se déconnecte
+//  - Une certaine période s'est écoulé
+my_session_regenerate_id();
+
+// Logique d'application
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>session_regenerate_id</function></member>
+    <member><function>session_start</function></member>
+    <member><link linkend="ini.session.use-strict-mode">session.use_strict_mode</link></member>
+    <member><methodname>SessionHandler::create_sid</methodname></member>
+   </simplelist>
+  </para>
+ </refsect1>
+</refentry>
+
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
