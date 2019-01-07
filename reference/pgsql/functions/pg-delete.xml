@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 49944c9148ba4e48c1aa96544cdec3911b2f4131 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 65fe2493a38670a11240a7522733bcde8bb4b784 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.pg-delete" xmlns="http://docbook.org/ns/docbook">
@@ -21,11 +21,27 @@
    <methodparam choice="opt"><type>int</type><parameter>options</parameter><initializer>PGSQL_DML_EXEC</initializer></methodparam>
   </methodsynopsis>
   <para>
-   <function>pg_delete</function> efface les lignes de la table
-   <parameter>table_name</parameter>, spécifiées par le tableau associatif
-   <parameter>assoc_array</parameter>. Si <parameter>option</parameter> est
-   spécifié, <function>pg_convert</function> est appliqué à
+   <function>pg_delete</function> efface les lignes d'une table
+   spécifiées par les clés et valeur du tableau associatif
+   <parameter>assoc_array</parameter>. Si <parameter>option</parameter>
+   est spécifié, <function>pg_convert</function> est appliqué à
    <parameter>assoc_array</parameter> avec cette option.
+  </para>
+  <para>
+   Si <literal>options</literal> est fournit,
+   <function>pg_convert</function> est appliqué à
+   <literal>assoc_array</literal> avec les drapeaux fournit.
+  </para>
+  <para>
+   Par défaut <function>pg_delete</function> passe des valeurs brutes. Les valeurs
+   doivent être échappé ou l'option PGSQL_DML_ESCAPE doit être fournit.
+   PGSQL_DML_ESCAPE met des guillemets et échappe les paramètres/idantifiants.
+   Par conséquent, les noms de table/colonnes doivent être sensible à la casse.
+  </para>
+  <para>
+   Notez que ni l'échappement ni les requêtes préparer peuvent protéger des
+   requêtes LIKE, JSON, Tableaux, Regex, etc. Ces paramètres devraient être
+   traité en fonction de leur contexte. C'est à dire échapper/valider les valeurs.
   </para>
  </refsect1>
 
@@ -99,7 +115,9 @@
 <![CDATA[
 <?php 
  $db = pg_connect ('dbname=foo');
- // C'est sans problème, car $_POST est converti automatiquement
+ // Ceci est sûr quelque peu, car toutes les valeurs sont échappées
+ // Cependant PostgreSSQL supporte les JSON/Tableaux. Ceci ne sont pas
+ // sûr ni par échappement ni par les requêtes préparés.
  $res = pg_delete($db, 'post_log', $_POST);
  if ($res) {
      echo "Les données POSTées ont été effacées : $res\n";

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 4501571c0db3a88528af1c5bcf8cb7193eec6961 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 109dfef79510c37d2f6abf344fadb5bbf85382a1 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.pg-insert" xmlns="http://docbook.org/ns/docbook">
@@ -21,12 +21,28 @@
    <methodparam choice="opt"><type>int</type><parameter>options</parameter><initializer>PGSQL_DML_EXEC</initializer></methodparam>
   </methodsynopsis>
   <para>
-   <function>pg_insert</function> insère le tableau 
-   <parameter>assoc_array</parameter> dans la table 
+   <function>pg_insert</function> insère les valeurs de 
+   <parameter>assoc_array</parameter> dans la table fournit par
    <parameter>table_name</parameter>.
    Si <parameter>options</parameter> est spécifiée,
    <function>pg_convert</function> s'applique à
-   <parameter>assoc_array</parameter> avec l'option spécifiée.
+   <parameter>assoc_array</parameter> avec les options spécifiée.
+  </para>
+  <para>
+   Si <literal>options</literal> est fournit,
+   <function>pg_convert</function> est appliqué à
+   <literal>assoc_array</literal> avec les drapeaux fournit.
+  </para>
+  <para>
+   Par défaut <function>pg_delete</function> passe des valeurs brutes. Les valeurs
+   doivent être échappé ou l'option PGSQL_DML_ESCAPE doit être fournit.
+   PGSQL_DML_ESCAPE met des guillemets et échappe les paramètres/idantifiants.
+   Par conséquent, les noms de table/colonnes doivent être sensible à la casse.
+  </para>
+  <para>
+   Notez que ni l'échappement ni les requêtes préparer peuvent protéger des
+   requêtes LIKE, JSON, Tableaux, Regex, etc. Ces paramètres devraient être
+   traité en fonction de leur contexte. C'est à dire échapper/valider les valeurs.
   </para>
  </refsect1>
 
@@ -87,8 +103,8 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   &return.success;  Retourne une &string; si <constant>PGSQL_DML_STRING</constant> 
-   est passé via le paramètre <parameter>options</parameter>.
+   Retourne la ressource de connexion en cas de succès, &return.falseforfailure;.
+   Retourne une &string; si <constant>PGSQL_DML_STRING</constant> est passé.
   </para>
  </refsect1>
 
@@ -101,8 +117,10 @@
 <![CDATA[
 <?php 
   $db = pg_connect ('dbname=foo');
-  // C'est sécuritaire, car $_POST est converti automatiquement
-  $res = pg_insert($db, 'post_log', $_POST);
+  // Ceci est sûr quelque peu, car toutes les valeurs sont échappées
+  // Cependant PostgreSSQL supporte les JSON/Tableaux. Ceci ne sont pas
+  // sûr ni par échappement ni par les requêtes préparés.
+  $res = pg_insert($dbconn, 'post_log', $_POST, PG_DML_ESCAPE);
   if ($res) {
       echo "Les données POSTées ont pu être enregistrées avec succès.\n";
   } else {
@@ -127,6 +145,13 @@
       </row>
      </thead>
      <tbody>
+      <row>
+       <entry>5.6.0</entry>
+       <entry>
+        À moins que <constant>PGSQL_DML_STRING</constant> est passé, la fonctione
+        retourne désormais la ressource de connexion au lieux de &true; en cas de succès.
+       </entry>
+      </row>
       <row>
        <entry>5.6.0</entry>
        <entry>
