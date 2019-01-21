@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 3cd337b4dc91c827399961b9b45524ae4f2b50c9 Maintainer: girgias Status: ready -->
+<!-- Reviewed: no -->
+
+<sect1 xml:id="migration71.windows-support" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Support Windows</title>
+
+ <sect2 xml:id="migration71.windows-support.long-and-utf8-path">
+  <title>Support pour les chemins long et UTF-8</title>
+  <para>
+   Si une application web est conforme à l'UTF-8, aucune action supplémentaire n'est requise.
+   Pour des applications qui dépendent de chemins dans un encodage différent que UTF-8 pour l'I/O,
+   une directive INI doit être explicitement définit. La vérification des paramètres d'encodage INI
+   se fie à l'ordre dans le cœur (core) :
+  </para>
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     internal_encoding
+    </simpara>
+   </listitem>
+    <listitem>
+    <simpara>
+     default_charset
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     zend.multibyte
+    </simpara>
+   </listitem>
+  </itemizedlist>
+  <para>
+   Plusieurs fonction pour la gestion des codepage ont été introduite :
+  </para>
+      <itemizedlist>
+       <listitem>
+        <simpara>
+         sapi_windows_cp_set() to set the default codepage
+        </simpara>
+       </listitem>
+       <listitem>
+        <simpara>
+         sapi_windows_cp_get() to retrieve the current codepage
+        </simpara>
+       </listitem>
+       <listitem>
+        <simpara>
+         sapi_windows_cp_is_utf8()
+        </simpara>
+       </listitem>
+       <listitem>
+        <simpara>
+         sapi_windows_cp_conv() to convert between codepages, using iconv() compatible signature
+        </simpara>
+       </listitem>
+      </itemizedlist>
+  <para>
+   Ces fonctions sont thread safe.
+  </para>
+  <para>
+   La sortie de la console codepage est ajusté en fonction de l'encodage utilisé
+   en PHP. En fonction du codepage OEM du système concret, la sortie visible
+   pourrait ou pourrait ne pas être correct. Par exemple, avec le cmd.exe par
+   défaut et sur un système avec le codepage OEM 437, la sortie dans codepage 1251,
+   1252, 1253 et d'autres peuvent être montrer correctement en utilisant UTF-8.
+   Sur les mêmes systèmes, les charactères dans codepage tel que 20932 seront
+   probablement pas montré correctement.
+   Ceci fait référence aux régles système particulières pour codepage, la
+   compabilité de la police et le choix du programme de console utilisé.
+   PHP définit automatiquement la codepage console en accord avec les régles
+   d'encodages depuis php.ini. Utiliser des consoles alternative à la place de
+   cmd.exe directement pourrait apporter une meilleure expérience dans certains cas.
+  </para>
+  <para>
+   Toutefois soyez conscient, changer de codepage après que la requête a commencé
+   peut causer des effets secondaires inattendue en CLI. La façon préférable est php.ini.
+   Quand PHP CLI est utilisé dans un émulateur de console, qui ne supporte pas Unicode,
+   il est possiblement nécessaire, d'éviter de changer la codepage de la console.
+   La meilleure façon pour achever ceci est de définir l'encodage interne ou par défault pour
+   correspondre à la codepage ANSI. Une autre méthode est de définir la directive INI
+   output_encoding et input_encoding à la codepage requise, cependant dans ce cas la
+   différence entre les codepages interne et I/O risque de causer du mojibake.
+   Dans de rare cas, si PHP arrive à planter gracieusement, la codepage originale de la
+   console peut ne pas être restaurée. Dans ce cas, la commande chcp peut être utilisé,
+   pour la restaurer manuellement.
+  </para>
+  <para>
+   Attention particulière pour les systèmes DBCS - le changement de codepage lors de
+   l'exécution en utilisant <function>ini_set</function> risque de causer des problèmes d'affichage.
+   À la différence des systèmes non DBCS, c'est que les charactères étendues nécessites deux consoles
+   pour être affiché. Dans certains cas, seulement la mise en correspondance des caractères dans
+   le jeu de glyphes de la police pourrait se produire, aucun changement de police se produit. Ceci est
+   la nature des systèmes DBCS, la manière la plus simple de prévenir des problèmes d'affichages
+   et d'éviter l'usage de <function>ini_set</function> pour le changement de codepage.
+  </para>
+  <para>
+   En conséquence du support d'UTF-8 dans les flux, les scripts PHP ne sont plus
+   limité à des noms de fichiers ASCII ou ANSI. Ceci est prêt à l'emplois en CLI.
+   Pour d'autres SAPI, la documentation pour le serveur correspondant est utile.
+  </para>
+  <para>
+   Le support des chemins long est transparent. Les chemins plus long que 260 octets sont
+   automatiquement préfixé par <literal>\\?\</literal>. La longeur maximale du chemin est
+   limité à 2018 octets. Soyez conscient, que la limite des segments de chemin (longeur du
+   basename) persiste.
+  </para>
+  <para>
+   Pour la meilleure portabilité, il est fortement recommendé de gérer les noms de fichiers,
+   I/O et autre sujets connexe UTF-8. En outre, pour les applications console, l'usage
+   d'une police TrueType est préférable et l'usage de ini_set() pour le
+   le changement de codepage est déconseillé.
+  </para>
+  <para>
+  </para>
+  <para>
+  </para>
+ </sect2>
+
+ <sect2 xml:id="migration71.windows-support.readline">
+  <title>readline</title>
+
+  <para>
+   L'<link linkend="book.readline">extension readline</link> est supporté
+   à travers la <link xlink:href="&url.readline.windows;">bibliothèque
+   WinEditLine</link>. Ainsi l'interface système interactive <acronym>CLI</acronym> est
+   aussi supporté (<literal>php.exe -a</literal>).
+  </para>
+ </sect2>
+
+ <sect2 xml:id="migration71.windows-support.php-fcgi-children">
+  <title>PHP_FCGI_CHILDREN</title>
+  <para>
+  <varname>PHP_FCGI_CHILDREN</varname> est désormais respecté. Si cette variable d'environement
+   est définit, le premier processus <filename>php-cgi.exe</filename> exécutera le nombre
+   spécifié d'enfant. Ceci partageront le même socket TCP.
+  </para>
+ </sect2>
+
+ <sect2 xml:id="migration71.windows-support.ftok">
+  <title>ftok()</title>
+  <para>
+   Ajout du support pour <function>ftok</function>
+  </para>
+ </sect2>
+
+</sect1>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
