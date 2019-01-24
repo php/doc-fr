@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 0aa774414ae3ca9032fa586b59554dd66fc376df Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 7e2109691481280c3488c5e95e90f1c235cc0800 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqlinfo.concepts" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -15,7 +15,7 @@
   <para>
    Les requêtes utilisent par défaut le mode Mémoire tampon.
    Cela signifie que le résultat des requêtes est immédiatement
-   transféré du serveur MySQL à PHP et conservé dans la mémoire
+   transféré du serveur MySQL à PHP et sont ensuite conservé dans la mémoire
    du processus PHP. Cela permet des opérations complémentaires
    comme compter le nombre de résultat, et déplacer le
    pointeur de résultat actuel. Il permet également d'exécuter des
@@ -163,14 +163,17 @@ if ($uresult) {
 
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-// N'affectera pas $mysqli->real_escape_string();
+// N'affectera PAS $mysqli->real_escape_string();
 $mysqli->query("SET NAMES utf8");
 
-// N'affectera pas $mysqli->real_escape_string();
+// N'affectera PAS $mysqli->real_escape_string();
 $mysqli->query("SET CHARACTER SET utf8");
 
-// Mais, ceci va affecter $mysqli->real_escape_string();
+// Mais, ceci affectera $mysqli->real_escape_string();
 $mysqli->set_charset('utf8');
+
+// Mais, ceci NE l'affectera PAS (utf-8 par rapport à utf8) -- n'utilisez pas les tirets ici
+$mysqli->set_charset('utf-8');
 
 ?>
 ]]>
@@ -181,21 +184,32 @@ $mysqli->set_charset('utf8');
    Ci-dessous les exemples qui démontrent la façon de modifier proprement
    le jeu de caractères lors de l'exécution en utilisant chacune des APIs.
   </para>
+  
+  <note>
+   <title>Confusion possible avec UTF-8</title>
+   <para>
+    Du au fait que les noms des jeux de charactères dans MySQL ne contiennent pas de tiret,
+    la chaîne "utf8" est correcte dans MySQL et définira le jeu de charactère en UTF-8.
+    La chaîne "utf-8" n'est pas correcte, et utiliser "utf-8" échouera à modifier le
+    jeu de charactère.
+   </para>
+  </note>
 
   <example>
    <title>Exemple de définition du jeu de caractères : mysqli</title>
    <programlisting role="php">
 <![CDATA[
 <?php
-
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
+
+printf("Jeu de charactère initial : %s\n", $mysqli->character_set_name());
 
 if (!$mysqli->set_charset('utf8')) {
     printf("Erreur lors du chargement du jeu de caractères utf8 : %s\n", $mysqli->error);
-} else {
-    printf("Jeu de caractères courant : %s\n", $mysqli->character_set_name());
+    exit;
 }
 
+echo "Nouvelle information du jeu de charactère :\n";
 print_r( $mysqli->get_charset() );
 
 ?>
@@ -222,9 +236,10 @@ $pdo = new PDO("mysql:host=localhost;dbname=world;charset=utf8", 'my_user', 'my_
    <programlisting role="php">
 <![CDATA[
 <?php
-
 $conn = mysql_connect("localhost", "my_user", "my_pass");
 $db   = mysql_select_db("world");
+
+echo 'Jeu de charactère initial : ' .  mysql_client_encoding($conn) . "\n";
 
 if (!mysql_set_charset('utf8', $conn)) {
     echo "Erreur : Impossible de définir le jeu de caractères.\n";
@@ -232,7 +247,6 @@ if (!mysql_set_charset('utf8', $conn)) {
 }
 
 echo 'Jeu de caractères courant : ' .  mysql_client_encoding($conn);
-
 ?>
 ]]>
    </programlisting>
