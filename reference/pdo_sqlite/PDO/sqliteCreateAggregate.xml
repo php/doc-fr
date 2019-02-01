@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: dc706816c30f61d28686b4bf43f5b09e6d2de8e0 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 0c1b86e9c6ff3bb46c8f3383053972f2a7fbf251 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="pdo.sqlitecreateaggregate" xmlns="http://docbook.org/ns/docbook">
@@ -59,19 +59,44 @@
         <methodparam><type>mixed</type><parameter>context</parameter></methodparam>
         <methodparam><type>int</type><parameter>rownumber</parameter></methodparam>
         <methodparam><type>mixed</type><parameter>value1</parameter></methodparam>
-        <methodparam choice="opt"><type>mixed</type><parameter>value2</parameter></methodparam>
-        <methodparam choice="opt"><type>mixed</type><parameter>..</parameter></methodparam>
+        <methodparam choice="opt"><type>mixed</type><parameter>...</parameter></methodparam>
        </methodsynopsis>
-      </para>
-      <para>
-       <varname>context</varname> vaudra &null; pour la première ligne; pour les lignes suivantes,
-       il vaudra la même valeur que celle  précédemment retournée par la fonction step; vous devriez
-       l'utiliser pour maintenir l'état d'agrégation.
-      </para>
-      <para>
-       <varname>rownumber</varname> contiendra le nombre de lignes.
-      </para>
-      <para>
+       <variablelist>
+        <varlistentry>
+         <term><parameter>context</parameter></term>
+         <listitem>
+          <para>
+           &null; pour la première ligne ; sur les lignes suivantes ceci aura la valeur
+           qui a été précedement retourné par la fonction step ; vous devriez utiliser
+           ceci pour maintenir l'état d'aggregation.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>rownumber</parameter></term>
+         <listitem>
+          <para>
+           Le numéro de ligne courante.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>value1</parameter></term>
+         <listitem>
+          <para>
+           Le premier argument à passer à l'agrégateur.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>...</parameter></term>
+         <listitem>
+          <para>
+           Arguments supplémentaires à passer à l'agrégateur.
+          </para>
+         </listitem>
+        </varlistentry>
+       </variablelist>
        La valeur retournée de cette fonction sera utilisée comme argument
        <parameter>context</parameter> lors du prochain appel d'une fonction
        d'étape ou finale.
@@ -84,8 +109,8 @@
       <para>
        Fonction de rappel pour agréger les "étapes" de données de chaque ligne.
        Une fois que toutes les lignes ont été traitées, la fonction sera appelée,
-       prendra les données du contexte d'agrégation et retournera le résultat. La fonction de
-       rappel retournera une type  compris 
+       prendra les données du contexte d'agrégation et retournera le résultat.
+       La fonction de rappel doit retourner un type compris 
        par SQLite (c'est-à-dire <link 
        linkend="language.types.intro">un type scalaire</link>).
       </para>
@@ -94,18 +119,26 @@
        <methodsynopsis>
         <type>mixed</type><methodname><replaceable>fini</replaceable></methodname>
         <methodparam><type>mixed</type><parameter>context</parameter></methodparam>
-        <methodparam><type>int</type><parameter>rownumber</parameter></methodparam>
+        <methodparam><type>int</type><parameter>rowcount</parameter></methodparam>
        </methodsynopsis>
-      </para>
-      <para>
-       <varname>context</varname> contiendra la valeur de retour du tout dernier appel à
-       la fonction step.
-      </para>
-      <para>
-       <varname>rownumber</varname> contiendra le nombre de lignes sur lesquelles l'agrégation a
-       eu lieu.
-      </para>
-      <para>
+       <variablelist>
+        <varlistentry>
+         <term><parameter>context</parameter></term>
+         <listitem>
+          <para>
+           Contient la valeur de retour du tout dernier appel à la fonction step.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>rowcount</parameter></term>
+         <listitem>
+          <para>
+           Contient le nombre de lignes sur lesquelles l'agrégat a été effectué.
+          </para>
+         </listitem>
+        </varlistentry>
+       </variablelist>
        La valeur de retour de cette fonction sera utilisée comme valeur de retour pour
        l'agrégation.
       </para>
@@ -159,7 +192,7 @@ foreach ($data as $str) {
 }
 $insert = null;
 
-function max_len_step(&$context, $rownumber, $string) 
+function max_len_step($context, $rownumber, $string) 
 {
     if (strlen($string) > $context) {
         $context = strlen($string);
@@ -167,7 +200,7 @@ function max_len_step(&$context, $rownumber, $string)
     return $context;
 }
 
-function max_len_finalize(&$context, $rownumber) 
+function max_len_finalize($context, $rownumber) 
 {
     return $context === null ? 0 : $context;
 }
@@ -185,11 +218,11 @@ var_dump($db->query('SELECT max_len(a) from strings')->fetchAll());
    Dans cet exemple, on crée une fonction agrégative qui va calculer la
    longueur de la plus grande chaîne de caractères dans une des colonnes de la
    table. Pour chaque ligne, la fonction <literal>max_len_step</literal> est
-   appelée et le paramètre <parameter>context</parameter> est passé. Le
+   appelée et le paramètre <literal>$context</literal> est passé. Le
    paramètre de contexte est comme n'importe quelle autre variable PHP et
    doit être fixé pour contenir un tableau ou même, un objet. Dans cet exemple,
    nous l'utilisons pour contenir la taille maximale que nous avons vu jusqu'à
-   présent ; si le paramètre <parameter>string</parameter> a une grandeur plus
+   présent ; si le paramètre <literal>$string</literal> a une grandeur plus
    importante que celle courante, on met à jour le contexte pour contenir cette
    nouvelle taille maximale.
   </para>
@@ -197,7 +230,7 @@ var_dump($db->query('SELECT max_len(a) from strings')->fetchAll());
    Une fois que toutes les lignes ont été traitées, SQLite appelle la fonction
    <literal>max_len_finalize</literal> pour déterminer le résultat agrégatif.
    Ici, nous pourrions effectuer des calculs basés sur les données trouvées
-   dans <parameter>context</parameter>. Dans notre exemple simple, nous avons
+   dans <literal>$context</literal>. Dans notre exemple simple, nous avons
    calculé le résultat comme si la requête progressait, alors que nous avons
    simplement besoin de retourner la valeur de contexte.
   </para>

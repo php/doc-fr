@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: af4410a7e15898c3dbe83d6ea38246745ed9c6fb Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 0c1b86e9c6ff3bb46c8f3383053972f2a7fbf251 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="sqlite3.createaggregate" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -38,11 +38,60 @@
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>step_callback</parameter></term>
+     <term><parameter>step_func</parameter></term>
      <listitem>
       <para>
-       Le nom de la fonction PHP ou de la fonction utilisateur à appliquer
-       comme callback sur tous les éléments de l'aggrégation.
+       Fonction de rappel appelée pour chaque ligne dans le jeu de résultats. Votre
+       fonction PHP devrait accumuler le résultat et stocker son contexte d'agrégation.
+      </para>
+      <para>
+       Cette fonction doit être définie comme :
+       <methodsynopsis>
+        <type>mixed</type><methodname><replaceable>step</replaceable></methodname>
+        <methodparam><type>mixed</type><parameter>context</parameter></methodparam>
+        <methodparam><type>int</type><parameter>rownumber</parameter></methodparam>
+        <methodparam><type>mixed</type><parameter>value1</parameter></methodparam>
+        <methodparam choice="opt"><type>mixed</type><parameter>...</parameter></methodparam>
+       </methodsynopsis>
+       <variablelist>
+        <varlistentry>
+         <term><parameter>context</parameter></term>
+         <listitem>
+          <para>
+           &null; pour la première ligne ; sur les lignes suivantes ceci aura la valeur
+           qui a été précedement retourné par la fonction step ; vous devriez utiliser
+           ceci pour maintenir l'état d'aggregation.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>rownumber</parameter></term>
+         <listitem>
+          <para>
+           Le numéro de ligne courante.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>value1</parameter></term>
+         <listitem>
+          <para>
+           Le premier argument à passer à l'agrégateur.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>...</parameter></term>
+         <listitem>
+          <para>
+           Arguments supplémentaires à passer à l'agrégateur.
+          </para>
+         </listitem>
+        </varlistentry>
+       </variablelist>
+       La valeur retournée de cette fonction sera utilisée comme argument
+       <parameter>context</parameter> lors du prochain appel d'une fonction
+       d'étape ou finale.
       </para>
      </listitem>
     </varlistentry>
@@ -50,8 +99,40 @@
      <term><parameter>final_callback</parameter></term>
      <listitem>
       <para>
-       Le nom de la fonction PHP ou de la fonction utilisateur à appliquer
-       comme callback à la fin des données de l'aggrégation.
+       Fonction de rappel pour agréger les "étapes" de données de chaque ligne.
+       Une fois que toutes les lignes ont été traitées, la fonction sera appelée,
+       prendra les données du contexte d'agrégation et retournera le résultat.
+       La fonction de rappel doit retourner un type compris 
+       par SQLite (c'est-à-dire <link 
+       linkend="language.types.intro">un type scalaire</link>).
+      </para>
+      <para>
+       Cette fonction doit être définie comme :
+       <methodsynopsis>
+        <type>mixed</type><methodname><replaceable>fini</replaceable></methodname>
+        <methodparam><type>mixed</type><parameter>context</parameter></methodparam>
+        <methodparam><type>int</type><parameter>rownumber</parameter></methodparam>
+       </methodsynopsis>
+       <variablelist>
+        <varlistentry>
+         <term><parameter>context</parameter></term>
+         <listitem>
+          <para>
+           Contient la valeur de retour du tout dernier appel à la fonction step.
+          </para>
+         </listitem>
+        </varlistentry>
+        <varlistentry>
+         <term><parameter>rownumber</parameter></term>
+         <listitem>
+          <para>
+           Toujours <literal>0</literal>.
+          </para>
+         </listitem>
+        </varlistentry>
+       </variablelist>
+       La valeur de retour de cette fonction sera utilisée comme valeur de retour pour
+       l'agrégation.
       </para>
      </listitem>
     </varlistentry>
@@ -73,8 +154,101 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne &true; si la création réussie, &false; si une erreur survient.
+   Retourne &true; si la création de l'agrégat a réussie, &false; si une erreur survient.
   </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple d'une fonction d'agrégation avec max_length</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$data = array(
+   'one',
+   'two',
+   'three',
+   'four',
+   'five',
+   'six',
+   'seven',
+   'eight',
+   'nine',
+   'ten',
+   );
+$db = new SQLite3(':memory:');
+$db->exec("CREATE TABLE strings(a)");
+$insert = $db->prepare('INSERT INTO strings VALUES (?)');
+foreach ($data as $str) {
+    $insert->bindValue(1, $str);
+    $insert->execute();
+}
+$insert = null;
+
+function max_len_step($context, $rownumber, $string) 
+{
+    if (strlen($string) > $context) {
+        $context = strlen($string);
+    }
+    return $context;
+}
+
+function max_len_finalize($context, $rownumber) 
+{
+    return $context === null ? 0 : $context;
+}
+
+$db->createAggregate('max_len', 'max_len_step', 'max_len_finalize');
+
+var_dump($db->querySingle('SELECT max_len(a) from strings'));
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen role="php">
+<![CDATA[
+int(5)
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   Dans cet exemple, on crée une fonction agrégative qui va calculer la
+   longueur de la plus grande chaîne de caractères dans une des colonnes de la
+   table. Pour chaque ligne, la fonction <literal>max_len_step</literal> est
+   appelée et le paramètre <literal>$context</literal> est passé. Le
+   paramètre de contexte est comme n'importe quelle autre variable PHP et
+   doit être fixé pour contenir un tableau ou même, un objet. Dans cet exemple,
+   nous l'utilisons pour contenir la taille maximale que nous avons vu jusqu'à
+   présent ; si le paramètre <literal>$string</literal> a une grandeur plus
+   importante que celle courante, on met à jour le contexte pour contenir cette
+   nouvelle taille maximale.
+  </para>
+  <para>
+   Une fois que toutes les lignes ont été traitées, SQLite appelle la fonction
+   <literal>max_len_finalize</literal> pour déterminer le résultat agrégatif.
+   Ici, nous pourrions effectuer des calculs basés sur les données trouvées
+   dans <literal>$context</literal>. Dans notre exemple simple, nous avons
+   calculé le résultat comme si la requête progressait, alors que nous avons
+   simplement besoin de retourner la valeur de contexte.
+  </para>
+  <tip>
+   <para>
+    Il n'est PAS recommandé d'enregistrer une copie des valeurs dans le contexte
+    pour finalement les traiter. Dans ce cas, SQLite utiliserait beaucoup trop
+    de mémoire pour traiter la requête - imaginez la quantité de mémoire nécessaire
+    si un million de lignes étaient enregistrées en mémoire, sachant que chaque ligne
+    contient une chaîne de caractères (32 octets par chaîne).
+   </para>
+  </tip>
+  <tip>
+   <para>
+    Vous pouvez utiliser <methodname>SQLite3::createAggregate</methodname> pour surcharger les
+    fonctions natives de SQLite.
+   </para>
+  </tip>
  </refsect1>
 
 </refentry>
