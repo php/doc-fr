@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: a44a1e0b7918846659a3c91013855d2c3d674fb9 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 0fe00e3574f5267948a29692e8daddaaeb275cee Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
  <sect1 xml:id="language.oop5.basic" xmlns="http://docbook.org/ns/docbook">
@@ -52,10 +52,22 @@ class SimpleClass
     la méthode est appelée de manière
     <link linkend="language.oop5.static">statique</link> depuis le
     contexte d'un autre objet).
+    À partir de PHP 7.0.0 appeller une méthode non statique statiquement depuis un
+    context incompatible résulte en $this étant indéfini à l'intérieur de la méthode.
+    Appeller une méthode non statique statiquement depuis un context incompatible a
+    été rendu obsolète à partir de PHP 5.6.0. À partir de PHP 7.0.0 appelller une
+    méthode non statique statiquement a été rendu obsolète généralement (même si
+    appellé depuis un contexte compatible). Antérieur à PHP 5.6.0 ce genre d'appel
+    déclanchaient déjà une notice stricte.
    </para>
    <para>
     <example xml:id="language.oop5.basic.class.this">
      <title>Quelques exemples de la pseudo-variable <varname>$this</varname></title>
+     <simpara>
+      Nous assumerons que error_reporting est désactivé dans cet exemple ;
+      sinon le code suivant déclancherait des notices obsolète et stricte,
+      respectivement en fonction de la version de PHP.
+     </simpara>
      <programlisting role="php">
 <![CDATA[
 <?php
@@ -77,7 +89,6 @@ class B
 {
   function titi()
   {
-    // Note: la ligne suivante émet une erreur si E_STRICT est activé.
     A::toto();
   }
 }
@@ -85,22 +96,29 @@ class B
 $a = new A();
 $a->toto();
 
-// Note: la ligne suivante émet une erreur si E_STRICT est activé.
 A::toto();
 $b = new B();
 $b->titi();
 
-// Note: la ligne suivante émet une erreur si E_STRICT est activé.
 B::titi();
 ?>
 ]]>
      </programlisting>
-     &example.outputs;
+     &example.outputs.5;
      <screen>
 <![CDATA[
 $this est définie (A)
 $this n'est pas définie.
 $this est définie (B)
+$this n'est pas définie.
+]]>
+     </screen>
+     &example.outputs.7;
+     <screen>
+<![CDATA[
+$this est définie (A)
+$this n'est pas définie.
+$this n'est pas définie.
 $this n'est pas définie.
 ]]>
      </screen>
@@ -221,6 +239,105 @@ bool(true)
 ]]>
     </screen>
    </example>
+
+   <para>
+    PHP 5.4.0 introduit la possibilité d'accéder un membre d'un objet nouvellement
+    créé en une seule expression :
+   </para>
+   <example>
+    <title>Accéder un membre d'un objet nouvellement créé</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+echo (new DateTime())->format('Y');
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+2016
+]]>
+    </screen>
+   </example>
+  </sect2>
+  
+  <sect2 xml:id="language.oop5.basic.properties-methods">
+   <title>Propriétés et méthodes</title>
+   <para>
+    Les propriétes et méthodes de classe vivent dans des "espaces de noms" séparé,
+    donc il est possible d'avoir une propriété et une méthode avec le même nom.
+    Faire référence à la fois a une propriété ainsi qu'une méthode ont la même
+    notation, et le fait qu'une propriété sera accédée ou qu'une méthode sera appelée,
+    dépend seulement du contexte, c'est à dire si l'utilisation est un accès variable
+    ou un appel de fonction.
+   </para>
+   <example>
+    <title>Accès de propriété contre appel de méthode</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Foo
+{
+    public $bar = 'property';
+    
+    public function bar() {
+        return 'method';
+    }
+}
+
+$obj = new Foo();
+echo $obj->bar, PHP_EOL, $obj->bar(), PHP_EOL;
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+property
+method
+]]>
+    </screen>
+   </example>
+   <para>
+    Ceci signifie qu'appeller une <link linkend="functions.anonymous">fonction
+    anonyme</link> qui a été assigné à une propriété n'est pas possible directement.
+    Au lieu de cela, la propriété doit d'abord être affectée à une variable.
+    À partir de PHP 7.0.0 il est possible d'appeler ce genre de propriété directement
+    en la mettant entre parenthèses.
+   </para>
+   <example>
+    <title>Appeller une fonction anonyme enregistré dans une propriété</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Foo
+{
+    public $bar;
+    
+    public function __construct() {
+        $this->bar = function() {
+            return 42;
+        };
+    }
+}
+
+$obj = new Foo();
+
+// à partir de PHP 5.3.0:
+$func = $obj->bar;
+echo $func(), PHP_EOL;
+
+// alternativement, à partir de PHP 7.0.0:
+echo ($obj->bar)(), PHP_EOL;
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+42
+]]>
+    </screen>
+   </example>
   </sect2>
 
   <sect2 xml:id="language.oop5.basic.extends">
@@ -308,6 +425,15 @@ NS\ClassName
      </screen>
     </example>
    </para>
+   <note>
+    <para>
+     La résolution du nom de classe en utilisant <literal>::class</literal> est une
+     transformation lors de la compilation. C'est à dire à l'instant où la chaine du
+     nom de classe est crée aucun auto-chargement n'a encore eu lieu. Par conséquent,
+     les noms de classes sont étendues même si la classe n'existe pas. Aucune erreur
+     n'est émise dans ce cas là.
+    </para>
+   </note>
   </sect2>
  </sect1>
 
