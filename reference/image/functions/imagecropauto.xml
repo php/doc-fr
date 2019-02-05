@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 055cdb7c7e4ade095b003dad1ab36a4c5a18b61d Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 80b8e5fbd91763fd10b43403093cbed990ba43d7 Maintainer: yannick Status: ready -->
+<!-- Reviewed: yes -->
 
 <refentry xml:id="function.imagecropauto" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
@@ -14,12 +14,12 @@
   <methodsynopsis>
    <type>resource</type><methodname>imagecropauto</methodname>
    <methodparam><type>resource</type><parameter>image</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>mode</parameter><initializer>-1</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>mode</parameter><initializer><constant>IMG_CROP_DEFAULT</constant></initializer></methodparam>
    <methodparam choice="opt"><type>float</type><parameter>threshold</parameter><initializer>.5</initializer></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>color</parameter><initializer>-1</initializer></methodparam>
   </methodsynopsis>
   <para>
-   Recadre automatiquement une image selon le <parameter>mode</parameter>.
+   Rogne automatiquement une image selon le <parameter>mode</parameter>.
   </para>
  </refsect1>
 
@@ -38,8 +38,10 @@
        <term><constant>IMG_CROP_DEFAULT</constant></term>
        <listitem>
         <simpara>
-         Tente d'utiliser <constant>IMG_CROP_TRANSPARENT</constant> et utilise
-         <constant>IMG_CROP_SIDES</constant> en cas d'échec.
+         Identique à <constant>IMG_CROP_TRANSPARENT</constant>.
+         Antérieur à PHP 7.4.0, la bibliothèque libgd intégré utilisait
+         <constant>IMG_CROP_SIDES</constant> en tant que solution de replis,
+         si l'image n'avait pas de couleur de transparance.
         </simpara>
        </listitem>
       </varlistentry>
@@ -101,6 +103,13 @@
      <para>
       Utilisé uniquement en mode <constant>IMG_CROP_THRESHOLD</constant>.
      </para>
+     <note>
+      <simpara>
+       Antérieur à PHP 7.4.0, la bibliothèque libgd intégré utilisait un algorithme
+       quelque peu différent, donc le même <parameter>threshold</parameter> produisait
+       des résultats différents pour libgd système et intégré.
+      </simpara>
+     </note>
     </listitem>
    </varlistentry>
    <varlistentry>
@@ -120,13 +129,44 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne la ressource de l'image recadrée en cas de
-   succès&return.falseforfailure;.
-   Si l'image n'est pas rognée ou que l'image complète était complètement rognée 
-   cela est traité en comme une erreur. La fonction <function>imagecrop</function> retourne &false;.
+   Retourne la ressource de l'image rognée en cas de succès&return.falseforfailure;.
+   Si l'image complète a été rognée, <function>imagecrop</function> retourne &false;.
   </para>
  </refsect1>
 
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>7.4.0</entry>
+      <entry>
+       Le comportement de imagecropauto de la bibliothèque libgd intégré a été
+       syncrhonisé avec celle de libgd système : <constant>IMG_CROP_DEFAULT</constant>
+       n'utilise plus <constant>IMG_CROP_SIDES</constant> comme solution de replis et
+       la tolérance de rognage utilise désormais le même algorithme que libgd système.     
+      </entry>
+     </row>
+     <row>
+      <entry>7.4.0</entry>
+      <entry>
+       La valeur par défault de <parameter>mode</parameter> a été modifié en
+       <constant>IMG_CROP_AUTO</constant>. Auparavant, la valeur par défaut était
+       <literal>-1</literal> qui correspond à <constant>IMG_CROP_DEFAULT</constant>,
+       mais passer <literal>-1</literal> est désormais obsolète.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
+ </refsect1>
 
  <refsect1 role="examples">
   &reftitle.examples;
@@ -134,11 +174,10 @@
    <example>
     <title>Rognage automatique correcte</title>
     <para>
-      Comme indiqué dans la section valeur de retour, 
-     <function>imagecropauto</function> retourne &false; quand il n'y a rien 
-     à rogner ou l'image entière serait recadrée. Dans cet exemple, nous 
+     Comme indiqué dans la section valeur de retour, <function>imagecropauto</function>
+     retourne &false; si l'image entière a été rognée. Dans cet exemple, nous 
      avons une ressource d'image <literal>$im</literal> qui ne devrait être 
-     automatiquement recadrée que s'il ya quelque chose à rogner; Sinon, nous 
+     automatiquement rognée que s'il ya quelque chose à rogner; Sinon, nous 
      voulons conserver à l'image originale.
     </para>
     <programlisting role="php">
@@ -147,7 +186,7 @@
 $cropped = imagecropauto($im, IMG_CROP_DEFAULT);
 if ($cropped !== false) { // Si une nouvelle ressource d'image a été retournée
     imagedestroy($im);    // nous détruisons l'image originale
-    $im = $cropped;       // et assignons l'image recadrée à $im
+    $im = $cropped;       // et assignons l'image rognée à $im
 }
 ?>
 ]]>
