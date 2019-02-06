@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: cd2eae76e7c53be3f9a3ed6427f38ea452d2560f Maintainer: yannick Status: ready -->
+<!-- EN-Revision: baded7410dac1f9d981e97f16fdc730f52c869cc Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="sqlite3stmt.bindparam" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>SQLite3Stmt::bindParam</refname>
-  <refpurpose>Lie un paramètre à une variable de requête</refpurpose>
+  <refpurpose>Lie un paramètre à une variable de déclaration</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -18,7 +18,7 @@
    <methodparam choice="opt"><type>int</type><parameter>type</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Lie un paramètre à une variable de requête.
+   Lie un paramètre à une variable de déclaration.
   </para>
  </refsect1>
 
@@ -30,8 +30,13 @@
      <term><parameter>sql_param</parameter></term>
      <listitem>
       <para>
-       Soit une &string;, soit un entier identifiant la variable de requête sur laquelle le paramètre
-       doit être lié.
+       Soit une &string; (pour les paramètres nommées) ou un &integer;
+       (pour les paramètres positionel) identifiant la variable de déclaration à
+       laquelle la valeur doit être liée.
+       Si un paramètre nommé ne débute pas avec un charactère "deux point"
+       (<literal>:</literal>) ou un arobase (<literal>@</literal>), "deux point"
+       (<literal>:</literal>) seront automatiquement préfixé.
+       Les paramètres positionels commencent avec <literal>1</literal>. 
       </para>
      </listitem>
     </varlistentry>
@@ -39,7 +44,7 @@
      <term><parameter>param</parameter></term>
      <listitem>
       <para>
-       Le paramètre à lier à la variable de requête.
+       Le paramètre à lier à la variable de déclaration.
       </para>
      </listitem>
     </varlistentry>
@@ -51,49 +56,160 @@
        <itemizedlist>
         <listitem>
          <para>
-          <literal>SQLITE3_INTEGER</literal> : La valeur est un entier signé,
+          <constant>SQLITE3_INTEGER</constant> : La valeur est un entier signé,
           stocké sur 1, 2, 3, 4, 6, ou 8 octets, suivant la grandeur de la valeur.
          </para>
         </listitem>
         <listitem>
          <para>
-          <literal>SQLITE3_FLOAT</literal> : La valeur est un nombre à virgule
+          <constant>SQLITE3_FLOAT</constant> : La valeur est un nombre à virgule
           flottante, stocké sur 8 octets.
          </para>
         </listitem>
         <listitem>
          <para>
-          <literal>SQLITE3_TEXT</literal> : La valeur est un texte, stocké
+          <constant>SQLITE3_TEXT</constant> : La valeur est un texte, stocké
           en utilisant l'encodage de la base de données
           (UTF-8, UTF-16BE ou UTF-16-LE).
          </para>
         </listitem>
         <listitem>
          <para>
-          <literal>SQLITE3_BLOB</literal> : La valeur est un BLOB, stocké
+          <constant>SQLITE3_BLOB</constant> : La valeur est un BLOB, stocké
           exactement de la façon dont il a été fourni.
          </para>
         </listitem>
         <listitem>
          <para>
-          <literal>SQLITE3_NULL</literal> : La valeur est la valeur NULL.
+          <constant>SQLITE3_NULL</constant> : La valeur est la valeur NULL.
          </para>
         </listitem>
        </itemizedlist>
       </para>
+      <para>
+       À partir de PHP 7.0.7, si <parameter>type</parameter> est omit, il est
+       automatiquement détecté depuis le type de <parameter>value</parameter> :
+       &boolean; et &integer; sont traités comme <constant>SQLITE3_INTEGER</constant>,
+       &float; comme <constant>SQLITE3_FLOAT</constant>,
+       &null; comme <constant>SQLITE3_NULL</constant>
+       et tous les autres comme <constant>SQLITE3_TEXT</constant>.
+       Auparavant, si <parameter>type</parameter> était omit, il était par défaut
+       <constant>SQLITE3_TEXT</constant>.
+      </para>
+      <note>
+       <para>
+        Si <parameter>value</parameter> est &null;, c'était toujours traité comme
+        <constant>SQLITE3_NULL</constant>, peu importe le
+        <parameter>type</parameter> fournie.
+       </para>
+      </note>
      </listitem>
     </varlistentry>
    </variablelist>
   </para>
-
  </refsect1>
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne &true; si le paramètre est lié à la variable de requête, &false; si
+   Retourne &true; si le paramètre est lié à la variable de déclaration, &false; si
    une erreur survient.
   </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>7.4.0</entry>
+      <entry>
+       <parameter>sql_param</parameter> supporte désormais la notation 
+       <literal>@param</literal>.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
+ </refsect1>
+
+ <refsect1 role="notes"><!-- {{{ -->
+  &reftitle.notes;
+  <caution>
+   <para>
+    <methodname>SQLite3Stmt::reset</methodname> doit être appelé après le premier
+    appel à <methodname>SQLite3Stmt::execute</methodname> si vous voulez que
+    la valeur liée soit mis à jour lors d'appels suivant à 
+    <methodname>SQLite3Stmt::execute</methodname>.
+    Si <methodname>SQLite3Stmt::reset</methodname> n'est pas appelé, les valeurs
+    liées ne seront pas modifiées, même si la valeur assigné à la variable passée à
+    <methodname>SQLite3Stmt::bindParam</methodname> a été modifié.
+   </para>
+  </caution>
+ </refsect1><!-- }}} -->
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Utilisation de <function>SQLite3Stmt::bindParam</function></title>
+    <para>
+     Cet exemple montre comment une déclaration préparée unique avec un seul
+     paramètre lié peut être utilisé pour insérer plusieurs lignes avece des
+     valeurs différentes.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$db = new SQLite3(':memory:');
+$db->exec("CREATE TABLE foo (bar TEXT)");
+
+$stmt = $db->prepare("INSERT INTO foo VALUES (:bar)");
+$stmt->bindParam(':bar', $bar, SQLITE3_TEXT);
+
+$bar = 'baz';
+$stmt->execute();
+
+$bar = 42;
+$stmt->execute();
+
+$res = $db->query("SELECT * FROM foo");
+while (($row = $res->fetchArray(SQLITE3_ASSOC))) {
+    var_dump($row);
+}
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen role="php">
+<![CDATA[
+array(1) {
+  ["bar"]=>
+  string(3) "baz"
+}
+array(1) {
+  ["bar"]=>
+  string(2) "42"
+}
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><methodname>SQLite3Stmt::bindValue</methodname></member>
+   <member><methodname>SQLite3::prepare</methodname></member>
+  </simplelist>
  </refsect1>
 
 </refentry>
