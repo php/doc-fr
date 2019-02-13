@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: d23298a70c0a1a48402844e0a6b818de27feb146 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 7e2f7b05e2fcb759e22e98bd5033a4baf5fb6789 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="memcached.getmulti" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -14,30 +14,32 @@
   <methodsynopsis>
    <modifier>public</modifier> <type>mixed</type><methodname>Memcached::getMulti</methodname>
    <methodparam><type>array</type><parameter>keys</parameter></methodparam>
-   <methodparam choice="opt"><type>array</type><parameter role="reference">cas_tokens</parameter></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>flags</parameter></methodparam>
   </methodsynopsis>
   <para>
    <function>Memcached::getMulti</function> est similaire à la méthode
    <methodname>Memcached::get</methodname>, mais au lieu d'un seul élément,
    elle sait lire plusieurs éléments spécifiés par le tableau
-   <parameter>keys</parameter>. Si la variable <parameter>cas_tokens</parameter>
-   est fournie, elle contiendra les CAS de chaque valeur trouvée.
+   <parameter>keys</parameter>.
    <note>
     <para>
-     Contrairement à <methodname>Memcached::get</methodname>, il n'est pas possible
-     de spécifier une fonction de rappel en cas d'absence pour la fonction
-     <function>Memcached::getMulti</function>, car le protocole de memcache 
-     ne fournit pas d'information sur les clés qui n'ont pas été trouvée.
+     Antérieur à v3.0 un deuxième argument
+     <parameter role="reference">cas_tokens</parameter> était utilisé.
+     Il était remplie avec les valeurs des jetons CAS pour les éléments trouvés.
+     Le paramètre <parameter role="reference">cas_tokens</parameter> a été supprimé
+     dans la v3.0 de l'extension.
+     Il a été remplacé par un nouveau drapeau <constant>Memcached::GET_EXTENDED</constant>
+     qui doit être utilisé comme valeur pour <parameter>flags</parameter>.
     </para>
    </note>
   </para>
   <para>
    Le paramètre <parameter>flags</parameter> sert à spécifier des options
-   supplémentaires pour <function>Memcached::getMulti</function>. Actuellement,
-   la seule option disponible est 
-   <constant>Memcached::GET_PRESERVE_ORDER</constant> qui garantit que les
+   supplémentaires pour <function>Memcached::getMulti</function>.
+   <constant>Memcached::GET_PRESERVE_ORDER</constant> garantit que les
    clés sont retournées dans le même ordre que celui de leur requête.
+   <constant>Memcached::GET_EXTENDED</constant> garentit que les
+   jetons CAS seront aussi récupérés.
   </para>
  </refsect1>
 
@@ -50,14 +52,6 @@
      <listitem>
       <para>
        Un tableau de clé à lire.
-      </para>
-     </listitem>
-    </varlistentry>
-    <varlistentry>
-     <term><parameter>cas_tokens</parameter></term>
-     <listitem>
-      <para>
-       La variable où stocker les CAS des éléments trouvés.
       </para>
      </listitem>
     </varlistentry>
@@ -85,10 +79,48 @@
   &reftitle.examples;
   <para>
    <example>
-    <title>Exemple avec <function>Memcached::getMulti</function></title>
+    <title>Exemple de <function>Memcached::getMulti</function> pour Memcached v3</title>
     <programlisting role="php">
 <![CDATA[
 <?php
+// Valide pour la v3 de l'extension
+
+$m = new Memcached();
+$m->addServer('localhost', 11211);
+
+$items = array(
+    'key1' => 'value1',
+    'key2' => 'value2',
+    'key3' => 'value3'
+);
+$m->setMulti($items);
+$result = $m->getMulti(array('key1', 'key3', 'badkey'));
+var_dump($result);
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+array(2) {
+  ["key1"]=>
+  string(6) "value1"
+  ["key3"]=>
+  string(6) "value3"
+}
+]]>
+    </screen>
+   </example>
+  </para>
+
+  <para>
+   <example>
+    <title>Exemple de <function>Memcached::getMulti</function> pour Memcached v1 et v2</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Valide pour la v1 et v2 de l'extension
+
 $m = new Memcached();
 $m->addServer('localhost', 11211);
 
@@ -124,10 +156,57 @@ array(2) {
   </para>
   <para>
    <example>
-    <title>Exemple avec <constant>Memcached::GET_PRESERVE_ORDER</constant></title>
+    <title>Exemple de <constant>Memcached::GET_PRESERVE_ORDER</constant> pour Memcached v3</title>
     <programlisting role="php">
 <![CDATA[
 <?php
+// Valide pour la v3 de l'extension
+
+$m = new Memcached();
+$m->addServer('localhost', 11211);
+
+$data = array(
+    'foo' => 'foo-data',
+    'bar' => 'bar-data',
+    'baz' => 'baz-data',
+    'lol' => 'lol-data',
+    'kek' => 'kek-data',
+);
+
+$m->setMulti($data, 3600);
+
+$keys = array_keys($data);
+$keys[] = 'zoo';
+$got = $m->getMulti($keys, Memcached::GET_PRESERVE_ORDER);
+
+foreach ($got as $k => $v) {
+    echo "$k $v\n";
+}
+?>
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+foo foo-data
+bar bar-data
+baz baz-data
+lol lol-data
+kek kek-data
+zoo 
+]]>
+    </screen>
+   </example>
+  </para>
+
+  <para>
+   <example>
+    <title>Exemple de <constant>Memcached::GET_PRESERVE_ORDER</constant> pour Memcached v1 et v2</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Valide pour la v1 et v2 de l'extension
+
 $m = new Memcached();
 $m->addServer('localhost', 11211);
 
@@ -165,6 +244,30 @@ zoo
     </screen>
    </example>
   </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>3.0.0</entry>
+      <entry>
+       Le paramètre <parameter role="reference">cas_tokens</parameter> a été supprimé.
+       <constant>Memcached::GET_EXTENDED</constant> a été ajoutée et quand passé en
+       tant que drapeau il s'assure que les jetons CAS sont récupérés.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
  </refsect1>
 
  <refsect1 role="seealso">
