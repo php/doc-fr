@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: e5bbd6cf6c7c97cb43fc6d1a9c57d5f6c5cbb2e7 Maintainer: yannick Status: ready -->
-<!--  Reviewed: no -->
+<!-- EN-Revision: 89fe07a4a902cb36377b163d7a15817e2b82a5f5 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xml:id="function.openssl-encrypt" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
@@ -15,17 +15,17 @@
    <type>string</type><methodname>openssl_encrypt</methodname>
    <methodparam><type>string</type><parameter>data</parameter></methodparam>
    <methodparam><type>string</type><parameter>method</parameter></methodparam>
-   <methodparam><type>string</type><parameter>password</parameter></methodparam>
+   <methodparam><type>string</type><parameter>key</parameter></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>options</parameter><initializer>0</initializer></methodparam>
    <methodparam choice="opt"><type>string</type><parameter>iv</parameter><initializer>""</initializer></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter role="reference">tag</parameter><initializer>NULL</initializer></methodparam>
+   <methodparam choice="opt"><type>string</type><parameter>aad</parameter><initializer>""</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>tag_length</parameter><initializer>16</initializer></methodparam>
   </methodsynopsis>
   <para>
    Chiffre les données passées avec la méthode et la clé précisées. Retourne une
-   chaine brute ou base64.
+   &string; brute ou encodé en base64.
   </para>
-  
-  &warn.undocumented.func;
-  
  </refsect1>
  
  <refsect1 role="parameters">
@@ -36,7 +36,7 @@
      <term><parameter>data</parameter></term>
      <listitem>
       <para>
-       Les données.
+       Les données du message en texte brut à chiffrer.
       </para>
      </listitem>
     </varlistentry>
@@ -44,15 +44,16 @@
      <term><parameter>method</parameter></term>
      <listitem>
       <para>
-       La méthode de cipher.
+       La méthode de cipher. Pour une liste des méthodes de cipher disponible,
+       utiliser <function>openssl_get_cipher_methods</function>.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>password</parameter></term>
+     <term><parameter>key</parameter></term>
      <listitem>
       <para>
-       Le password.
+       La clé.
       </para>
      </listitem>
     </varlistentry>
@@ -60,8 +61,8 @@
      <term><parameter>options</parameter></term>
      <listitem>
       <para>
-       Le paramètre <parameter>options</parameter> peut prendre
-       la valeur <constant>OPENSSL_RAW_DATA</constant> ou la valeur
+       <parameter>options</parameter> est une disjonction au niveau des bits des drapeaux
+       <constant>OPENSSL_RAW_DATA</constant> et
        <constant>OPENSSL_ZERO_PADDING</constant>.
       </para>
      </listitem>
@@ -71,6 +72,32 @@
      <listitem>
       <para>
        Un vecteur d'initialisation non-nul.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>tag</parameter></term>
+     <listitem>
+      <para>
+       Le tag d'authentification passé par référence lors de l'utilisation du mode 
+       cipher AEAD (GCM ou CCM).
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>aad</parameter></term>
+     <listitem>
+      <para>
+       Données additionel d'authentification.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>tag_length</parameter></term>
+     <listitem>
+      <para>
+       La longeur du <parameter>tag</parameter> d'authentification.
+       Sa valeur peut être entre 4 et 16 pour le mode GCM.
       </para>
      </listitem>
     </varlistentry>
@@ -109,10 +136,8 @@
     </thead>
     <tbody>
      <row>
-      <entry>5.3.3</entry>
-      <entry>
-       Le paramètre <parameter>iv</parameter> a été ajouté.
-      </entry>
+      <entry>7.1.0</entry>
+      <entry>Les paramètres <parameter>tag</parameter>, <parameter>aad</parameter> et <parameter>tag_length</parameter> ont été ajoutés.</entry>
      </row>
      <row>
       <entry>5.4.0</entry>
@@ -121,11 +146,77 @@
        a été changé en <parameter>options</parameter>.
       </entry>
      </row>
+     <row>
+      <entry>5.3.3</entry>
+      <entry>
+       Le paramètre <parameter>iv</parameter> a été ajouté.
+      </entry>
+     </row>
     </tbody>
    </tgroup>
   </informaltable>
  </refsect1>
- 
+
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple de chiffrement authentifié AES en mode GCM pour PHP 7.1+</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+//$key devrait être généré précédement d'une manière cryptographique, tel que openssl_random_pseudo_bytes
+$plaintext = "message to be encrypted";
+$cipher = "aes-128-gcm";
+if (in_array($cipher, openssl_get_cipher_methods()))
+{
+    $ivlen = openssl_cipher_iv_length($cipher);
+    $iv = openssl_random_pseudo_bytes($ivlen);
+    $ciphertext = openssl_encrypt($plaintext, $cipher, $key, $options=0, $iv, $tag);
+    //store $cipher, $iv, and $tag for decryption later
+    $original_plaintext = openssl_decrypt($ciphertext, $cipher, $key, $options=0, $iv, $tag);
+    echo $original_plaintext."\n";
+}
+?>
+]]>
+    </programlisting>
+   </example>
+
+   <example>
+    <title>Exemple de chiffrement authentifié AES en mode GCM pour PHP 5.6+</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+//$key devrait être généré précédement d'une manière cryptographique, tel que openssl_random_pseudo_bytes
+$plaintext = "message to be encrypted";
+$ivlen = openssl_cipher_iv_length($cipher="AES-128-CBC");
+$iv = openssl_random_pseudo_bytes($ivlen);
+$ciphertext_raw = openssl_encrypt($plaintext, $cipher, $key, $options=OPENSSL_RAW_DATA, $iv);
+$hmac = hash_hmac('sha256', $ciphertext_raw, $key, $as_binary=true);
+$ciphertext = base64_encode( $iv.$hmac.$ciphertext_raw );
+
+// déchifrrer plus tard ...
+$c = base64_decode($ciphertext);
+$ivlen = openssl_cipher_iv_length($cipher="AES-128-CBC");
+$iv = substr($c, 0, $ivlen);
+$hmac = substr($c, $ivlen, $sha2len=32);
+$ciphertext_raw = substr($c, $ivlen+$sha2len);
+$original_plaintext = openssl_decrypt($ciphertext_raw, $cipher, $key, $options=OPENSSL_RAW_DATA, $iv);
+$calcmac = hash_hmac('sha256', $ciphertext_raw, $key, $as_binary=true);
+if (hash_equals($hmac, $calcmac))//PHP 5.6+ timing attack safe comparison
+{
+    echo $original_plaintext."\n";
+}
+?>
+]]>
+    </programlisting>
+   </example>
+
+  </para>
+ </refsect1>
+
+
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
@@ -134,7 +225,7 @@
    </simplelist>
   </para>
  </refsect1>
- 
+
 </refentry>
 
 <!-- Keep this comment at the end of the file

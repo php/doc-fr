@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 07eb9953564f09e10f4c65da31c0339a2db613bb Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: e7f9a4f893deee7a4017d7a8d5388671932e8ef5 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xml:id="function.openssl-csr-new" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -20,8 +20,7 @@
   </methodsynopsis>
   <para>
    <function>openssl_csr_new</function> génère une nouvelle CSR (<literal>Certificate Signing Request</literal>,
-   requête de signature de certificat), basée sur les informations apportés par <parameter>dn</parameter>, 
-   qui représente le nom unique (<literal>Distinguished Name</literal>) qui doit être utilisé pour ce certificat.
+   requête de signature de certificat), basée sur les informations apportés par <parameter>dn</parameter>.
   </para>
   &note.openssl.cnf;
  </refsect1>
@@ -34,7 +33,7 @@
      <term><parameter>dn</parameter></term>
      <listitem>
       <para>
-       Le nom distingué qui doit être utilisé dans le certificat.
+       Le nom distingué ou champs de sujets qui doit être utilisé dans le certificat.
       </para>
      </listitem>
     </varlistentry>
@@ -79,7 +78,7 @@
            <entry>digest_alg</entry>
            <entry><type>string</type></entry>
            <entry>default_md</entry>
-           <entry>Sélectionne l'algorithme de hachage à utiliser</entry>
+           <entry>Méthode de digeste ou signature de hachage, généralement un de <function>openssl_get_md_methods</function></entry>
           </row>
           <row>
            <entry>x509_extensions</entry>
@@ -104,12 +103,12 @@
            <entry>private_key_type</entry>
            <entry><type>integer</type></entry>
            <entry>none</entry>
-           <entry>Spécifie le type de clé privée à créer. Les valeurs possibles
-            sont <constant>OPENSSL_KEYTYPE_DSA</constant>,
-            <constant>OPENSSL_KEYTYPE_DH</constant> ou
-            <constant>OPENSSL_KEYTYPE_RSA</constant>.
-            La valeur par défaut est <constant>OPENSSL_KEYTYPE_RSA</constant> qui 
-            est actuellement le seul type de clé supporté.
+           <entry>Spécifie le type de clé privée à créer. Cela peut être l'un
+            de <constant>OPENSSL_KEYTYPE_DSA</constant>,
+            <constant>OPENSSL_KEYTYPE_DH</constant>,
+            <constant>OPENSSL_KEYTYPE_RSA</constant> ou
+            <constant>OPENSSL_KEYTYPE_EC</constant>.
+            La valeur par défaut est <constant>OPENSSL_KEYTYPE_RSA</constant>.
            </entry>
           </row>
           <row>
@@ -124,6 +123,22 @@
            <entry>none</entry>
            <entry>
             Une des <link linkend="openssl.ciphers">constantes cipher</link>.
+           </entry>
+          </row>
+          <row>
+           <entry>curve_name</entry>
+           <entry><type>string</type></entry>
+           <entry>none</entry>
+           <entry>
+            Un de <function>openssl_get_curve_names</function>.
+           </entry>
+          </row>
+          <row>
+           <entry>config</entry>
+           <entry><type>string</type></entry>
+           <entry>N/A</entry>
+           <entry>
+            Chemin vers votre fichier openssl.conf alternatif.
            </entry>
           </row>
          </tbody>
@@ -152,8 +167,30 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne la CSR.
+   Retourne la CSR&return.falseforfailure;.
   </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>7.1.0</entry>
+      <entry>
+       <parameter>configargs</parameter> supporte désormais <literal>curve_name</literal>.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
  </refsect1>
  
  <refsect1 role="examples">
@@ -164,15 +201,11 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-// Assigne les valeurs du nom distingué à utiliser avec le certificat
-// Vous devez remplacer les valeurs suivantes pour qu'elles correspondent
-// au nom de votre compagnie, ou, plus précisément, le nom de la personne
-// qui représente le site de votre compagnie pour qui vous générez des certificats.
-// Pour les certificats SSL, le commonName est généralement le nom de domaine
-// pour lequel vous installez le certificat, mais pour les certificats S/MIME,
-// le commonName sera le nom de la personne qui utilisera le certificat.
+// pour les certificats SSL serveur, le commonName est le nom de domaine à sécuriser
+// pour les certificats e-mail S/MIME le commonName est le propriétaire de l'adresse e-mail
+// les champs d'emplacement et d'identification font référence au propriétaire du domaine ou à l'objet de l'e-mail à sécuriser
 $dn = array(
-    "countryName" => "UK",
+    "countryName" => "GB",
     "stateOrProvinceName" => "Somerset",
     "localityName" => "Glastonbury",
     "organizationName" => "The Brain Room Limited",
@@ -181,26 +214,21 @@ $dn = array(
     "emailAddress" => "wez@example.com"
 );
 
-// Génère les clés privée et publique
-$privkey = openssl_pkey_new();
+// Génère une nouvelle paire de clés privée (et publique)
+$privkey = openssl_pkey_new(array(
+    "private_key_bits" => 2048,
+    "private_key_type" => OPENSSL_KEYTYPE_RSA,
+));
 
-// Génère la requête de signature de certificat
-$csr = openssl_csr_new($dn, $privkey);
+// Génère une requête de signature de certificat
+$csr = openssl_csr_new($dn, $privkey, array('digest_alg' => 'sha256'));
 
-// Vous souhaiterez généralement créer un certificat auto-signé
-// une fois que votre autorité de certification accède à votre requête
-// Cette commande crée une certificat auto-signé valide 365 jours
-$sscert = openssl_csr_sign($csr, null, $privkey, 365);
+// Génère un certificat autosigné, valide pour 365 jours
+$x509 = openssl_csr_sign($csr, null, $privkey, $days=365, array('digest_alg' => 'sha256'));
 
-// Maintenant, vous voulez préserver la clé privée, la CSR et le certificat
-// auto-signé, de façon à ce qu'ils puissent être installés sur votre
-// serveur web, serveur mail ou client mail (suivant l'utilisation).
-// Cet exemple vous montre comment placer ces éléments dans des variables
-// mais vous pouvez aussi les mettre directement dans des fichiers.
-// Typiquement, vous allez envoyer la CSR à votre autorité de certification
-// qui vous émettra un "vrai" certificat.
+// Conservez votre clé privée, CSR et certificat autosigné pour une utilisation ultérieur
 openssl_csr_export($csr, $csrout) and var_dump($csrout);
-openssl_x509_export($sscert, $certout) and var_dump($certout);
+openssl_x509_export($x509, $certout) and var_dump($certout);
 openssl_pkey_export($privkey, $pkeyout, "mypassword") and var_dump($pkeyout);
 
 // Affiche les erreurs qui sont survenues
@@ -211,9 +239,47 @@ while (($e = openssl_error_string()) !== false) {
 ]]>
     </programlisting>
    </example>
+   
+   <example>
+    <title>Créer un certficat ECC autosigné (à partir de PHP 7.1.0)</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$subject = array(
+    "commonName" => "docs.php.net",
+);
+
+// Génère une nouvelle paire de clés privée (et publique)
+$private_key = openssl_pkey_new(array(
+    "private_key_type" => OPENSSL_KEYTYPE_EC,
+    "curve_name" => 'prime256v1',
+));
+
+// Génère une requête de signature de certificat
+$csr = openssl_csr_new($subject, $private_key, array('digest_alg' => 'sha384'));
+
+// Génère un certificat EC autosigné
+$x509 = openssl_csr_sign($csr, null, $private_key, $days=365, array('digest_alg' => 'sha384'));
+openssl_x509_export_to_file($x509, 'ecc-cert.pem');
+openssl_pkey_export_to_file($private_key, 'ecc-private.key');
+?>
+]]>
+    </programlisting>
+   </example>
+   
+   
   </para>
  </refsect1>
- 
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>openssl_csr_sign</function></member>
+   </simplelist>
+  </para>
+ </refsect1>
+
 </refentry>
 
 <!-- Keep this comment at the end of the file
