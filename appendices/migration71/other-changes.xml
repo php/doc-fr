@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: c0def81f41e21c607a3000aa54ea3ca3d8646b78 Maintainer: girgias Status: ready -->
+<!-- Reviewed: no -->
+
+<sect1 xml:id="migration71.other-changes" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Autres changements</title>
+
+ <sect2 xml:id="migration71.other-changes.apprise-on-arithmetic-with-invalid-strings">
+  <title>Notices et avertisements sur opérations arithmétiques avec chaînes invalides</title>
+
+  <para>
+   Des nouvelles erreurs <constant>E_WARNING</constant> et <constant>E_NOTICE</constant>
+   ont été introduite quand des &string; invalides sont contraint en utilisant
+   des opérateurs s'attendant à des nombres (<literal>+</literal> <literal>-</literal>
+   <literal>*</literal> <literal>/</literal> <literal>**</literal>
+   <literal>%</literal> <literal>&lt;&lt;</literal> <literal>&gt;&gt;</literal>
+   <literal>|</literal> <literal>&amp;</literal> <literal>^</literal>) ou leurs
+   assignements équivalent. Une <constant>E_NOTICE</constant> est émise quand la
+   &string; commence avec une valeur numérique mais contient des caractères non
+   numériques de fin, et une <constant>E_WARNING</constant> est émise quand la
+   &string; ne contient pas une valeur numérique.
+  </para>
+
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+'1b' + 'something';
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Notice: A non well formed numeric value encountered in %s on line %d
+Warning: A non-numeric value encountered in %s on line %d
+]]>
+   </screen>
+  </informalexample>
+ </sect2>
+
+ <sect2 xml:id="migration71.other-changes.warn-on-octal-overflow">
+  <title>Avertir en cas de débordement de la séquence d'échappement octale</title>
+
+  <para>
+   Auparavant, les séquences d'échappement de chaîne octale de 3 octets débordaient
+   silencieusement. Désormais, ils déborderont toujours, mais une
+   <constant>E_WARNING</constant> sera émise.
+  </para>
+
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+var_dump("\500");
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Warning: Octal escape sequence overflow \500 is greater than \377 in %s on line %d
+string(1) "@"
+]]>
+   </screen>
+  </informalexample>
+ </sect2>
+
+ <sect2 xml:id="migration71.other-changes.inconsistency-fixes-to-this">
+  <title>Correction des incohérences de <literal>$this</literal></title>
+
+  <para>
+   Bien que <literal>$this</literal> est considéré une variable spéciale en PHP,
+   elle lui manquait des contrôles appropriés pour s'assurer qu'elle n'était pas
+   utilisé comme nom de variable ou réassigné. Ceci a été désormais rectifié pour
+   s'assurer que <literal>$this</literal> ne peut pas être une variable définit par
+   l'utilisateur, réassigné à une différente valeur, ou globalisé.
+  </para>
+ </sect2>
+
+ <sect2 xml:id="migration71.other-changes.session-id-generation-without-hashing">
+  <title>Génération d'ID de session sans hachage</title>
+
+  <para>
+   Les IDs de session ne seront plus hashé dès la génération. Avec ce changement
+   ceci amène à la suppression des quatres paramètres ini suivant :
+  </para>
+
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     <parameter>session.entropy_file</parameter>
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     <parameter>session.entropy_length</parameter>
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     <parameter>session.hash_function</parameter>
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     <parameter>session.hash_bits_per_character</parameter>
+    </simpara>
+   </listitem>
+  </itemizedlist>
+
+  <para>
+   Et l'addition des deux paramètres ini suivant :
+  </para>
+
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     <parameter>session.sid_length</parameter> - définit la longeur de l'ID de
+     session, par défaut 32 caractères pour la rétrocompatibilité.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     <parameter>session.sid_bits_per_character</parameter> - définit le nombre
+     de bits à enregistrer par caractère (c.à.d augmente l'intervale de caractères
+     qui peuvent être utilisé dans l'ID de session), par défaut 4 pour la
+     rétrocompatibilité.
+    </simpara>
+   </listitem>
+  </itemizedlist>
+ </sect2>
+
+ <sect2 xml:id="migration71.other-changes.ini-file-handling">
+  <title>Modifications apportées à la gestion des fichiers INI</title>
+  <variablelist>
+   <varlistentry>
+    <term><parameter>precision</parameter></term>
+    <listitem>
+     <para>
+      Si la valeur est définit à -1, alors le mode dtoa 0 est utilisé.
+      La valeur par défaut est toujours 14.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><parameter>serialize_precision</parameter></term>
+    <listitem>
+     <para>
+      Si la valeur est définit à -1, alors le mode dtoa 0 est utilisé.
+      La valeur -1 est désormais utilisé par défaut.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><parameter>gd.jpeg_ignore_warning</parameter></term>
+    <listitem>
+     <para>
+      La valeur par défaut de ce paramètre &php.ini; a été modifié à 1,
+      donc par défaut les avertissements libjpeg sont ignorés.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><parameter>opcache.enable_cli</parameter></term>
+    <listitem>
+     <para>
+      La valeur par défaut de ce paramètre &php.ini; a été modifié à 1
+      (activé) en PHP 7.1.2.
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </sect2>
+
+ <sect2 xml:id="migration71.other-changes.session-id-csprng-gen">
+  <title>Génération des IDs de sessions seulement avec un CSPRNG</title>
+
+  <para>
+   Les IDs de sessions seront désormais seulement générés avec un CSPRNG
+   (Crypto Secure Pseudo Random Number Generator)
+  </para>
+ </sect2>
+
+ <sect2 xml:id="migration71.other-changes.typeerror-error-messages">
+  <title>Des messages <classname>TypeError</classname> plus informatifs quand &null; est permit</title>
+  <para>
+   Les exceptions <classname>TypeError</classname> pour les vérifications de type
+   arg_info fourniront désormais des messages d'erreurs plus informatifs. Si le
+   type du paramètre ou la type de retour accepte &null; (soit en ayant une valeur
+   par défaut de &null; soit en étant un type nullable), alors le message d'erreur
+   mentionnera désormais ceci avec un message "must be ... or null" ou 
+   "must ... or be null."
+  </para>
+ </sect2>
+</sect1>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
