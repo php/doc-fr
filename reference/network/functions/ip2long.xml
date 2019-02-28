@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: e41aab5ecacf449e51179886c17f1d41735b0234 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 62e49c2b1beec1ecad6d2fd2a65639c2965362fc Maintainer: girgias Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="function.ip2long" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>ip2long</refname>
-  <refpurpose>Convertit une chaîne contenant une adresse (IPv4) IP numérique en adresse littérale</refpurpose>
+  <refpurpose>Convertit une chaîne contenant une adresse (IPv4) en notation décimale à point en une adresse entier long</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -16,11 +16,13 @@
    <methodparam><type>string</type><parameter>ip_address</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Génère une adresse IPv4 à partir de son équivalent numérique.
+   La fonction <function>ip2long</function> génère une représentation
+   en entier long d'une adresse IPv4 depuis son format standard
+   (notation décimale à point)
   </para>
   <para>
    <function>ip2long</function> fonctionne également avec des adresses IP
-   incomplètes. Lisez <link xlink:href="&url.ip2long.tech;">&url.ip2long.tech;</link>
+   incomplètes. Lire <link xlink:href="&url.ip2long.tech;">&url.ip2long.tech;</link>
    pour plus d'informations.
   </para>
  </refsect1>
@@ -44,7 +46,7 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne une adresse IPv4, ou &false; si <parameter>ip_address</parameter>
+   Retourne l'entier long, ou &false; si <parameter>ip_address</parameter>
    est invalide.
   </para>
  </refsect1>
@@ -62,10 +64,19 @@
      </thead>
      <tbody>
       <row>
+       <entry>5.5.0</entry>
+       <entry>
+        Antérieur à cette version, sur Windows <function>ip2long</function>
+        retournait parfois un nombre valide même si la valeur passée n'était
+        pas une adresse IPv4 en notation décimale à point.
+       </entry>
+      </row>
+      <row>
        <entry>5.2.10</entry>
        <entry>
-        Avant cette version, <function>ip2long</function> retourne parfois un nombre
-        valide même si la valeur passée n'est pas une adresse pointée (IPv4).
+        Antérieur à cette version, <function>ip2long</function> retournait
+        parfois un nombre valide même si la valeur passée n'était
+        pas une adresse IPv4 en notation décimale à point.
        </entry>
       </row>
      </tbody>
@@ -96,7 +107,7 @@ echo $out;
     <title>Affichage d'une adresse IP</title>
     <para>
      Ce second exemple montre comment afficher une adresse convertie
-     à l'aide de la fonction <function>printf</function> en PHP 4 et en PHP 5 :
+     à l'aide de la fonction <function>printf</function> :
     </para>
     <programlisting role="php">
 <![CDATA[
@@ -107,8 +118,8 @@ $long = ip2long($ip);
 if ($long == -1 || $long === FALSE) {
     echo 'IP invalide, merci d\'essayer encore';
 } else {
-    echo $ip   . "\n";           // 192.0.34.166
-    echo $long . "\n";           // -1073732954
+    echo $ip   . "\n";            // 192.0.34.166
+    echo $long . "\n";            // 3221234342 (-1073732954 sur les sytèmes 32-bit, à cause du débordement d'entier)
     printf("%u\n", ip2long($ip)); // 3221234342
 }
 ?>
@@ -122,8 +133,8 @@ if ($long == -1 || $long === FALSE) {
   &reftitle.notes;
   <note>
    <para>
-    Comme les entiers PHP sont signés et que beaucoup d'adresses IP
-    peuvent être des entiers négatifs sur les architectures 32-bits, vous
+    Comme les &integer; PHP sont signés et que beaucoup d'adresses IP
+    résulteront en des entiers négatifs sur les architectures 32-bits, vous
     devez utiliser le motif "%u" de la fonction <function>sprintf</function>
     ou de la fonction <function>printf</function> pour récupérer la représentation
     sous forme de &string; d'une adresse IP non signé.
@@ -131,9 +142,11 @@ if ($long == -1 || $long === FALSE) {
   </note>
   <note>
    <para>
-    <function>ip2long</function> devrait retourner &false; pour l'adresse IP
-    <literal>255.255.255.255</literal> en PHP 5 &lt;= 5.0.2. Ce comportement
-    a été modifié en PHP 5.0.3 où il retournait <literal>-1</literal> (comme en PHP 4).
+    <function>ip2long</function> retournera &false; pour l'adresse IP
+    <literal>255.255.255.255</literal> en PHP 5 &lt;= 5.0.2, et <literal>-1</literal>
+    sur les systèmes 64-bits en PHP 5 &lt;=5.2.4. Ça a été corrigé en
+    PHP 5.2.5 où ça retourne <literal>4294967295</literal>. Les systèmes 32-bit
+    retourneront <literal>-1</literal> à cause du débordement de la valeur d'entier.
    </para>
   </note>
  </refsect1>
