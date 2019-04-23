@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 80267cad62d87d99aa5601f4cbb13b033992c5c9 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 53401e8378352282a0d994eddeca7f4899eea49d Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.strrpos">
@@ -44,11 +44,23 @@
     <varlistentry>
      <term><parameter>offset</parameter></term>
      <listitem>
+      <para> 
+       Si zéro ou positif, la recherche est effectuée de gauche à droite
+       omettant les premiers <parameter>offset</parameter> octets de
+       <parameter>haystack</parameter>.
+      </para>
       <para>
-       Si spécifié, la recherche commencera à ce nombre de caractères,
-       compté depuis le début de la chaîne. Si la valeur est
-       négative, la recherche commencera depuis ce nombre de caractères,
-       depuis la fin de la chaîne, en cherchant en arrière.
+       Si négatif, la recherche est effectuée de droite à gauche
+       omettant les derniers <parameter>offset</parameter> octets de
+       <parameter>haystack</parameter> et cherchant pour la première occurrence
+       de <parameter>needle</parameter>.
+       <note>
+        <para>
+         Ceci est effectivement à la recherche de la dernière occurrence de
+         <parameter>needle</parameter> avant les derniers
+         <parameter>offset</parameter> octets.
+        </para>
+       </note>
       </para>
      </listitem>
     </varlistentry>
@@ -59,12 +71,17 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne la position à laquelle l'occurrence a été trouvée
-   relativement au debut de la chaîne <parameter>haystack</parameter>
+   Retourne la position de la dernière occurrence de <parameter>needle</parameter>
+   relativement au début de la chaîne <parameter>haystack</parameter>
    (indépendamment de la direction de recherche ou de l'offset).
+   <note>
+    <simpara>
+     Les positions des &string; débutent à 0, et pas à 1.
+    </simpara>
+   </note>
   </para>
   <para>
-   Retourne &false; si l'occurrence n'a pas été trouvée.
+   Retourne &false; si la <parameter>needle</parameter> n'a pas été trouvée.
   </para>
   &return.falseproblem;
  </refsect1>
@@ -120,22 +137,47 @@ if ($pos === false) { // note : 3 signes "="
   </para>
   <para>
    <example>
-    <title>Recherche avec positions</title>
+    <title>Recherche avec des positions</title>
     <programlisting role="php">
 <![CDATA[
 <?php
 $foo = "0123456789a123456789b123456789c";
 
-var_dump(strrpos($foo, '7', -5));  // Commence à cherche en arrière de 5 positions
-                                   // depuis la fin. Résultat : int(17)
+// Chercher pour '0' depuis l'octet 0 (depuis le début)
+var_dump(strrpos($foo, '0', 0));
 
-var_dump(strrpos($foo, '7', 20));  // Commence à chercher à partir de la 20ème positions
-                                   // dansla chaîne. Résultat : int(27)
+// Chercher pour '0' depuis le 1er octet (après l'octet "0")
+var_dump(strrpos($foo, '0', 1));
 
-var_dump(strrpos($foo, '7', 28));  // Résultat : bool(false)
+// Chercher pour '7' depuis le 21ème octet (après l'octet 20)
+var_dump(strrpos($foo, '7', 20));
+
+// Chercher pour '7' depuis le 29ème octet (après l'octet 28)
+var_dump(strrpos($foo, '7', 28));
+
+// Chercher pour '7' de droite à gauche depuis le 5ème octet depuis la fin
+var_dump(strrpos($foo, '7', -5));
+
+// Chercher pour 'c' de droite à gauche depuis le 2ème octet depuis la fin
+var_dump(strrpos($foo, 'c', -2));
+
+// Chercher pour '9c' de droite à gauche depuis le 2ème octet depuis la fin
+var_dump(strrpos($foo, '9c', -2));
 ?>
 ]]>
     </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+int(0)
+bool(false)
+int(27)
+bool(false)
+int(17)
+bool(false)
+int(29)
+]]>
+   </screen>
    </example>
   </para>
  </refsect1>
