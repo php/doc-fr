@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: b8758b0605e80c4e3610137b7502a6abeea5c69b Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 4d8da419011b34623bc91aab8d5ef7f5b6bfb128 Maintainer: girgias Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.ibase-backup">
  <refnamediv>
   <refname>ibase_backup</refname>
-  <refpurpose>Effectue une sauvegarde de base de données InterBase</refpurpose>
+  <refpurpose>Lance une tâche de sauvegarde dans le gestionnaire de services et retourne immédiatement</refpurpose>
  </refnamediv>
-
+ 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
@@ -19,9 +19,144 @@
    <methodparam choice="opt"><type>int</type><parameter>options</parameter><initializer>0</initializer></methodparam>
    <methodparam choice="opt"><type>bool</type><parameter>verbose</parameter><initializer>&false;</initializer></methodparam>
   </methodsynopsis>
+  <para>
+   Cette fonction transmet les arguments au serveur de base de donnée (distant).
+   Là, il commence un nouveau processus de sauvegarde.
+   Par conséquent, vous n'obtiendrez aucune réponse.
+  </para>
+ </refsect1>
+ 
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>service_handle</parameter></term>
+     <listitem>
+      <para>
+       Une connexion au serveur de base de donnée créee précédemment.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>source_db</parameter></term>
+     <listitem>
+      <para>
+       Le chemin absolue vers la base de donnée sur le serveur de base de donnée.
+       Vous pouvez également utiliser un alias de base de données.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>dest_file</parameter></term>
+     <listitem>
+      <para>
+       Le chemin absolue vers le fichier de sauvegarde sur le serveur de base de donnée.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>options</parameter></term>
+     <listitem>
+      <para>
+       Options supplémentaires à transmettre au serveur de base de données
+       pour la sauvegarde.
+       Le paramètre <parameter>options</parameter> peut être une combinaison
+       des constantes suivantes :
+       <constant>IBASE_BKP_IGNORE_CHECKSUMS</constant>,
+       <constant>IBASE_BKP_IGNORE_LIMBO</constant>, 
+       <constant>IBASE_BKP_METADATA_ONLY</constant>,
+       <constant>IBASE_BKP_NO_GARBAGE_COLLECT</constant>,
+       <constant>IBASE_BKP_OLD_DESCRIPTIONS</constant>,
+       <constant>IBASE_BKP_NON_TRANSPORTABLE</constant> or
+       <constant>IBASE_BKP_CONVERT</constant>.
+       Lire la section à propos des <xref linkend="ibase.constants" /> pour
+       plus d'information.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>verbose</parameter></term>
+     <listitem>
+      <para>
+       Étant donné que le processus de sauvegarde est effectué sur le serveur
+       de base de données, vous n’avez aucune chance d’obtenir sa sortie.
+       Cet argument est inutile.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
 
-   &warn.undocumented.func;
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   &return.success;
+  </para>
+  <para>
+   Le processus de sauvegarde étant effectué sur le serveur (distant),
+   cette fonction ne fait que lui transmettre les arguments.
+   Tant que les arguments sont légaux, vous n'obtiendrez pas &false;.
+  </para>
+ </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>ibase_backup</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// S'attacher au serveur par adresse ip et port.
+$service = ibase_service_attach ('10.1.11.200/3050', 'sysdba', 'masterkey');
+
+// Débuter le processus de sauvegarde sur le serveur de base de donnée
+// Sauvegarde la base de donnée employee en utilisant le chemin complet vers /srv/backup/employees.fbk
+// N'utilise pas d'argument spéciaux
+ibase_backup($service, '/srv/firebird/employees.fdb', '/srv/backup/employees.fbk');
+
+// Libère la connexion attaché
+ibase_service_detach ($service);
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+
+  <para>
+   <example>
+    <title>Exemple de <function>ibase_backup</function> avec des arguments</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+// S'attacher au serveur par nom et port par défaut
+$service = ibase_service_attach ('fb-server.contoso.local', 'sysdba', 'masterkey');
+
+// Débuter le processus de sauvegarde sur le serveur de base de donnée
+// Sauvegarde la base de donnée employee en utilisant un alias vers /srv/backup/employees.fbk.
+// Sauvegarde uniquement les métadonnées. Ne crée pas une sauvegarde transportable.
+ibase_backup($service, 'employees.fdb', '/srv/backup/employees.fbk', IBASE_BKP_METADATA_ONLY | IBASE_BKP_NON_TRANSPORTABLE);
+
+// Libère la connexion attaché
+ibase_service_detach ($service);
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>ibase_restore</function></member>
+   </simplelist>
+  </para>
  </refsect1>
 
 </refentry>
