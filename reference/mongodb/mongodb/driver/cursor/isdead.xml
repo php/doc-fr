@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 14f834fa0328e3c9651abd1d0b9b023cb21106fa Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 1e327d12051bfc071aea2910c285dd9385565609 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mongodb-driver-cursor.isdead" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>MongoDB\Driver\Cursor::isDead</refname>
-  <refpurpose>Vérifie si le curseur peut avoir des résultats supplémentaires</refpurpose>
+  <refpurpose>Vérifie si le curseur est épuisé ou peut avoir des résultats supplémentaires</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -16,18 +16,44 @@
    <void />
   </methodsynopsis>
   <para>
-    Vérifie si le curseur peut avoir des résultats supplémentaires disponibles à 
-   lire. Un curseur est initialement "alive" mais peut devenir "dead" pour l'une 
-   des raisons suivantes :
-   <simplelist>
-    <member>L'avancement d'un curseur "non-tailable" n'a pas retourné un document</member>
-    <member>Le curseur a rencontré une erreur</member>
-    <member>Le curseur a lu son dernier lot à l'achèvement</member>
-    <member>Le curseur a atteint sa limite configurée</member>
-   </simplelist>
-   Ceci est principalement utile avec les curseurs de queue.
+   Vérifie s'il n'y a plus aucun résultat supplémentaire disponible sur le
+   curseur. Cette méthode est similaire à la méthode
+   <link xlink:href="&url.mongodb.docs;reference/method/cursor.isExhausted/">cursor.isExhausted()</link>
+   dans le shell MongoDB et son utilité primaire et lors de l'itération de
+   <link xlink:href="&url.mongodb.docs;core/tailable-cursors/">curseurs de queue</link>.
   </para>
-
+  <para>
+   Un curseur n'a plus de résultats supplémentaires et est considéré "mort" s'il
+   satisfait l'une des conditions ci-dessous:
+   <simplelist>
+    <member>
+     Le lot actuel a était complètement itéré <emphasis>et</emphasis> l'ID du
+     curseur est zéro (c.à.d. il est impossible de délivrer un <link
+     xlink:href="&url.mongodb.docs;reference/command/getMore/">getMore</link>).
+    </member>
+    <member>Une erreur a été rencontré lors de l'itération du curseur.</member>
+    <member>Le curseur a atteint sa limite configurée.</member>
+   </simplelist>
+  </para>
+  <para>
+   Par sa conception, il n'est pas toujours possible de déterminer si un curseur
+   a des résultats supplémentaires. Les cas où un curseur <emphasis>peut</emphasis>
+   avoir plus de données disponibles sont les suivants :
+   <simplelist>
+    <member>
+     Il y a des documents supplémentaires dans le lot courrant, qui sont tamponée
+     du côté client. Itérer récupèrera un document du tampon local.
+    </member>
+    <member>
+     Il n'y a pas de documents supplémentairesdans le lot courrant (c.à.d.
+     tampon local), mais le l'ID du curseur est différent de zéro. Itérer
+     solliicitera plus de documents depuis le serveur via une opération
+     <link xlink:href="&url.mongodb.docs;reference/command/getMore/">getMore</link>,
+     qui retournera ou pas des résultats supplémentaires et / ou indiquera que
+     le curseur a été fermé sur le serveur en retournant zéro pour son ID.
+    </member>
+   </simplelist>
+  </para>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -38,8 +64,8 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne &true; si des résultats supplémentaires ne sont pas disponibles, 
-   et &false; sinon.
+   Retourne &true; si c'est confirmé qu'aucun résultat supplémentaire n'est
+   disponible sur le curseur, et &false; sinon.
   </para>
  </refsect1>
 
@@ -97,6 +123,14 @@ bool(true)
 ]]>
    </screen>
   </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><link xlink:href="&url.mongodb.docs;core/tailable-cursors/">Tailable Cursors</link> in the MongoDB manual</member>
+   <member><link xlink:href="&url.mongodb.docs;reference/method/cursor.isExhausted/">cursor.isExhausted()</link> in the MongoDB manual</member>
+  </simplelist>
  </refsect1>
 
 </refentry>
