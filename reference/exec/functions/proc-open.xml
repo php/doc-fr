@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 58f224110635890a9fb1449e00d787439c2d915a Maintainer: yannick Status: ready -->
+<!-- EN-Revision: f811c29cdcb9ae601c51346f139ec75eef2ce334 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id='function.proc-open' xmlns="http://docbook.org/ns/docbook">
@@ -14,7 +14,7 @@
     &reftitle.description;
      <methodsynopsis>
       <type>resource</type><methodname>proc_open</methodname>
-      <methodparam><type>string</type><parameter>cmd</parameter></methodparam>
+      <methodparam><type>mixed</type><parameter>cmd</parameter></methodparam>
       <methodparam><type>array</type><parameter>descriptorspec</parameter></methodparam>
       <methodparam><type>array</type><parameter role="reference">pipes</parameter></methodparam>
       <methodparam choice="opt"><type>string</type><parameter>cwd</parameter><initializer>&null;</initializer></methodparam>
@@ -35,7 +35,31 @@
      <term><parameter>cmd</parameter></term>
      <listitem>
       <para>
-       La commande à exécuter
+       La commande à exécuter en tant que &string;. Les caractères spéciaux
+       doivent être échappé correctement, et une application correcte des
+       guillemets doit être appliqué.
+      </para>
+      <note>
+       <simpara>
+        Sur <emphasis>Windows</emphasis>, sauf si <literal>bypass_shell</literal> est définie à &true; dans
+        <parameter>other_options</parameter>, <parameter>cmd</parameter> est
+        passé à <command>cmd.exe</command> (en fait, <literal>%ComSpec%</literal>)
+        avec le drapeau <literal>/c</literal> est une &string; <emphasis>sans
+        guillemets</emphasis> (c.à.d. exactement comment elle a été fournie à
+        <function>proc_open</function>). Ceci peut causer
+        <command>cmd.exe</command> à supprimer les guillemets entourant de
+        <parameter>cmd</parameter> (pour plus de détails voir la documentation
+        de <command>cmd.exe</command>), résulatant dans du comportement
+        innatendu, et potentiellement dangereux, car les messages d'erreurs de
+        <command>cmd.exe</command> peuvent contenir (une partir de) la
+        <parameter>cmd</parameter> passé (see example below).
+       </simpara>
+      </note>
+      <para>
+       À partir de PHP 7.4.0, <parameter>cmd</parameter> peut être passé comme
+       un &array; de paramètres de commandes.
+       Dans ce cas le processus sera ouvert directement (sans passer à travers
+       un shell) et PHP se chargera d'échapper les arguments nécessaire.
       </para>
      </listitem>
     </varlistentry>
@@ -163,6 +187,13 @@
       <row>
        <entry>7.4.0</entry>
        <entry>
+        <function>proc_open</function> accepte désormais un &array;
+        pour <parameter>cmd</parameter>.
+       </entry>
+      </row>
+      <row>
+       <entry>7.4.0</entry>
+       <entry>
         Ajout de l'option <literal>create_process_group</literal> au paramètre 
         <parameter>other_options</parameter>.
        </entry>
@@ -240,6 +271,44 @@ Array
 La commande a retourné 0
 ]]>
     </screen>
+   </example>
+  </para>
+
+  <para>
+   <example>
+    <title>Bizarrerie de <function>proc_open</function> sur Windows</title>
+    <simpara>
+     Bien que l'on puisse s'attendre à ce que le programme suivant recherche
+     le fichier <filename>filename.txt</filename> pour le texte
+     <literal>search</literal> et d'afficher les résultats,
+     il se comporte plutôt différemment.
+    </simpara>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$descriptorspec = [STDIN, STDOUT, STDOUT];
+$cmd = '"findstr" "search" "filename.txt"';
+$proc = proc_open($cmd, $descriptorspec, $pipes);
+proc_close($proc);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+'findstr" "search" "filename.txt' is not recognized as an internal or external command,
+operable program or batch file.
+]]>
+    </screen>
+    <simpara>
+     Pour contourner ce comportement, il est généralement suffisant d'entourer
+     <parameter>cmd</parameter> de guillemets additionnelles :
+    </simpara>
+    <programlisting role="php">
+<![CDATA[
+$cmd = '""findstr" "search" "filename.txt""';
+]]>
+    </programlisting>
    </example>
   </para>
  </refsect1>
