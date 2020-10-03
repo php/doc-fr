@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 3c8132d8240441503401c9e66ae23b15067ee2f1 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: fe81a24d2e124209c833c9715ec4c83ca546274b Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.stat">
@@ -19,6 +19,10 @@
    Renvoie les informations à propos du fichier <parameter>filename</parameter>.
    Si <parameter>filename</parameter> est un lien symbolique, les informations
    proviennent du fichier lui-même, et non du lien symbolique.
+   Avant PHP 7.4.0, sous Windows <abbrev>NTS</abbrev> compile les
+   valeurs statiques <literal>size</literal>, <literal>atime</literal>,
+   <literal>mtime</literal> et <literal>ctime</literal> depuis les liens
+   symboliques, dans ce cas.
   </para>
   <para>
    <function>lstat</function> est identique à
@@ -61,12 +65,12 @@
       <row>
        <entry>0</entry>
        <entry>dev</entry>
-       <entry>volume</entry>
+       <entry>volume (***)</entry>
       </row>
       <row>
        <entry>1</entry>
        <entry>ino</entry>
-       <entry>Numéro d'inode (*)</entry>
+       <entry>Numéro d'inode (****)</entry>
       </row>
       <row>
        <entry>2</entry>
@@ -126,11 +130,26 @@
      </tbody>
     </tgroup>
    </table>
-   * - Sous Windows, vaut toujours 0.
+  </para>
+  <para>
+   * - Sous Windows, ceci sera toujours <literal>0</literal>.
   </para>
   <para>
    ** - uniquement sur les systèmes qui supportent le type <literal>st_blksize</literal>.
-   Les autres systèmes (e.g. Windows) retournent -1.
+   Les autres systèmes (e.g. Windows) retournent <literal>-1</literal>.
+  </para>
+  <para>
+   *** - Sous Windows, depuis PHP 7.4.0, ce sera le numéro de série du volume qui
+   contient le fichier, qui sera un entier 64-bit <emphasis>non signé</emphasis>
+   qui peut déborder. Auparavant, c'était la représentation numériques de la lettre
+   du volume (i.e. <literal>2</literal> pour <literal>C:</literal>) pour la fonction
+   <function>stat</function>, et <literal>0</literal> pour la fonction
+   <function>lstat</function>.
+  </para>
+  <para>
+   **** - Sous Windows, depuis PHP 7.4.0, c'est l'identifiant associé avec le fichier,
+   qui sera un entier 64-bit <emphasis>non signé</emphasis> qui peut déborder.
+   Previously, it was always <literal>0</literal>.
   </para>
   <para>
    La valeur de <literal>mode</literal> contient des informations lut par
@@ -187,6 +206,38 @@
    Si une erreur survient, une alerte de type
    <constant>E_WARNING</constant> est émise.
   </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>7.4.0</entry>
+      <entry>
+       Sous Windows, le numéro du volume est maintenant le numéro de série qui contient
+       le fichier, et le numéro de l'inode est l'identifiant associé avec le fichier.
+      </entry>
+     </row>
+     <row>
+      <entry>7.4.0</entry>
+      <entry>
+       Les valeurs statiques <literal>size</literal>, <literal>atime</literal>,
+       <literal>mtime</literal> et <literal>ctime</literal> des liens symboliques
+       sont toujours ceux de la cible. Ce n'était précédemment pas le cas
+       This was previously not the case for <abbrev>NTS</abbrev> builds on Windows.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
  </refsect1>
 
  <refsect1 role="examples">
