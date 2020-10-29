@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 9af43469f46843451955b8926fe470a9f3d45034 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 513913468bfc339440bab5553e39d8ec74023254 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.parse-ini-file">
@@ -37,7 +37,9 @@
      <term><parameter>filename</parameter></term>
      <listitem>
       <para>
-       Le nom du fichier de configuration à analyser.
+       Le nom du fichier de configuration à analyser. Si un chemin relatif
+       est utilisé, il est évalué relatif au dossier courrant actuel, puis
+       selon le <link linkend="ini.include-path">include_path</link>.
       </para>
      </listitem>
     </varlistentry>
@@ -108,11 +110,12 @@ urls[git] = "http://git.php.net"
    <example>
     <title>Exemple avec <function>parse_ini_file</function></title>
     <para>
-     Les <link linkend="language.constants">constantes</link> peuvent aussi
+     Les <link linkend="language.constants">constantes</link> (mais pas les
+     "constantes magiques" tel que <constant>__FILE__</constant>) peuvent aussi
      être utilisées dans le fichier .ini, ce qui fait que si vous définissez
      une constante avant d'exécuter <function>parse_ini_file</function>, elle
      sera intégrée dans les résultats. Seules les valeurs de configuration
-     sont remplacées par leur équivalent en constantes. Par exemple :
+     sont évaluées, et la valeur doit juste être la constante. Par exemple :
     </para>
     <programlisting role="php">
 <![CDATA[
@@ -226,6 +229,50 @@ echo '(chargé ) magic_quotes_gpc = ' . yesno(get_cfg_var('magic_quotes_gpc')) .
     </screen>
    </example>
   </para>
+  <para>
+   <example>
+    <title>Interpolation de Valeur</title>
+    <para>
+     En plus d'évaluer les constantes, certain caractères ont une signification
+     particulière dans une valeur ini.
+     Additionellement, les variables d'environement et des valeurs définies
+     précédement peuvent être lu en utilisant la syntaxe <code>${}</code>.
+    </para>
+    <programlisting>
+<![CDATA[
+; | is used for bitwise OR
+three = 2|3
+
+; & is used for bitwise AND
+four = 6&5
+
+; ^ is used for bitwise XOR
+five = 3^6
+
+; ~ is used for bitwise negate
+negative_two = ~1
+
+; () is used for grouping
+seven = (8|7)&(6|5)
+
+; \ is used to escape a value.
+newline_is = "\\n" ; results in the string "\n", not a newline character.
+with quotes = "She said \"Exactly my point\"." ; Results in a string with quote marks in it.
+
+path = ${PATH}
+also_five = ${five}
+
+]]>
+    </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+(parsed) magic_quotes_gpc = Yes
+(loaded) magic_quotes_gpc = Yes
+]]>
+    </screen>
+   </example>
+  </para>
  </refsect1>
  
  <refsect1 role="notes">
@@ -268,6 +315,15 @@ echo '(chargé ) magic_quotes_gpc = ' . yesno(get_cfg_var('magic_quotes_gpc')) .
     Par exemple, MySQL a une option de configuration "no-auto-rehash" dans
     le fichier <filename>my.cnf</filename> qui ne prend pas de valeur, aussi,
     elle sera ignorée.
+   </para>
+  </note>
+  <note>
+   <para>
+    Les fichiers ini sont généralement traité comme des fichiers de texte brut
+    par les servers web, et donc envoyé au navigateur si demandé. Ceci signifie
+    que pour la sécurité soit les fichiers ini doivent être stockés en dehors
+    de la racine docroot, soit reconfigurer le serveur web pour ne pas les servir.
+    L'échec de faire l'une de ces mesures peut introduire un risque de sécurité.
    </para>
   </note>
  </refsect1>
