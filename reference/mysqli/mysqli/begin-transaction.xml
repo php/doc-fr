@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 144fc4f4d1c5d7d16926fb6a3317131147f0c8ea Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3742d36be1e1d0d9249ce7e093f4f05ead85b8e8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xml:id="mysqli.begin-transaction" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -86,48 +86,98 @@
   </para>
  </refsect1>
 
+ <refsect1 role="notes">
+  &reftitle.notes;
+  <note>
+   <para>
+    Cette fonction ne fonctionne pas avec les types de table non transactionnelle
+    (comme MyISAM ou ISAM).
+   </para>
+  </note>
+ </refsect1>
+
  <refsect1 role="examples">
   &reftitle.examples;
-  <example>
-   <title>Exemple avec <methodname>$mysqli->begin_transaction</methodname></title>
+  <example xml:id="mysqli.begin-transaction.example.basic">
+   <title>Exemple avec <methodname>mysqli::begin_transaction</methodname></title>
    <para>&style.oop;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
-$mysqli = new mysqli("127.0.0.1", "my_user", "my_password", "sakila");
 
-if ($mysqli->connect_errno) {
-    printf("Echec de la connexion : %s\n", $mysqli->connect_error);
-    exit();
+/* Demande à mysqli de lancer une exception si une erreur survient */
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
+
+/* Le moteur de table supporte les transactions */
+$mysqli->query("CREATE TABLE IF NOT EXISTS language (
+    Code text NOT NULL,
+    Speakers int(11) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+/* Démarre la transaction */
+$mysqli->begin_transaction();
+
+try {
+    /* Insère plusieurs valeurs */
+    $mysqli->query("INSERT INTO language(Code, Speakers) VALUES ('DE', 42000123)");
+
+    /* Tente d'insérer de mauvaises valeurs */
+    $language_code = 'FR';
+    $native_speakers = 'Unknown';
+    $stmt = $mysqli->prepare('INSERT INTO language(Code, Speakers) VALUES (?,?)');
+    $stmt->bind_param('ss', $language_code, $native_speakers);
+    $stmt->execute();
+
+    /* Si le code arrive à ce point sans erreur, alors on commit les données dans
+       la base de données */
+    $mysqli->commit();
+} catch (mysqli_sql_exception $exception) {
+    $mysqli->rollback();
+
+    throw $exception;
 }
-
-$mysqli->begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
-
-$mysqli->query("SELECT first_name, last_name FROM actor");
-$mysqli->commit();
-
-$mysqli->close();
-?>
 ]]>
    </programlisting>
    <para>&style.procedural;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
-$link = mysqli_connect("127.0.0.1", "my_user", "my_password", "sakila");
 
-if (mysqli_connect_errno()) {
-    printf("Echec de la connexion : %s\n", mysqli_connect_error());
-    exit();
+/* Demande à mysqli de lancer une exception si une erreur survient */
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
+$mysqli = mysqli_connect("localhost", "my_user", "my_password", "world");
+
+/* Le moteur de table supporte les transactions */
+mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS language (
+    Code text NOT NULL,
+    Speakers int(11) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+/* Commence la transaction */
+mysqli_begin_transaction($mysqli);
+
+try {
+    /* Insère plusieurs valeurs */
+    mysqli_query($mysqli, "INSERT INTO language(Code, Speakers) VALUES ('DE', 42000123)");
+
+    /* Tente d'insérer de mauvaises valeurs */
+    $language_code = 'FR';
+    $native_speakers = 'Unknown';
+    $stmt = mysqli_prepare($mysqli, 'INSERT INTO language(Code, Speakers) VALUES (?,?)');
+    mysqli_stmt_bind_param($stmt, 'ss', $language_code, $native_speakers);
+    mysqli_stmt_execute($stmt);
+
+    /* Si le code arrive à ce point sans erreur, alors on commit les données dans
+       la base de données */
+    mysqli_commit($mysqli);
+} catch (mysqli_sql_exception $exception) {
+    mysqli_rollback($mysqli);
+
+    throw $exception;
 }
-
-mysqli_begin_transaction($link, MYSQLI_TRANS_START_READ_ONLY);
-
-mysqli_query($link, "SELECT first_name, last_name FROM actor LIMIT 1");
-mysqli_commit($link);
-
-mysqli_close($link);
-?>
 ]]>
    </programlisting>
   </example>

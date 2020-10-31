@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 46319b5952750bc2a5e030c0a216023b551b60c1 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3742d36be1e1d0d9249ce7e093f4f05ead85b8e8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xml:id="mysqli.autocommit" xmlns="http://docbook.org/ns/docbook">
@@ -75,56 +75,139 @@
    <programlisting role="php">
 <![CDATA[
 <?php
+
+/* Demande à mysqli de lancer une exception si une erreur survient */
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion. Erreur : %s\n", mysqli_connect_error());
-    exit();
-}
+/* Le moteur de table supporte les transactions */
+$mysqli->query("CREATE TABLE IF NOT EXISTS language (
+    Code text NOT NULL,
+    Speakers int(11) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
-/* Activation de l'autocommit */
-$mysqli->autocommit(TRUE);
+/* Désactive l'autocommit */
+$mysqli->autocommit(false);
 
-if ($result = $mysqli->query("SELECT @@autocommit")) {
+$result = $mysqli->query("SELECT @@autocommit");
+$row = $result->fetch_row();
+printf("L'Autocommit vaut %s\n", $row[0]);
+
+try {
+    /* Prépare une requête d'insertion */
+    $stmt = $mysqli->prepare('INSERT INTO language(Code, Speakers) VALUES (?,?)');
+    $stmt->bind_param('ss', $language_code, $native_speakers);
+
+    /* Insère plusieurs valeurs */
+    $language_code = 'DE';
+    $native_speakers = 50_123_456;
+    $stmt->execute();
+    $language_code = 'FR';
+    $native_speakers = 40_546_321;
+    $stmt->execute();
+
+    /* Commit les données dans la base de données. Ceci n'active pas l'autocommit */
+    $mysqli->commit();
+    print "Validation de 2 lignes dans la base de données\n";
+
+    $result = $mysqli->query("SELECT @@autocommit");
     $row = $result->fetch_row();
     printf("L'autocommit vaut %s\n", $row[0]);
-    $result->free();
-}
 
-/* Fermeture de la connexion */
-$mysqli->close();
-?>
+    /* Tente d'insérer plusieurs valeurs */
+    $language_code = 'PL';
+    $native_speakers = 30_555_444;
+    $stmt->execute();
+    $language_code = 'DK';
+    $native_speakers = 5_222_444;
+    $stmt->execute();
+
+    /* Le fait de définir autocommit=true va déclencher le commit */
+    $mysqli->autocommit(true);
+
+    print "Validation de 2 lignes dans la base de données\n";
+} catch (mysqli_sql_exception $exception) {
+    $mysqli->rollback();
+
+    throw $exception;
+}
 ]]>
    </programlisting>
    <para>&style.procedural;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
-$link = mysqli_connect("localhost", "my_user", "my_password", "world");
 
-if (!$link) {
-    printf("Échec de la connexion. Erreur : %s\n", mysqli_connect_error());
-    exit();
-}
+/* Demande à mysqli de lancer une exception si une erreur survient */
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-/* Activation de l'autocommit */
-mysqli_autocommit($link, TRUE);
+$mysqli = mysqli_connect("localhost", "my_user", "my_password", "world");
 
-if ($result = mysqli_query($link, "SELECT @@autocommit")) {
+/* Le moteur de table supporte les transactions */
+mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS language (
+    Code text NOT NULL,
+    Speakers int(11) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+/* Désactive l'autocommit */
+mysqli_autocommit($mysqli, false);
+
+$result = mysqli_query($mysqli, "SELECT @@autocommit");
+$row = mysqli_fetch_row($result);
+printf("L'Autocommit vaut %s\n", $row[0]);
+
+try {
+    /* Prépare une requête d'insertion */
+    $stmt = mysqli_prepare($mysqli, 'INSERT INTO language(Code, Speakers) VALUES (?,?)');
+    mysqli_stmt_bind_param($stmt, 'ss', $language_code, $native_speakers);
+
+    /* Insère plusieurs valeurs */
+    $language_code = 'DE';
+    $native_speakers = 50_123_456;
+    mysqli_stmt_execute($stmt);
+    $language_code = 'FR';
+    $native_speakers = 40_546_321;
+    mysqli_stmt_execute($stmt);
+
+    /* Commit les données dans la base de données. Ceci n'active pas l'autocommit */
+    mysqli_commit($mysqli);
+    print "Validation de 2 lignes dans la base de données\n";
+
+    $result = mysqli_query($mysqli, "SELECT @@autocommit");
     $row = mysqli_fetch_row($result);
     printf("L'autocommit vaut %s\n", $row[0]);
-    mysqli_free_result($result);
-}
 
-/* Fermeture de la connexion */
-mysqli_close($link);
-?>
+    /* Tente d'insérer plusieurs valeurs */
+    $language_code = 'PL';
+    $native_speakers = 30_555_444;
+    mysqli_stmt_execute($stmt);
+    $language_code = 'DK';
+    $native_speakers = 5_222_444;
+    mysqli_stmt_execute($stmt);
+
+    /* Le fait de définir autocommit=true va déclencher le commit */
+    mysqli_autocommit($mysqli, true);
+
+    print "Validation de 2 lignes dans la base de données\n";
+} catch (mysqli_sql_exception $exception) {
+    mysqli_rollback($mysqli);
+
+    throw $exception;
+}
 ]]>
    </programlisting>
    &examples.outputs;
    <screen>
 <![CDATA[
-L'autocommit vaut 1
+L'autocommit vaut 0
+Validation de 2 lignes dans la base de données
+L'autocommit vaut 0
+Validation de 2 lignes dans la base de données
+L'autocommit vaut 0
+Validation de 2 lignes dans la base de données
+L'autocommit vaut 0
+Validation de 2 lignes dans la base de données
 ]]>
    </screen>
   </example>
