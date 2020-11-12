@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 86e6094e86b84a51d00ab217ac50ce8dde33d82a Maintainer: yannick Status: ready -->
+<!-- EN-Revision: a71742330defbc0edfbc6822b4f947bf437b2f70 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <!-- CREDITS: DAnnebicque -->
 
@@ -11,9 +11,17 @@
   simple. Comme son nom le suggère, cette valeur ne peut jamais être
   modifiée durant l'exécution du script (sauf les
   <link linkend="language.constants.predefined">constantes magiques</link>).
-  Par défaut, le nom d'une constante est sensible à la casse. Par convention,
+  Les constantes sont sensible à la casse. Par convention,
   les constantes sont toujours en majuscules.
  </simpara>
+
+ <note>
+  <para>
+   Antérieur à PHP 8.0.0, les constantes définies en utilisant la fonction
+   <function>define</function> peuvent être insensible à la casse.
+  </para>
+ </note>
+
  <para>
   Les noms de constantes suivent les mêmes règles que n'importe
   quel nom en PHP. Un nom de constante valide commence par une
@@ -24,7 +32,7 @@
  </para>
  <para>
    Il est possible de définir une constante avec un nom réservé ou même invalide via <function>define</function>,
-   ces valeurs ne peuvent alors être récupérées qu'avec 
+   ces valeurs ne peuvent alors être récupérées qu'avec la fonction
    <function>constant</function>. Faire ceci n'est cependant pas recommandé.
   </para>
  &tip.userlandnaming;
@@ -60,14 +68,21 @@ define("__FOO__", "something");
   </simpara>
  </note>
  <simpara>
-  Tout comme les &link.superglobals;, les constantes sont
-  accessibles de manière globale. Vous pouvez les définir
-  n'importe où, et y accéder depuis n'importe quelle fonction.
-  Pour plus d'informations sur le contexte, lisez la section
-  du manuel sur la <link linkend="language.variables.scope">portée
-  des variables</link>.
+  Tout comme les &link.superglobals;, la porté d'une constante est globale.
+  Les contentes peuvent être accédé depuis partout dans un script sans tenir
+  compte de la portée.
+  Pour plus d'informations sur la portée, lisez la section du manuel sur la
+  <link linkend="language.variables.scope">portée des variables</link>.
  </simpara>
- 
+
+ <note>
+  <simpara>
+   À partir de PHP 7.4.0, les constantes de classes peuvent définir une
+   visibilité de protégé ou privée, les rendent disponible que dans la
+   portée hiérarchique de la classe où elles ont été définies.
+  </simpara>
+ </note>
+
  <sect1 xml:id="language.constants.syntax">
   <title>Syntaxe</title>
   <simpara>
@@ -100,6 +115,7 @@ define("__FOO__", "something");
    Utilisez la fonction <function>get_defined_constants</function> pour connaître
    la liste de toutes les constantes définies.
   </simpara>
+
   <note>
    <simpara>
     Les constantes et les variables globales utilisent deux espaces de
@@ -108,23 +124,30 @@ define("__FOO__", "something");
     peuvent avoir des valeurs différentes).
    </simpara>
   </note>
+
   <simpara>
-   Si vous utilisez une constante non définie, PHP considère que vous souhaitez
-   uniquement le nom de la constante elle-même, comme si vous l'appeliez
-   comme étant une &string; (CONSTANT vs "CONSTANT").
-   Cette solution de repli est déprécié depuis PHP 7.2.0, et une erreur de niveau
-    <constant>E_WARNING</constant> sera émise lorsque ce cas se produit
-    (précedemment, une erreur de niveau
-    <link linkend="ref.errorfunc">E_NOTICE</link> était émise à la place.)
-   Lisez également l'entrée du manuel qui explique pourquoi
+   Si une constante indéfinie est utilisé une <classname>Error</classname> est
+   lancé.
+   Antérieur à PHP 8.0.0, les constantes indéfinies était interprété comme un
+   mot nu de type &string;, c.à.d. (CONSTANT vs "CONSTANT").
+   Cette solution de repli est déprécié à partir de PHP 7.2.0, et une erreur de
+   niveau <constant>E_WARNING</constant> était émise lorsque ce cas se produit.
+   Antérieur à PHP 7.2.0, une erreur de niveau
+   <link linkend="ref.errorfunc">E_NOTICE</link> était émise à la place.
+   Voir également l'entrée du manuel qui explique pourquoi
    <link linkend="language.types.array.foo-bar">$foo[bar]</link> est faux
-   (tant que vous ne définissez pas <literal>bar</literal> comme étant une
-   constante). Ceci ne s'applique pas pour 
-   <link linkend="language.namespaces.rules">les constantes (fully) qualified</link>,
-   ce qui déclencherait une erreur fatale si ce n'est pas défini.
-   Si vous voulez simplement vérifier qu'une constante est définie,
-   utilisez la fonction <function>defined</function>.
+   (sauf si <literal>bar</literal> est une constante).
+   Ceci ne s'applique pas pour les <link
+   linkend="language.namespaces.rules">constantes (complètement) qualified</link>,
+   qui lance toujours une <classname>Error</classname>.
   </simpara>
+
+  <note>
+   <simpara>
+    Pour vérifier qu'une constante est définie, utiliser la fonction <function>defined</function>.
+   </simpara>
+  </note>
+
   <para>
    Il y a des différences entre les constantes et les variables :
    <itemizedlist>
@@ -152,26 +175,27 @@ define("__FOO__", "something");
     </listitem>
    </itemizedlist>
   </para>
-  
+
   <para>
    <example>
     <title>Définir une constante</title>
     <programlisting role="php">
 <![CDATA[
 <?php
-  define("CONSTANTE", "Bonjour le monde.");
-  echo CONSTANTE; // affiche "Bonjour le monde."
-  echo Constante; // affiche "Constante" et une notice.
+  define("CONSTANT", "Bonjour le monde.");
+  echo CONSTANT; // affiche "Bonjour le monde."
+  echo Constant; // Lance une Error : Undefined constant "Constant"
+                 // Antérieur à PHP 8.0.0, affiche "Constante" et émet un avertissement.
 ?>
 ]]>
-     </programlisting>
-    </example>
-   </para>
-   
-   <para>
-    <example>
-     <title>Définir des constantes en utilisant le mot-clé <literal>const</literal></title>
-     <programlisting role="php">
+    </programlisting>
+   </example>
+  </para>
+
+  <para>
+   <example>
+    <title>Définir des constantes en utilisant le mot-clé <literal>const</literal></title>
+    <programlisting role="php">
 <![CDATA[
 <?php
 // Simple valeur scalaire
@@ -195,31 +219,30 @@ define('ANIMALS', array(
 echo ANIMALS[1]; // affiche "chat"
 ?>
 ]]>
-     </programlisting>
-    </example>
+    </programlisting>
+   </example>
+  </para>
+
+  <note>
+   <para>
+    Contrairement aux constantes définies en utilisant l'instruction
+    <function>define</function>, les constantes définies en utilisant
+    le mot-clé <literal>const</literal> doivent être déclarées
+    au plus haut niveau du contexte, car elles seront définies au moment
+    de la compilation. Cela signifie qu'elles ne peuvent être déclarées
+    à l'intérieur de fonctions, boucles, instructions
+    <literal>if</literal> ou blocs <literal>try</literal>/<literal>catch</literal>.
    </para>
-   
-   <note>
-    <para>
-     Contrairement aux constantes définies en utilisant l'instruction
-     <function>define</function>, les constantes définies en utilisant
-     le mot-clé <literal>const</literal> doivent être déclarées
-     au plus haut niveau du contexte, car elles seront définies au moment
-     de la compilation. Cela signifie qu'elles ne peuvent être déclarées
-     à l'intérieur de fonctions, boucles, instructions
-     <literal>if</literal> ou blocs <literal>try</literal>/<literal>catch</literal>.
-    </para>
-   </note>
-   <note>
-    <para>
-     Antérieur à PHP 8.0.0, les constantes définies via <function>define</function>
-     peuvent être insensible à la casse.
-    </para>
-   </note>
-   <simpara>
-    Voir aussi
-    les <link linkend="language.oop5.constants">constantes de classe</link>.
-   </simpara>
+  </note>
+
+  <sect2 role="seealso">
+   &reftitle.seealso;
+   <para>
+    <simplelist>
+     <member><link linkend="language.oop5.constants">Les Constantes de Classe</link></member>
+    </simplelist>
+   </para>
+  </sect2>
  </sect1>
  
  <sect1 xml:id="language.constants.predefined">
@@ -244,12 +267,12 @@ echo ANIMALS[1]; // affiche "chat"
   </para>
   <para>
    <table>
-    <title>Quelques constantes PHP magiques</title>
+    <title>Les constantes magique dePHP</title>
     <tgroup cols="2">
      <thead>
       <row>
-       <entry>Nom</entry>
-       <entry>Description</entry>
+       <entry>&Name;</entry>
+       <entry>&Description;</entry>
       </row>
      </thead>
      <tbody>
@@ -312,12 +335,11 @@ echo ANIMALS[1]; // affiche "chat"
        </entry>
       </row>
       <row xml:id="constant.coloncolonclass">
-        <entry><constant>ClassName::class</constant></entry>
-        <entry>
-         Le nom entièrement qualifié de la classe. Voir aussi
-         <link linkend="language.oop5.basic.class.class">::class</link>.
-        </entry>
-       </row>
+       <entry><constant><replaceable>ClassName</replaceable>::class</constant></entry>
+       <entry>
+        Le nom entièrement qualifié de la classe.
+       </entry>
+      </row>
      </tbody>
     </tgroup>
    </table>
@@ -327,7 +349,7 @@ echo ANIMALS[1]; // affiche "chat"
    &reftitle.seealso;
    <para>
     <simplelist>
-<!-- <link linkend="language.oop5.basic.class.class">::class</link> -->
+     <member><link linkend="language.oop5.basic.class.class">::class</link></member>
      <member><function>get_class</function></member>
      <member><function>get_object_vars</function></member>
      <member><function>file_exists</function></member>
