@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: cdaea0421544885f02ff3d36bd203dc01b78299e Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 1d58f726462a821d3f926fb61247357f49fa1ce5 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
  <chapter xml:id="language.exceptions" xmlns="http://docbook.org/ns/docbook">
@@ -200,21 +200,43 @@ echo "\n\n";
    </para>
 
    <para>
+    Si une exception est lancé et que la porté courante de la fonction n'as pas
+    de block &catch;, l'exception "remontera" la pile d'appel de la fonction appelante
+    jusqu'à trouver un bloc &catch; correspondant. Tous les blocs &finally; rencontrer
+    seront exécuté. Si la pile d'appel est déroulé jusqu'à la portée globale sans
+    rencontrer de bloc &catch; correspondant, le programme sera terminé avec
+    une erreur fatale sauf si un gestionnaire globale d'exception a été définie.
+   </para>
+   <para>
     L'objet lancé doit être une instance de la classe
     <classname>Exception</classname> ou d'une sous-classe de la classe
     <classname>Exception</classname>. Tenter de lancer un objet qui ne
     correspond pas à cela résultera en une erreur fatale émise par PHP.
+   </para>
+   <para>
+    À partir de PHP 8.0.0, le mot clé &throw; est une expression et peut être
+    utilisé dans n'importe quel contexte d'expressions. Dans les versions
+    antérieures c'était une déclaration et devait être sur sa propre ligne.
    </para>
   </simplesect>
 
   <simplesect xml:id="language.exceptions.catch">
    <title><literal>catch</literal></title>
    <para>
+    Un bloc &catch; définie comment réagir à une exception qui a été lancé.
+    Un bloc &catch; définit un ou plusieurs type d'exception ou erreur qu'il peut
+    gérer, et optionellement une variable dans laquelle assigner l'exception.
+    (Cette variable était requis antérieur à PHP 8.0.0)
+    Le premier bloc &catch; qu'une exception our erreur lancé qui correspond au
+    type de l'objet lancé gérera l'objet.
+   </para>
+   <para>
     Plusieurs blocs &catch; peuvent être utilisés pour attraper différentes
     classes d'exceptions. L'exécution normale (lorsqu'aucune exception n'est lancée
     dans le bloc &try;) continue après le dernier
     bloc &catch; défini dans la séquence. Les exceptions
-    peuvent être lancées (ou relancées) dans un bloc &catch;.
+    peuvent être &throw; (lancé) (ou relancées) dans un bloc &catch;. Sinon,
+    l'exécution continuera après le bloc &catch; qui a été déclanché.
    </para>
    <para>
     Lorsqu'une exception est lancée, le code suivant le traitement ne sera pas
@@ -226,10 +248,15 @@ echo "\n\n";
     <function>set_exception_handler</function>.
    </para>
    <para>
-    Depuis PHP 7.1, un block &catch; peut spécifier plusieurs exceptions à 
+    À partir de PHP 7.1, un block &catch; peut spécifier plusieurs exceptions à 
     l'aide du caratère pipe (<literal>|</literal>). Ceci est utile lorsque 
     différentes exceptions de hiérarchies de classes différentes sont traitées 
     de la même manière.
+   </para>
+   <para>
+    À partir de PHP 8.0.0, le nom de variable pour l'exception attrapé est
+    optionnel. Si non spécifié, le bloc &catch; sera toujours exécuté mais
+    n'aura pas accès à l'objet lancé.
    </para>
   </simplesect>
 
@@ -254,6 +281,19 @@ echo "\n\n";
    </para>
   </simplesect>
 
+ <simplesect xml:id="language.exceptions.exception-handler">
+  <title><literal>Global exception handler</literal></title>
+  <para>
+   Si une exception est autorisé à remonter jusqu'à la portée globale, elle peut
+   être attrapée par un gestionnaire d'exception global si définie. La fonction
+   <function>set_exception_handler</function> peut définir une fonction qui sera
+   appellée à la place d'un block &catch; si aucun autre block n'est invoqué.
+   L'effet est essentiellement identique à entourer le programme entier dans un
+   block &tryy;-&catch; avec cette fonction en tant que &catch;.
+  </para>
+ </simplesect>
+
+
   <simplesect xml:id="language.exceptions.notes">
    &reftitle.notes;
 
@@ -264,7 +304,22 @@ echo "\n\n";
      <link linkend="language.oop5">orientées objet</link>
      utilisent les exceptions. Quoiqu'il en soit, des erreurs peuvent facilement être traduites en 
      exceptions avec <link linkend="class.errorexception">ErrorException</link>.
+     Cependant, cette technique ne fonctionne que pour les erreurs non fatales.
     </para>
+    <example>
+     <title>Cenvertir l'error reporting en exceptions</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+function exceptions_error_handler($severity, $message, $filename, $lineno) {
+    throw new ErrorException($message, 0, $severity, $filename, $lineno);
+}
+
+set_error_handler('exceptions_error_handler');
+?>
+]]>
+     </programlisting>
+    </example>
    </note>
    <tip>
     <para>
@@ -449,6 +504,50 @@ $foo->testing();
 string(11) "MyException"
 ]]>
     </screen>
+   </example>
+   <example>
+    <title>Omettre la variable attrapé</title>
+    <para>Seulement permit dans PHP 8.0.0 et ultérieur.</para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+class SpecificException extends Exception {}
+
+function test() {
+    throw new SpecificException('Oopsie');
+}
+
+try {
+    test();
+} catch (SpecificException) {
+    print "A SpecificException was thrown, but we don't care about the details.";
+}
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Throw en tant qu'expression</title>
+    <para>Seulement permit dans PHP 8.0.0 et ultérieur.</para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+class SpecificException extends Exception {}
+
+function test() {
+    do_something_risky() or throw new Exception('It did not work');
+}
+
+try {
+    test();
+} catch (Exception $e) {
+    print $e->getMessage();
+}
+?>
+]]>
+    </programlisting>
    </example>
   </simplesect>
  </chapter>
