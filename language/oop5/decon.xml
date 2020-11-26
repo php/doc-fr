@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 9e0f03ac354d797d1d16c0fcc1663e5e170f2727 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: a6338d747762e36e01061eae19aadca4167375b6 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
  <sect1 xml:id="language.oop5.decon" xmlns="http://docbook.org/ns/docbook">
@@ -31,7 +31,7 @@
     </simpara>
    </note>
    <example>
-    <title>Exemple d'utilisation des nouveaux constructeurs unifiés</title>
+    <title>Constructeur lors de l'héritage</title>
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -66,52 +66,193 @@ $obj = new OtherSubClass();
     </programlisting>
    </example>
    <para>
-    Pour des raisons de compatibilité ascendante avec PHP 3 et 4, si PHP ne peut pas
-    trouver une fonction <link linkend="object.construct">__construct()</link>
-    pour une classe donnée,
-    il cherchera une fonction constructeur représentée, comme dans
-    l'ancien style, par le nom de la classe.
-    Dans les faits, cela signifie que le seul cas où il pourrait y avoir
-    un problème de compatibilité est celui où votre classe contiendrait une
-    méthode nommée <link linkend="object.construct">__construct()</link> et que vous en ayez un
-    autre usage.
-   </para>
-   <!-- Not using an entity because I want specific wording here, since we're
-   not deprecating constructors in general. -->
-   <warning>
-    <simpara>
-     L'ancien style de constructeur est <emphasis>DECONSEILLE</emphasis> à partir de PHP 7.0
-     et sera supprimé dans une future version. Vous devez toujours utiliser 
-     <link linkend="object.construct">__construct()</link> dans le nouveau code.
-    </simpara>
-   </warning>
-   <para>
     À la différence des autres méthodes, PHP ne génèrera pas d'erreur de niveau
     <constant>E_STRICT</constant> lorsque <link linkend="object.construct">__construct()</link> est
     surchargé avec des paramètres différents du <link linkend="object.construct">__construct()</link> parent.
    </para>
    <para>
-    À partir de PHP 5.3.3, les méthodes ayant le même nom que la classe dans laquelle
-    elle se trouve ne sont plus traitées comme des constructeurs, si la classe
-    considérée se situe dans un espace de noms. Ceci n'affecte pas les classes
-    sans espace de noms.
+    Les constructeurs sont des méthodes ordinaires qui sont appellées lors de
+    l'instanciation de leur objet correspondant. Par conséquent, ils peuvent
+    définir un nombre arbitraire d'arguments, qui peuvent être requis, avoir un type,
+    et peuvent avoir une valeur par défaut. Les arguments d'un constructeur sont appelés
+    en plaçant les arguments dans des paranthèses après le nom de la classe.
    </para>
    <example>
-    <title>Constructeurs dans des classes dans des espaces de noms</title>
+    <title>Utiliser les arguments d'un constructeur</title>
     <programlisting role="php">
 <![CDATA[
 <?php
-namespace Foo;
-class Bar {
-    public function Bar() {
-        // Traitée comme un constructeur dans PHP 5.3.0-5.3.2
-        // Traitée comme une méthode normale à partir de PHP 5.3.3
+class Point {
+    protected int $x;
+    protected int $y;
+
+    public function __construct(int $x, int $y = 0) {
+        $this->x = $x;
+        $this->y = $y;
     }
 }
+
+// Pass both parameters.
+$p1 = new Point(4, 5);
+// Pass only the required parameter. $y will take its default value of 0.
+$p2 = new Point(4);
+// With named parameters (as of PHP 8.0):
+$p3 = new Point(y: 5, x: 4);
 ?>
 ]]>
     </programlisting>
    </example>
+   <para>
+    Si une classe n'a pas de constructeur, ou le constructeur n'a pas d'arguments requis,
+    les parenthèses peuvent être omit.
+   </para>
+   <sect3>
+    <title>Style ancien des constructeurs</title>
+    <para>
+     Antérieur à PHP 8.0.0, les classes dans le nom d'espace global interpréteront une
+     méthode qui à la même nom que la classe come un constructeur de style ancien.
+     Cette syntaxe est obsolète, et résultera en une erreur <constant>E_DEPRECATED</constant>
+     mais appellera quand même cette fonction comme un constructeur.
+     Si <link linkend="object.construct">__construct()</link> et une méthode du même nom
+     sont définie, <link linkend="object.construct">__construct()</link> sera appellé.
+    </para>
+    <para>
+     Les classes dans les espaces de nom, ou toute classe à partir de PHP 8.0.0,
+     une méthode du même nom que la classe n'a jamais de signification particulière.
+    </para>
+    <para>
+     Toujours utiliser <link linkend="object.construct">__construct()</link> dans du nouveau code.
+    </para>
+   </sect3>
+   <sect3 xml:id="language.oop5.decon.constructor.promotion">
+    <title>Promotion du Constructeur</title>
+    <para>
+     À partir de PHP 8.0.0, les paramètres du constructeur peuvent être promu pour
+     correspondre à une propriété de l'objet. Il est très commun pour les paramètres
+     d'un constructeur d'être assigné à une propriété sans éffectuer d'opérations dessus.
+     La promotion du constructeur fournie un raccourci pour ce cas d'utilisation.
+     L'exemple ci-dessus peut être réécrit de la façon suivante.
+    </para>
+    <example>
+     <title>Utilisant la promotion de propriété de constructeur</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+class Point {
+    public function __construct(protected int $x, protected int $y = 0) {
+    }
+}
+]]>
+     </programlisting>
+    </example>
+    <para>
+     Quand un argument de constructeur inclus un modificateur de visibilité, PHP l'interprétera
+     comme une propriété d'objet et un argument du constructeur, et assigne la valeur de l'argument
+     à la propriété. Le corps du constructeur peut être alors vide ou peut contenir d'autres
+     déclarations. Toutes déclarations additionnelles seront exécuté apr_s que la valeur de
+     l'argument a été assigné à leur propriétés correspondantes.
+    </para>
+    <para>
+     Pas tous les arguments doivent être promu. Il est possible de mélanger et assortir les
+     arguments promu et non-promu, dans n'importe quel ordre. Les arguments promu n'ont aucun impact
+     sur du code appellant le constructeur.
+    </para>
+    <note>
+     <para>
+      Les propriétés d'objet ne peuvent être typé <type>callable</type> à cause des ambiguïtés du moteur
+      que ceci introduirait. Ainsi, les arguments promu, ne peuvent pas non plus être typé
+      <type>callable</type>. Cependant, toute autre
+      <link linkend="language.types.declarations">déclaration de type</link> est permit.
+     </para>
+    </note>
+    <note>
+     <para>
+      <!-- This should be linked once attributes are documented. -->
+      Les attributs placé sur un argument de constructeur promu seront reproduit
+      à la fois sur la propriété ainsi que sur l'argument.
+     </para>
+    </note>
+   </sect3>
+   <sect3 xml:id="language.oop5.decon.constructor.static">
+    <title>Méthode de création statique</title>
+    <para>
+     PHP supporte uniquement un constructeur unique par classe. Cependant, dans
+     certains cas il peut être désirable de permettre à un objet d'être construit
+     de manière différente avec des entrées différentes.
+     La façon recommendé de faire ceci est en utilisant des méthodes statiques
+     comme une enveloppe du constructeur.
+    </para>
+    <example>
+     <title>Utilisant la création via une méthode statique</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+class Product {
+
+    private ?int $id;
+    private ?string $name;
+
+    private function __construct(?int $id = null, ?string $name = null) {
+        $this->id = $id;
+        $this->name = $name;
+    }
+
+    public static function fromBasicData(int $id, string $name): static {
+        $new = new static($id, $name);
+        return $new;
+    }
+
+    public static function fromJson(string $json): static {
+        $data = json_decode($json);
+        return new static($data['id'], $data['name']);
+    }
+
+    public static function fromXml(string $xml): static {
+        // Put your own logic here.
+        $data = convert_xml_to_array($xml);
+        $new = new static();
+        $new->id = $data['id'];
+        $new->name = $data['name'];
+        return $new;
+    }
+}
+
+$p1 = Product::fromBasicData(5, 'Widget');
+$p2 = Product::fromJson($some_json_string);
+$p3 = Product::fromXml($some_xml_string);
+]]>
+     </programlisting>
+    </example>
+    <para>
+     Le constructeur peut être rendu privé ou protégé pour empêcher son appel
+     depuis l'extérieur. Dans ce cas, seul une méthode statique sera capable
+     d'instancier la classe. Car elles sont dans la même définition de classe
+     elles ont accès aux méthodes privées, même dans une instance différente de
+     l'objet. Un constructeur privé est optionnel et peut ou pas faire de sens
+     en fonction du cas d'utilisation.
+    </para>
+    <para>
+     Les trois méthodes statiques publique démonstrent alors des manières différentes
+     d'instancier l'objet.
+    </para>
+    <simplelist>
+     <member><code>fromBasicData()</code> prend les paramètres exacte qui sont nécessaire,
+      puis créé l'objet en appellant le constructeur puis retournant le résulat.</member>
+     <member><code>fromJson()</code> accepte une chaîne de caractère JSON et fait
+      du pré-traitement sur lui même pour ce convertir dans le format désiré par
+      le constructeur. Elle retourne alors le nouvel objet.</member>
+     <member>
+      <code>fromXml()</code> accepte une chaîne de caractère XML, fait du pré-traitement,
+      puis créé un objet brut. Le constructeur est appellé, mais comme tout les
+      paramètres sont optionnels la méthode les ignores. Elle assigne alors les
+      valeurs aux propriétés de l'objet directement avant de retourner le résultat.
+     </member>
+    </simplelist>
+    <para>
+     Dans les trois cas, le mot clé <code>static</code> est traduit en le nom de
+     la classe dont le code y est. Dans ce cas, <code>Product</code>.
+    </para>
+   </sect3>
   </sect2>
 
   <sect2 xml:id="language.oop5.decon.destructor">
