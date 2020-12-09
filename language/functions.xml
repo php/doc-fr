@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 574f492ae951e820d36bc6d9273f9da90ba46ef7 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: e296d2443b197fce63a9752dc6d58c0fdcf0c5cc Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <chapter xml:id="language.functions" xmlns="http://docbook.org/ns/docbook">
  <title>Les fonctions</title>
@@ -231,7 +231,29 @@ function takes_many_args(
 ]]>
     </programlisting>
    </example>
-  
+  <para>
+   À partir de PHP 8.0.0, passer des arguments obligatoire après des arguments optionnel
+   est obsolète. Ceci peut être généralement résolue en supprimant la valeur par défaut.
+   Une exception à cette règle sont les arguments de la forme
+   <code>Type $param = null</code>, où le &null; par défaut rend le type implicitement
+   nullable. Cette usage continue d'être autorisé, néanmoins il est recommandé d'utiliser
+   un type nullable explicitement à la place.
+  </para>
+  <example>
+   <title>Passer des arguments optionnels après des arguments obligatoire</title>
+   <programlisting role="php">
+    <![CDATA[
+<?php
+function foo($a = [], $b) {} // Avant
+function foo($a, $b) {}      // Après
+
+function bar(A $a = null, $b) {} // Toujours autorisé
+function bar(?A $a, $b) {}       // Recommandé
+?>
+]]>
+   </programlisting>
+  </example>
+
   <sect2 xml:id="functions.arguments.by-reference">
    <title>Passage d'arguments par référence</title>
    
@@ -570,9 +592,114 @@ echo sum(1, 2, 3, 4);
    </sect3>
    
   </sect2>
-  
+
+  <sect2 xml:id="functions.named-arguments">
+   <title>Arguments Nommées</title>
+
+   <para>
+    PHP 8.0.0 introduit les arguments nommées comme extension aux paramètres
+    positionnels existant. Les arguments nommées permettent de passer les
+    arguments à une fonction en s'appuyant sur le nom du paramètre, au lieu de
+    la position du paramètre. Ceci documente automatiquement la signification
+    de l'argument, rend l'ordre des arguments indépendant et permet d'ignorer
+    les valeur par défaut arbitrairement.
+   </para>
+
+   <para>
+    Les arguments nommées sont passés en préfixant la valeur avec le nom du
+    paramètre suivit d'un deux-points. Utiliser des mots-clés réservés comme
+    nom de paramètre est autorisé. Le nom du paramètre doit être un identifiant,
+    le spécifiant de façon dynamique n'est pas permis.
+   </para>
+
+   <example>
+    <title>Syntaxe des arguments nommées</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+myFunction(paramName: $value);
+array_foobar(array: $value);
+
+// NON supporté.
+function_name($variableStoringParamName: $value);
+?>
+]]>
+    </programlisting>
+   </example>
+
+   <example>
+    <title>Argument positionnels comparé aux arguments nommées</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Utilisant les arguments positionnels :
+array_fill(0, 100, 50);
+
+// Utilisant les arguments nommées :
+array_fill(start_index: 0, num: 100, value: 50);
+?>
+]]>
+    </programlisting>
+   </example>
+
+   <para>
+    L'ordre dans lequel les arguments nommées sont passé n'importe pas.
+   </para>
+
+   <example>
+    <title>Même example que ci-dessus mais avec un ordre de paramètre différent</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+array_fill(value: 50, num: 100, start_index: 0);
+?>
+]]>
+    </programlisting>
+   </example>
+
+   <para>
+    Les arguments nommées peuvent être combinées avec les arguments positionnels.
+    Au quel cas, les arguments nommées doivent venir après les arguments positionnels.
+    Il est aussi possible de spécifier seulement certains des arguments optionnels
+    d'une fonction, peut importe leur ordre.
+   </para>
+
+   <example>
+    <title>Combiner les arguments nommées avec les arguments positionnels</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+htmlspecialchars($string, double_encode: false);
+// Same as
+htmlspecialchars($string, ENT_COMPAT | ENT_HTML401, 'UTF-8', false);
+?>
+]]>
+    </programlisting>
+   </example>
+
+   <para>
+    Passer le même paramètre plusieurs fois résulte en une Error exception.
+   </para>
+
+   <example>
+    <title>Exception Error quand un même paramètre est passer plusieurs fois</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+function foo($param) { ... }
+
+foo(param: 1, param: 2);
+// Error: Named parameter $param overwrites previous argument
+foo(1, param: 2);
+// Error: Named parameter $param overwrites previous argument
+?>
+]]>
+    </programlisting>
+   </example>
+
+  </sect2>
  </sect1>
- 
+
  <sect1 xml:id="functions.returning-values">
   <title>Les valeurs de retour</title>
   
