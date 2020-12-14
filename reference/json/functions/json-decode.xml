@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 9e3b30232be09c56bd18a766b2041da254ef95f0 Maintainer: girgias Status: ready -->
+<!-- EN-Revision: 32f3a5a59f9f2ab2b97ad223b9e996cbc69e11c3 Maintainer: girgias Status: ready -->
 <!-- Reviewed: yes -->
-
 <refentry xml:id="function.json-decode" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>json_decode</refname>
@@ -56,7 +55,7 @@
      <term><parameter>depth</parameter></term>
      <listitem>
       <para>
-       Définit la profondeur de récursion.
+       Profondeur d'imbrication maximale de la structure en cours de décodage.
       </para>
      </listitem>
     </varlistentry>
@@ -88,7 +87,7 @@
    sont retournées respectivement comme &true;, &false; et &null;.
    &null; est retourné si le paramètre <parameter>json</parameter> n'a pu
    être décodé ou si les données encodées sont plus profondes que la limite
-   de récursion fournie.
+   d'imbrication fournie.
   </para>
  </refsect1>
  
@@ -226,7 +225,7 @@ json_decode($bad_json); // null
     <programlisting role="php">
 <![CDATA[
 <?php
-// Encodage des données.
+// Encodage des données avec un niveau d'imbrication maximal de 4 (array -> array -> array -> string)
 $json = json_encode(
     array(
         1 => array(
@@ -251,11 +250,28 @@ foreach ($constants["json"] as $name => $value) {
  }
 }
 
-// Affichage des erreurs pour les différentes profondeurs.
-foreach (range(4, 3, -1) as $depth) {
-    var_dump(json_decode($json, true, $depth));
-    echo 'Dernière erreur : ', $json_errors[json_last_error()], PHP_EOL, PHP_EOL;
-}
+
+$json = json_encode(
+    array(
+        1 => array(
+            'English' => array(
+                'One',
+                'January'
+            ),
+            'French' => array(
+                'Une',
+                'Janvier'
+            )
+        )
+    )
+);
+
+// Affichage des erreurs pour des niveau d'imbrication différentes.
+var_dump(json_decode($json, true, 4));
+echo 'Last error: ', json_last_error_msg(), PHP_EOL, PHP_EOL;
+
+var_dump(json_decode($json, true, 3));
+echo 'Last error: ', json_last_error_msg(), PHP_EOL, PHP_EOL;
 ?>
 ]]>
     </programlisting>
@@ -275,16 +291,16 @@ array(1) {
     ["French"]=>
     array(2) {
       [0]=>
-      string(2) "Un"
+      string(3) "Une"
       [1]=>
       string(7) "Janvier"
     }
   }
 }
-Dernière erreur : JSON_ERROR_NONE
+Last error: No error
 
 NULL
-Dernière erreur : JSON_ERROR_DEPTH
+Last error: Maximum stack depth exceeded
 ]]>
     </screen>
    </example>
