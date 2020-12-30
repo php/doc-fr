@@ -1,6 +1,6 @@
 $Revision: 331053 $
 
-But : Ce fichier à pour but de définir les règles à respecter lors de vos traductions/mises à jour de fichiers.
+But : Ce fichier a pour but de dÃ©finir les rÃ¨gles Ã  respecter lors de vos traductions/mises Ã  jour de fichiers.
 
 Structure :
 
@@ -15,7 +15,7 @@ VIII - Orthographe et relectures
 
 I - Indentation :
 
-Le pas à respecter pour l'indentation est de 1. Exemple :
+Le pas Ã  respecter pour l'indentation est de 1. Exemple :
 <note>
 _<para>
 __<example>
@@ -25,89 +25,89 @@ __</example>
 _</para>
 </note>
 
-Le caractère d'indentation est un espace (aucune tabulation n'est admise dans les fichiers .xml)
+Le caractÃ¨re d'indentation est un espace (aucune tabulation n'est admise dans les fichiers .xml)
 
 
 
 II - Coding standards :
 
-Le groupe de documentation PHP a choisi d'utiliser les coding standards de PEAR, vous les trouverez ici : 
+Le groupe de documentation PHP a choisi d'utiliser les coding standards de PEAR, vous les trouverez ici :
   http://pear.php.net/manual/fr/standards.php
 Merci donc de les lire et de les appliquer.
 
-Le code source PHP commence à la colonne zéro de l'exemple :
+Le code source PHP commence Ã  la colonne zÃ©ro de l'exemple :
 
 <?php
 ca_commence_ici(); // bien
   ca_commence_ici(); // pas bien
 ?>
 
-On nottera aussi qu'on privilégie les echo à print (echo sans parenthèses).
-Tous le code est sensé être compatible avec error_reporting(E_ALL) et register_globals = Off.
+On notera aussi qu'on privilÃ©gie les echo Ã  print (echo sans parenthÃ¨ses).
+Tout le code est sensÃ© Ãªtre compatible avec error_reporting(E_ALL) et register_globals = Off.
 
 
 
 III - Revision tracking.
 
-Vers la fin février, la documentation française a adopté la méthode de Revision Tracking par balises :
+Vers la fin fÃ©vrier, la documentation franÃ§aise a adoptÃ© la mÃ©thode de Revision Tracking par balises :
    http://fr.php.net/manual/howto/translation-revtrack.html (9.4.2).
 
-Dans un premier temps, nous avons rajouté la balise suivante dans tous les fichiers :
+Dans un premier temps, nous avons rajoutÃ© la balise suivante dans tous les fichiers :
 <!-- EN-Revision: 1.1 Maintainer: nobody Status: partial -->
 
-Pourquoi avons-nous fais cela ?
+Pourquoi avons-nous fait cela ?
 
-L'adoption de cette méthode permet de mieux suivre les différences entre la 
-documentation anglaise et française. 
-Vous pourrez le constater en utilisant le script revcheck.php (dans 
+L'adoption de cette mÃ©thode permet de mieux suivre les diffÃ©rences entre la
+documentation anglaise et franÃ§aise.
+Vous pourrez le constater en utilisant le script revcheck.php (dans
 phpdoc-fr/scripts/) ou en visitant http://doc.php.net/php/fr/revcheck.php
 
 
 
 IV - Commentaires dans les fichiers
 
-Les seuls commentaires qui doivent figurer en début de fichier sont :
+Les seuls commentaires qui doivent figurer en dÃ©but de fichier sont :
 
 <!-- $Revision: 331053 $ -->
 <!-- EN-Revision: 1.5 Maintainer: XXXX Status: YYYYY -->
 <!-- Reviewed: ZZZ -->
 
-Le dernier tag permet de spécifier si le document a été relu ou non. ZZZ vaut 'yes' s'il l'a été, 'no' sinon.
+Le dernier tag permet de spÃ©cifier si le document a Ã©tÃ© relu ou non. ZZZ vaut 'yes' s'il l'a Ã©tÃ©, 'no' sinon.
 
-Et bien sûr, les commentaires des traducteurs (<!-- ne touchez pas ce fichier svp, utilisateur -->)
+Et bien sÃ»r, les commentaires des traducteurs (<!-- ne touchez pas ce fichier svp, utilisateur -->)
 
 
 
 V - Commits et messages de log
 
-Essayez (dans la mesure du possible) de commiter répertoire par répertoire.
+Essayez (dans la mesure du possible) de commiter rÃ©pertoire par rÃ©pertoire.
 Dans fr/reference/ commitez extension par extension.
 
 En ce qui concerne les messages de logs pour les commits, on essayera de :
- - faire des messages en anglais (au cas où jamais un non-francophone a besoin de comprendre les modifications)
- - faire des messages explicites (ne pas mettre "typo" quand on rajoute du texte..)
+ - faire des messages en anglais (au cas oÃ¹ jamais un non-francophone a besoin de comprendre les modifications)
+ - faire des messages explicites (ne pas mettre "typo" quand on rajoute du texte...)
 
-Bon, évidement, on n'est pas chez les scouts, les écarts seront tolérés.
+Bon, Ã©videment, on n'est pas chez les scouts, les Ã©carts seront tolÃ©rÃ©s.
 
 
 
 VI - Commandes utiles
 
-(On suppose par la suite qu'on est d'office dans le répertoire racine du module de la doc française)
+(On suppose par la suite qu'on est d'office dans le rÃ©pertoire racine du module de la doc franÃ§aise)
 Voici quelques commandes utiles lors de vos traductions/commits :
 
 1 - Commiter de grosses modifications dans fr/reference/
-si vous avez modifié plusieurs fichiers dans plusieurs extensions :
+si vous avez modifiÃ© plusieurs fichiers dans plusieurs extensions :
 
 cd reference
 for i in $(ls); do cvs ci -m "message de log" $i; done
 
 2 - Tester syntaxiquement tous les exemples sous fr/reference :
 
-Ici, on va lancer une analyse syntaxique des tous les fichiers dans
-les répertoires "functions" de fr/reference/. La technique est simple,
-on configure short_open_tag à Off en ligne de commande pour que PHP n'analyse
-que les exemples commençant par <?php, puis on lance la moulinette :
+Ici, on va lancer une analyse syntaxique de tous les fichiers dans
+les rÃ©pertoires "functions" de fr/reference/. La technique est simple,
+on configure short_open_tag Ã  Off en ligne de commande pour que PHP n'analyse
+que les exemples commenÃ§ant par <?php, puis on lance la moulinette :
 
 cd reference
 for i in $(find -name *.xml); do php -d "short_open_tag=Off" -l $i; done > syntax.txt
@@ -123,9 +123,9 @@ Voir le fichier TRADUCTIONS.txt
 
 VIII - Orthographe et relectures
 
-Afin d'avoir un manuel en bon français, nous avons des relecteurs.
+Afin d'avoir un manuel en bon franÃ§ais, nous avons des relecteurs.
 Les relecteurs ne font presque jamais de traductions (ils ne changent jamais le tag EN-Revision)
 Ils doivent par contre changer (ou ajouter) le tag <!-- Reviewed: no/yes -->
-Quand un relecteur valide un document, il doit passer la valeur de Reviewed à "yes".
-Quand un traducteur met à jour un fichier, il doit passer la valeur de Reviewed à "no".
-Nous mettrons bientôt à disposition une interface graphique permettant aux relecteurs de voir les fichiers à valider.
+Quand un relecteur valide un document, il doit passer la valeur de Reviewed Ã  "yes".
+Quand un traducteur met Ã  jour un fichier, il doit passer la valeur de Reviewed Ã  "no".
+Nous mettrons bientÃ´t Ã  disposition une interface graphique permettant aux relecteurs de voir les fichiers Ã  valider.
