@@ -25,7 +25,7 @@ __</example>
 _</para>
 </note>
 
-Le caractère d'indentation est un espace (aucune tabulation n'est admise dans les fichiers .xml)
+Le caractère d'indentation est une espace (aucune tabulation n'est admise dans les fichiers .xml)
 
 
 
@@ -43,7 +43,7 @@ ca_commence_ici(); // bien
 ?>
 
 On notera aussi qu'on privilégie les echo à print (echo sans parenthèses).
-Tout le code est sensé être compatible avec error_reporting(E_ALL) et register_globals = Off.
+Tout le code est censé être compatible avec error_reporting(E_ALL) et register_globals = Off.
 
 
 
@@ -84,10 +84,10 @@ Essayez (dans la mesure du possible) de commiter répertoire par répertoire.
 Dans fr/reference/ commitez extension par extension.
 
 En ce qui concerne les messages de logs pour les commits, on essayera de :
- - faire des messages en anglais (au cas où jamais un non-francophone a besoin de comprendre les modifications)
+ - faire des messages en anglais (au cas où un non-francophone a besoin de comprendre les modifications)
  - faire des messages explicites (ne pas mettre "typo" quand on rajoute du texte...)
 
-Bon, évidement, on n'est pas chez les scouts, les écarts seront tolérés.
+Bon, évidemment, on n'est pas chez les scouts, les écarts seront tolérés.
 
 
 
