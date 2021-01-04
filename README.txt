@@ -25,7 +25,7 @@ __</example>
 _</para>
 </note>
 
-Le caractère d'indentation est une espace (aucune tabulation n'est admise dans les fichiers .xml)
+Le caractère d'indentation est l'espace (aucune tabulation n'est admise dans les fichiers .xml)
 
 
 
