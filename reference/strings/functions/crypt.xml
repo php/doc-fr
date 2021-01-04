@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7f569e1f175adf1fbd0e462eba8d6bc82214c939 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 5453bb7d88a586ef1e5f2bb01dd9f1a7540af348 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
-
 <refentry xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://docbook.org/ns/docbook" xml:id="function.crypt">
  <refnamediv>
   <refname>crypt</refname>
@@ -17,19 +16,18 @@
   &reftitle.description;
   <methodsynopsis>
    <type>string</type><methodname>crypt</methodname>
-   <methodparam><type>string</type><parameter>str</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>salt</parameter></methodparam>
+   <methodparam><type>string</type><parameter>string</parameter></methodparam>
+   <methodparam><type>string</type><parameter>salt</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Retourne la chaîne <parameter>str</parameter> chiffrée avec l'algorithme
-   standard Unix <abbrev>DES</abbrev>, ou bien un des algorithmes disponibles
-   sur la machine.
+   <function>crypt</function> retournera une chaîne haché utilisant l'algorithme
+   standard d'Unix basé sur <abbrev>DES</abbrev>, ou un algorithme alternatif.
   </para>
   <para>
    Le paramètre <parameter>salt</parameter> est optionnel.
-   Cependant, <function>crypt</function> crée un hash faible
-   sans paramètre <parameter>salt</parameter>. PHP 5.6 et suivants lancent
-   une alerte de niveau E_NOTICE sans ce paramètre.
+   Cependant, <function>crypt</function> crée un hash faible sans le
+   <parameter>salt</parameter>, et lève une erreur <constant>E_NOTICE</constant>
+   sans celui-ci.
    Assurez-vous de spécifier un salt assez solide pour une meilleure sécurité.
   </para>
   <para>
@@ -41,13 +39,8 @@
    <function>password_hash</function> est fortement encouragée.
   </para>
   <para>
-   Certains systèmes supportent plus d'un type de hachage. En fait,
-   il arrive que le chiffrement DES standard soit remplacé par un
-   algorithme de chiffrement MD5. Le choix du type de hachage est
-   effectué en se basant sur la valeur du <parameter>salt</parameter>.
-   À l'installation, PHP détermine les possibilités de
-   la fonction <function>crypt</function>, et acceptera des <parameter>salt</parameter>
-   pour d'autres types de chiffrements. Si aucun <parameter>salt</parameter>
+   Le type de hash est déclenché par l'argument <parameter>salt</parameter>.
+   Si aucun <parameter>salt</parameter>
    n'est fourni, PHP va en générer deux caractères (DES), à moins que le
    système par défaut soit MD5, auquel cas un <parameter>salt</parameter>
    compatible MD5 sera généré. PHP définit une constante appelée
@@ -58,15 +51,13 @@
    <function>crypt</function>, lorsqu'elle est utilisée avec
    le chiffrement standard DES, retourne le <parameter>salt</parameter>
    dans les deux premiers caractères de la chaîne retournée. Elle
-   n'utilise que les 8 premiers caractères de <parameter>str</parameter>,
+   n'utilise que les 8 premiers caractères de <parameter>string</parameter>,
    ce qui fait que toutes les chaînes plus longues, qui ont les mêmes
    premiers 8 octets retourneront le même résultat (tant que le
    <parameter>salt</parameter> est toujours le même).
   </para>
   <simpara>
-   Sur les systèmes où <function>crypt</function> supporte plusieurs types de
-   hachages, les constantes suivantes sont mises à 0 ou 1,
-   suivant que le type correspondant est disponible :
+   Les types de hash suivant sont supportés :
   </simpara>
   <itemizedlist>
    <listitem>
@@ -99,16 +90,15 @@
      et 22 caractères depuis l'alphabet "./0-9A-Za-z". L'utilisation
      de caractères en dehors de cette classe dans le salt fera que la fonction crypt()
      retournera une chaîne vide (de longueur 0). Le paramètre à 2 chiffres est le logarithme
-     base-2 du compteur d'itération pour l'algorithme de hachage basé sur Blowfish sous jacent et
+     base-2 du compteur d'itération pour l'algorithme de hachage basé sur Blowfish sous jasant et
      doivent être dans l'intervalle 04-31. De la même façon, si vous utilisez une valeur en dehors
      de cet intervalle, la fonction crypt() échouera.
-     Les versions de PHP antérieures à la version 5.3.7 ne supportent que
-     "$2a$" comme préfixe salt : PHP 5.3.7 a introduit deux nouveaux préfixes
-     pour résoudre une faille de sécurité dans l'implémentation de Blowfish.
+
+     Les hashes "$2x$" sont potentiellement faible; les hashes "$2a$" sont
+     compatible et atténue cette faiblesse. Pour de nouveaux hashes, "$2y$"
+     devrait être utilisé.
      Référez-vous à <link xlink:href="&url.crypt.blowfish;">ce document</link>
-     pour la totalité des détails de la correction de cette faille, mais pour résumer,
-     les développeurs prévoient uniquement l'utilisation de "$2y$" à la place de
-     "$2a$" pour les versions supérieures à 5.3.7 de PHP.
+     pour la totalité des détails de la correction de cette faille.
     </simpara>
    </listitem>
    <listitem>
@@ -134,12 +124,6 @@
     </simpara>
    </listitem>
   </itemizedlist>
-  <note>
-   <para>
-    Depuis PHP 5.3.0, PHP dispose de sa propre implémentation, et l'utilisera
-    si le système ne dispose pas de fonction crypt, ou de certains algorithmes.
-   </para>
-  </note>
  </refsect1>
  
  <refsect1 role="parameters">
@@ -147,7 +131,7 @@
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>str</parameter></term>
+     <term><parameter>string</parameter></term>
      <listitem>
       <para>
        La chaîne à hacher.
@@ -155,7 +139,7 @@
       <caution>
        <para>
         Si vous utilisez l'algorithme <constant>CRYPT_BLOWFISH</constant>,
-        le résultat du paramètre <parameter>str</parameter> sera tronqué
+        le résultat du paramètre <parameter>string</parameter> sera tronqué
         à une longueur maximale de 72 caractères.
        </para>
       </caution>
@@ -183,13 +167,35 @@
   </para>
   <warning>
    <simpara>
-    Lors de la validation des mots de passe, une fonction de comparaison de chaînes
-    qui n'est pas vulnérable aux attaques temporelles doit être utilisée
-    pour comparer la sortie de la fonction <function>crypt</function>
-    au hash précédemment connu. PHP 5.6 et suivants fournit la fonction
-    <function>hash_equals</function> pour ceci.
+    Lors de la validation des mots de passe, une fonction de comparaison de
+    chaînes qui n'est pas vulnérable aux attaques temporelles doit être utilisée
+    pour comparer la sortie de la fonction <function>crypt</function> au hash
+    précédemment connu.
+    PHP fournit <function>hash_equals</function> pour ceci.
    </simpara>
   </warning>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>8.0.0</entry>
+      <entry>
+       Le <parameter>salt</parameter> n'est plus optionnel.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
  </refsect1>
 
  <refsect1 role="examples">
@@ -200,7 +206,7 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-// laissons le salt initialisé par PHP
+// laissons le salt être automatiquement généré ; non recommandé
 $hashed_password = crypt('mypassword');
 
 /*
@@ -227,7 +233,7 @@ if (hash_equals($hashed_password, crypt($user_input, $hashed_password))) {
 // Définition du mot de passe
 $password = 'mypassword';
 
-// Récupération du hash, on laisse le salt se générer automatiquement
+// Récupération du hash, on laisse le salt se générer automatiquement ; non recommandé
 $hash = crypt($password);
 ?>
 ]]>
@@ -242,31 +248,26 @@ $hash = crypt($password);
 <?php
 /* Ces salts ne sont que pour l'exemple, et ne doivent pas être utilisés
    dans votre application. Vous devriez générer un salt distinct,
-   correctement formatté pour chaque mot de passe.
+   correctement formaté pour chaque mot de passe.
 */
-if (CRYPT_STD_DES == 1) {
-    echo 'DES standard : ' . crypt('rasmuslerdorf', 'rl') . "\n";
-}
-
-if (CRYPT_EXT_DES == 1) {
-    echo 'DES étendu : ' . crypt('rasmuslerdorf', '_J9..rasm') . "\n";
-}
-
-if (CRYPT_MD5 == 1) {
-    echo 'MD5 :          ' . crypt('rasmuslerdorf', '$1$rasmusle$') . "\n";
-}
-
-if (CRYPT_BLOWFISH == 1) {
-    echo 'Blowfish :     ' . crypt('rasmuslerdorf', '$2a$07$usesomesillystringforsalt$') . "\n";
-}
-
-if (CRYPT_SHA256 == 1) {
-    echo 'SHA-256 :      ' . crypt('rasmuslerdorf', '$5$rounds=5000$usesomesillystringforsalt$') . "\n";
-}
-
-if (CRYPT_SHA512 == 1) {
-    echo 'SHA-512 :      ' . crypt('rasmuslerdorf', '$6$rounds=5000$usesomesillystringforsalt$') . "\n";
-}
+echo 'Standard DES: ',
+    crypt('rasmuslerdorf', 'rl'),
+    "\n";
+echo 'Extended DES: ',
+    crypt('rasmuslerdorf', '_J9..rasm'),
+    "\n";
+echo 'MD5:          ',
+    crypt('rasmuslerdorf', '$1$rasmusle$'),
+    "\n";
+echo 'Blowfish:     ',
+    crypt('rasmuslerdorf', '$2a$07$usesomesillystringforsalt$'),
+    "\n";
+echo 'SHA-256:      ',
+    crypt('rasmuslerdorf', '$5$rounds=5000$usesomesillystringforsalt$'),
+    "\n";
+echo 'SHA-512:      ',
+    crypt('rasmuslerdorf', '$6$rounds=5000$usesomesillystringforsalt$'),
+    "\n";
 ?>
 ]]>
     </programlisting>
@@ -276,7 +277,7 @@ if (CRYPT_SHA512 == 1) {
 DES standard : rl.3StKT.4T8M
 DES étendu : _J9..rasmBYk8r9AiWNc
 MD5 :          $1$rasmusle$rISCgZzpwk3UhDidwXvin0
-Blowfish :     $2a$07$usesomesillystringfore2uDLvp1Ii2e./U9C8sBjqp8I90dH6hi
+Blowfish :     $2y$07$usesomesillystringfore2uDLvp1Ii2e./U9C8sBjqp8I90dH6hi
 SHA-256 :      $5$rounds=5000$usesomesillystri$KqJWpanXZHKq2BOB43TSaYhEWsQ1Lr5QNyPCDH/Tp.6
 SHA-512 :      $6$rounds=5000$usesomesillystri$D4IrlXatmP7rx3P3InaxBeoomnAihCKRVQP22JZ6EY47Wc6BkroIuUUBOov1i.S5KPgErtP/EN5mcO.ChWQW21
 ]]>
@@ -302,14 +303,12 @@ SHA-512 :      $6$rounds=5000$usesomesillystri$D4IrlXatmP7rx3P3InaxBeoomnAihCKRV
     <member><function>hash_equals</function></member>
     <member><function>password_hash</function></member>
     <member><function>md5</function></member>
-    <member>L'extension <link linkend="ref.mcrypt">Mcrypt</link></member>
     <member>La page de manuel Unix de la fonction crypt pour plus d'informations</member>
    </simplelist>
   </para>
  </refsect1>
  
 </refentry>
-
 <!-- Keep this comment at the end of the file
 Local variables:
 mode: sgml
