@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: b95d28e6ec86e4a71e012737d36ebdc1cf009180 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: be526864c9777106cd78a517628847b60743e2d4 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
-
 <refentry xml:id="mysqli.construct" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>mysqli::__construct</refname>
@@ -55,10 +54,12 @@
      <term><parameter>host</parameter></term>
      <listitem>
       <para>
-       Peut être un nom d'hôte ou une adresse IP. Si vous passez
-       la valeur &null; ou la chaîne "localhost" à ce paramètre, l'hôte
-       local est sous-entendu. Lorsque c'est possible, les sockets
-       seront utilisées au lieu du protocole TCP/IP.
+       Peut être un nom d'hôte ou une adresse IP.
+       L'hôte local est présumé si la valeur &null; ou la chaîne "localhost"
+       est passée à ce paramètre.
+       Si possible, les pipes seront utilisé à la place du protocole TCP/IP.
+       Le protocol TCP/IP est utilisé si un nom d'hôte et numéro de port sont
+       fournis ensemble, par exemple <literal>localhost:3308</literal>.
       </para>
       <para>
        Préfixer l'hôte par <literal>p:</literal> ouvre une connexion persistante
@@ -127,92 +128,111 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne un objet qui représente la connexion au serveur MySQL,
+   <methodname>mysqli::__construct</methodname> retourne toujours un objet qui représente la connexion au serveur MySQL,
+   peut importe que ceci est réussi ou pas.
+  </para>
+  <para>
+   <function>mysqli_connect</function> retourne un objet qui représente la connexion au serveur MySQL,
    &return.falseforfailure;.
+  </para>
+ </refsect1>
+
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <para>
+   Si <constant>MYSQLI_REPORT_STRICT</constant> est activé et qu'une tentative de connexion
+   à la base de données demandé échoue, une <classname>mysqli_sql_exception</classname> est lancé.
   </para>
  </refsect1>
 
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>Exemple avec <methodname>mysqli::__construct</methodname></title>
+   <title>Exemple <methodname>mysqli::__construct</methodname></title>
    <para>&style.oop;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
+/* Vous devriez toujours activer le rapport d'erreur pour mysqli avant une tentative de connexion */
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli('localhost', 'my_user', 'my_password', 'my_db');
-
-/*
- * Ceci est le style POO "officiel"
- * MAIS $connect_error était erroné jusqu'en PHP 5.2.9 et 5.3.0.
- */
-if ($mysqli->connect_error) {
-    die('Erreur de connexion (' . $mysqli->connect_errno . ') '
-            . $mysqli->connect_error);
-}
-
-/*
- * Utilisez cette syntaxe de $connect_error si vous devez assurer
- * la compatibilité avec les versions de PHP avant 5.2.9 et 5.3.0.
- */
-if (mysqli_connect_error()) {
-    die('Erreur de connexion (' . mysqli_connect_errno() . ') '
-            . mysqli_connect_error());
-}
-
-echo 'Succès... ' . $mysqli->host_info . "\n";
-
-$mysqli->close();
-?>
-]]>
-   </programlisting>
-   <para>&style.oop; when extending mysqli class</para>
-   <programlisting role="php">
-<![CDATA[
-<?php
-
-class foo_mysqli extends mysqli {
-    public function __construct($host, $user, $pass, $db) {
-        parent::__construct($host, $user, $pass, $db);
-
-        if (mysqli_connect_error()) {
-            die('Erreur de connexion (' . mysqli_connect_errno() . ') '
-                    . mysqli_connect_error());
-        }
-    }
-}
-
-$db = new foo_mysqli('localhost', 'my_user', 'my_password', 'my_db');
-
-echo 'Succès... ' . $db->host_info . "\n";
-
-$db->close();
-?>
+/* Définir le jeu de caractère désiré après avoir établie une connexion */
+$mysqli->set_charset('utf8mb4');
+printf("Success... %s\n", $mysqli->host_info);
 ]]>
    </programlisting>
    <para>&style.procedural;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
-$link = mysqli_connect('localhost', 'my_user', 'my_password', 'my_db');
-
-if (!$link) {
-    die('Erreur de connexion (' . mysqli_connect_errno() . ') '
-            . mysqli_connect_error());
-}
-
-echo 'Succès... ' . mysqli_get_host_info($link) . "\n";
-
-mysqli_close($link);
-?>
+/* Vous devriez toujours activer le rapport d'erreur pour mysqli avant une tentative de connexion */
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = mysqli_connect('localhost', 'my_user', 'my_password', 'my_db');
+/* Définir le jeu de caractère désiré après avoir établie une connexion */
+mysqli_set_charset($mysqli, 'utf8mb4');
+printf("Success... %s\n", mysqli_get_host_info($mysqli));
 ]]>
    </programlisting>
-   &examples.outputs;
+   &examples.outputs.similar;
    <screen>
 <![CDATA[
-Succès... MySQL host info: localhost via TCP/IP
+Success... localhost via TCP/IP
 ]]>
    </screen>
+  </example>
+  <example>
+   <title>Étendre la classe mysqli</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class FooMysqli extends mysqli {
+    public function __construct($host, $user, $pass, $db, $port, $socket, $charset) {
+        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+        parent::__construct($host, $user, $pass, $db, $port, $socket);
+        $this->set_charset($charset);
+    }
+}
+$db = new FooMysqli('localhost', 'my_user', 'my_password', 'my_db', 3306, null, 'utf8mb4');
+]]>
+   </programlisting>
+  </example>
+  <example>
+   <title>Gestion d'erreur manuelle</title>
+   <para>Si le rapport d'erreur est désactivé, le développeur est responsable pour vérifier et gérer les échecs</para>
+   <para>&style.oop;</para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+error_reporting(0);
+mysqli_report(MYSQLI_REPORT_OFF);
+$mysqli = new mysqli('localhost', 'my_user', 'my_password', 'my_db');
+if ($mysqli->connect_errno) {
+    throw new RuntimeException('mysqli connection error: ' . $mysqli->connect_error);
+}
+/* Définir le jeu de caractère désiré après avoir établie une connexion */
+$mysqli->set_charset('utf8mb4');
+if ($mysqli->errno) {
+    throw new RuntimeException('mysqli error: ' . $mysqli->error);
+}
+]]>
+   </programlisting>
+   <para>&style.procedural;</para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+error_reporting(0);
+mysqli_report(MYSQLI_REPORT_OFF);
+$mysqli = mysqli_connect('localhost', 'my_user', 'my_password', 'my_db');
+if (mysqli_connect_errno()) {
+    throw new RuntimeException('mysqli connection error: ' . mysqli_connect_error());
+}
+/* Définir le jeu de caractère désiré après avoir établie une connexion */
+mysqli_set_charset($mysqli, 'utf8mb4');
+if (mysqli_errno($mysqli)) {
+    throw new RuntimeException('mysqli error: ' . mysqli_error($mysqli));
+}
+]]>
+   </programlisting>
   </example>
  </refsect1>
 
@@ -221,8 +241,8 @@ Succès... MySQL host info: localhost via TCP/IP
   &mysqli.charset.note;
   <note>
    <para>
-    Uniquement pour la syntaxe orientée objet : pour vérifier si la 
-    connexion a échoué, utilisez la fonction 
+    &style.oop; uniquement : si la connexion a échoué, un objet est quand même retourné.
+    Pour vérifier si la connexion a échoué, utilisez soit la fonction 
     <function>mysqli_connect_error</function> ou la propriété 
     <link linkend="mysqli.connect-error">mysqli->connect_error</link>
     comme dans l'exemple ci-dessus.
@@ -266,7 +286,6 @@ Succès... MySQL host info: localhost via TCP/IP
  </refsect1>
 
 </refentry>
-
 <!-- Keep this comment at the end of the file
 Local variables:
 mode: sgml
