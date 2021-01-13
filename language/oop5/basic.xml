@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 4528db2d91279a8f120bacfd84e48f7e2281d923 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
-
+<!-- EN-Revision: a9edd62d087ab1eb6292c795b7256e14ff9f1234 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
  <sect1 xml:id="language.oop5.basic" xmlns="http://docbook.org/ns/docbook">
   <title>Syntaxe de base</title>
   <sect2 xml:id="language.oop5.basic.class">
@@ -44,86 +43,87 @@ class SimpleClass
 ]]>
     </programlisting>
    </example>
-   <para>    
+   <para>
     La pseudo-variable <varname>$this</varname> est disponible
     lorsqu'une méthode est appelée depuis un contexte objet.
-    <varname>$this</varname> est une référence à l'objet appelant (habituellement,
-    l'objet auquel la méthode appartient, mais ce peut être un autre objet si
-    la méthode est appelée de manière
-    <link linkend="language.oop5.static">statique</link> depuis le
-    contexte d'un autre objet).
-    À partir de PHP 7.0.0 appeler une méthode non statique statiquement depuis un
-    context incompatible résulte en $this étant indéfini à l'intérieur de la méthode.
-    Appeler une méthode non statique statiquement depuis un context incompatible a
-    été rendu obsolète à partir de PHP 5.6.0. À partir de PHP 7.0.0 appeler une
-    méthode non statique statiquement a été rendu obsolète généralement (même si
-    appelé depuis un contexte compatible). Antérieur à PHP 5.6.0 ce genre d'appel
-    déclenchaient déjà une notice stricte.
+    <varname>$this</varname> est une référence à l'objet appelant.
    </para>
-   <para>
+   <warning>
+    <para>
+     Appeler une méthode non-statique statiquement lance une
+     <classname>Error</classname>.
+     Antérieur à PHP 8.0.0, ceci générait une notice d'obsolescence,
+     et <varname>$this</varname> était indéfini.
+    </para>
     <example xml:id="language.oop5.basic.class.this">
      <title>Quelques exemples de la pseudo-variable <varname>$this</varname></title>
-     <simpara>
-      Nous assumerons que error_reporting est désactivé dans cet exemple ;
-      sinon le code suivant déclencherait des notices obsolète et stricte,
-      respectivement en fonction de la version de PHP.
-     </simpara>
      <programlisting role="php">
 <![CDATA[
 <?php
 class A
 {
-  function toto()
-  {
-    if (isset($this)) {
-      echo '$this est définie (';
-      echo get_class($this);
-      echo ")\n";
-    } else {
-      echo "\$this n'est pas définie.\n";
+    function foo()
+    {
+        if (isset($this)) {
+            echo '$this is defined (';
+            echo get_class($this);
+            echo ")\n";
+        } else {
+            echo "\$this is not defined.\n";
+        }
     }
-  }
 }
 
 class B
 {
-  function titi()
-  {
-    A::toto();
-  }
+    function bar()
+    {
+        A::foo();
+    }
 }
 
 $a = new A();
-$a->toto();
+$a->foo();
 
-A::toto();
+A::foo();
+
 $b = new B();
-$b->titi();
+$b->bar();
 
-B::titi();
+B::bar();
 ?>
 ]]>
      </programlisting>
-     &example.outputs.5;
-     <screen>
-<![CDATA[
-$this est définie (A)
-$this n'est pas définie.
-$this est définie (B)
-$this n'est pas définie.
-]]>
-     </screen>
      &example.outputs.7;
      <screen>
 <![CDATA[
-$this est définie (A)
-$this n'est pas définie.
-$this n'est pas définie.
-$this n'est pas définie.
+$this is defined (A)
+
+Deprecated: Non-static method A::foo() should not be called statically in %s  on line 27
+$this is not defined.
+
+Deprecated: Non-static method A::foo() should not be called statically in %s  on line 20
+$this is not defined.
+
+Deprecated: Non-static method B::bar() should not be called statically in %s  on line 32
+
+Deprecated: Non-static method A::foo() should not be called statically in %s  on line 20
+$this is not defined.
+]]>
+     </screen>
+     &example.outputs.8;
+     <screen>
+<![CDATA[
+$this is defined (A)
+
+Fatal error: Uncaught Error: Non-static method A::foo() cannot be called statically in %s :27
+Stack trace:
+#0 {main}
+  thrown in %s  on line 27
 ]]>
      </screen>
     </example>
-   </para>
+   </warning>
   </sect2>
 
   <sect2 xml:id="language.oop5.basic.new">
@@ -208,7 +208,7 @@ object(SimpleClass)#1 (1) {
     </screen>
    </example>
    <para>
-    PHP 5.3.0 a introduit de nouvelles manières de créer des objets :
+    Il est possible de créer une instance d'un objet de quelques manières différentes :
    </para>
    <example>
     <title>Créer de nouveaux objets</title>
@@ -249,7 +249,7 @@ bool(true)
    </example>
 
    <para>
-    PHP 5.4.0 introduit la possibilité d'accéder un membre d'un objet nouvellement
+    Il est possible d'accéder à un membre d'un objet nouvellement
     créé en une seule expression :
    </para>
    <example>
@@ -317,7 +317,7 @@ method
     Ceci signifie qu'appeler une <link linkend="functions.anonymous">fonction
     anonyme</link> qui a été assigné à une propriété n'est pas possible directement.
     Au lieu de cela, la propriété doit d'abord être affectée à une variable.
-    À partir de PHP 7.0.0 il est possible d'appeler ce genre de propriété directement
+    Il est possible d'appeler ce genre de propriété directement
     en la mettant entre parenthèses.
    </para>
    <example>
@@ -338,11 +338,6 @@ class Foo
 
 $obj = new Foo();
 
-// à partir de PHP 5.3.0:
-$func = $obj->bar;
-echo $func(), PHP_EOL;
-
-// alternativement, à partir de PHP 7.0.0:
 echo ($obj->bar)(), PHP_EOL;
 ]]>
     </programlisting>
@@ -358,13 +353,13 @@ echo ($obj->bar)(), PHP_EOL;
   <sect2 xml:id="language.oop5.basic.extends">
    <title>Le mot-clé <literal>extends</literal></title>
    <para>
-    Une classe peut hériter des méthodes et des membres d'une autre classe en
+    Une classe peut hériter des constantes, méthodes, et des propriétés d'une autre classe en
     utilisant le mot-clé <literal>extends</literal> dans la déclaration.
     Il n'est pas possible d'étendre plusieurs classes : une classe peut
     uniquement hériter d'une seule classe de base.
    </para>
    <para>
-    Les méthodes et membres hérités peuvent être surchargés en les redéclarant avec le
+    Les constantes, méthodes, et propriétés hérités peuvent être surchargés en les redéclarant avec le
     même nom que dans la classe parente. Cependant, si la classe parente a défini
     une méthode comme <link linkend="language.oop5.final">final</link>, alors celle-ci
     ne sera pas surchargeable. Il est possible d'accéder aux
