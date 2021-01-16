@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: a9edd62d087ab1eb6292c795b7256e14ff9f1234 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 4317fec7555dd42621f88162cc5068092e5c5cfb Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
  <sect1 xml:id="language.oop5.basic" xmlns="http://docbook.org/ns/docbook">
   <title>Syntaxe de base</title>
@@ -366,11 +366,6 @@ echo ($obj->bar)(), PHP_EOL;
     méthodes ou une propriétés statiques surchargées en y faisant référence avec l'opérateur
     <link linkend="language.oop5.paamayim-nekudotayim">parent::</link>.
    </para>
-   <para>
-    Lors de la surcharge de méthodes, la signature devrait rester la même ; sinon,
-    PHP génèrera une erreur de niveau <constant>E_STRICT</constant>. Ceci ne s'applique pas
-    au constructeur, qui accepte la surcharge avec des paramètres différents.
-   </para>
    <example>
     <title>Héritage simple d'une classe</title>
     <programlisting role="php">
@@ -399,6 +394,158 @@ une valeur par défaut
 ]]>
     </screen>
    </example>
+
+   <sect3 xml:id="language.oop.lsp">
+    <title>Règles de compatibilité de signature</title>
+    <para>
+     Lors de la surcharge d'une méthode, sa signature doit être compatible avec
+     la méthode parente. Sinon, une erreur fatale est émise, ou, antérieur à
+     PHP 8.0.0, une erreur de niveau <constant>E_WARNING</constant> est généré.
+     Une signature est compatible si elle respecte les règles de
+     <link linkend="language.oop5.variance">variance</link>, rend un paramètre
+     obligatoire optionnel, et si tout nouveau paramètre sont optionnels.
+     Ceci est connu sous le Principe de Substitution de Liskov
+     (Liskov Substitution Principle), ou simplement LSP.
+     Le <link linkend="language.oop5.decon.constructor">constructeur</link>,
+     et les méthodes <literal>private</literal> sont exclus de ces règles de
+     compatibilité des signatures, et par conséquent n'émettront pas d'erreur
+     fatale en cas de signature incompatible.
+    </para>
+    <example>
+     <title>Méthodes enfant compatibles</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+class Base
+{
+    public function foo(int $a) {
+        echo "Valid\n";
+    }
+}
+class Extend1 extends Base
+{
+    function foo(int $a = 5)
+    {
+        parent::foo($a);
+    }
+}
+class Extend2 extends Base
+{
+    function foo(int $a, $b = 5)
+    {
+        parent::foo($a);
+    }
+}
+$extended1 = new Extend1();
+$extended1->foo();
+$extended2 = new Extend2();
+$extended2->foo(1);
+]]>
+     </programlisting>
+     &example.outputs;
+     <screen>
+<![CDATA[
+Valid
+Valid
+]]>
+     </screen>
+    </example>
+
+    <para>
+     Les exemples suivant démontrent qu'une méthode enfant qui supprime un paramètre,
+     ou rend un paramètre optionnel obligatoire, n'est pas compatible avec la méthode parente.
+    </para>
+    <example>
+     <title>Erreur fatale quand une méthode enfant supprime un paramètre</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+class Base
+{
+    public function foo(int $a = 5) {
+        echo "Valid\n";
+    }
+}
+class Extend extends Base
+{
+    function foo()
+    {
+        parent::foo(1);
+    }
+}
+]]>
+     </programlisting>
+     &example.outputs.8.similar;
+     <screen>
+<![CDATA[
+Fatal error: Declaration of Extend::foo() must be compatible with Base::foo(int $a = 5) in /in/evtlq on line 13
+]]>
+     </screen>
+    </example>
+    <example>
+     <title>Erreur fatale quand une méthode enfant rend un paramètre optionnel obligatoire</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+class Base
+{
+    public function foo(int $a = 5) {
+        echo "Valid\n";
+    }
+}
+class Extend extends Base
+{
+    function foo(int $a)
+    {
+        parent::foo($a);
+    }
+}
+]]>
+     </programlisting>
+     &example.outputs.8.similar;
+     <screen>
+<![CDATA[
+Fatal error: Declaration of Extend::foo(int $a) must be compatible with Base::foo(int $a = 5) in /in/qJXVC on line 13
+]]>
+     </screen>
+    </example>
+
+    <warning>
+     <para>
+      Renommer un paramètre d'une méthode dans une classe enfant n'est pas
+      une incompatibilité de signature. Cependant, ceci est découragé car ceci
+      va résulter en une <classname>Error</classname> lors du runtime si les
+      <link linkend="functions.named-arguments">arguments nommées</link>
+      sont utilisés.
+     </para>
+     <example>
+      <title>Erreur lors de l'utilisation des arguments nommées et que les paramètres ont étaient renommée dans une classe enfant</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+class A {
+    public function test($foo, $bar) {}
+}
+class B extends A {
+    public function test($a, $b) {}
+}
+$obj = new B;
+// Pass parameters according to A::test() contract
+$obj->test(foo: "foo", bar: "bar"); // ERROR!
+]]>
+      </programlisting>
+      &example.outputs.similar;
+      <screen>
+<![CDATA[
+Fatal error: Uncaught Error: Unknown named parameter $foo in /in/XaaeN:14
+Stack trace:
+#0 {main}
+  thrown in /in/XaaeN on line 14
+]]>
+      </screen>
+     </example>
+    </warning>
+   </sect3>
   </sect2>
 
   <sect2 xml:id="language.oop5.basic.class.class">
