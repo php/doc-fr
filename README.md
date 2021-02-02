@@ -36,8 +36,8 @@ Pour construire la documentation il faut posséder à minimal les trois reposito
 
 ## 2: Construire la documentation
 
-Il est important de savoir construire la documentation pour s'assurer que les changements effectué
-ne casse pas le build, ce qui empêchera la publication de la dernière version de celle-ci sur php.net.
+Il est important de savoir construire la documentation pour s'assurer que les changements effectués
+ne cassent pas le build, ce qui empêchera la publication de la dernière version de celle-ci sur php.net.
 
 En s'imaginant qu'on se situe dans le dossier ``fr`` dans la structure de dossier suivante :
 
@@ -51,7 +51,7 @@ En s'imaginant qu'on se situe dans le dossier ``fr`` dans la structure de dossie
 
 Il suffit d'exécuter ``php ../base/configure.php --with-lang=fr``
 
-Si tout ce passe bien vous serez accueillie avec le message suivant :
+Si tout ce passe bien vous serez accueillis avec le message suivant :
 
 ```
 All good. Saving .manual.xml... done.
@@ -173,9 +173,9 @@ Pour proposer une modification vous devez passer par une pull request contre le 
 afin d'ouvrir une pull request.
 
 Si des remarques sont faites sur votre pull request suivez-les.
-Après que la pull request soit approuvé, faite un squash-rebase de votre pull request pour
+Après que la pull request soit approuvée, faite un squash-rebase de votre pull request pour
 que les modifications se trouve en un seul commit, ceci simplifie le travail pour la personne
-qui doit merge votre contribution sur le repository git officiel.
+qui doit merger votre contribution sur le repository git officiel.
 
 ### Utilisateur ayant un accès VCS (c.à.d un compte @php.net, avec du karma sur doc-fr)
 
@@ -188,7 +188,7 @@ Ne créer et pusher pas des branches différentes de ``master`` sur le repo git 
 
 ### Procédure pour merge une pull request GitHub dans git.php.net
 
-Comme GitHub est un miroir, il est nécessaire de merge manuellement les pulls requests.
+Comme GitHub est un miroir, il est nécessaire de merger manuellement les pulls requests.
 Pour l'exemple on va imaginer que le numéro de la pull request est ``99999``.
 
 La pull request se trouve donc à cette adresse : ``https://github.com/php/doc-fr/pull/99999``
@@ -202,7 +202,7 @@ curl https://patch-diff.githubusercontent.com/raw/php/doc-fr/pull/99999.patch | 
 ```
 
 Avant de push ce commit on va éditer le message du commit pour ajouter un lien bi-directionnel
-entre le commit et la pull request. Pour cella, ajouter dans le texte étendu du commit le texte suivant :
+entre le commit et la pull request. Pour cela, ajouter dans le texte étendu du commit le texte suivant :
 ``Closes GH-99999``
 
 Ceci, clôtura la PR automatiquement lors du commit et génèrera le lien bi-directionnel.
