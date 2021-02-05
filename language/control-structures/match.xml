@@ -1,108 +1,254 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7104ee97ced1768a3231588dfc0bc0d7eb1117ad Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
 
-<sect1 xml:id="control-structures.if" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+<sect1 xml:id="control-structures.match" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>match</title>
  <?phpdoc print-version-for="match"?>
  <para>
   L'élement de langage <literal>match</literal> dirige l'évaluation d'après une comparaison strict entre l'expression soumise et l'objet de la condition.
   Similaire à une instruction <literal>switch</literal>, <literal>match</literal> possède une expression à comparer avec plusieurs alternatives.
   Contrairement à <literal>switch</literal>, match évaluera la valeur un peut comme les structures conditionnelles ternaires.
-  Contrairement à <literal>switch</literal>, la condition est une comparaison à l'identique (===) plutôt qu'une comparaison d'égalité faible(==).
+  Contrairement à <literal>switch</literal>, la condition est une comparaison à l'identique (<code>===</code>) plutôt qu'une comparaison d'égalité faible(<code>==</code>).
   Les structures match sont disponibles à partir de PHP 8.0.0. 
+ </para>
 
-  Exemple #1 Structure d'un match
-  <informalexample>
-   <programlisting>
+ <example>
+  <title>Exemple #1 Structure d'une <literal>match</literal></title>
+  <programlisting role="php">
 <![CDATA[
 <?php
 $return_value = match (subject_expression) {
     object_condition => return_expression_1,
     object_condition_1, or_object_condition_2 => return_expression_2,
 };
-]]>
-   </programlisting>
-  </informalexample>
-
-Equivalent :
-<?php
-$return_value = NULL;
-if (subject_expression===object_condition) {
-    $return_value = return_expression1;
-} else {
-    if(subject_expression===object_condition_1) {
-        $return_value = return_expression_2;
-    } else {
-        if (subject_expression===or_object_condition_2) {
-            $return_value = return_expression_2;
-        } else {
-            // default => not defined
-            throw new Exception("Uncaught UnhandledMatchError: Unhandled match value of type string");
-        }
-    }
-}
 ?>
+]]>
+  </programlisting>
 
+  <note>
+   <simpara>
+    La valeur de retour d'une structure <literal>match</literal> est optionnel. 
+   </simpara>
+  </note>
+  <note>
+   <simpara>
+    Une structure <literal>match</literal> <emphasis>doit</emphasis> être terminé par le caractere de fin d'instruction <literal>;</literal>.
+   </simpara>
+  </note>
+ </example>
 
-Note: La valeur de retour d'une structure match est optionnel. 
-Note: Une structure match doit être terminé par le caractere ';'( fin d'instruction) .
-
- </para>
- <simpara>
-  Comme nous l'avons vu dans le paragraphe consacré aux
-  <link linkend="language.expressions">expressions</link>,
-  <replaceable>expression</replaceable> est convertie en sa valeur
-  booléenne. Si l'<replaceable>expression</replaceable> vaut
-  &true;, PHP exécutera l'<replaceable>instruction</replaceable> et
-  si elle vaut &false;, l'instruction sera ignorée. Plus de détails sur les valeurs
-  qui valent &false; sont disponibles dans la section
-  <link linkend="language.types.boolean.casting">Conversion en booléen</link>.
- </simpara>
  <para>
-  L'exemple suivant affiche la phrase <computeroutput>a est plus grand
-  que b</computeroutput> si <varname>$a</varname> est plus grand
-  que <varname>$b</varname> :
+  Une structure <literal>match</literal> est similaire à une instruction
+  <literal>switch</literal> mais possède quelques différences clé :
+  
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     A <literal>match</literal> arm compares values strictly (<code>===</code>) instead
+     of loosely as the switch statement does.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     A <literal>match</literal> expression returns a value.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     <literal>Match</literal> arms do not fall-through to later cases the way
+     <literal>switch</literal> statements do.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     A <literal>match</literal> expression must be exhaustive.
+    </simpara>
+   </listitem>
+  </itemizedlist>
+ </para>
+
+ <para>
+  As <literal>switch</literal> statements, <literal>match</literal>
+  expressions are executed match arm by match arm.
+  In the beginning, no code is executed.
+  The conditional expressions are only evaluated if all previous conditional
+  expressions failed to match the subject expression.
+  Only the return expression corresponding to the matching conditional
+  expression will be evaluated.
+  For example:
   <informalexample>
    <programlisting role="php">
 <![CDATA[
 <?php
-if ($a > $b)
-  echo "a est plus grand que b";
+$result = match ($x) {
+    foo() => ...,
+    $this->bar() => ..., // bar() isn't called if foo() === $x
+    $this->baz => beep(), // beep() isn't called unless $x === $this->baz
+    // etc.
+};
+?>
+]]>
+   </programlisting>
+  </informalexample>
+ </para>
+
+ <para>
+  <literal>match</literal> expression arms may contain multiple expressions
+  separated by a comma.  That is a logical OR, and is a short-hand for multiple
+  match arms with the same right-hand side.
+ </para>
+ <para>
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$result = match ($x) {
+    // This match arm:
+    $a, $b, $c => 5,
+    // Is equivalent to these three match arms:
+    $a => 5,
+    $b => 5,
+    $c => 5,
+};
 ?>
 ]]>
    </programlisting>
   </informalexample>
  </para>
  <para>
-  Souvent, vous voulez que plusieurs instructions soient exécutées après un
-  branchement conditionnel. Bien évidemment, il n'est pas obligatoire de répéter
-  l'instruction conditionnelle <literal>if</literal> autant de fois que vous
-  avez d'instructions à exécuter. À la place, vous pouvez rassembler toutes les
-  instructions dans un bloc. L'exemple suivant affiche <computeroutput>a
-  est plus grand que b</computeroutput>, si <varname>$a</varname> est plus grand
-  que <varname>$b</varname>, puis assigne la valeur de <varname>$a</varname>
-  à la variable <varname>$b</varname> :
+  A special case is the <literal>default</literal> pattern.
+  This pattern matches anything that wasn't previously matched.
+  For example:
   <informalexample>
    <programlisting role="php">
 <![CDATA[
 <?php
-if ($a > $b) {
-  echo "a est plus grand que b";
-  $b = $a;
-}
+$expressionResult = match ($condition) {
+    1, 2 => foo(),
+    3, 4 => bar(),
+    default => baz(),
+};
 ?>
 ]]>
    </programlisting>
   </informalexample>
+  <note>
+   <simpara>
+    Multiple default patterns will raise a
+    <constant>E_FATAL_ERROR</constant> error.
+   </simpara>
+  </note>
  </para>
- <simpara>
-  Vous pouvez imbriquer indéfiniment des instructions
-  <literal>if</literal> dans d'autres instructions <literal>if</literal>, ce qui
-  permet une grande flexibilité dans l'exécution d'une
-  partie de code suivant un grand nombre de conditions.
- </simpara>
+
+ <para>
+  A <literal>match</literal> expression must be exhaustive.  If the
+  subject expression is not handled by any match arm an
+  <classname>UnhandledMatchError</classname> is thrown.
+ </para>
+
+ <example>
+  <title>Example of an unhandled match expression</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+$condition = 5;
+
+try {
+    match ($condition) {
+        1, 2 => foo(),
+        3, 4 => bar(),
+    };
+} catch (\UnhandledMatchError $e) {
+    var_dump($e);
+}
+?>
+]]>
+  </programlisting>
+  &example.outputs;
+  <screen>
+<![CDATA[
+object(UnhandledMatchError)#1 (7) {
+  ["message":protected]=>
+  string(33) "Unhandled match value of type int"
+  ["string":"Error":private]=>
+  string(0) ""
+  ["code":protected]=>
+  int(0)
+  ["file":protected]=>
+  string(9) "/in/ICgGK"
+  ["line":protected]=>
+  int(6)
+  ["trace":"Error":private]=>
+  array(0) {
+  }
+  ["previous":"Error":private]=>
+  NULL
+}
+]]>
+  </screen>
+ </example>
+
+ <sect2>
+  <title>Using match expressions to handle non identity checks</title>
+  <para>
+   It is possible to use a <literal>match</literal> expression to handle
+   non-identity conditional cases by using <code>true</code> as the subject
+   expression.
+  </para>
+
+  <example>
+   <title>Using a generalized match expressions to branch on integer ranges</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$age = 23;
+
+$result = match (true) {
+    $age >= 65 => 'senior',
+    $age >= 25 => 'adult',
+    $age >= 18 => 'young adult',
+    default => 'kid',
+};
+
+var_dump($result);
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+string(11) "young adult"
+]]>
+   </screen>
+  </example>
+
+  <example>
+   <title>Using a generalized match expressions to branch on string content</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$text = 'Bienvenue chez nous';
+
+$result = match (true) {
+    str_contains($text, 'Welcome') || str_contains($text, 'Hello') => 'en',
+    str_contains($text, 'Bienvenue') || str_contains($text, 'Bonjour') => 'fr',
+    // ...
+};
+
+var_dump($result);
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+string(2) "fr"
+]]>
+   </screen>
+  </example>
+ </sect2>
 </sect1>
 
 <!-- Keep this comment at the end of the file
