@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: c1434c95fc666c20cdbd1e1d9a4183e0d11fb88c Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: ca5c477437fcb21680408bf7e0cc0424853e7907 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xml:id="mysqli-result.fetch-assoc" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -42,7 +42,7 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne un tableau associatif de chaînes représentant la prochaine
+   Retourne un tableau associatif de valeur représentant la prochaine
    ligne dans le jeu de résultats représenté par le paramètre
    <parameter>result</parameter>, où chaque clé du
    tableau représente le nom d'une colonne du résultat ou
@@ -62,69 +62,44 @@
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>&style.oop;</title>
+   <title>Exemple <methodname>mysqli_result::fetch_assoc</methodname></title>
+   <para>&style.oop;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", $mysqli->connect_error);
-    exit();
+$query = "SELECT Name, CountryCode FROM City ORDER BY ID DESC";
+
+$result = $mysqli->query($query);
+
+/* fetch associative array */
+while ($row = $result->fetch_assoc()) {
+    printf("%s (%s)\n", $row["Name"], $row["CountryCode"]);
 }
-
-$query = "SELECT Name, CountryCode FROM City ORDER by ID DESC LIMIT 50,5";
-
-if ($result = $mysqli->query($query)) {
-
-    /* Récupère un tableau associatif */
-    while ($row = $result->fetch_assoc()) {
-        printf ("%s (%s)\n", $row["Name"], $row["CountryCode"]);
-    }
-
-    /* Libération des résultats */
-    $result->free();
-}
-
-/* Fermeture de la connexion */
-$mysqli->close();
-?>
 ]]>
    </programlisting>
-  </example>
-  <example>
-   <title>&style.procedural;</title>
+   <para>&style.procedural;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
-$link = mysqli_connect("localhost", "my_user", "my_password", "world");
 
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = mysqli_connect("localhost", "my_user", "my_password", "world");
+
+$query = "SELECT Name, CountryCode FROM City ORDER BY ID DESC";
+
+$result = mysqli_query($mysqli, $query);
+
+/* fetch associative array */
+while ($row = mysqli_fetch_assoc($result)) {
+    printf("%s (%s)\n", $row["Name"], $row["CountryCode"]);
 }
-
-$query = "SELECT Name, CountryCode FROM City ORDER by ID DESC LIMIT 50,5";
-
-if ($result = mysqli_query($link, $query)) {
-
-    /* Récupère un tableau associatif */
-    while ($row = mysqli_fetch_assoc($result)) {
-        printf ("%s (%s)\n", $row["Name"], $row["CountryCode"]);
-    }
-
-    /* Libération des résultats */
-    mysqli_free_result($result);
-}
-
-/* Fermeture de la connexion */
-mysqli_close($link);
-?>
 ]]>
    </programlisting>
-   &examples.outputs;
+   &examples.outputs.similar;
    <screen>
 <![CDATA[
 Pueblo (USA)
@@ -136,42 +111,52 @@ Santa Clara (USA)
    </screen>
   </example>
   <example xml:id="mysqli-result.example.iterator">
-   <title>Exemple avec <classname>MySQLi_Result</classname> et l'utilisation d'un <classname>iterator</classname></title>
+   <title>Comparaison de l'usage de <classname>mysqli_result</classname> <classname>iterator</classname> et <methodname>mysqli_result::fetch_assoc</methodname></title>
+   <para>
+    <classname>mysqli_result</classname> peut être itéré en utilisant un &foreach;.
+    Le jeu de résultats sera toujours itéré à partir de la première ligne,
+    quel que soit la position actuelle.
+   </para>
    <programlisting role="php">
 <![CDATA[
 <?php
-$c = mysqli_connect('127.0.0.1','user', 'pass');
 
-// Utilisation d'itérateurs (support ajouté en PHP 5.4)
-foreach ( $c->query('SELECT user,host FROM mysql.user') as $row ) {
-    printf("'%s'@'%s'\n", $row['user'], $row['host']);
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
+
+$query = 'SELECT Name, CountryCode FROM City ORDER BY ID DESC';
+
+// Utilise un itérateur
+$result = $mysqli->query($query);
+foreach ($result as $row) {
+    printf("%s (%s)\n", $row["Name"], $row["CountryCode"]);
 }
 
 echo "\n==================\n";
 
-// Sans utiliser les itérateurs
-$result = $c->query('SELECT user,host FROM mysql.user');
+// N'utilise pas d'itérateur
+$result = $mysqli->query($query);
 while ($row = $result->fetch_assoc()) {
-    printf("'%s'@'%s'\n", $row['user'], $row['host']);
+    printf("%s (%s)\n", $row["Name"], $row["CountryCode"]);
 }
-
-?>
 ]]>
    </programlisting>
    &example.outputs.similar;
    <screen>
 <![CDATA[
-'root'@'192.168.1.1'
-'root'@'127.0.0.1'
-'dude'@'localhost'
-'lebowski'@'localhost'
+Pueblo (USA)
+Arvada (USA)
+Cape Coral (USA)
+Green Bay (USA)
+Santa Clara (USA)
 
 ==================
+Pueblo (USA)
+Arvada (USA)
+Cape Coral (USA)
+Green Bay (USA)
+Santa Clara (USA)
 
-'root'@'192.168.1.1'
-'root'@'127.0.0.1'
-'dude'@'localhost'
-'lebowski'@'localhost'
 ]]>
    </screen>
   </example>
