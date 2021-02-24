@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 783fbc2001b129f5f8956937e15e253969b8765c Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 12b1d4704ea448b55ec155619be1e50c0e67e9f9 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <!-- CREDITS: DAnnebicque -->
 <chapter xml:id="language.operators" xmlns="http://docbook.org/ns/docbook">
@@ -1908,9 +1908,9 @@ echo $foo ?? $bar ?? $baz ?? $qux; // sortie 1
  <sect1 xml:id="language.operators.errorcontrol">
   <title>Opérateur de contrôle d'erreur</title>
   <simpara>
-   PHP supporte un opérateur de contrôle d'erreur : c'est @.
+   PHP supporte un opérateur de contrôle d'erreur : l'arobase (<literal>@</literal>).
    Lorsque cet opérateur est ajouté en préfixe d'une
-   expression PHP, les messages d'erreur qui peuvent être
+   expression PHP, les diagnostics d'erreur qui peuvent être
    générés par cette expression seront ignorés.
   </simpara>
   <simpara>
@@ -1921,6 +1921,38 @@ echo $foo ?? $bar ?? $baz ?? $qux; // sortie 1
    qui devra retourner 0 lorsque l'appel qui a émis l'erreur
    était précédé d'un @.
   </simpara>
+
+  <para>
+   Si un gestionnaire d'erreur personnalisé est défini avec
+   <function>set_error_handler</function>, il sera quand même appelé même si
+   le diagnostic a été ignorée, de ce fait le gestionnaire d'erreur personnalisé
+   devrait appeler <function>error_reporting</function> et vérifier que
+   l'opérateur <literal>@</literal> a été utilisé de la manière suivante :
+
+   <informalexample>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+function my_error_handler($err_no, $err_msg, $filename, $linenum) {
+    if (!(error_reporting() & $err_no)) {
+        return false; // Ignoré
+    }
+    // ...
+}
+?>
+]]>
+    </programlisting>
+   </informalexample>
+  </para>
+
+  <warning>
+   <para>
+    Prior to PHP 8.0.0, the value of the severity passed to the custom error
+    handler was always <literal>0</literal> if the diagnostic was suppressed.
+    This is no longer the case as of PHP 8.0.0.
+   </para>
+  </warning>
+
   <simpara>
    Tous les messages d'erreur générés par l'expression est disponible
    dans l'élément <literal>"message"</literal> du tableau retourné par
@@ -1947,23 +1979,25 @@ $mon_fichier = @file ('non_persistent_file') or
   </para>
   <note>
    <simpara>
-    L'opérateur @ ne fonctionne qu'avec les
-    <link linkend="language.expressions">expressions</link>. La règle
-    générale de fonctionnement est la suivante : si vous pouvez prendre
-    la valeur de quelque chose, vous pouvez le préfixer avec @. Par exemple,
-    vous pouvez ajouter @ aux variables, fonctions, à
-    <function>include</function>,
-    aux constantes, etc. Vous ne pourrez pas le faire avec des éléments de
-    langage tels que les classes, <literal>if</literal> et &foreach;, etc.
+    L'opérateur <literal>@</literal> ne fonctionne qu'avec les
+    <link linkend="language.expressions">expressions</link>.
+    La règle générale est : si il est possible de prendre la valeur de quelque
+    chose alors on peut préfixé l'opérateur <literal>@</literal> à celui-ci.
+    Par exemple, il peut être préfixé devant les variables, appels de fonctions,
+    certain appels aux constructions de langages (e.g.
+    <function>include</function>), etc.
+    Il ne peut pas être préfixé devant les définitions de fonctions ou de classes,
+    ou structure conditionnelles tel que <literal>if</literal> et &foreach;, etc.
    </simpara>
   </note>
   <warning>
    <para>
-    En fait, l'opérateur "@" va aussi désactiver les rapports
-    d'erreurs critiques, qui stoppent l'exécution du script. Entre autres,
-    si vous utilisez "@" pour supprimer les erreurs de certaines
-    fonctions, et que cette fonction n'existe pas, ou qu'elle
-    a été mal orthographiée, vous n'aurez aucune indication.
+    Antérieur à PHP 8.0.0, il était possible pour l'opérateur
+    <literal>@</literal> de désactiver les erreurs critiques qui terminait
+    l'exécution du script.
+    Par exemple, préfixer <literal>@</literal> à un appel d'une fonction qui
+    n'existe pas, en étant indisponible ou mal orthographiée, causait le script
+    à se terminer sans aucune indication pourquoi.
    </para>
   </warning>
 
