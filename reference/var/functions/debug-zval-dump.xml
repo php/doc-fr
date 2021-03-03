@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 0c9c2dd669fe9395eaa73d487fbd160f9057429a Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
-
+<!-- EN-Revision: d08d2e887fdc229f16748df96450c9b68c9a3076 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 <refentry xml:id="function.debug-zval-dump" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>debug_zval_dump</refname>
-  <refpurpose>Extrait une représentation sous forme de chaîne d'une valeur interne à Zend
+  <refpurpose>Extrait une représentation sous forme de chaîne de la structure interne d'une zval
   pour affichage</refpurpose>
  </refnamediv>
  <refsect1 role="description">
@@ -17,8 +16,10 @@
    <methodparam rep="repeat"><type>mixed</type><parameter>values</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Extrait une représentation sous forme de chaîne
-   d'une valeur interne à Zend pour affichage.
+   Extrait une représentation sous forme de chaîne de caractère d'un structure
+   interne d'une zval (Zend value) pour affichage.
+   Ceci est généralement utile pour comprendre ou déboguer les détails
+   d'implémentation du moteur Zend ou d'extensions PHP.
   </para>
  </refsect1>
  <refsect1 role="parameters">
@@ -29,7 +30,7 @@
      <term><parameter>value</parameter></term>
      <listitem>
       <para>
-       La variable à afficher.
+       La variable où valeur à extraire.
       </para>
      </listitem>
     </varlistentry>
@@ -37,7 +38,7 @@
      <term><parameter>values</parameter></term>
      <listitem>
       <para>
-       Variables supplémentaire à afficher.
+       Variables ou valeurs supplémentaire à extraire.
       </para>
      </listitem>
     </varlistentry>
@@ -58,36 +59,65 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-$var1 = 'Bonjour le monde !';
-$var2 = '';
+$var1 = 'Hello';
+$var1 .= ' World';
+$var2 = $var1;
 
-$var2 =& $var1;
-
-debug_zval_dump(&$var1);
+debug_zval_dump($var1);
 ?>
 ]]>
     </programlisting>
     &example.outputs;
     <screen>
 <![CDATA[
-&string(18) "Bonjour le monde !" refcount(3)
+string(11) "Hello World" refcount(3)
 ]]>
     </screen>
    </example>
   </para>
   <note>
-   <title>Faites attention avec <literal>refcount</literal></title>
+   <title>Comprendre le <literal>refcount</literal></title>
    <para>
-    La valeur <literal>refcount</literal> retournée par cette fonction n'est pas
-    significative dans certaines circonstances. Par exemple, un développeur
-    peut s'attendre avec l'exemple ci-dessus d'avoir un <literal>refcount</literal>
-    de <literal>2</literal>. La troisième référence est créée lors de l'appel à la
-    fonction <function>debug_zval_dump</function>.
+    La valeur <literal>refcount</literal> affiché par cette fonction peut être
+    surprenant sans une compréhension détaillé de l'implémentation du moteur.
    </para>
    <para>
-    Ce comportement est encore plus fin lorsqu'une variable n'est pas passée
-    par référence à la fonction <function>debug_zval_dump</function>. Pour illustrer
-    ceci, voici une version modifiée de l'exemple ci-dessus :
+    Le moteur Zend utilise le comptage de référence pour deux raisons
+    différentes :
+   </para>
+   <para>
+    <simplelist>
+     <member>
+      Optimiser l'usage de mémoire en utilisant une technique appelé
+      "copy on write", où plusieurs variables tenant la même valeur pointe
+      à la même copie en mémoire. Quand une de ces variables est modifié,
+      elle pointe à une nouvelle copie en mémoire, et le comptage de référence
+      de l'originale est réduit de 1.
+     </member>
+     <member>
+      Le pistage des variables qui ont été assigné ou passé par référence (voir
+      <link linkend="language.references">Références Expliquer</link>). Ce
+      refcount est stocker dans un zval de référence séparé, pointant à la zval
+      pour la valeur actuelle. Cette zval additionnelle n'est actuellement pas
+      montré par <function>debug_zval_dump</function>.
+     </member>
+    </simplelist>
+   </para>
+   <para>
+    Car <function>debug_zval_dump</function> prend son entrée comme un
+    paramètre normal, passé par valeur, la technique de copy on write sera
+    utilisé pour la passé: au lieu de copier les données, le refcount sera
+    incrémenté de 1 pour la durée de vie de l'appel de la fonction. Si la
+    fonction modifie le paramètre après l'avoir reçu, alors une copie sera
+    fait ; comme elle n'en fait pas, elle affichera un refcount de 1 plus
+    élevé que dans la portée d'appel.
+   </para>
+   <para>
+    Le passage de paramètre empêche aussi <function>debug_zval_dump</function>
+    de montrer les variables qui ont été assigné par référence. Pour illustrer
+    ceci, considérons une version légèrement modifié de l'exemple ci-dessus :
+    showing variables which have been assigned by reference. To illustrate,
+    consider a slightly modified version of the above example:
    </para>
    <para>
     <example>
@@ -95,39 +125,11 @@ debug_zval_dump(&$var1);
      <programlisting role="php">
 <![CDATA[
 <?php
-$var1 = 'Bonjour le monde !';
-$var2 = '';
-
+$var1 = 'Hello';
+$var1 .= ' World';
+// Point three variables as references to the same value
 $var2 =& $var1;
-
-debug_zval_dump($var1); // non passée par référence, cette fois-ci
-?>
-]]>
-     </programlisting>
-     &example.outputs;
-     <screen>
-<![CDATA[
-string(18) "Bonjour le monde !" refcount(1)
-]]>
-     </screen>
-    </example>
-   </para>
-   <para>
-    Pourquoi <literal>refcount(1)</literal> ? Parce qu'une copie de <literal>$var1</literal> a
-    été faite, lors de l'appel de la fonction.
-   </para>
-   <para>
-    Cette fonction devient encore <emphasis>plus</emphasis> confuse lorsqu'une
-    variable avec un <literal>refcount</literal> de <literal>1</literal> est
-    passée (par copie/valeur) :
-   </para>
-   <para>
-    <example>
-     <title/>
-     <programlisting role="php">
-<![CDATA[
-<?php
-$var1 = 'Bonjour le monde !';
+$var3 =& $var1;
 
 debug_zval_dump($var1);
 ?>
@@ -136,30 +138,26 @@ debug_zval_dump($var1);
      &example.outputs;
      <screen>
 <![CDATA[
-string(18) "Bonjour le monde !" refcount(2)
+string(11) "Hello World" refcount(2)
 ]]>
      </screen>
     </example>
    </para>
    <para>
-    Un <literal>refcount</literal> de <literal>2</literal>, ici, est vraiment
-    inattendu. Tout spécialement si on considère les exemples ci-dessus. Donc, que
-    se passe-t-il ?
+    Bien que <varname>$var1</varname>, <varname>$var2</varname>, et
+    <varname>$var3</varname> sont lié en tant que référence, seul la
+    <emphasis>valeur</emphasis> est passé à <function>debug_zval_dump</function>.
+    Cette valeur est utilisé une seul fois par le jeu de références, et une
+    fois à l'intérieur de <function>debug_zval_dump</function>, ainsi
+    il affiche un refcount de 2.
    </para>
    <para>
-    Lorsqu'une variable a une seule référence (faire <literal>$var1</literal>
-    avant qu'elle ne soit utilisée en tant qu'argument de la fonction
-    <function>debug_zval_dump</function>), le moteur PHP optimise
-    la façon dont elle est passée à la fonction. En interne, PHP traite
-    <literal>$var1</literal> comme une référence (et donc, le <literal>refcount</literal>
-    est incrémenté), et avec le cas où le passage par référence intervient, une copie est alors
-    faite, <emphasis>mais uniquement</emphasis> au moment de l'écriture. Ceci est connu comme "la copie à l'écriture".
-   </para>
-   <para>
-    Donc, si <function>debug_zval_dump</function> intervient pour écrire son unique paramètre
-    (et il ne le fait pas), alors une copie est faite. Jusque-là, le paramètre demeure
-    une référence, faisant que le <literal>refcount</literal> est incrémenté
-    à <literal>2</literal> pour l'appel à la fonction.
+    Des complications supplémentaire émergent à cause des optimisations
+    effectué par le moteur pour différent types de données. Certains types tel
+    que les entiers n'utilise pas "copy on write", et donc n'affiche aucun
+    refcount. Dans d'autre cas, le refcount montre d'autres copies utilisé
+    en interne, tel que quand une chaîne littérale ou tableau est stocké comme
+    une partie d'une instruction de code
    </para>
   </note>
  </refsect1>
