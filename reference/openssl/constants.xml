@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 86e6094e86b84a51d00ab217ac50ce8dde33d82a Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: e52245f15da8b19397478a4edbf6dc16ff2f80bd Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <appendix xml:id="openssl.constants" xmlns="http://docbook.org/ns/docbook">
  &reftitle.constants;
@@ -301,6 +301,101 @@
    </table>
   </para>
  </section>
+
+ <section xml:id="openssl.cms.flags">
+  <title>Drapeaux/Constantes <acronym>CMS</acronym></title>
+  <para>
+   Les fonctions CMS utilise des drapeaux qui sont spécifiés utilisant
+   un masque de bit qui inclus une ou plusieurs des valeurs suivantes :
+   <table>
+    <title><acronym>CMS</acronym> CONSTANTS</title>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Constants;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row xml:id="constant.openssl-cms-text">
+       <entry><constant>OPENSSL_CMS_TEXT</constant></entry>
+       <entry>
+        Ajoute l'en-tête content type text/plain au message chiffré/signé.
+        Lors du déchiffrement/vérification, ces en-têtes sont enlevés de la
+        sortie, si le message déchiffré ou vérifié n'est pas du type MIME
+        text/plain alors une erreur surviendra.
+       </entry>
+      </row>
+      <row xml:id="constant.openssl-cms-binary">
+       <entry><constant>OPENSSL_CMS_BINARY</constant></entry>
+       <entry>
+        Normalement le message d'entrée est converti en sa forme "canonique"
+        qui en réalité utilise <literal>CR</literal> et <literal>LF</literal>
+        comme fin de ligne: tel que requis par la spécification CMS. Quand
+        cette option est présente, aucune translation n'est effectué. Ceci
+        est utile lors de la gestion de données binaire qui peuvent ne pas
+        être en format CMS.
+       </entry>
+      </row>
+      <row xml:id="constant.openssl-cms-nointern">
+       <entry><constant>OPENSSL_CMS_NOINTERN</constant></entry>
+       <entry>
+        Lors de la vérification d'un message, les certificats (le cas échéant)
+        inclus dans le message sont normalement recherchés pour le certificat
+        de signature. Avec cette option, seuls les certificats spécifiés dans
+        le paramètre <parameter>untrusted_certificates_filename</parameter>
+        de <function>openssl_cms_verify</function> sont utilisés.
+        Les certificats fournis peuvent cependant toujours être utilisés comme
+        des autorités de certification non fiables.
+       </entry>
+      </row>
+      <row xml:id="constant.openssl-cms-noverify">
+       <entry><constant>OPENSSL_CMS_NOVERIFY</constant></entry>
+       <entry>
+        Ne vérifie pas le certificat du signataire d'un message signé.
+       </entry>
+      </row>
+      <row xml:id="constant.openssl-cms-nocerts">
+       <entry><constant>OPENSSL_CMS_NOCERTS</constant></entry>
+       <entry>
+        Lors de la signature d'un message le certificat du signataire est
+        normalement inclus, avec cette option il est exclus. Ceci réduira
+        la taille du message signé mais le vérificateur doit avoir une copie
+        du certificat du signataire disponible localement (passé en utilisant
+        <parameter>untrusted_certificates_filename</parameter> de
+        <function>openssl_cms_verify</function> par exemple).
+       </entry>
+      </row>
+      <row xml:id="constant.openssl-cms-noattr">
+       <entry><constant>OPENSSL_CMS_NOATTR</constant></entry>
+       <entry>
+        Normalement quand un message est signé, un jeu d'attributs sont
+        inclus qui inclus l'heure de signature et les algorithmes symétriques
+        supportés. Avec cette options ils ne sont pas inclus.
+       </entry>
+      </row>
+      <row xml:id="constant.openssl-cms-detached">
+       <entry><constant>OPENSSL_CMS_DETACHED</constant></entry>
+       <entry>
+        Lors de la signature d'un message, la signature cleartext est utilisé
+        avec le MIME type <literal>"multipart/signed"</literal>. Ceci est le
+        comportement par défaut, si vous ne spécifiez aucun
+        <parameter>flags</parameter> à <function>openssl_cms_sign</function>.
+        Si vous désactivez cette option, le message sera signé en utilisant
+        une signature opaque, qui est plus résistante à la translation par
+        les relais mail mais ne peut pas être lu par les agents mail qui ne
+        supportent pas S/MIME.
+       </entry>
+      </row>
+      <row xml:id="constant.openssl-cms-nosigs">
+       <entry><constant>OPENSSL_CMS_NOSIGS</constant></entry>
+       <entry>Ne tente pas de vérifier les signatures d'un message</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+ </section>
  
  <section xml:id="openssl.signature-algos">
   <title>Algorithme de signature</title>
@@ -574,6 +669,21 @@
  <section xml:id="openssl.constants.other">
   <title>Autres constantes</title>
   <variablelist>
+   <varlistentry xml:id="constant.openssl-raw-data">
+    <term>
+     <constant>OPENSSL_RAW_DATA</constant>
+     (<type>bool</type>)
+    </term>
+    <listitem>
+     <simpara>
+      Si <constant>OPENSSL_RAW_DATA</constant> est définie dans
+      <function>openssl_encrypt</function> ou <function>openssl_decrypt</function>,
+      les données retournées sont retournées tel quel.
+      Quand ceci n'est pas spécifié, les données retournées à l'appeleur sont
+      encodées en Base64.
+     </simpara>
+    </listitem>
+   </varlistentry>
     <varlistentry xml:id="constant.openssl-zero-padding">
       <term>
         <constant>OPENSSL_ZERO_PADDING</constant>
@@ -592,6 +702,39 @@
         </simpara>
       </listitem>
     </varlistentry>
+   <varlistentry xml:id="constant.openssl-encoding-smime">
+    <term>
+     <constant>OPENSSL_ENCODING_SMIME</constant>
+     (<type>int</type>)
+    </term>
+    <listitem>
+     <simpara>
+      Indique que l'encodage est S/MIME.
+     </simpara>
+    </listitem>
+   </varlistentry>
+   <varlistentry xml:id="constant.openssl-encoding-der">
+    <term>
+     <constant>OPENSSL_ENCODING_DER</constant>
+     (<type>int</type>)
+    </term>
+    <listitem>
+     <simpara>
+      Indique que l'encodage est DER (Distinguished Encoding Rules).
+     </simpara>
+    </listitem>
+   </varlistentry>
+   <varlistentry xml:id="constant.openssl-encoding-pem">
+    <term>
+     <constant>OPENSSL_ENCODING_PEM</constant>
+     (<type>int</type>)
+    </term>
+    <listitem>
+     <simpara>
+      Indique que l'encodage est PEM (Privacy-Enhanced Mail).
+     </simpara>
+    </listitem>
+   </varlistentry>
   </variablelist>
  </section>
 </appendix>
