@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 9e0f03ac354d797d1d16c0fcc1663e5e170f2727 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: ede9d209f64d4cd71bf22fcfaed14c6fc269523c Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://docbook.org/ns/docbook" xml:id="function.echo">
  <refnamediv>
@@ -13,29 +13,26 @@
   &reftitle.description;
   <methodsynopsis>
    <type>void</type><methodname>echo</methodname>
-   <methodparam><type>string</type><parameter>arg</parameter></methodparam>
-   <methodparam rep="repeat"><type>string</type><parameter>args</parameter></methodparam>
+   <methodparam rep="repeat"><type>string</type><parameter>expressions</parameter></methodparam>
   </methodsynopsis>
   <simpara>
-   Affiche tous les paramètres. Aucune nouvelle ligne n'est ajoutée.
+   Affiche une ou plusieurs expressions, sans espaces ou nouvelle ligne additionnelle.
   </simpara>
   <para>
-   <literal>echo</literal> n'est pas vraiment une fonction (c'est
-   techniquement une structure du langage), cela fait que vous n'êtes
-   pas obligé d'utiliser des parenthèses. <literal>echo</literal>
-   (contrairement à d'autres structures de langage) ne se comporte pas
-   comme une fonction, il ne peut donc pas être utilisé dans le contexte d'une
-   fonction. De même, si vous voulez passer plusieurs paramètres à
-   <literal>echo</literal>, les paramètres ne doivent pas être entourés
-   de parenthèses.
+   <literal>echo</literal> n'est pas une fonction mais une construction du langage.
+   Ses arguments sont une liste d'expressions suivant le mot clé <literal>echo</literal>,
+   séparé par des virgules, et non délimité par des parenthèses.
+   Contrairement à d'autres construction du langages, <literal>echo</literal>
+   n'a pas de valeur de retour, elle ne peut donc pas être utilisé dans
+   le contexte d'une expression.
   </para>
   <para>
-   <literal>echo</literal> dispose aussi d'une version courte,
-   où vous pouvez faire suivre la balise PHP ouvrante d'un
-   signe égal (<literal>=</literal>). Avant PHP 5.4.0, cette syntaxe
-   n'était possible que si la directive de configuration <link
-   linkend="ini.short-open-tag"><option>short_open_tag</option></link>
-   était activée.
+   <literal>echo</literal> dispose aussi d'une syntaxe courte,
+   où vous pouvez faire suivre immédiatement la balise PHP ouvrante d'un
+   signe égal (<literal>=</literal>).
+   Cette syntaxe est disponible même si la directive de configuration
+   <link linkend="ini.short-open-tag"><option>short_open_tag</option></link>
+   est désactivée.
    <informalexample>
     <programlisting role="php">
 <![CDATA[
@@ -45,8 +42,8 @@ J'ai <?=$foo?> foo.
    </informalexample>
   </para>
   <para>
-   La plus grosse différente avec <literal>print</literal> est que
-   <literal>echo</literal> accepte une liste d'arguments et ne retourne
+   La plus grosse différente avec <function>print</function> est que
+   <literal>echo</literal> accepte plusieurs arguments et ne retourne
    aucune valeur.
   </para>
  </refsect1>
@@ -56,17 +53,15 @@ J'ai <?=$foo?> foo.
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>arg</parameter></term>
+     <term><parameter>expressions</parameter></term>
      <listitem>
       <para>
-       Le paramètre à afficher.
-      </para>
-     </listitem>
-    </varlistentry>
-    <varlistentry>
-     <term><parameter>args</parameter></term>
-     <listitem>
-      <para>
+       Une ou plusieurs expressions de chaînes de caractères à afficher,
+       séparé par des virgules.
+       Les valeurs qui ne sont pas des chaînes de caractères seront convertie
+       en chaîne de caractère, même si la directive
+       <link linkend="language.types.declarations.strict"><literal>strict_types</literal></link>
+       est activée.
       </para>
      </listitem>
     </varlistentry>
@@ -89,28 +84,45 @@ J'ai <?=$foo?> foo.
     <programlisting role="php">
 <![CDATA[
 <?php
-echo "Bonjour le monde";
+echo "echo ne requit pas de parenthèses.";
 
-// Si vous n'utilisez pas d'autres caractères,
-// vous pouvez afficher plusieurs variables
-// en les séparant par des virgules
-echo $foo;          // foobar
-echo $foo,$bar;     // foobarbarbaz
+// Les chaînes peuvent être passé soit individuellement comme plusieurs arguments ou
+// concaténé ensemble et passé en tant qu'un seul argument
+echo 'This ', 'string ', 'was ', 'made ', 'with multiple parameters.', "\n";
+echo 'This ' . 'string ' . 'was ' . 'made ' . 'with concatenation.' . "\n";
 
-// Les chaînes peuvent être passées individuellement comme arguments multiples ou
-// concaténées et passées comme un seul argument
-echo 'Cette ', 'chaîne ', 'a été ', 'faite ', 'avec plusieurs paramètres.', chr(10);
-echo 'Cette ' . 'chaîne ' . 'a été ' . 'faite ' . 'à l\'aide de la concaténation.' . "\n";
+// Aucune nouvelle ligne ou espace est ajouté ; ci-dessous affiche "helloworld" tout sur une ligne
+echo "hello";
+echo "world";
 
-// Parce que echo() ne se comporte pas comme une fonction, le code suivant est invalide.
+// Pareil que ci-dessus
+echo "hello", "world";
+
+echo "This string spans
+multiple lines. The newlines will be
+output as well";
+
+echo "This string spans\nmultiple lines. The newlines will be\noutput as well.";
+
+// L'argument peut être n'importe quelle expression qui produit une chaîne de caractères
+$foo = "example";
+echo "foo is $foo"; // foo is example
+
+$fruits = ["lemon", "orange", "banana"];
+echo implode(" and ", $fruits); // lemon and orange and banana
+
+// Les expressions qui ne sont pas des chaînes sont convertie en chaîne, même si declare(strict_types=1) est utilisé
+echo 6 * 7; // 42
+
+// Comme echo ne se comporte pas comme une expression, le code suivant est invalide.
 ($some_var) ? echo 'true' : echo 'false';
 
-// Cependant, les exemples suivants sont valides :
-($some_var) ? print 'Oui' : print 'Non'; // print est aussi une structure de langage,
-                                         // mais il se comporte comme une fonction, donc,
-                                         // il peut être utilisé dans ce contexte.
+// Cependent, les exemples suivants fonctionneront :
+($some_var) ? print 'true' : print 'false'; // print est aussi une construction, mais
+                                            // est une expression valide, retournant 1.
+                                            // Dont il peut être utilisé dans ce contexte.
 
-echo $some_var ? 'Oui': 'Non'; // échanger la déclaration
+echo $some_var ? 'true': 'false'; // évaluant l'expression d'abord puis la passant à echo
 ?>
 ]]>
     </programlisting>
@@ -121,32 +133,83 @@ echo $some_var ? 'Oui': 'Non'; // échanger la déclaration
  <refsect1 role="notes">
   &reftitle.notes;
   &note.language-construct;
+
+  <note>
+   <title>Utilisation avec les parenthèses</title>
+   <para>
+    Entourer un seul argument de <literal>echo</literal> avec des parenthèses
+    ne lèvera pas une erreur de syntaxe, et produit une syntaxe ressemblant à un
+    appel normal de fonction. Néanmoins, ceci peut être trompeur, car les
+    parenthèses font en réalité partie de l'expression qui est en cours
+    d'affichage, et non partie de la syntaxe de <literal>echo</literal>
+    en lui-même.
+   </para>
+   <para>
+    <example>
+     <title/>
+     <programlisting role="php">
+      <![CDATA[
+<?php
+echo "hello";
+// outputs "hello"
+
+echo("hello");
+// also outputs "hello", because ("hello") is a valid expression
+
+echo(1 + 2) * 3;
+// outputs "9"; the parentheses cause 1+2 to be evaluated first, then 3*3
+// the echo statement sees the whole expression as one argument
+
+echo "hello", " world";
+// outputs "hello world"
+
+echo("hello"), (" world");
+// outputs "hello world"; the parentheses are part of each expression
+
+echo("hello", " world");
+// Throws a Parse Error because ("hello", " world") is not a valid expression
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </note>
+
   <tip>
    <para>
-    Un bénéfice de passe par plusieurs arguments au lieu d'utiliser la
-    concaténation dans la fonction <function>echo</function> concerne la
-    priorité de l'opérateur point ".". Si plusieurs arguments sont passés,
-    alors les parenthèses ne sont pas requises pour accroitre la priorité. :
+    Passer plusieurs arguments à <literal>echo</literal> permet d'éviter des
+    complications qui apparaissent à cause de la précédence de l'opération de
+    concaténation en PHP. Pour instance, l'opérateur de concatenation à une
+    précédence supérieur à l'opérateur ternaire, et antérieur à PHP 8.0.0,
+    avait la même précédence que l'addition et la soustraction :
    </para>
    <programlisting role="php">
 <![CDATA[
 <?php
-echo "Somme : ", 1 + 2;
-echo "Bonjour ", isset($name) ? $name : "John Doe", "!";
+// Below, the expression 'Hello ' . isset($name) is evaluated first,
+// and is always true, so the argument to echo is always $name
+echo 'Hello ' . isset($name) ? $name : 'John Doe' . '!';
+
+// The intended behaviour requires additional parentheses
+echo 'Hello ' . (isset($name) ? $name : 'John Doe') . '!';
+
+// In PHP prior to 8.0.0, the below outputs "2", rather than "Sum: 3"
+echo 'Sum: ' . 1 + 2;
+
+// Again, adding parentheses ensures the intended order of evaluation
+echo 'Sum: ' . (1 + 2);
 ]]>
    </programlisting>
-
    <para>
-    Avec la concaténation, l'opérateur "point" a une précédence identique
-    à l'addition et une précédence plus élevée que l'opérateur ternaire,
-    c'est pour cela que les parenthèses doivent être utilisées
-    pour un comportement correct :
+    Si plusieurs arguments sont fournis, alors les parenthèses ne seront pas
+    requis pour enforcer la précédence, car chaque expression est séparé :
    </para>
    <programlisting role="php">
 <![CDATA[
 <?php
-echo 'Somme : ' . (1 + 2);
-echo 'Bonjour ' . (isset($name) ? $name : 'John Doe') . '!';
+echo "Hello ", isset($name) ? $name : "John Doe", "!";
+
+echo "Sum: ", 1 + 2;
 ]]>
    </programlisting>
   </tip>
@@ -159,7 +222,7 @@ echo 'Bonjour ' . (isset($name) ? $name : 'John Doe') . '!';
     <member><function>print</function></member>
     <member><function>printf</function></member>
     <member><function>flush</function></member>
-    <member><link linkend="language.types.string.syntax.heredoc">Syntaxe Heredoc</link></member>
+    <member><link linkend="language.types.string">Manière de spécifié des chaînes littérales</link></member>
    </simplelist>
   </para>
  </refsect1>

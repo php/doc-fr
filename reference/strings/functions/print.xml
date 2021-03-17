@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 3d974bf87ef32d933ca1d40828711a8da4b594f1 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: eea9c73ba47da81155ed5baa979dd2a085c3b874 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://docbook.org/ns/docbook" xml:id="function.print">
  <refnamediv>
@@ -60,44 +60,36 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-print("Bonjour le monde");
+print "print does not require parentheses.";
 
-print "print() fonctionne aussi sans les parenthèses.";
+// No newline or space is added; the below outputs "helloworld" all on one line
+print "hello";
+print "world";
 
-print "Ce print() se
-répartit sur plusieurs lignes. Il affiche aussi les
-nouvelles lignes";
+print "This string spans
+multiple lines. The newlines will be
+output as well";
 
-print "Ce print() se\nrépartit sur plusieurs lignes. Il affiche aussi les\nnouvelles lignes";
+print "This string spans\nmultiple lines. The newlines will be\noutput as well.";
 
-print "L'échappement de caractères se fait : \"comme ceci\".";
+// The argument can be any expression which produces a string
+$foo = "example";
+print "foo is $foo"; // foo is example
 
-// Vous pouvez utiliser des variables avec print
-$foo = "foobar";
-$bar = "barbaz";
+$fruits = ["lemon", "orange", "banana"];
+print implode(" and ", $fruits); // lemon and orange and banana
 
-print "foo vaut $foo"; // foo vaut foobar
+// Non-string expressions are coerced to string, even if declare(strict_types=1) is used
+print 6 * 7; // 42
 
-// Vous pouvez aussi utiliser des tableaux
-$bar = array("clé" => "foo");
+// Because print has a return value, it can be used in expressions
+// The following outputs "hello world"
+if ( print "hello" ) {
+    echo " world";
+}
 
-print "c'est {$bar['clé']} !"; // c'est foo !
-
-// Les guillemets simples annulent le remplacement des variables
-print 'foo vaut $foo'; // foo vaut $foo
-
-// Si vous n'utilisez pas d'autres caractères, vous 
-// pouvez afficher simplement vos variables comme ceci
-print $foo; // foobar
-
-print <<<END
-Cette syntaxe s'intitule le "here document" et 
-permet d'afficher plusieurs lignes avec de 
-l'interpolation de variables. Notez que la fin de
-la syntaxe doit apparaître sur une nouvelle ligne,
-avec uniquement un point-virgule, et pas d'espace
-de plus !
-END;
+// The following outputs "true"
+( 1 === 1 ) ? print 'true' : print 'false';
 ?>
 ]]>
     </programlisting>
@@ -107,6 +99,86 @@ END;
 
  <refsect1 role="notes">
   &reftitle.notes;
+
+  <note>
+   <title>Using with parentheses</title>
+   <para>
+    Entourer l'argument de <literal>print</literal> avec des parenthèses
+    ne lèvera pas une erreur de syntaxe, et produit une syntaxe ressemblant à un
+    appel normal de fonction. Néanmoins, ceci peut être trompeur, car les
+    parenthèses font en réalité partie de l'expression qui est en cours
+    d'affichage, et non partie de la syntaxe de <literal>print</literal>
+    en lui-même.
+   </para>
+   <para>
+    <example>
+     <title/>
+     <programlisting role="php">
+<![CDATA[
+<?php
+print "hello";
+// outputs "hello"
+
+print("hello");
+// also outputs "hello", because ("hello") is a valid expression
+
+print(1 + 2) * 3;
+// outputs "9"; the parentheses cause 1+2 to be evaluated first, then 3*3
+// the print statement sees the whole expression as one argument
+
+if ( print("hello") && false ) {
+    print " - inside if";
+}
+else {
+    print " - inside else";
+}
+// outputs " - inside if"
+// the expression ("hello") && false is first evaluated, giving false
+// this is coerced to the empty string "" and printed
+// the print construct then returns 1, so code in the if block is run
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    Quand <literal>print</literal> est utilisé dans une expression plus large,
+    placer tout deux le mot clé et son argument dans les parenthèses peut être
+    nécessaire pour obtenir le résultat attendu :
+   </para>
+
+   <para>
+    <example>
+     <title/>
+     <programlisting role="php">
+<![CDATA[
+<?php
+if ( (print "hello") && false ) {
+    print " - inside if";
+}
+else {
+    print " - inside else";
+}
+// outputs "hello - inside else"
+// unlike the previous example, the expression (print "hello") is evaluated first
+// after outputting "hello", print returns 1
+// since 1 && false is false, code in the else block is run
+
+print "hello " && print "world";
+// outputs "world1"; print "world" is evaluated first,
+// then the expression "hello " && 1 is passed to the left-hand print
+
+(print "hello ") && (print "world");
+// outputs "hello world"; the parentheses force the print expressions
+// to be evaluated before the &&
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </note>
+
   &note.language-construct;
  </refsect1>
 
@@ -117,7 +189,7 @@ END;
     <member><function>echo</function></member>
     <member><function>printf</function></member>
     <member><function>flush</function></member>
-    <member><link linkend="language.types.string.syntax.heredoc">Syntaxe Heredoc</link></member>
+    <member><link linkend="language.types.string">Manière de spécifié des chaînes littérales</link></member>
    </simplelist>
   </para>
  </refsect1>
