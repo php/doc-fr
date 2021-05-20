@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: aab33d644359aba597e810e2fc0c0caa0d347c9c Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 184f3f7bd45643cb80f828d0bb001991ec3a5fad Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.session-set-save-handler" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
@@ -310,8 +310,8 @@
      dans la documentation sur l'interface <classname>SessionHandlerInterface</classname>.
     </title>
     <para>
-     Le code suivant est pour PHP version 5.4.0 et supérieure. Vous pouvez y voir
-     l'invocation, l'exemple complet peut être vu dans la documentation de l'interface
+     Nous montrons juste l'invocation ici, l'exemple complet peut être vu dans
+     la documentation de l'interface
      <classname>SessionHandlerInterface</classname>.
     </para>
     <para>
@@ -336,98 +336,6 @@ session_start();
 ]]>
     </programlisting>
    </example>
-   <example>
-    <title>
-     Gestionnaire de sauvegarde de session personnalisé en utilisant des objets
-    </title>
-    <para>
-     Le code suivant est pour PHP en version inférieure à 5.4.0.
-    </para>
-    <para>
-     L'exemple suivant fournit un gestionnaire de stockage des sessions basé sur les
-     fichiers, similaire au gestionnaire de sauvegarde de session par défaut de PHP
-     <parameter>files</parameter>.  Cet exemple peut facilement être étendu pour couvrir
-     le stockage par base de données, en utilisant votre moteur de base de données préféré.
-    </para>
-    <para>
-     Notez que nous enregistrons la fonction d'arrêt <function>session_write_close</function>
-     en utilisant la fonction <function>register_shutdown_function</function> en version antérieure
-     à PHP 5.4.0. C'est généralement préférable lors de l'enregistrement d'objets
-     comme gestionnaires de sauvegarde des sessions sous PHP antérieure à la version 5.4.0.
-    </para>
-    <programlisting role="php">
-<![CDATA[
-<?php
-class FileSessionHandler
-{
-    private $savePath;
-
-    function open($savePath, $sessionName)
-    {
-        $this->savePath = $savePath;
-        if (!is_dir($this->savePath)) {
-            mkdir($this->savePath, 0777);
-        }
-
-        return true;
-    }
-
-    function close()
-    {
-        return true;
-    }
-
-    function read($id)
-    {
-        return (string)@file_get_contents("$this->savePath/sess_$id");
-    }
-
-    function write($id, $data)
-    {
-        return file_put_contents("$this->savePath/sess_$id", $data) === false ? false : true;
-    }
-
-    function destroy($id)
-    {
-        $file = "$this->savePath/sess_$id";
-        if (file_exists($file)) {
-            unlink($file);
-        }
-
-        return true;
-    }
-
-    function gc($maxlifetime)
-    {
-        foreach (glob("$this->savePath/sess_*") as $file) {
-            if (filemtime($file) + $maxlifetime < time() && file_exists($file)) {
-                unlink($file);
-            }
-        }
-
-        return true;
-    }
-}
-
-$handler = new FileSessionHandler();
-session_set_save_handler(
-    array($handler, 'open'),
-    array($handler, 'close'),
-    array($handler, 'read'),
-    array($handler, 'write'),
-    array($handler, 'destroy'),
-    array($handler, 'gc')
-    );
-
-// Ceci permet de prévenir des effets non désirés lors de l'utilisation d'objets
-// comme gestionnaires de session
-register_shutdown_function('session_write_close');
-
-session_start();
-// processus pour définir et récupérer les valeurs par leurs clés depuis $_SESSION
-]]>
-    </programlisting>
-   </example>
   </para>
  </refsect1>
 
@@ -435,28 +343,11 @@ session_start();
   &reftitle.notes;
   <warning>
    <para>
-    Lors de l'utilisation d'objets comme gestionnaires de sauvegarde des sessions,
-    il est important d'enregistrer la fonction d'arrêt avec PHP pour éviter les
-    effets non désirés issus de la façon dont PHP détruit en interne les objets
-    lors de l'arrêt, et peut empécher les fonctions de rappel
-    <parameter>write</parameter> et <parameter>close</parameter> d'être exécutées.
-    Typiquement, vous devez enregistrer <parameter>'session_write_close'</parameter>
-    en utilisant la fonction <function>register_shutdown_function</function>.
-   </para>
-   <para>
-    Depuis PHP 5.4.0, vous pouvez utiliser la fonction
-    <function>session_register_shutdown</function> ou simplement utiliser le drapeau
-    'register shutdown' lors de l'appel à la fonction <function>session_set_save_handler</function>
-    en utilisant la méthode orientée objet, et passer une instance qui implémente
-    l'interface <classname>SessionHandlerInterface</classname>.
-   </para>
-  </warning>
-  <warning>
-   <para>
-    Les gestionnaires d'écriture et de fermeture sont appelés après la destruction
-    des objets depuis PHP 5.0.5. et donc, ne peuvent pas utiliser les objets ou
-    lancer des exceptions. Les exceptions ne peuvent donc pas être attrapées ni
-    affichées, et l'exécution ne fera que s'arrêter de façon innatendue.
+    Les gestionnaires d'écriture <parameter>write</parameter> et de fermeture
+    <parameter>close</parameter> sont appelés après la destruction des objets,
+    et donc, ne peuvent pas utiliser les objets ou lancer des exceptions.
+    Les exceptions ne peuvent donc pas être attrapées ni affichées,
+    et l'exécution ne fera que s'arrêter de façon innatendue.
    </para>
    <para>
     Il est possible d'appeler <function>session_write_close</function> depuis
@@ -485,7 +376,7 @@ session_start();
      <link linkend="ini.session.serialize-handler">session.serialize_handler</link>.
     </member>
     <member><function>register_shutdown_function</function></member>
-    <member><function>session_register_shutdown</function> pour PHP 5.4.0+</member>
+    <member><function>session_register_shutdown</function></member>
     <member>
      Se reporter à <link xlink:href="&url.session-save-handler;">save_handler.inc</link>
      pour une mise en œuvre procédurales complète 
