@@ -115,7 +115,7 @@ De plus la soft-limit du nombre de caractères par ligne est de 80.
 
 ### Exemple PHP
 Officiellement le groupe de documentation PHP a choisi d'utiliser les coding standards de PEAR,
-vous les trouverez ici : http://pear.php.net/manual/fr/standards.php
+vous les trouverez ici : http://pear.php.net/manual/en/standards.php
 
 > En pratique néanmoins le coding style est un mélange entre PEAR et PSR-2/12,
 > essayer donc de suivre le style dans lequel la page a été écrite, ou celui de la documentation anglaise.
