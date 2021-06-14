@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 40667918dcff1d5c9f7ecdc88b5caca24ba0686c Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 5c3589b9b8175cb5d60729a7a6af51ebb74fb246 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 
 <refentry xml:id="mysqli-stmt.bind-param" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -9,7 +9,7 @@
   <refname>mysqli_stmt_bind_param</refname>
   <refpurpose>Lie des variables à une requête MySQL</refpurpose>
  </refnamediv>
- 
+
  <refsect1 role="description">
   &reftitle.description;
   <para>&style.oop;</para>
@@ -28,8 +28,8 @@
    <methodparam rep="repeat"><type>mixed</type><parameter role="reference">vars</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Sert à lier des variables à une requête MySQL préparée par
-   <function>mysqli_prepare</function>.
+   Lie les variables pour les marqueurs de paramètre dans la requête préparé
+   par <function>mysqli_prepare</function> ou <function>mysqli_stmt_prepare</function>.
   </para>
   <note>
    <para>
@@ -53,7 +53,7 @@
    </para>
   </note>
  </refsect1>
- 
+
  <refsect1 role="parameters">
   &reftitle.parameters;
   <para>
@@ -111,28 +111,25 @@
    </variablelist>
   </para>
  </refsect1>
- 
+
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
    &return.success;
   </para>
  </refsect1>
- 
+
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>&style.oop;</title>
+   <title>Exemple avec <methodname>mysqli_stmt::bind_param</methodname></title>
+   <para>&style.oop;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
-$mysqli = new mysqli('localhost', 'my_user', 'my_password', 'world');
 
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli('localhost', 'my_user', 'my_password', 'world');
 
 $stmt = $mysqli->prepare("INSERT INTO CountryLanguage VALUES (?, ?, ?, ?)");
 $stmt->bind_param('sssd', $code, $language, $official, $percent);
@@ -142,36 +139,22 @@ $language = 'Bavarian';
 $official = "F";
 $percent = 11.2;
 
-/* Exécution de la requête */
 $stmt->execute();
 
-printf("%d ligne insérée.\n", $stmt->affected_rows);
+printf("%d row inserted.\n", $stmt->affected_rows);
 
-/* Fermeture du traitement */
-$stmt->close();
-
-/* Nettoyage de la table CountryLanguage */
+/* Clean up table CountryLanguage */
 $mysqli->query("DELETE FROM CountryLanguage WHERE Language='Bavarian'");
-printf("%d ligne effacée.\n", $mysqli->affected_rows);
-
-/* Fermeture de la connexion */
-$mysqli->close();
-?>
+printf("%d row deleted.\n", $mysqli->affected_rows);
 ]]>
    </programlisting>
-  </example>
-  <example>
-   <title>&style.procedural;</title>
+   <para>&style.procedural;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
-$link = mysqli_connect('localhost', 'my_user', 'my_password', 'world');
 
-/* Vérification de la connexion */
-if (!$link) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$link = mysqli_connect('localhost', 'my_user', 'my_password', 'world');
 
 $stmt = mysqli_prepare($link, "INSERT INTO CountryLanguage VALUES (?, ?, ?, ?)");
 mysqli_stmt_bind_param($stmt, 'sssd', $code, $language, $official, $percent);
@@ -181,33 +164,54 @@ $language = 'Bavarian';
 $official = "F";
 $percent = 11.2;
 
-/* Exécution de la requête */
 mysqli_stmt_execute($stmt);
 
-printf("%d ligne insérée.\n", mysqli_stmt_affected_rows($stmt));
+printf("%d row inserted.\n", mysqli_stmt_affected_rows($stmt));
 
-/* Fermeture du traitement */
-mysqli_stmt_close($stmt);
-
-/* Nettoyage de la table CountryLanguage */
+/* Clean up table CountryLanguage */
 mysqli_query($link, "DELETE FROM CountryLanguage WHERE Language='Bavarian'");
-printf("%d ligne effacée.\n", mysqli_affected_rows($link));
-
-/* Fermeture de la connexion */
-mysqli_close($link);
-?>
+printf("%d row deleted.\n", mysqli_affected_rows($link));
 ]]>
    </programlisting>
-   &example.outputs;
+   &examples.outputs;
    <screen>
 <![CDATA[
-1 ligne insérée.
-1 ligne effacée.
+1 row inserted.
+1 row deleted.
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>Using <literal>...</literal> to provide arguments</title>
+   <para>
+    The <literal>...</literal> operator can be used to provide variable-length
+    argument list, e.g. in a <literal>WHERE IN</literal> clause.
+   </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli('localhost', 'my_user', 'my_password', 'world');
+
+$stmt = $mysqli->prepare("SELECT Language FROM CountryLanguage WHERE CountryCode IN (?, ?)");
+/* Using ... to provide arguments */
+$stmt->bind_param('ss', ...['DEU', 'POL']);
+$stmt->execute();
+$stmt->store_result();
+
+printf("%d rows found.\n", $stmt->num_rows());
+]]>
+   </programlisting>
+   &examples.outputs;
+   <screen>
+<![CDATA[
+10 rows found.
 ]]>
    </screen>
   </example>
  </refsect1>
- 
+
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
@@ -222,9 +226,8 @@ mysqli_close($link);
    </simplelist>
   </para>
  </refsect1>
- 
-</refentry>
 
+</refentry>
 <!-- Keep this comment at the end of the file
 Local variables:
 mode: sgml

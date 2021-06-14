@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
 <!-- EN-Revision: 7e5d0d1bb69180c9de1992edf9613215c975fa57 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- Reviewed: no -->
 <refentry xml:id="mysqli-stmt.store-result" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>mysqli_stmt::store_result</refname>
   <refname>mysqli_stmt_store_result</refname>
-  <refpurpose>Stocke un jeu de résultats depuis une requête préparée</refpurpose>
+  <refpurpose>Stocke un jeu de résultats dans un tampon interne</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -22,11 +22,15 @@
    <methodparam><type>mysqli_stmt</type><parameter>statement</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Vous devez appeler <function>mysqli_stmt_store_result</function> pour toutes les requêtes
-   qui produisent un jeu de résultats (<literal>SELECT, SHOW, DESCRIBE, EXPLAIN</literal>),
-   et uniquement si vous voulez stocker le jeu de résultats complet par le client, et donc,
-   les séquences <function>mysqli_stmt_fetch</function> pourront retourner ces données
-   stockées.
+   This function should be called for queries that successfully
+   produce a result set (e.g. <literal>SELECT, SHOW, DESCRIBE, EXPLAIN</literal>)
+   only if the complete result set needs to be buffered in PHP. Each subsequent
+   <function>mysqli_stmt_fetch</function> call will return buffered data.
+   Cette fonction devrait être appelé pour les requêtes qui succèdent à
+   produire un jeu de résultats (e.g. <literal>SELECT, SHOW, DESCRIBE, EXPLAIN</literal>)
+   seulement si le jeu de résultats complet doit être mit en tampon par PHP.
+   Chaque appel successif à <function>mysqli_stmt_fetch</function> retournera
+   les données mise en tampon.
   </para>
   <note>
    <para>
@@ -62,36 +66,18 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-/* Ouvre la connexion */
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-/* Vérifie la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
-
 $query = "SELECT Name, CountryCode FROM City ORDER BY Name LIMIT 20";
-if ($stmt = $mysqli->prepare($query)) {
+$stmt = $mysqli->prepare($query);
+$stmt->execute();
 
-    /* Exécution de la requête */
-    $stmt->execute();
+/* store the result in an internal buffer */
+$stmt->store_result();
 
-    /* Stocke le résultat */
-    $stmt->store_result();
-
-    printf("Nombre de lignes: %d.\n", $stmt->num_rows);
-
-    /* Libère le résultat */
-    $stmt->free_result();
-
-    /* Fermeture de la requête */
-    $stmt->close();
-}
-
-/* Fermeture de la connexion */
-$mysqli->close();
-?>
+printf("Number of rows: %d.\n", $stmt->num_rows);
 ]]>
    </programlisting>
   </example>
@@ -100,42 +86,24 @@ $mysqli->close();
    <programlisting role="php">
 <![CDATA[
 <?php
-/* Ouvre la connexion */
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $link = mysqli_connect("localhost", "my_user", "my_password", "world");
 
-/* Vérifie la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
-
 $query = "SELECT Name, CountryCode FROM City ORDER BY Name LIMIT 20";
-if ($stmt = mysqli_prepare($link, $query)) {
+$stmt = mysqli_prepare($link, $query);
+mysqli_stmt_execute($stmt);
 
-    /* Exécution de la requête */
-    mysqli_stmt_execute($stmt);
+/* store the result in an internal buffer */
+mysqli_stmt_store_result($stmt);
 
-    /* Stocke le résultat */
-    mysqli_stmt_store_result($stmt);
-
-    printf("Nombre de lignes : %d.\n", mysqli_stmt_num_rows($stmt));
-
-    /* Libère le résultat */
-    mysqli_stmt_free_result($stmt);
-
-    /* Fermeture de la requête */
-    mysqli_stmt_close($stmt);
-}
-
-/* Fermeture de la connexion */
-mysqli_close($link);
-?>
+printf("Number of rows: %d.\n", mysqli_stmt_num_rows($stmt));
 ]]>
    </programlisting>
    &examples.outputs;
    <screen>
 <![CDATA[
-Nombre de lignes : 20.
+Number of rows: 20.
 ]]>
    </screen>
   </example>
