@@ -25,10 +25,10 @@ La traduction française suivra la modification faite dans la documentation angl
 
 Pour construire la documentation il faut posséder à minimal les trois repository suivant :
  - ``php/doc-base`` : qui possède les outils pour construire la documentation
-   trouvée sur ``git.php.net`` : https://git.php.net/?p=doc/base.git;a=summary
+   trouvée sur ``github.com`` : https://github.com/php/doc-base
  - ``php/doc-en`` : la version anglaise de la documentation sur laquelle se rabattre quand
-   la version française est inexistante pour une page : https://git.php.net/?p=doc/en.git;a=summary
- - ``php/doc-fr`` : la version française de la documentation : https://git.php.net/?p=doc/fr.git;a=summary
+   la version française est inexistante pour une page : https://github.com/php/doc-en
+ - ``php/doc-fr`` : la version française de la documentation : https://github.com/php/doc-fr
 
 > Note : vous pouvez cloner à partir du miroir GitHub, mais pour que la documentation puisse
 > être construite le dossier où se situe la documentation anglaise *doit* être nommé ``en``
@@ -180,7 +180,7 @@ qui doit merger votre contribution sur le repository git officiel.
 ### Utilisateur ayant un accès VCS (c.à.d un compte @php.net, avec du karma sur doc-fr)
 
 Il n'est pas nécessaire de passer par une pull request et vous pouvez commit et
-push directement sur la branche ``master`` du repo doc-fr sur https://git.php.net.
+push directement sur la branche ``master`` du repo doc-fr sur https://github.com.
 
 Éviter les "merge commit" et préférez un ``git rebase`` suivi d'un merge fast-forward.
 
