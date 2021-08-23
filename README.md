@@ -3,11 +3,11 @@
 Ce document a pour but d'expliquer comment participer à la rédaction de la
 documentation française de PHP.
 
-Si vous voulez lire la documentation et non la rédiger aller voir le site PHP.net :
+Si vous voulez lire la documentation et non la rédiger, allez sur le site PHP.net :
 https://www.php.net/manual/fr/
 
-De plus, si une erreur est présente dans la documentation vérifiez qu'elle ne se
-trouve pas non plus dans la documentation anglaise, si oui corrigez celle-ci d'abord.
+De plus, si une erreur est présente dans la documentation, vérifiez qu'elle ne se
+trouve pas non plus dans la documentation anglaise. Si oui, corrigez celle-ci d'abord.
 La traduction française suivra la modification faite dans la documentation anglaise.
 
 # Sommaire
@@ -23,12 +23,12 @@ La traduction française suivra la modification faite dans la documentation angl
 
 ## 1: Installation :
 
-Pour construire la documentation il faut posséder à minimal les trois repository suivant :
- - ``php/doc-base`` : qui possède les outils pour construire la documentation
-   trouvée sur ``github.com`` : https://github.com/php/doc-base
- - ``php/doc-en`` : la version anglaise de la documentation sur laquelle se rabattre quand
+Pour construire la documentation, il faut posséder au minimum les trois répertoires suivant :
+ - ``php/doc-base``, qui possède les outils pour construire la documentation
+   disponible sur ``github.com`` : https://github.com/php/doc-base
+ - ``php/doc-en``, la version anglaise de la documentation sur laquelle se rabattre quand
    la version française est inexistante pour une page : https://github.com/php/doc-en
- - ``php/doc-fr`` : la version française de la documentation : https://github.com/php/doc-fr
+ - ``php/doc-fr``, la version française de la documentation : https://github.com/php/doc-fr
 
 > Note : vous pouvez cloner à partir du miroir GitHub, mais pour que la documentation puisse
 > être construite le dossier où se situe la documentation anglaise *doit* être nommé ``en``
@@ -39,7 +39,7 @@ Pour construire la documentation il faut posséder à minimal les trois reposito
 Il est important de savoir construire la documentation pour s'assurer que les changements effectués
 ne cassent pas le build, ce qui empêchera la publication de la dernière version de celle-ci sur php.net.
 
-En s'imaginant qu'on se situe dans le dossier ``fr`` dans la structure de dossier suivante :
+En s'imaginant qu'on se situe dans le dossier ``fr`` de l'arborescence suivante :
 
 ```
 |
@@ -49,7 +49,7 @@ En s'imaginant qu'on se situe dans le dossier ``fr`` dans la structure de dossie
  |- ...
 ```
 
-Il suffit d'exécuter ``php ../base/configure.php --with-lang=fr``
+Il suffit d'exécuter ``php ../base/configure.php --with-lang=fr``.
 
 Si tout ce passe bien vous serez accueillis avec le message suivant :
 
@@ -85,8 +85,9 @@ Ceci ce manifeste par le commentaire suivant en haut de chaque fichier XML :
 <!-- EN-Revision: git-hash Maintainer: XXXX Status: YYYYY -->
 ```
 
-Lors de la mise à jour d'un fichier pour répliquer les changements effectués sur la version
-anglaise il est primordial de mettre à jour le hache git du commit anglais.
+Lors de la mise à jour d'un fichier, afin de répliquer les changements
+effectués sur la version anglaise il est primordial de mettre à jour le hache
+git du commit anglais.
 
 Le statut du rev-check peut actuellement être consulté sur
 http://doc.php.gpb.moe/tools/revcheck/fr/outdated.html
@@ -133,8 +134,8 @@ Tout le code est censé être compatible avec `error_reporting(E_ALL)`
 
 ## 5: Traduction, relectures et orthographe
 
-Afin d'avoir un manuel en bon français, la traduction de certain terme technique
-se trouve dans le document ``TRADUCTIONS.txt``.
+Afin d'avoir un manuel en bon français, la traduction de certains termes
+techniques se trouve dans le document ``TRADUCTIONS.txt``.
 
 Il est aussi nécessaire de le relire la traduction pour s'assurer que le texte
 traduit ait du sens et soit en accordance avec le texte anglais.
@@ -191,10 +192,10 @@ Ne créer et pusher pas des branches différentes de ``master`` sur le repo git 
 Comme GitHub est un miroir, il est nécessaire de merger manuellement les pulls requests.
 Pour l'exemple on va imaginer que le numéro de la pull request est ``99999``.
 
-La pull request se trouve donc à cette adresse : ``https://github.com/php/doc-fr/pull/99999``
+La pull request se trouve donc à cette adresse : ``https://github.com/php/doc-fr/pull/99999``.
 
 GitHub fournit le patch de cette PR à l'adresse suivante : ``https://github.com/php/doc-fr/pull/99999.patch``
-qui sera convertie en ``https://patch-diff.githubusercontent.com/raw/php/doc-fr/pull/99999.patch``
+qui sera convertie en ``https://patch-diff.githubusercontent.com/raw/php/doc-fr/pull/99999.patch``.
 
 Il suffit alors de ``curl`` le patch et le ``git am`` de la manière suivante :
 ```shell
@@ -205,7 +206,7 @@ Avant de push ce commit on va éditer le message du commit pour ajouter un lien 
 entre le commit et la pull request. Pour cela, ajouter dans le texte étendu du commit le texte suivant :
 ``Closes GH-99999``
 
-Ceci, clôtura la PR automatiquement lors du commit et génèrera le lien bi-directionnel.
+Ceci clôtura la PR automatiquement lors du commit et génèrera le lien bi-directionnel.
 
 
 ## 7: Commandes utiles
