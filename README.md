@@ -21,7 +21,7 @@ La traduction française suivra la modification faite dans la documentation angl
  7. Commandes utiles
 
 
-## 1: Installation :
+## 1: Installation
 
 Pour construire la documentation il faut posséder à minimal les trois repository suivant :
  - ``php/doc-base`` : qui possède les outils pour construire la documentation
@@ -88,8 +88,11 @@ Ceci ce manifeste par le commentaire suivant en haut de chaque fichier XML :
 Lors de la mise à jour d'un fichier pour répliquer les changements effectués sur la version
 anglaise il est primordial de mettre à jour le hache git du commit anglais.
 
-Le statut du rev-check peut actuellement être consulté sur
-http://doc.php.gpb.moe/tools/revcheck/fr/outdated.html
+Le statut du rev-check peut actuellement être consulté sur le site des outils de la documentation
+de PHP : http://doc.php.net/revcheck.php?p=filesummary&lang=fr
+
+Pour voir les fichiers qui doivent être mise à jour, allez sur le lien "Outdated Files" qui
+amène à : http://doc.php.net/revcheck.php?p=files&lang=fr
 
 > Normalement le rev-check se trouve sur le site https://doc.php.net, mais à cause de la
 > migration récente de la documentation de SVN à git il se trouve là-bas actuellement.
@@ -173,9 +176,10 @@ Pour proposer une modification vous devez passer par une pull request contre le 
 afin d'ouvrir une pull request.
 
 Si des remarques sont faites sur votre pull request suivez-les.
-Après que la pull request soit approuvée, faite un squash-rebase de votre pull request pour
-que les modifications se trouve en un seul commit, ceci simplifie le travail pour la personne
-qui doit merger votre contribution sur le repository git officiel.
+
+En cas de conflit avec votre branche et la branche ``master``, il est préféré de faire
+un ``git rebase`` de votre branche sur ``master`` au lieu de ``git merge`` la branche ``master``
+dans la votre.
 
 ### Utilisateur ayant un accès VCS (c.à.d un compte @php.net, avec du karma sur doc-fr)
 
@@ -185,27 +189,6 @@ push directement sur la branche ``master`` du repo doc-fr sur https://github.com
 Éviter les "merge commit" et préférez un ``git rebase`` suivi d'un merge fast-forward.
 
 Ne créer et pusher pas des branches différentes de ``master`` sur le repo git officiel.
-
-### Procédure pour merge une pull request GitHub dans git.php.net
-
-Comme GitHub est un miroir, il est nécessaire de merger manuellement les pulls requests.
-Pour l'exemple on va imaginer que le numéro de la pull request est ``99999``.
-
-La pull request se trouve donc à cette adresse : ``https://github.com/php/doc-fr/pull/99999``
-
-GitHub fournit le patch de cette PR à l'adresse suivante : ``https://github.com/php/doc-fr/pull/99999.patch``
-qui sera convertie en ``https://patch-diff.githubusercontent.com/raw/php/doc-fr/pull/99999.patch``
-
-Il suffit alors de ``curl`` le patch et le ``git am`` de la manière suivante :
-```shell
-curl https://patch-diff.githubusercontent.com/raw/php/doc-fr/pull/99999.patch | git am --signoff
-```
-
-Avant de push ce commit on va éditer le message du commit pour ajouter un lien bi-directionnel
-entre le commit et la pull request. Pour cela, ajouter dans le texte étendu du commit le texte suivant :
-``Closes GH-99999``
-
-Ceci, clôtura la PR automatiquement lors du commit et génèrera le lien bi-directionnel.
 
 
 ## 7: Commandes utiles
