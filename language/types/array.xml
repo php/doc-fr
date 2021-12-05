@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: a8b8d435a7fef626867bbc3928e687b17eeef117 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 2ff6e6bcad9700adaf50f9e1639c6d7d7d1f059d Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
-<!-- CREDITS: DavidA -->
 <sect1 xml:id="language.types.array">
  <title>Les tableaux</title>
 
@@ -437,20 +435,26 @@ $arr[] = <replaceable>valeur</replaceable>;
 // <replaceable>valeur</replaceable> peut être n'importe quel type</synopsis>
 
    <para>
-    Si <varname>$arr</varname> n'existe pas lors de l'assignation, il sera
-    créé ; c'est ainsi une façon détournée de créer un tableau. Cette pratique
-    est cependant découragée car si <varname>$arr</varname> contient déjà
-    quelques valeurs (i.e. <type>string</type> depuis la variable demandée)
+    Si lors de l'assignation <varname>$arr</varname> n'existe pas ou est défini
+    à &null; ou &false;, il sera créé ; c'est ainsi une façon détournée de créer un tableau.
+    Cette pratique est cependant découragée car si <varname>$arr</varname>
+    contient déjà quelques valeurs (i.e. <type>string</type> depuis la variable demandée)
     alors cette valeur restera en place et <literal>[]</literal> peut attendre
     un <link linkend="language.types.string.substr">opérateur d'accès
     sur une chaîne</link>. C'est toujours un meilleur choix que d'initialiser
-    une variable par affectation direct.
+    une variable par affectation directe.
    </para>
    <note>
     <simpara>
      À partir de PHP 7.1.0, l'application de l'opérateur d'index vide sur une 
      chaîne lève une erreur fatale. Auparavant, la chaîne aurait été convertie 
      silencieusement en tableau.
+    </simpara>
+   </note>
+   <note>
+    <simpara>
+     À partir de PHP 8.1.0, créer un nouveau tableau à partir de &false; est obsolète.
+     Créer un nouveau tableau depuis &null; et les valeurs indéfinies est toujours autorisé.
     </simpara>
    </note>
 
@@ -854,10 +858,12 @@ $error_descriptions[8] = "This is just an informal notice";
    Si un objet est converti en un tableau, le résultat sera un tableau dont les
    éléments sont les propriétés de l'objet. Les clés sont les noms des membres,
    avec une légère exception : les variables ayant un nom sous forme d'entier sont
-   inaccessible; les variables privées auront le nom de la classe
+   inaccessibles ; les variables privées auront le nom de la classe
    ajouté au nom de la variable ; les variables protégées auront un '*' ajouté
    au nom de la variable.
-   Ces valeurs préfixés ont des octets <literal>NUL</literal> des deux côtés.
+   Ces valeurs préfixées ont des octets <literal>NUL</literal> des deux côtés.
+   Les <link linkend="language.oop5.properties.typed-properties">propriétés typées</link>
+   non-initialisées sont silencieusement défaussés.
   </para>
 
   <informalexample>
@@ -945,6 +951,102 @@ array(3) {
    <function>array_diff</function> ainsi qu'avec les
    <link linkend="language.operators.array">opérateurs de tableaux</link>.
   </para>
+ </sect2>
+
+ <sect2 xml:id="language.types.array.unpacking">
+  <title>Déballage des tableaux</title>
+
+  <para>
+   Un tableau préfixé par <code>...</code> sera déballé sur place lors de la définition du tableau.
+   Seul les tableaux et les objets qui implémente <interfacename>Traversable</interfacename> peuvent être déballé.
+   Le déballage de tableau avec <code>...</code> est disponible à partir de PHP 7.4.0.
+  </para>
+
+  <para>
+   Il est possible de déballer plusieurs fois, et d'ajouter des éléments
+   normaux avant et après l'opérateur <code>...</code> :
+
+   <example>
+    <title>Déballage simple de tableau</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Using short array syntax.
+// Also, works with array() syntax.
+$arr1 = [1, 2, 3];
+$arr2 = [...$arr1]; //[1, 2, 3]
+$arr3 = [0, ...$arr1]; //[0, 1, 2, 3]
+$arr4 = [...$arr1, ...$arr2, 111]; //[1, 2, 3, 1, 2, 3, 111]
+$arr5 = [...$arr1, ...$arr1]; //[1, 2, 3, 1, 2, 3]
+
+function getArr() {
+  return ['a', 'b'];
+}
+$arr6 = [...getArr(), 'c' => 'd']; //['a', 'b', 'c' => 'd']
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+
+  <para>
+   Déballer un tableau avec l'opérateur <code>...</code> suit les sémantiques de la fonction <function>array_merge</function>.
+   C'est-à-dire, que les clés ultérieures écrasent les valeurs antérieures
+   et les clés numériques sont renumérotées :
+
+   <example>
+    <title>Déballage de tableau avec clé dupliqué</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// string key
+$arr1 = ["a" => 1];
+$arr2 = ["a" => 2];
+$arr3 = ["a" => 0, ...$arr1, ...$arr2];
+var_dump($arr3); // ["a" => 2]
+
+// integer key
+$arr4 = [1, 2, 3];
+$arr5 = [4, 5, 6];
+$arr6 = [...$arr4, ...$arr5];
+var_dump($arr6); // [1, 2, 3, 4, 5, 6]
+// Which is [0 => 1, 1 => 2, 2 => 3, 3 => 4, 4 => 5, 5 => 6]
+// where the original integer keys have not been retained.
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+
+  <note>
+   <para>
+    Les clés qui ne sont ni des entiers, ni des chaînes lance une <classname>TypeError</classname>.
+    De telles clés peuvent uniquement être généré par un objet <interfacename>Traversable</interfacename>.
+   </para>
+  </note>
+  <note>
+   <para>
+    Antérieur à PHP 8.1, le déballage de tableau qui avait une clé sous forme de chaîne n'est pas supporté :
+   </para>
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$arr1 = [1, 2, 3];
+$arr2 = ['a' => 4];
+$arr3 = [...$arr1, ...$arr2];
+// Fatal error: Uncaught Error: Cannot unpack array with string keys in example.php:5
+
+$arr4 = [1, 2, 3];
+$arr5 = [4, 5];
+$arr6 = [...$arr4, ...$arr5]; // works. [1, 2, 3, 4, 5]
+?>
+]]>
+    </programlisting>
+   </informalexample>
+  </note>
+
  </sect2>
 
  <sect2 xml:id="language.types.array.examples">
