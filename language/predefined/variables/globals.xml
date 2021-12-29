@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: cb0630b14901459c0bf1556e7d68f1b4c0d3796e Maintainer: yannick Status: ready -->
+<!-- EN-Revision: a7f535a32ba19f7e8236b9d87f3d84552c5f9b64 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes Maintainer: mikaelkael -->
 
 <phpdoc:varentry xmlns:phpdoc="http://php.net/ns/phpdoc" xml:id="reserved.variables.globals" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -47,6 +46,29 @@ $foo dans le contexte courant : variable locale
     </screen>
    </example>
   </para>
+  <warning>
+   <para>
+    À partir de PHP 8.1.0, l'accès en écriture au tableau entier
+    <varname>$GLOBALS</varname> n'est désormais plus supportée :
+    <example xml:id="variable.globals.entire_write_error">
+     <title>Écrire au tableau entier <varname>$GLOBALS</varname> résultera en une erreur.</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+// Génère une erreur lors de la compilation :
+$GLOBALS = [];
+$GLOBALS += [];
+$GLOBALS =& $x;
+$x =& $GLOBALS;
+unset($GLOBALS);
+array_pop($GLOBALS);
+// ...et toute autre opération d'écriture/lecture-écriture sur $GLOBALS
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </warning>
  </refsect1>
 
  <refsect1 role="notes">
@@ -58,6 +80,39 @@ $foo dans le contexte courant : variable locale
     Contrairement à toutes les autres
     <link linkend="language.variables.superglobals">superglobales</link>,
     <varname>$GLOBALS</varname> a toujours été disponible en PHP.
+   </para>
+  </note>
+  <note>
+   <para>
+    À partir de PHP 8.1.0, <varname>$GLOBALS</varname> est désormais une
+    copie en lecture seule du tableau de symbole global.
+    C'est-à-dire que, les variables globales ne peuvent pas être modifié via sa copie.
+    Auparavant, le tableau <varname>$GLOBALS</varname> était exclus du
+    comportement usuel par-valeur des tableaux PHP et les variables globales
+    peuvent être modifié via sa copie.
+    <informalexample>
+     <programlisting role="php">
+<![CDATA[
+<?php
+// Before PHP 8.1.0
+$a = 1;
+$globals = $GLOBALS; // Ostensibly by-value copy
+$globals['a'] = 2;
+var_dump($a); // int(2)
+
+// As of PHP 8.1.0
+// this no longer modifies $a. The previous behavior violated by-value semantics.
+$globals = $GLOBALS;
+$globals['a'] = 1;
+
+// To restore the previous behavior, iterate its copy and assign each property back to $GLOBALS.
+foreach ($globals as $key => $value) {
+    $GLOBALS[$key] = $value;
+}
+?>
+]]>
+     </programlisting>
+    </informalexample>
    </para>
   </note>
  </refsect1>

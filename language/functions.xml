@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 14e006b4eea529ce9c3df9e550b27fb507aaa44c Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 5c2678e02f0eb135946799eed02d884de1bcf4ad Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <chapter xml:id="language.functions" xmlns="http://docbook.org/ns/docbook">
  <title>Les fonctions</title>
@@ -233,7 +233,7 @@ function takes_many_args(
     </programlisting>
    </example>
   <para>
-   À partir de PHP 8.0.0, passer des arguments obligatoire après des arguments optionnel
+   À partir de PHP 8.0.0, déclarer des arguments obligatoire après des arguments optionnel
    est obsolète. Ceci peut être généralement résolue en supprimant la valeur par défaut.
    Une exception à cette règle sont les arguments de la forme
    <code>Type $param = null</code>, où le &null; par défaut rend le type implicitement
@@ -241,7 +241,7 @@ function takes_many_args(
    un type nullable explicitement à la place.
   </para>
   <example>
-   <title>Passer des arguments optionnels après des arguments obligatoire</title>
+   <title>Déclarer des arguments optionnels après des arguments obligatoire</title>
    <programlisting role="php">
 <![CDATA[
 <?php
@@ -686,7 +686,7 @@ htmlspecialchars($string, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401, 'UTF-8', fa
    </para>
 
    <example>
-    <title>Exception Error quand un même paramètre est passer plusieurs fois</title>
+    <title>Exception Error quand un même paramètre est passé plusieurs fois</title>
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -799,11 +799,10 @@ $newref =& retourne_reference();
   <title>Fonctions variables</title>
   
   <para>
-   PHP supporte le concept de fonctions variables. Cela signifie
-   que si le nom d'une variable est suivi de parenthèses,
-   PHP recherchera une fonction de même nom,
-   et essaiera de l'exécuter. Cela peut servir, entre autres,
-   pour faire des fonctions de rappel, des tables de fonctions...
+   PHP supporte le concept de fonctions variables.
+   Cela signifie que si le nom d'une variable est suivi de parenthèses,
+   PHP recherchera une fonction de même nom et essaiera de l'exécuter.
+   Cela peut servir, entre autres, pour faire des fonctions de rappel, des tables de fonctions...
   </para>
   <para>
    Les fonctions variables ne peuvent pas fonctionner avec les
@@ -1529,6 +1528,126 @@ var_export($x);  // Outputs 1
     </note>
    </sect2>
   </sect1>
+
+ <sect1 xml:id="functions.first_class_callable_syntax">
+  <title>Syntaxe callable de première classe</title>
+
+  <para>
+   La syntaxe de callable de première classe est introduite à partir de PHP 8.1.0,
+   comme une manière de créer des <link linkend="functions.anonymous">fonctions anonymes</link>
+   depuis des <link linkend="language.types.callable">callable</link>.
+   Elle remplace la syntaxe des callables existante utilisant les chaînes et tableaux.
+   L'avantage de cette syntaxe est qu'elle est accessible à l'analyse statique
+   et utilise la portée du point où le callable est acquis.
+  </para>
+
+  <para>
+   La syntaxe <code>CallableExpr(...)</code> est utilisée pour créer un objet
+   <classname>Closure</classname> depuis le callable.
+   <code>CallableExpr</code> accepte toute expression qui peut être directement
+   appelé dans la grammaire de PHP :
+   <example>
+    <title>Syntaxe callable de première classe basique</title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+class Foo {
+   public function method() {}
+   public static function staticmethod() {}
+   public function __invoke() {}
+}
+$obj = new Foo();
+$classStr = 'Foo';
+$methodStr = 'method';
+$staticmethodStr = 'staticmethod';
+$f1 = strlen(...);
+$f2 = $obj(...);  // invokable object
+$f3 = $obj->method(...);
+$f4 = $obj->$methodStr(...);
+$f5 = Foo::staticmethod(...);
+$f6 = $classStr::$staticmethodStr(...);
+// traditional callable using string, array
+$f7 = 'strlen'(...);
+$f8 = [$obj, 'method'](...);
+$f9 = [Foo::class, 'staticmethod'](...);
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+
+  <note>
+   <para>
+    Les <code>...</code> font parti de la syntaxe est n'est pas une omission.
+   </para>
+  </note>
+
+  <para>
+   <code>CallableExpr(...)</code> a les mêmes sémantiques que <methodname>Closure::fromCallable</methodname>.
+   C'est-à-dire, contrairement aux callables utilisant les chaînes et tableaux,
+   <code>CallableExpr(...)</code> respecte la portée du point où il est créé :
+   <example>
+    <title>Comparaison de portée de <code>CallableExpr(...)</code> et des callables traditionnels</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Foo {
+    public function getPrivateMethod() {
+        return [$this, 'privateMethod'];
+    }
+    private function privateMethod() {
+        echo __METHOD__, "\n";
+    }
+}
+$foo = new Foo;
+$privateMethod = $foo->getPrivateMethod();
+$privateMethod();
+// Fatal error: Call to private method Foo::privateMethod() from global scope
+// This is because call is performed outside from Foo and visibility will be checked from this point.
+class Foo1 {
+    public function getPrivateMethod() {
+        // Uses the scope where the callable is acquired.
+        return $this->privateMethod(...); // identical to Closure::fromCallable([$this, 'privateMethod']);
+    }
+    private function privateMethod() {
+        echo __METHOD__, "\n";
+    }
+}
+$foo1 = new Foo1;
+$privateMethod = $foo1->getPrivateMethod();
+$privateMethod();  // Foo1::privateMethod
+?>
+]]>
+    </programlisting>
+   </example>
+
+  </para>
+
+  <note>
+   <para>
+    La création d'objets avec cette syntaxe (e.g <code>new Foo(...)</code>) n'est pas supporté,
+    car la syntaxe <code>new Foo()</code> n'est pas considéré comme un appel.
+   </para>
+  </note>
+
+  <note>
+   <para>
+    La syntaxe de callable de première classe ne peut pas être combinée avec
+    l'<link linkend="language.oop5.basic.nullsafe">opérateur nullsafe</link>.
+    Les deux cas suivants entraînent une erreur de compilation :
+    <example>
+     <programlisting role="php">
+<![CDATA[
+<?php
+$obj?->method(...);
+$obj?->prop->method(...);
+?>
+]]>
+     </programlisting>
+    </example>
+   </para>
+  </note>
+ </sect1>
 
 </chapter>
 
