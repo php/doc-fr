@@ -121,7 +121,7 @@ Officiellement le groupe de documentation PHP a choisi d'utiliser les coding sta
 vous les trouverez ici : http://pear.php.net/manual/en/standards.php
 
 > En pratique néanmoins le coding style est un mélange entre PEAR et PSR-2/12,
-> essayer donc de suivre le style dans lequel la page a été écrite, ou celui de la documentation anglaise.
+> essayez donc de suivre le style dans lequel la page a été écrite, ou celui de la documentation anglaise.
 
 Le code source PHP commence à la colonne zéro de l'exemple :
 ```php
@@ -136,7 +136,7 @@ Tout le code est censé être compatible avec `error_reporting(E_ALL)`
 
 ## 5: Traduction, relectures et orthographe
 
-Afin d'avoir un manuel en bon français, la traduction de certain terme technique
+Afin d'avoir un manuel en bon français, la traduction de certains termes techniques
 se trouve dans le document ``TRADUCTIONS.txt``.
 
 Il est aussi nécessaire de le relire la traduction pour s'assurer que le texte
@@ -145,7 +145,7 @@ traduit ait du sens et soit en accordance avec le texte anglais.
 Après la relecture d'une traduction le tag/commentaire suivant
 ``<!-- Reviewed: no/yes -->`` doit avoir la valeur `yes`.
 Lors d'une modification d'un fichier relu ce tag doit passer à la valeur ``no``,
-sauf lors de modification mineure/changement purement XML (e.g. changement d'un element
+sauf lors de modifications mineures/changements purement XML (e.g. changement d'un element
 `<methodsynopsis>`).
 
 ### Traduire une nouvelle page
@@ -171,13 +171,13 @@ Pour les messages de logs des commits, on essayera de :
 ### Utilisateur lambda
 
 Pour proposer une modification vous devez passer par une pull request contre le miroir GitHub
-`doc-fr`, pour cella faire un fork du repository `doc-fr` de GitHub, créer une nouvelle branche
-(feature branch) faite vos modifications, committer, puis `git push` la branche sur votre fork
+`doc-fr`, pour cela faire un fork du repository `doc-fr` de GitHub, créer une nouvelle branche
+(feature branch), faire vos modifications, committer, puis `git push` la branche sur votre fork
 afin d'ouvrir une pull request.
 
 Si des remarques sont faites sur votre pull request suivez-les.
 
-En cas de conflit avec votre branche et la branche ``master``, il est préféré de faire
+En cas de conflit avec votre branche et la branche ``master``, il est préférable de faire
 un ``git rebase`` de votre branche sur ``master`` au lieu de ``git merge`` la branche ``master``
 dans la votre.
 
