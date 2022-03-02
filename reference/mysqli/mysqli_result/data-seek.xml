@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: d68e83b719028bb068785cccc3205c23be530564 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 67c340d029add04675cd4b399f18ad390f485a7b Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 <refentry xml:id="mysqli-result.data-seek" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -59,77 +59,100 @@
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>&style.oop;</title>
+   <title><methodname>mysqli::data_seek</methodname> example</title>
+   <para>&style.oop;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
-
 $query = "SELECT Name, CountryCode FROM City ORDER BY Name";
-if ($result = $mysqli->query($query)) {
+$result = $mysqli->query($query);
 
-    /* Déplacement du pointeur sur la ligne numéro 400 */
-    $result->data_seek(399);
+/* Recherche la ligne 401 */
+$result->data_seek(400);
 
-    /* Récupération de cette ligne */
-    $row = $result->fetch_row();
-
-    printf ("Ville : %s Code Pays : %s\n", $row[0], $row[1]);
-
-    /* Libération des résultats */
-    $result->close();
-}
-
-/* Fermeture de la connexion */
-$mysqli->close();
+/* Récupération de cette ligne */
+$row = $result->fetch_row();
+printf("Ville: %s  Code Pays: %s\n", $row[0], $row[1]);
 ?>
 ]]>
    </programlisting>
-  </example>
-  <example>
-   <title>&style.procedural;</title>
+   <para>&style.procedural;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $link = mysqli_connect("localhost", "my_user", "my_password", "world");
 
-/* Vérification de la connexion */
-if (!$link) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
-
 $query = "SELECT Name, CountryCode FROM City ORDER BY Name";
+$result = mysqli_query($link, $query);
 
-if ($result = mysqli_query($link, $query)) {
+/* Recherché la ligne 401 */
+mysqli_data_seek($result, 400);
 
-    /* Déplacement du pointeur sur la ligne numéro 400 */
-    mysqli_data_seek($result, 399);
-
-    /* Récupération de cette ligne */
-    $row = mysqli_fetch_row($result);
-
-    printf ("Ville : %s Code Pays : %s\n", $row[0], $row[1]);
-
-    /* Libération des résultats */
-    mysqli_free_result($result);
-}
-
-/* Fermeture de la connexion */
-mysqli_close($link);
-?>
+/* Récupération de cette ligne */
+$row = mysqli_fetch_row($result);
+printf("Ville: %s  Code Pays: %s\n", $row[0], $row[1]);
 ]]>
    </programlisting>
    &examples.outputs;
    <screen>
 <![CDATA[
-Ville : Benin City Code Pays : NGA
+Ville: Benin City  Code Pays: NGA
+]]>
+   </screen>
+  </example>
+
+  <example>
+   <title>Adjusting the result pointer when iterating</title>
+   <para>
+    This function can be useful when iterating over the result set to impose
+    a custom order or rewind the result set when iterating multiple times.
+   </para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
+
+$query = "SELECT Name, CountryCode FROM City ORDER BY Name LIMIT 15,4";
+$result = $mysqli->query($query);
+
+/* Interroger l'ensemble des résultats dans l'ordre inverse */
+for ($row_no = $result->num_rows - 1; $row_no >= 0; $row_no--) {
+    $result->data_seek($row_no);
+    
+    /* Récupération de cette ligne */
+    $row = $result->fetch_row();
+    printf("Ville: %s  Code Pays: %s\n", $row[0], $row[1]);
+}
+
+/* Remise à zéro du pointeur au début de l'ensemble de résultats */
+$result->data_seek(0);
+print "\n";
+
+/* Interroger à nouveau le même ensemble de résultats */
+while ($row = $result->fetch_row()) {
+    printf("Ville: %s  Code Pays: %s\n", $row[0], $row[1]);
+}
+]]>
+   </programlisting>
+   &examples.outputs;
+   <screen>
+<![CDATA[
+Ville: Acmbaro  Code Pays: MEX
+Ville: Abuja  Code Pays: NGA
+Ville: Abu Dhabi  Code Pays: ARE
+Ville: Abottabad  Code Pays: PAK
+Ville: Abottabad  Code Pays: PAK
+Ville: Abu Dhabi  Code Pays: ARE
+Ville: Abuja  Code Pays: NGA
+Ville: Acmbaro  Code Pays: MEX
 ]]>
    </screen>
   </example>
@@ -140,8 +163,8 @@ Ville : Benin City Code Pays : NGA
   <note>
    <para>
     Cette fonction ne peut être utilisée qu'avec des résultats obtenus
-    avec la fonction <function>mysqli_store_result</function> ou
-    <function>mysqli_query</function>.
+    avec la fonction <function>mysqli_store_result</function>,
+    <function>mysqli_query</function> ou <function>mysqli_stmt_get_result</function>.
    </para>
   </note>
  </refsect1>
