@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7e5d0d1bb69180c9de1992edf9613215c975fa57 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3d34df408450460dcfb98e749bc14600059f6f73 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 <refentry xml:id="mysqli.query" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -78,30 +78,34 @@
       <para>
        La requête, sous la forme d'une &string;.
       </para>
-      <para>
-       Les données contenues dans la requête doivent être
-       <link linkend="mysqli.real-escape-string">échappées</link>.
-      </para>
+      &mysqli.sqlinjection.warning;
      </listitem>
     </varlistentry>
     <varlistentry>
      <term><parameter>result_mode</parameter></term>
      <listitem>
       <para>
-       Soit la constante <constant>MYSQLI_USE_RESULT</constant>, soit la constante
-       <constant>MYSQLI_STORE_RESULT</constant>, suivant le comportement désiré.
-       Par défaut, la constante <constant>MYSQLI_STORE_RESULT</constant> est utilisé.
+       Le mode de résultat peut être l'une des 3 constantes indiquant comment
+       le résultat sera renvoyé par le serveur MySQL.
       </para>
       <para>
-       Si vous utilisez la constante <constant>MYSQLI_USE_RESULT</constant>,
-       tous les appels suivants retourneront une erreur <literal>Commands out of sync</literal>
-       tant que vous n'aurez pas appelé la fonction <function>mysqli_free_result</function>.
+       <constant>MYSQLI_STORE_RESULT</constant> (par défaut) - renvoie un objet <classname>mysqli_result</classname>
+       avec un ensemble de résultats mis en mémoire tampon.
       </para>
       <para>
-       Avec la constante <constant>MYSQLI_ASYNC</constant> (disponible avec mysqlnd), 
-       il est possible de faire des requêtes asynchrone. 
-       <function>mysqli_poll</function> est alors utilisé pour lire les résultats
-       de ce type de requêtes.
+       <constant>MYSQLI_USE_RESULT</constant> - renvoie un objet <classname>mysqli_result</classname>
+       avec un ensemble de résultats non tamponnés.
+       Tant qu'il y a des enregistrements en attente d'être récupérés, la ligne de connexion sera occupée
+       et tous les appels suivants renverront l'erreur <literal>Commands out of sync</literal>.
+       Pour éviter l'erreur, tous les enregistrements doivent être récupérés du serveur ou l'ensemble
+       de résultats doit être écarté en appelant la <function>mysqli_free_result</function>.
+      </para>
+      <para>
+       <constant>MYSQLI_ASYNC</constant> (disponible avec mysqlnd) - la requête est exécutée
+       de manière asynchrone et aucun ensemble de résultats n'est immédiatement renvoyé.
+       <function>mysqli_poll</function> est alors utilisée pour obtenir les résultats de telles requêtes.
+       Utilisée en combinaison avec la constante
+       <constant>MYSQLI_STORE_RESULT</constant> ou <constant>MYSQLI_USE_RESULT</constant>.
       </para>
      </listitem>
     </varlistentry>
@@ -128,40 +132,24 @@
    <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-/* Vérification de la connexion */
-if ($mysqli->connect_errno) {
-    printf("Échec de la connexion : %s\n", $mysqli->connect_error);
-    exit();
-}
-
 /* "Create table" ne retournera aucun jeu de résultats */
-if ($mysqli->query("CREATE TEMPORARY TABLE myCity LIKE City") === TRUE) {
-    printf("Table myCity créée avec succès.\n");
-}
+$mysqli->query("CREATE TEMPORARY TABLE myCity LIKE City");
+printf("Table myCity créée avec succès.\n");
 
 /* Requête "Select" retourne un jeu de résultats */
-if ($result = $mysqli->query("SELECT Name FROM City LIMIT 10")) {
-    printf("Select a retourné %d lignes.\n", $result->num_rows);
-
-    /* Libération du jeu de résultats */
-    $result->close();
-}
+$result = $mysqli->query("SELECT Name FROM City LIMIT 10");
+printf("Select a retourné %d lignes.\n", $result->num_rows);
 
 /* Si nous avons à récupérer beaucoup de données, nous utilisons MYSQLI_USE_RESULT */
-if ($result = $mysqli->query("SELECT * FROM City", MYSQLI_USE_RESULT)) {
+$result = $mysqli->query("SELECT * FROM City", MYSQLI_USE_RESULT);
 
-    /* Notez que nous ne pouvons exécuter aucune fonction qui agit sur le serveur tant que
-        le jeu de résultats n'est pas clos. Tous les appels retourneront un 'out of sync' 
-    */
-    if (!$mysqli->query("SET @a:='this will not work'")) {
-        printf("Erreur : %s\n", $mysqli->error);
-    }
-    $result->close();
-}
-
-$mysqli->close();
+/* Notez que nous ne pouvons exécuter aucune fonction qui agit sur le serveur tant que
+	le jeu de résultats n'est pas clos. Tous les appels retourneront un 'out of sync' */
+$mysqli->query("SET @a:='this will not work'");
 ?>
 ]]>
    </programlisting>
@@ -169,40 +157,24 @@ $mysqli->close();
    <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $link = mysqli_connect("localhost", "my_user", "my_password", "world");
 
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
-
 /* "Create table" ne retournera aucun jeu de résultats */
-if (mysqli_query($link, "CREATE TEMPORARY TABLE myCity LIKE City") === TRUE) {
-    printf("Table myCity créée avec succès.\n");
-}
+mysqli_query($link, "CREATE TEMPORARY TABLE myCity LIKE City");
+printf("Table myCity créée avec succès.\n");
 
 /* Requête "Select" retourne un jeu de résultats */
-if ($result = mysqli_query($link, "SELECT Name FROM City LIMIT 10")) {
-    printf("Select a retourné %d lignes.\n", mysqli_num_rows($result));
-
-    /* Libération du jeu de résultats */
-    mysqli_free_result($result);
-}
+$result = mysqli_query($link, "SELECT Name FROM City LIMIT 10");
+printf("Select a retourné %d lignes.\n", mysqli_num_rows($result));
 
 /* Si nous avons à récupérer beaucoup de données, nous utilisons MYSQLI_USE_RESULT */
-if ($result = mysqli_query($link, "SELECT * FROM City", MYSQLI_USE_RESULT)) {
+$result = mysqli_query($link, "SELECT * FROM City", MYSQLI_USE_RESULT);
 
-    /* Notez que nous ne pouvons exécuter aucune fonction qui agit sur le serveur tant que
-        le jeu de résultats n'est pas clos. Tous les appels retourneront un 'out of sync' 
-    */
-    if (!mysqli_query($link, "SET @a:='this will not work'")) {
-        printf("Erreur : %s\n", mysqli_error($link));
-    }
-    mysqli_free_result($result);
-}
-
-mysqli_close($link);
+/* Notez que nous ne pouvons exécuter aucune fonction qui agit sur le serveur tant que
+	le jeu de résultats n'est pas clos. Tous les appels retourneront un 'out of sync' */
+mysqli_query($link, "SET @a:='this will not work'");
 ?>
 ]]>
    </programlisting>
@@ -211,7 +183,7 @@ mysqli_close($link);
 <![CDATA[
 Table myCity créée avec succès.
 Select a retourné 10 lignes.
-Erreur : Commands out of sync;  You can't run this command now
+Fatal error: Uncaught mysqli_sql_exception: Commands out of sync; you can't run this command now in...
 ]]>
    </screen>
   </example>
@@ -223,6 +195,7 @@ Erreur : Commands out of sync;  You can't run this command now
    <simplelist>
     <member><function>mysqli_real_query</function></member>
     <member><function>mysqli_multi_query</function></member>
+    <member><function>mysqli_prepare</function></member>
     <member><function>mysqli_free_result</function></member>
    </simplelist>
   </para>
