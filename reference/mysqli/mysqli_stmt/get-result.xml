@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 4a9a553afc482e0a6df8e70a403342669437b62c Maintainer: yannick Status: ready -->
+<!-- EN-Revision: cbf72e31455a596699accc04a38c8129687979ee Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <refentry xml:id="mysqli-stmt.get-result" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>mysqli_stmt::get_result</refname>
   <refname>mysqli_stmt_get_result</refname>
-  <refpurpose>Récupère un jeu de résultats depuis une requête préparée</refpurpose>
+  <refpurpose>Récupère un jeu de résultats depuis une requête préparée en tant qu'objet <classname>mysqli_result</classname></refpurpose>
  </refnamediv>
  
  <refsect1 role="description">
@@ -22,11 +22,21 @@
    <methodparam><type>mysqli_stmt</type><parameter>statement</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Récupère un jeu de résultats depuis une requête préparée.
+   Récupère un jeu de résultats d'une déclaration préparée sous la forme
+   d'un objet <classname>mysqli_result</classname>.
+   Les données seront récupérées depuis le serveur MySQL vers PHP.
+   Cette méthode ne doit être appelée que pour les requêtes qui produisent un ensemble de résultats.
   </para>
   <note>
    <para>
     &mysqli.available.mysqlnd;
+   </para>
+  </note>
+  <note>
+   <para>
+    Cette fonction ne peut pas être utilisée conjointement avec
+    la <function>mysqli_stmt_store_result</function>.
+    Ces deux fonctions récupèrent le jeu de résultats complet du serveur MySQL.
    </para>
   </note>
  </refsect1>
@@ -64,45 +74,28 @@
    <title>&style.oop;</title>
    <programlisting role="php">
 <![CDATA[
-<?php 
+<?php
 
-$mysqli = new mysqli("127.0.0.1", "user", "password", "world"); 
-
-if($mysqli->connect_error)
-{
-    die("$mysqli->connect_errno: $mysqli->connect_error");
-}
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
 $query = "SELECT Name, Population, Continent FROM Country WHERE Continent=? ORDER BY Name LIMIT 1";
 
-$stmt = $mysqli->stmt_init();
-if(!$stmt->prepare($query))
-{
-    print "Échec lors de la préparation de la requête\n";
-}
-else
-{
-    $stmt->bind_param("s", $continent);
+$stmt = $mysqli->prepare($query);
+$stmt->bind_param("s", $continent);
 
-    $continent_array = array('Europe','Africa','Asia','North America');
+$continentList = array('Europe', 'Africa', 'Asia', 'North America');
 
-    foreach($continent_array as $continent)
-    {
-        $stmt->execute();
-        $result = $stmt->get_result();
-        while ($row = $result->fetch_array(MYSQLI_NUM))
-        {
-            foreach ($row as $r)
-            {
-                print "$r ";
-            }
-            print "\n";
+foreach ($continentList as $continent) {
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_array(MYSQLI_NUM)) {
+        foreach ($row as $r) {
+            print "$r ";
         }
+        print "\n";
     }
 }
-
-$stmt->close();
-$mysqli->close();
 ?>
 ]]>
    </programlisting>
@@ -113,49 +106,30 @@ $mysqli->close();
 <![CDATA[
 <?php 
 
-$link = mysqli_connect("127.0.0.1", "user", "password", "world"); 
-
-if (!$link)
-{
-    $error = mysqli_connect_error();
-    $errno = mysqli_connect_errno();
-    print "$errno: $error\n";
-    exit();
-}
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$link = mysqli_connect("localhost", "my_user", "my_password", "world");
 
 $query = "SELECT Name, Population, Continent FROM Country WHERE Continent=? ORDER BY Name LIMIT 1";
 
-$stmt = mysqli_stmt_init($link);
-if(!mysqli_stmt_prepare($stmt, $query))
-{
-    print "Échec lors de la préparation de la requête\n";
-}
-else
-{
-    mysqli_stmt_bind_param($stmt, "s", $continent);
+$stmt = mysqli_prepare($link, $query);
+mysqli_stmt_bind_param($stmt, "s", $continent);
 
-    $continent_array = array('Europe','Africa','Asia','North America');
+$continentList= array('Europe', 'Africa', 'Asia', 'North America');
 
-    foreach($continent_array as $continent)
-    {
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_stmt_get_result($stmt);
-        while ($row = mysqli_fetch_array($result, MYSQLI_NUM))
-        {
-            foreach ($row as $r)
-            {
-                print "$r ";
-            }
-            print "\n";
+foreach ($continentList as $continent) {
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    while ($row = mysqli_fetch_array($result, MYSQLI_NUM)) {
+        foreach ($row as $r) {
+            print "$r ";
         }
+        print "\n";
     }
 }
-mysqli_stmt_close($stmt);
-mysqli_close($link);
 ?>
 ]]>
    </programlisting>
-   &examples.outputs;
+   &examples.outputs.similar;
    <screen>
 <![CDATA[
 Albania 3401200 Europe 
@@ -176,7 +150,6 @@ Anguilla 8000 North America
     <member><function>mysqli_stmt_fetch</function></member>
     <member><function>mysqli_fetch_array</function></member>
     <member><function>mysqli_stmt_store_result</function></member>
-    <member><function>mysqli_errno</function></member>
    </simplelist>
   </para>
  </refsect1>

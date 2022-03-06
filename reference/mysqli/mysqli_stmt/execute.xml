@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7e5d0d1bb69180c9de1992edf9613215c975fa57 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 9b50279c673a432b3e49ed348a966db91b21b0db Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <refentry xml:id="mysqli-stmt.execute" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -14,12 +14,13 @@
   <para>&style.oop;</para>
   <methodsynopsis role="oop">
    <modifier>public</modifier> <type>bool</type><methodname>mysqli_stmt::execute</methodname>
-   <void/>
+   <methodparam choice="opt"><type class="union"><type>array</type><type>null</type></type><parameter>params</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
   <para>&style.procedural;</para>
   <methodsynopsis role="procedural">
    <type>bool</type><methodname>mysqli_stmt_execute</methodname>
    <methodparam><type>mysqli_stmt</type><parameter>statement</parameter></methodparam>
+   <methodparam choice="opt"><type class="union"><type>array</type><type>null</type></type><parameter>params</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
   <para>
    Exécute une requête qui a été préalablement préparée en utilisant la
@@ -31,8 +32,10 @@
    Si la requête est <literal>UPDATE</literal>, <literal>DELETE</literal>,
    ou <literal>INSERT</literal>, le nombre total de lignes affectées est
    disponible via la fonction <function>mysqli_stmt_affected_rows</function>.
-   De la même façon, si la fonction génère un résultat, il sera disponible
-   via la fonction <function>mysqli_stmt_fetch</function>.
+   Si la requête produit un ensemble de résultats, il peut être récupéré à l'aide
+   de la fonction <function>mysqli_stmt_get_result</function> ou en le récupérant ligne
+   par ligne directement à partir de l'instruction à l'aide
+   de la fonction <function>mysqli_stmt_fetch</function>.
   </para>
  </refsect1>
 
@@ -41,6 +44,15 @@
   <para>
    <variablelist>
     &mysqli.stmt.description;
+    <varlistentry>
+     <term><parameter>params</parameter></term>
+     <listitem>
+      <para>
+       Une liste facultative, en tant que &array;, avec autant d'éléments qu'il y a de paramètres liés
+       dans l'instruction SQL en cours d'exécution. Chaque valeur est traitée comme une &string;.
+      </para>
+     </listitem>
+    </varlistentry>
    </variablelist>
   </para>
  </refsect1>
@@ -52,10 +64,32 @@
   </para>
  </refsect1>
 
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>8.1.0</entry>
+      <entry>
+       Le paramètre facultatif <parameter>params</parameter> a été ajouté.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
+ </refsect1>
+
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title><methodname>mysqli_stmt::execute</methodname> example</title>
+   <title>Exécuter une instruction préparée avec des variables liées</title>
    <para>&style.oop;</para>
    <programlisting role="php">
 <![CDATA[
@@ -64,37 +98,32 @@
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-$mysqli->query("CREATE TABLE myCity LIKE City");
+$mysqli->query("CREATE TEMPORARY TABLE myCity LIKE City");
 
-/* Prepare an insert statement */
+/* Préparation de la requête */
 $stmt = $mysqli->prepare("INSERT INTO myCity (Name, CountryCode, District) VALUES (?,?,?)");
 
-/* Bind variables to parameters */
+/* Lier les variables aux paramètres */
 $stmt->bind_param("sss", $val1, $val2, $val3);
-
 $val1 = 'Stuttgart';
 $val2 = 'DEU';
 $val3 = 'Baden-Wuerttemberg';
 
-/* Execute the statement */
+/* Exécuter l'instruction */
 $stmt->execute();
-
 $val1 = 'Bordeaux';
 $val2 = 'FRA';
 $val3 = 'Aquitaine';
 
-/* Execute the statement */
+/* Exécuter l'instruction */
 $stmt->execute();
 
-/* retrieve all rows from myCity */
+/* Récupération de toutes les lignes de myCity */
 $query = "SELECT Name, CountryCode, District FROM myCity";
 $result = $mysqli->query($query);
 while ($row = $result->fetch_row()) {
     printf("%s (%s,%s)\n", $row[0], $row[1], $row[2]);
 }
-
-/* remove table */
-$mysqli->query("DROP TABLE myCity");
 ]]>
    </programlisting>
    <para>&style.procedural;</para>
@@ -105,37 +134,32 @@ $mysqli->query("DROP TABLE myCity");
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $link = mysqli_connect("localhost", "my_user", "my_password", "world");
 
-mysqli_query($link, "CREATE TABLE myCity LIKE City");
+mysqli_query($link, "CREATE TEMPORARY TABLE myCity LIKE City");
 
-/* Prepare an insert statement */
+/* Préparation de la requête */
 $stmt = mysqli_prepare($link, "INSERT INTO myCity (Name, CountryCode, District) VALUES (?,?,?)");
 
-/* Bind variables to parameters */
+/* Lier les variables aux paramètres */
 mysqli_stmt_bind_param($stmt, "sss", $val1, $val2, $val3);
-
 $val1 = 'Stuttgart';
 $val2 = 'DEU';
 $val3 = 'Baden-Wuerttemberg';
 
-/* Execute the statement */
+/* Exécuter l'instruction */
 mysqli_stmt_execute($stmt);
-
 $val1 = 'Bordeaux';
 $val2 = 'FRA';
 $val3 = 'Aquitaine';
 
-/* Execute the statement */
+/* Exécuter l'instruction */
 mysqli_stmt_execute($stmt);
 
-/* retrieve all rows from myCity */
+/* Récupération de toutes les lignes de myCity */
 $query = "SELECT Name, CountryCode, District FROM myCity";
 $result = mysqli_query($link, $query);
 while ($row = mysqli_fetch_row($result)) {
     printf("%s (%s,%s)\n", $row[0], $row[1], $row[2]);
 }
-
-/* remove table */
-mysqli_query($link, "DROP TABLE myCity");
 ]]>
    </programlisting>
    &examples.outputs;
@@ -143,6 +167,63 @@ mysqli_query($link, "DROP TABLE myCity");
 <![CDATA[
 Stuttgart (DEU,Baden-Wuerttemberg)
 Bordeaux (FRA,Aquitaine)
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>Exécuter une instruction préparée avec un tableau de valeurs</title>
+   <para>&style.oop;</para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli('localhost', 'my_user', 'my_password', 'world');
+
+$mysqli->query('CREATE TEMPORARY TABLE myCity LIKE City');
+
+/* Préparation de la requête */
+$stmt = $mysqli->prepare('INSERT INTO myCity (Name, CountryCode, District) VALUES (?,?,?)');
+
+/* Exécuter l'instruction */
+$stmt->execute(['Stuttgart', 'DEU', 'Baden-Wuerttemberg']);
+
+/* Récupération de toutes les lignes de myCity */
+$query = 'SELECT Name, CountryCode, District FROM myCity';
+$result = $mysqli->query($query);
+while ($row = $result->fetch_row()) {
+    printf("%s (%s,%s)\n", $row[0], $row[1], $row[2]);
+}
+]]>
+   </programlisting>
+   <para>&style.procedural;</para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$link = mysqli_connect('localhost', 'my_user', 'my_password', 'world');
+
+mysqli_query($link, 'CREATE TEMPORARY TABLE myCity LIKE City');
+
+/* Préparation de la requête */
+$stmt = mysqli_prepare($link, 'INSERT INTO myCity (Name, CountryCode, District) VALUES (?,?,?)');
+
+/* Exécuter l'instruction */
+mysqli_stmt_execute($stmt, ['Stuttgart', 'DEU', 'Baden-Wuerttemberg']);
+
+/* Récupération de toutes les lignes de myCity */
+$query = 'SELECT Name, CountryCode, District FROM myCity';
+$result = mysqli_query($link, $query);
+while ($row = mysqli_fetch_row($result)) {
+    printf("%s (%s,%s)\n", $row[0], $row[1], $row[2]);
+}
+]]>
+   </programlisting>
+   &examples.outputs;
+   <screen>
+<![CDATA[
+Stuttgart (DEU,Baden-Wuerttemberg)
 ]]>
    </screen>
   </example>
