@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7e5d0d1bb69180c9de1992edf9613215c975fa57 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 181e9c5572ed04ed712b8d7f858f61a94647c6ac Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 <refentry xml:id="mysqli-result.num-rows" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>mysqli_result::$num_rows</refname>
   <refname>mysqli_num_rows</refname>
-  <refpurpose>Retourne le nombre de lignes dans un résultat</refpurpose>
+  <refpurpose>Retourne le nombre de lignes dans le jeu de résultats</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -23,9 +23,9 @@
   </para>
   <para>
    Le comportement de <function>mysqli_num_rows</function> dépend de l'utilisation de
-   jeux de résultats bufferisés ou non. Pour les jeux de résultats
-   non bufferisés, <function>mysqli_num_rows</function> ne retournera pas le
-   nombre correct de lignes tant que toutes les lignes du jeu de résultats ne sont pas retournées.
+   jeux de résultats bufferisés ou non.
+   Cette fonction renvoie <literal>0</literal> pour les ensembles de résultats non tamponnés,
+   sauf si toutes les lignes ont été récupérées du serveur.
   </para>
  </refsect1>
 
@@ -41,14 +41,11 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne le nombre de lignes dans le jeu de résultats.
+   Un &integer; représentant le nombre de lignes récupérées.
+   Retourne <literal>0</literal> en mode non tamponné,
+   sauf si toutes les lignes ont été récupérées depuis le serveur.
   </para>
-  <note>
-   <para>
-    Si le nombre de résultats est plus grand que <constant>PHP_INT_MAX</constant>,
-    le nombre sera retourné sous la forme d'une chaîne de caractères.
-   </para>
-  </note>
+  &mysqli.integer.overflow.as.string.note;
  </refsect1>
 
  <refsect1 role="examples">
@@ -58,28 +55,16 @@
    <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
+$result = $mysqli->query("SELECT Code, Name FROM Country ORDER BY Name");
 
-if ($result = $mysqli->query("SELECT Code, Name FROM Country ORDER BY Name")) {
+/* Détermine le nombre de lignes du jeu de résultats */
+$row_cnt = $result->num_rows;
 
-    /* Détermine le nombre de lignes du jeu de résultats */
-    $row_cnt = $result->num_rows;
-
-    printf("Le jeu de résultats a %d lignes.\n", $row_cnt);
-
-    /* Ferme le jeu de résultats */
-    $result->close();
-}
-
-/* Ferme la connexion */
-$mysqli->close();
-?>
+printf("Le jeu de résultats a %d lignes.\n", $row_cnt);
 ]]>
    </programlisting>
   </example>
@@ -88,27 +73,16 @@ $mysqli->close();
    <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $link = mysqli_connect("localhost", "my_user", "my_password", "world");
 
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
+$result = mysqli_query($link, "SELECT Code, Name FROM Country ORDER BY Name");
 
-if ($result = mysqli_query($link, "SELECT Code, Name FROM Country ORDER BY Name")) {
+/* Détermine le nombre de lignes du jeu de résultats */
+$row_cnt = mysqli_num_rows($result);
 
-    /* Détermine le nombre de lignes du jeu de résultats */
-    $row_cnt = mysqli_num_rows($result);
-
-    printf("Le jeu de résultats a %d lignes.\n", $row_cnt);
-
-    /* Ferme le jeu de résultats */
-    mysqli_free_result($result);
-}
-
-/* Ferme la connexion */
-mysqli_close($link);
+printf("Le jeu de résultats a %d lignes.\n", $row_cnt);
 ?>
 ]]>
    </programlisting>
@@ -121,6 +95,17 @@ Le jeu de résultats a 239 lignes.
   </example>
  </refsect1>
 
+ <refsect1 role="notes">
+  &reftitle.notes;
+  <note>
+   <para>
+    Contrairement à la fonction <function>mysqli_stmt_num_rows</function>,
+    cette fonction n'a pas de variante de méthode orientée objet.
+    Dans le style orienté objet, utilisez la propriété getter.
+   </para>
+  </note>
+ </refsect1>
+
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
@@ -129,6 +114,7 @@ Le jeu de résultats a 239 lignes.
     <member><function>mysqli_store_result</function></member>
     <member><function>mysqli_use_result</function></member>
     <member><function>mysqli_query</function></member>
+    <member><function>mysqli_stmt_num_rows</function></member>
    </simplelist>
   </para>
  </refsect1>
