@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 5c2678e02f0eb135946799eed02d884de1bcf4ad Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 0bafd5454e7c54de5b9e455f997bec3ecf89cfdb Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <chapter xml:id="language.functions" xmlns="http://docbook.org/ns/docbook">
  <title>Les fonctions</title>
@@ -232,28 +232,6 @@ function takes_many_args(
 ]]>
     </programlisting>
    </example>
-  <para>
-   À partir de PHP 8.0.0, déclarer des arguments obligatoire après des arguments optionnel
-   est obsolète. Ceci peut être généralement résolue en supprimant la valeur par défaut.
-   Une exception à cette règle sont les arguments de la forme
-   <code>Type $param = null</code>, où le &null; par défaut rend le type implicitement
-   nullable. Cet usage continue d'être autorisé, néanmoins il est recommandé d'utiliser
-   un type nullable explicitement à la place.
-  </para>
-  <example>
-   <title>Déclarer des arguments optionnels après des arguments obligatoire</title>
-   <programlisting role="php">
-<![CDATA[
-<?php
-function foo($a = [], $b) {} // Avant
-function foo($a, $b) {}      // Après
-
-function bar(A $a = null, $b) {} // Toujours autorisé
-function bar(?A $a, $b) {}       // Recommandé
-?>
-]]>
-   </programlisting>
-  </example>
 
   <sect2 xml:id="functions.arguments.by-reference">
    <title>Passage d'arguments par référence</title>
@@ -296,8 +274,9 @@ echo $str; // Affiche : 'Ceci est une chaîne, et un peu plus.'
    <title>Valeur par défaut des arguments</title>
    
    <para>
-    Vous pouvez définir comme en C++ des valeurs par
-    défaut pour les arguments de type scalaire :
+     Une fonction peut définir des valeurs par défaut pour les arguments en utilisant une syntaxe similaire à l'affectation d'une variable.
+     La valeur par défaut n'est utilisée que lorsque le paramètre n'est pas spécifié ;
+     en particulier, notez que le passage de &null; ne <emphasis>pas</emphasis> assigne la valeur par défaut.
    </para>
    <para>
     <example>
@@ -326,8 +305,9 @@ Servir un espresso.
     </example>
    </para>
    <para>
-    PHP vous autorise à utiliser des &array; ainsi que le type spécial
-    &null; comme valeur par défaut, par exemple :
+     Les valeurs par défaut des paramètres peuvent être des valeurs scalaires,
+     des &array;s, le type spécial &null;, et à partir de PHP 8.1.0,
+     des objets utilisant la syntaxe <link linkend="language.oop5.basic.new">new ClassName()</link>.
    </para>
    <para>
     <example>
@@ -347,17 +327,42 @@ echo servir_cafe(array("cappuccino", "lavazza"), "une cafetière");
      </programlisting>
     </example>
    </para>
+    <para>
+      <example>
+        <title>Utilisation d'objets comme valeurs par défaut (à partir de PHP 8.1.0)</title>
+        <programlisting role="php">
+<![CDATA[
+<?php
+class DefaultCoffeeMaker {
+    public function brew() {
+        return 'Faire du café.';
+    }
+}
+class FancyCoffeeMaker {
+    public function brew() {
+        return 'Créer un beau café rien que pour vous.';
+    }
+}
+function makecoffee($coffeeMaker = new DefaultCoffeeMaker)
+{
+    return $coffeeMaker->brew();
+}
+echo makecoffee();
+echo makecoffee(new FancyCoffeeMaker);
+?>
+]]>
+        </programlisting>
+      </example>
+    </para>
    <simpara>
     La valeur par défaut d'un argument doit
     obligatoirement être une constante, et ne peut être
     ni une variable, ni un membre de classe, ni un appel de fonction.
    </simpara>
    <para>
-    Il est à noter que si vous utilisez des arguments avec
-    valeur par défaut avec d'autres sans valeur par défaut,
-    les premiers doivent être placés à la suite de tous les paramètres sans
-    valeur par défaut. Sinon, cela ne fonctionnera pas.
-    Considérons le code suivant :
+     Notez que tous les arguments facultatifs doivent être spécifiés après les arguments obligatoires,
+     sinon ils ne peuvent pas être omis dans les appels.
+     Considérons le code suivant :
    </para>
    <para>
     <example>
@@ -365,21 +370,20 @@ echo servir_cafe(array("cappuccino", "lavazza"), "une cafetière");
      <programlisting role="php">
 <![CDATA[
 <?php
-function faireunyaourt ($type = "acidophilus", $flavour)
+function faireunyaourt ($container = "bol", $flavour)
 {
-    return "Préparer un bol de $type $flavour.\n";
+    return "Préparer un $container de yaourt à la $flavour.\n";
 }
  
-echo faireunyaourt("framboise");   // ne fonctionne pas comme voulu
+echo faireunyaourt("framboise");   // "framboise" est $container, pas $flavour
 ?>
 ]]>
      </programlisting>
      &example.outputs;
      <screen>
 <![CDATA[
-Warning: Missing argument 2 in call to faireunyaourt() in 
-/usr/local/etc/httpd/htdocs/phptest/functest.html on line 41
-Préparer un bol de framboise .
+Fatal error: Uncaught ArgumentCountError: Too few arguments
+ to function faireunyaourt(), 1 passed in example.php on line 42
 ]]>
      </screen>
     </example>
@@ -393,23 +397,77 @@ Préparer un bol de framboise .
      <programlisting role="php">
 <![CDATA[
 <?php
-function faireunyaourt ($flavour, $type = "acidophilus")
+function faireunyaourt ($flavour, $container = "bol")
 {
-    return "Préparer un bol de $type $flavour.\n";
+    return "Préparer un $container de yaourt à la $flavour.\n";
 }
  
-echo faireunyaourt ("framboise");   // fonctionne comme voulu
+echo faireunyaourt ("framboise");   // "framboise" est $flavour
 ?>
 ]]>
      </programlisting>
      &example.outputs;
      <screen>
 <![CDATA[
-Préparer un bol de acidophilus framboise.
+Préparer un bol de yaourt à la framboise.
 ]]>
      </screen>
     </example>
    </para>
+    <para>
+      Depuis PHP 8.0.0, <link linkend="functions.named-arguments">arguments nommés</link>
+      peut être utilisé pour passer outre plusieurs paramètres optionnels.
+    </para>
+    <para>
+      <example>
+        <title>Utilisation correcte des arguments de fonction par défaut</title>
+        <programlisting role="php">
+<![CDATA[
+<?php
+function faireunyaourt($container = "bol", $flavour = "framboise", $style = "Grec")
+{
+    return "Préparer un $container de $style yaourt à la $flavour.\n";
+}
+echo faireunyaourt(style: "naturel");
+?>
+]]>
+        </programlisting>
+        &example.outputs;
+        <screen>
+<![CDATA[
+Préparer un bol de naturel yaourt à la framboise.
+]]>
+        </screen>
+      </example>
+    </para>
+    <para>
+      Depuis PHP 8.0.0, déclarer des arguments obligatoires après des arguments optionnels est <emphasis>déprécié</emphasis>.
+      Ce problème peut généralement être résolu en abandonnant la valeur par défaut, puisqu'elle ne sera jamais utilisée.
+      Une exception à cette règle concerne les arguments de la forme <code>Type $param = null</code>,
+      où le défaut &null; rend le type implicitement nullable.
+      Cet usage reste autorisé, bien qu'il soit recommandé d'utiliser
+      un <link linkend="language.types.declarations.nullable">type nullable</link> explicite à la place.
+      <example>
+        <title>Déclarer les arguments facultatifs après les arguments obligatoires</title>
+        <programlisting role="php">
+<![CDATA[
+<?php
+function foo($a = [], $b) {} // Par défaut, non utilisé ; déprécié à partir de PHP 8.0.0.
+function foo($a, $b) {} // Fonctionnement équivalent, pas d'avis de dépréciation
+function bar(A $a = null, $b) {} // Toujours autorisé ; $a est obligatoire mais nullable.
+function bar(?A $a, $b) {} // Recommandé
+?>
+]]>
+        </programlisting>
+      </example>
+    </para>
+    <note>
+      <simpara>
+        Depuis PHP 7.1.0, l'omission d'un paramètre qui ne spécifie pas une valeur par défaut lance
+        un <classname>ArgumentCountError</classname> ;
+        dans les versions précédentes, cela levait un avertissement.
+      </simpara>
+    </note>
    <note>
     <simpara>
      Les arguments passés par référence peuvent avoir
@@ -686,7 +744,7 @@ htmlspecialchars($string, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401, 'UTF-8', fa
    </para>
 
    <example>
-    <title>Exception Error quand un même paramètre est passé plusieurs fois</title>
+    <title>Thrown Error quand un même paramètre est passé plusieurs fois</title>
     <programlisting role="php">
 <![CDATA[
 <?php
