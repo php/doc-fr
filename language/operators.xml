@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: c36ce0b514faa2efce1427ae87ba9ea25cc038ad Maintainer: yannick Status: ready -->
+<!-- EN-Revision: c653d5a2b9b3a2671ca017c9f7ab6976fa8d148d Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <!-- CREDITS: DAnnebicque -->
 <chapter xml:id="language.operators" xmlns="http://docbook.org/ns/docbook">
@@ -1799,7 +1799,7 @@ var_dump(min(-100, -10, NULL, 10, 100)); // NULL - (bool)NULL < (bool)-100 est i
     <programlisting role="php">
 <![CDATA[
 <?php
-// Les tableaux sont comparés comme ceci avec les opérateurs standards de comparaison
+// Les tableaux sont comparés comme ceci avec les opérateurs standards de comparaison et l'opérateur combiné
 function standard_array_compare($op1, $op2)
 {
    if (count($op1) < count($op2)) {
@@ -1809,7 +1809,7 @@ function standard_array_compare($op1, $op2)
    }
    foreach ($op1 as $key => $val) {
       if (!array_key_exists($key, $op2)) {
-         return null; // incomparable
+         return 1;
       } elseif ($val < $op2[$key]) {
          return -1;
       } elseif ($val > $op2[$key]) {
@@ -1837,6 +1837,16 @@ function standard_array_compare($op1, $op2)
     Voyez la documentation de <type>float</type> pour plus d'informations.
    </para>
   </warning>
+
+  <note>
+   <simpara>
+    Soyer conscient que la manipulation des types n'est pas toujours évidente lors de la comparaison
+    de valeurs de différents types, en particulier comparant des &integer;s à des &boolean;s ou des
+    &integer;s à des &string;s. Il est par conséquent généralement recommandé d'utiliser les
+    opérateurs de comparaison <literal>===</literal> et <literal>!==</literal> au lieu de
+    <literal>==</literal> et <literal>!=</literal> dans la plupart des cas.
+   </simpara>
+  </note>
 
    <sect2 role="seealso">
     &reftitle.seealso;
@@ -1869,7 +1879,6 @@ if (empty($_POST['action'])) {
 } else {
    $action = $_POST['action'];
 }
-
 ?>
 ]]>
      </programlisting>
@@ -1882,9 +1891,10 @@ if (empty($_POST['action'])) {
    </para>
    <para>
     Il est possible d'omettre la partie centrale de l'opérateur ternaire.
-    L'expression <literal>expr1 ?: expr3</literal> retourne
+    L'expression <literal>expr1 ?: expr3</literal> évalue le résultat de
     <replaceable>expr1</replaceable> si <replaceable>expr1</replaceable>
     vaut &true;, et <replaceable>expr3</replaceable> sinon.
+    <replaceable>expr1</replaceable> n'est évalué qu'une seule fois dans ce cas.
    </para>
    <note>
     <simpara>
@@ -1931,13 +1941,31 @@ echo ((true ? 'true' : false) ? 't' : 'f');
      </example>
     </para>
    </note>
+   <note>
+    <para>
+     La combinaison de ternaire court (<literal>?:</literal>), cependant, est stable et se comporte de manière résonable.
+     Ceci évaluera au premier argument qui évalue à une valeur non-falsy.
+     À noter que des valeurs indéfinies émettront toujours un avertissement.
+     <example>
+      <title>Combinaison de ternaire court</title>
+      <programlisting role="php">
+<![CDATA[
+<?php
+echo 0 ?: 1 ?: 2 ?: 3, PHP_EOL; //1
+echo 0 ?: 0 ?: 2 ?: 3, PHP_EOL; //2
+echo 0 ?: 0 ?: 0 ?: 3, PHP_EOL; //3
+?>
+]]>
+      </programlisting>
+     </example>
+    </para>
+   </note>
   </sect2>
-  
-  
+
   <sect2 xml:id="language.operators.comparison.coalesce">
    <title>Opérateur de fusion Null</title>
    <para>
-    Il existe également l'opérateur "??" (ou fusion null).
+    Un autre opérateur court utile est l'opérateur "??" (ou fusion null).
     <example>
      <title>Assigner une valeur par défaut</title>
      <programlisting role="php">
@@ -1952,7 +1980,6 @@ if (isset($_POST['action'])) {
 } else {
     $action = 'default';
 }
-
 ?>
 ]]>
       </programlisting>
@@ -1975,6 +2002,24 @@ if (isset($_POST['action'])) {
      L'expression <literal>return $foo ?? $bar;</literal> est un retour par
      référence qui ne fonctionne donc pas et émet un avertissement.
     </simpara>
+   </note>
+   <note>
+    <para>
+     L'opérateur de fusion null à une précédence faible. Ceci signifie que le mélanger
+     avec d'autres opérateurs (tel que la concaténation de chaînes ou les opérateurs
+     arithmétiques) des parenthèses seront requis.
+    </para>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+// Émet un avertissement que $name est indéfinie.
+print 'Mr. ' . $name ?? 'Anonymous';
+
+// Prints "Mr. Anonymous"
+print 'Mr. ' . ($name ?? 'Anonymous');
+?>
+]]>
+    </programlisting>
    </note>
    <note>
     <para>
@@ -2014,31 +2059,14 @@ echo $foo ?? $bar ?? $baz ?? $qux; // sortie 1
   <para>
    Si un gestionnaire d'erreur personnalisé est défini avec
    <function>set_error_handler</function>, il sera quand même appelé même si
-   le diagnostic a été ignorée, de ce fait le gestionnaire d'erreur personnalisé
-   devrait appeler <function>error_reporting</function> et vérifier que
-   l'opérateur <literal>@</literal> a été utilisé de la manière suivante :
-
-   <informalexample>
-    <programlisting role="php">
-     <![CDATA[
-<?php
-function my_error_handler($err_no, $err_msg, $filename, $linenum) {
-    if (!(error_reporting() & $err_no)) {
-        return false; // Ignoré
-    }
-    // ...
-}
-?>
-]]>
-    </programlisting>
-   </informalexample>
+   le diagnostic a été ignorée.
   </para>
 
   <warning>
    <para>
-    Prior to PHP 8.0.0, the value of the severity passed to the custom error
-    handler was always <literal>0</literal> if the diagnostic was suppressed.
-    This is no longer the case as of PHP 8.0.0.
+    Antérieur à PHP 8.0.0, le <function>error_reporting</function> appelée dans le gestionnaire d'erreur
+    personnalisé retournait toujours <literal>0</literal> si le l'erreur a été ignorée avec l'opérateur <literal>@</literal>.
+    À partir de 8.0.0, il retourne la valeur <literal>E_ERROR | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR | E_RECOVERABLE_ERROR | E_PARSE</literal>.
    </para>
   </warning>
 

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 9ee9eccf455188ab6eb352194eb6f9eb99e15606 Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: fca50d321ce57036f3786f278887abe58cd41de8 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 <sect1 xml:id="language.oop5.autoload" xmlns="http://docbook.org/ns/docbook">
  <title>Auto-chargement de classes</title>
@@ -17,6 +16,10 @@
   En enregistrant des autochargeurs, PHP donne une dernière chance d'inclure une
   définition de classe ou interface, avant que PHP n'échoue avec une erreur.
  </para>
+ <para>
+  Toute construction similaire à des classes peuvent être autochargées de la
+  même manière. Ceci inclut les classes, interfaces, trait, et énumérations.
+ </para>
  <caution>
   <para>
    Antérieur à PHP 8.0.0, il était possible d'utiliser <function>__autoload</function>
@@ -26,9 +29,19 @@
    et supprimée à partir de PHP 8.0.0.
   </para>
  </caution>
+ <note>
+  <para>
+   <function>spl_autoload_register</function> peut être appelée plusieurs fois
+   pour enregistrer plusieurs autochargeur. Lancer une exception depuis une
+   fonction d'autochargement, interrompra ce processus et ne permet pas aux
+   fonctions d'autochargement suivantes à être exécutées. Pour cette raison,
+   lancer des exceptions depuis une fonction d'autochargement est fortement
+   découragée.
+  </para>
+ </note>
  <para>
   <example>
-   <title>Exemple avec <function>__autoload</function></title>
+   <title>Exemple d'autochargement</title>
    <para>
     Cet exemple tente de charger les classes <literal>MaClasse1</literal>
     et <literal>MaClasse2</literal>, respectivement depuis les fichiers
@@ -72,67 +85,6 @@ Fatal error: Interface 'ITest' not found in ...
 ?>
 ]]>
    </programlisting>
-  </example>
-  <example>
-   <title>Auto-chargement avec gestion des exceptions</title>
-   <para>
-    Cet exemple lance une exception et montre comment la traiter avec
-    un bloc try/catch.
-   </para>
-   <programlisting role="php">
-<![CDATA[
-<?php
-spl_autoload_register(function ($name) {
-    echo "Tentative de chargement de $name.\n";
-    throw new Exception("Impossible de charger $name.");
-});
-
-try {
-    $obj = new NonLoadableClass();
-} catch (Exception $e) {
-    echo $e->getMessage(), "\n";
-}
-?>
-]]>
-   </programlisting>
-   &example.outputs;
-   <screen>
-<![CDATA[
-Tentative de chargement de NonLoadableClass.
-Impossible de charger NonLoadableClass.
-]]>
-   </screen>
-  </example>
-  <example>
-   <title>Auto-chargement avec gestion des exceptions. Exception personnalisée manquante</title>
-   <para>
-    Cet exemple lance une exception personnalisée non-chargeable.
-   </para>
-   <programlisting role="php">
-<![CDATA[
-<?php
-spl_autoload_register(function ($name) {
-    echo "Tentative de chargement de $name.\n";
-    throw new MissingException("Impossible de charger $name.");
-});
-
-try {
-    $obj = new NonLoadableClass();
-} catch (Exception $e) {
-    echo $e->getMessage(), "\n";
-}
-?>
-]]>
-   </programlisting>
-   &example.outputs;
-   <screen>
-<![CDATA[
-Tentative de chargement de NonLoadableClass.
-Tentative de chargement de MissingException.
-
-Fatal error: Class 'MissingException' not found in testMissingException.php on line 4
-]]>
-   </screen>
   </example>
  </para>
  
