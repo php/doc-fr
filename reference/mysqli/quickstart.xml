@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 40667918dcff1d5c9f7ecdc88b5caca24ba0686c Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 14e5e29fd12657263368b305369ddc206084762d Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="mysqli.quickstart" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -40,23 +40,23 @@
     <programlisting role="php">
 <![CDATA[
 <?php
+
 $mysqli = mysqli_connect("example.com", "user", "password", "database");
-$res = mysqli_query($mysqli, "SELECT 'Please, do not use ' AS _msg FROM DUAL");
-$row = mysqli_fetch_assoc($res);
+$result = mysqli_query($mysqli, "SELECT 'Please do not use the deprecated mysql extension for new development. ' AS _msg FROM DUAL");
+$row = mysqli_fetch_assoc($result);
 echo $row['_msg'];
 
 $mysql = mysql_connect("example.com", "user", "password"); 
 mysql_select_db("test");
-$res = mysql_query("SELECT 'the mysql extension for new developments.' AS _msg FROM DUAL", $mysql);
-$row = mysql_fetch_assoc($res);
+$result = mysql_query("SELECT 'Use the mysqli extension instead.' AS _msg FROM DUAL", $mysql);
+$row = mysql_fetch_assoc($result);
 echo $row['_msg'];
-?>
 ]]>
     </programlisting>
     &example.outputs;
     <screen>
 <![CDATA[
-Please, do not use the mysql extension for new developments.
+Please do not use the deprecated mysql extension for new development. Use the mysqli extension instead.
 ]]>
     </screen>
    </example>
@@ -82,24 +82,16 @@ Please, do not use the mysql extension for new developments.
     <programlisting role="php">
 <![CDATA[
 <?php
-$mysqli = mysqli_connect("example.com", "user", "password", "database");
-if (mysqli_connect_errno()) {
-    echo "Échec lors de la connexion à MySQL : " . mysqli_connect_error();
-}
 
-$res = mysqli_query($mysqli, "SELECT 'A world full of ' AS _msg FROM DUAL");
-$row = mysqli_fetch_assoc($res);
+$mysqli = mysqli_connect("example.com", "user", "password", "database");
+$result = mysqli_query($mysqli, "SELECT 'A world full of ' AS _msg FROM DUAL");
+$row = mysqli_fetch_assoc($result);
 echo $row['_msg'];
 
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL : " . $mysqli->connect_error;
-}
-
-$res = $mysqli->query("SELECT 'choices to please everybody.' AS _msg FROM DUAL");
-$row = $res->fetch_assoc();
+$result = $mysqli->query("SELECT 'choices to please everybody.' AS _msg FROM DUAL");
+$row = $result->fetch_assoc();
 echo $row['_msg'];
-?>
 ]]>
     </programlisting>
     &example.outputs;
@@ -127,20 +119,13 @@ A world full of choices to please everybody.
     <programlisting role="php">
 <![CDATA[
 <?php
+
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL : " . $mysqli->connect_error;
-}
+$result = mysqli_query($mysqli, "SELECT 'Possible but bad style.' AS _msg FROM DUAL");
 
-$res = mysqli_query($mysqli, "SELECT 'Possible but bad style.' AS _msg FROM DUAL");
-if (!$res) {
-    echo "Échec lors de l'exécution de la requête : (" . $mysqli->errno . ") " . $mysqli->error;
-}
-
-if ($row = $res->fetch_assoc()) {
+if ($row = $result->fetch_assoc()) {
     echo $row['_msg'];
 }
-?>
 ]]>
     </programlisting>
     &example.outputs;
@@ -177,9 +162,9 @@ Possible but bad style.
   </para>
   <para>
    Le nom d'hôte <literal>localhost</literal> a une signification particulière.
-   Il est lié à l'utilisation des sockets de domaine Unix. Il n'est pas possible
-   d'ouvrir une connexion TCP/IP en utilisant le nom d'hôte <literal>localhost</literal> ;
-   vous devez utiliser <literal>127.0.0.1</literal> à la place.
+   Il est lié à l'utilisation des sockets de domaine Unix. 
+   Pour ouvrir une connexion TCP/IP sur l'hôte local, vous devez utiliser <literal>127.0.0.1</literal> 
+   et non <literal>localhost</literal>.
   </para>
   <para>
    <example>
@@ -187,19 +172,14 @@ Possible but bad style.
     <programlisting role="php">
 <![CDATA[
 <?php
+
 $mysqli = new mysqli("localhost", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL : (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
+
 echo $mysqli->host_info . "\n";
 
 $mysqli = new mysqli("127.0.0.1", "user", "password", "database", 3306);
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL : (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
 echo $mysqli->host_info . "\n";
-?>
 ]]>
     </programlisting>
     &example.outputs;
@@ -278,9 +258,10 @@ mysqli.default_socket=/tmp/mysql.sock
   <para>
    Pour définir une option de connexion, l'opération de connexion doit
    être effectuée en 3 étapes : création d'un gestionnaire de connexion avec
-   <function>mysqli_init</function>, définition des options demandées en utilisant
-   <function>mysqli_options</function>, et connexion au réseau avec
-   <function>mysqli_real_connect</function>.
+   <function>mysqli_init</function> ou <methodname>mysqli::__construct</methodname>, 
+   définition des options demandées en utilisant
+   <methodname>mysqli::options</methodname>, et connexion au réseau avec
+   <methodname>mysqli::real_connect</methodname>.
   </para>
   <para>
    <emphasis role="bold">File d'attente de connexion</emphasis>
@@ -335,13 +316,13 @@ mysqli.default_socket=/tmp/mysql.sock
    statut persistant, et un statut réinitialisé avant ré-utilisation. Par
    défaut, il sera réinitialisé. Avant qu'une connexion persistante ne soit
    réutilisée, l'extension mysqli appelle implicitement la fonction
-   <function>mysqli_change_user</function> pour réinitialiser le statut.
+   <methodname>mysqli::change_user</methodname> pour réinitialiser le statut.
    La connexion persistante apparaît à l'utilisateur comme si elle venait
    juste d'être ouverte. Aucune trace d'une utilisation précédente ne
    sera visible.
   </para>
   <para>
-   La fonction <function>mysqli_change_user</function> est une opération couteuse.
+   La fonction <methodname>mysqli::change_user</methodname> est une opération couteuse.
    Pour de meilleures performances, les utilisateurs peuvent vouloir re-compiler
    l'extension avec le drapeau de compilation <constant>MYSQLI_NO_CHANGE_USER_ON_PCONNECT</constant>.
   </para>
@@ -356,8 +337,8 @@ mysqli.default_socket=/tmp/mysql.sock
   </para>
   <para>
    <simplelist>
+    <member><function>mysqli_init</function></member>
     <member><methodname>mysqli::__construct</methodname></member>
-    <member><methodname>mysqli::init</methodname></member>
     <member><methodname>mysqli::options</methodname></member>
     <member><methodname>mysqli::real_connect</methodname></member>
     <member><methodname>mysqli::change_user</methodname></member>
@@ -371,33 +352,29 @@ mysqli.default_socket=/tmp/mysql.sock
   <title>Exécution des requêtes</title>
   <para>
    Les requêtes peuvent être exécutées avec les fonctions
-   <function>mysqli_query</function>, <function>mysqli_real_query</function>
-   et <function>mysqli_multi_query</function>. La fonction
-   <function>mysqli_query</function> est la plus commune, et combine
+   <methodname>mysqli::query</methodname>, <methodname>mysqli::real_query</methodname>
+   et <methodname>mysqli::multi_query</methodname>.. La fonction
+   <methodname>mysqli::query</methodname> est la plus commune, et combine
    l'exécution de la requête avec une récupération
    de son jeu de résultats en mémoire tampon, s'il y en a un, en un seul appel.
-   Appeler la fonction <function>mysqli_query</function>
+   Appeler la fonction <methodname>mysqli::query</methodname>
    est identique à appeler la fonction
-   <function>mysqli_real_query</function> suivie d'un appel à la fonction
-   <function>mysqli_store_result</function>.
+   <methodname>mysqli::real_query</methodname>suivie d'un appel à la fonction
+   <methodname>mysqli::store_result</methodname>.
   </para>
   <para>
    <example>
-    <title>Connexion à MySQL</title>
+    <title>Exécution des requêtes</title>
     <programlisting role="php">
 <![CDATA[
 <?php
-$mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL : (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
-    !$mysqli->query("CREATE TABLE test(id INT)") ||
-    !$mysqli->query("INSERT INTO test(id) VALUES (1)")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
-?>
+ 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli("example.com", "user", "password", "database");
+
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT)");
 ]]>
     </programlisting>
    </example>
@@ -406,15 +383,14 @@ if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
    <emphasis role="bold">Jeux de résultats en mémoire tampon</emphasis>
   </para>
   <para>
-   Après exécution de la requête, les résultats peuvent être récupérés
-   afin d'être placés en mémoire tampon par le client ou bien être lus
-   ligne par ligne. La mise en mémoire tampon du jeu de résultats côté client
-   autorise le serveur à libérer les ressources associées avec le résultat
-   de la requête aussi vite que possible. De manière générale, les clients
-   sont lents à parcourir les jeux de résultats. Toutefois, il est recommandé
-   d'utiliser la mise en mémoire tampon des jeux de résultats. La fonction
-   <function>mysqli_query</function> combine à la fois l'exécution de la
-   requête et la mise en mémoire tampon du jeu de résultats.
+   Après exécution de la requête, les résultats peuvent intégralement récupérés
+   en une fois ou bien être lus ligne par ligne. La mise en mémoire 
+   tampon du jeu de résultats côté client autorise le serveur à libérer
+   les ressources associées avec le résultat de la requête aussi vite que possible. 
+   De manière générale, les clients sont lents à parcourir les jeux de résultats. 
+   Toutefois, il est recommandéd'utiliser la mise en mémoire tampon des 
+   jeux de résultats. La fonction <methodname>mysqli::query</methodname> 
+   combine à la fois l'exécution de la requête et la mise en mémoire tampon du jeu de résultats.
   </para>
   <para>
    Les applications PHP peuvent naviguer librement dans les résultats
@@ -429,32 +405,27 @@ if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL : (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
-    !$mysqli->query("CREATE TABLE test(id INT)") ||
-    !$mysqli->query("INSERT INTO test(id) VALUES (1), (2), (3)")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT)");
+$mysqli->query("INSERT INTO test(id) VALUES (1), (2), (3)");
 
-$res = $mysqli->query("SELECT id FROM test ORDER BY id ASC");
+$result = $mysqli->query("SELECT id FROM test ORDER BY id ASC");
 
 echo "Ordre inversé...\n";
-for ($row_no = $res->num_rows - 1; $row_no >= 0; $row_no--) {
-    $res->data_seek($row_no);
-    $row = $res->fetch_assoc();
+for ($row_no = $result->num_rows - 1; $row_no >= 0; $row_no--) {
+    $result->data_seek($row_no);
+    $row = $result->fetch_assoc();
     echo " id = " . $row['id'] . "\n";
 }
 
 echo "Ordre du jeu de résultats...\n";
-$res->data_seek(0);
-while ($row = $res->fetch_assoc()) {
+foreach ($result as $row) {
     echo " id = " . $row['id'] . "\n";
 }
-?>
 ]]>
     </programlisting>
     &example.outputs;
@@ -488,14 +459,14 @@ Ordre du jeu de résultats...
     <programlisting role="php">
 <![CDATA[
 <?php
+
 $mysqli->real_query("SELECT id FROM test ORDER BY id ASC");
-$res = $mysqli->use_result();
+$result = $mysqli->use_result();
 
 echo "Ordre du jeu de résultats...\n";
-while ($row = $res->fetch_assoc()) {
+foreach ($result as $row) {
     echo " id = " . $row['id'] . "\n";
 }
-?>
 ]]>
     </programlisting>
    </example>
@@ -504,8 +475,8 @@ while ($row = $res->fetch_assoc()) {
    <emphasis role="bold">Types de données des valeurs du jeu de résultats</emphasis>
   </para>
   <para>
-   Les fonctions <function>mysqli_query</function>, <function>mysqli_real_query</function>
-   et <function>mysqli_multi_query</function> sont utilisées pour exécuter des
+   Les fonctions <methodname>mysqli::query</methodname>, <methodname>mysqli::real_query</methodname>
+   et <methodname>mysqli::multi_query</methodname> sont utilisées pour exécuter des
    requêtes non-préparées. Au niveau du protocole client-serveur MySQL, la commande
    <literal>COM_QUERY</literal> ainsi que le protocole texte sont utilisés pour
    l'exécution de la requête. Avec le protocole texte, le serveur MySQL convertit
@@ -521,23 +492,19 @@ while ($row = $res->fetch_assoc()) {
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL  : (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
-    !$mysqli->query("CREATE TABLE test(id INT, label CHAR(1))") ||
-    !$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'a')")) {
-    echo "Table creation failed: (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT, label CHAR(1))");
+$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'a')");
 
-$res = $mysqli->query("SELECT id, label FROM test WHERE id = 1");
-$row = $res->fetch_assoc();
+$result = $mysqli->query("SELECT id, label FROM test WHERE id = 1");
+$row = $result->fetch_assoc();
 
 printf("id = %s (%s)\n", $row['id'], gettype($row['id']));
 printf("label = %s (%s)\n", $row['label'], gettype($row['label']));
-?>
 ]]>
     </programlisting>
     &example.outputs;
@@ -565,26 +532,22 @@ label = a (string)
     <programlisting role="php">
 <![CDATA[
 <?php
-$mysqli = mysqli_init();
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+ 
+$mysqli = new mysqli();
 $mysqli->options(MYSQLI_OPT_INT_AND_FLOAT_NATIVE, 1);
 $mysqli->real_connect("example.com", "user", "password", "database");
 
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL  : (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT, label CHAR(1))");
+$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'a')");
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
-    !$mysqli->query("CREATE TABLE test(id INT, label CHAR(1))") ||
-    !$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'a')")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
-
-$res = $mysqli->query("SELECT id, label FROM test WHERE id = 1");
-$row = $res->fetch_assoc();
+$result = $mysqli->query("SELECT id, label FROM test WHERE id = 1");
+$row = $result->fetch_assoc();
 
 printf("id = %s (%s)\n", $row['id'], gettype($row['id']));
 printf("label = %s (%s)\n", $row['label'], gettype($row['label']));
-?>
 ]]>
     </programlisting>
     &example.outputs;
@@ -602,14 +565,12 @@ label = a (string)
   <para>
    <simplelist>
     <member><methodname>mysqli::__construct</methodname></member>
-    <member><methodname>mysqli::init</methodname></member>
     <member><methodname>mysqli::options</methodname></member>
     <member><methodname>mysqli::real_connect</methodname></member>
     <member><methodname>mysqli::query</methodname></member>
     <member><methodname>mysqli::multi_query</methodname></member>
     <member><methodname>mysqli::use_result</methodname></member>
     <member><methodname>mysqli::store_result</methodname></member>
-    <member><methodname>mysqli_result::free</methodname></member>
    </simplelist>
   </para>
  </section>
@@ -619,7 +580,8 @@ label = a (string)
   <para>
    La base de données MySQL supporte les requêtes préparées. Une requête
    préparée ou requête paramétrable est utilisée pour exécuter la
-   même requête plusieurs fois, avec une grande efficacité.
+   même requête plusieurs fois, avec une grande efficacité et protège 
+   des injections SQL.
   </para>
   <para>
    <emphasis role="bold">Flux de travail de base</emphasis>
@@ -635,54 +597,35 @@ label = a (string)
    Le serveur MySQL supporte le mode anonyme, avec des marqueurs de position
    utilisant le caractère <literal>?</literal>.
   </para>
+    <para>
+    La préparation précède l'exécution. Pendant l'exécution, le client lie
+    les valeurs des paramètres et les envoie au serveur. Le serveur exécute
+    l'instruction avec les valeurs liées en utilisant les ressources internes 
+    précédemment créées.
+  </para>
   <para>
    <example>
     <title>Première étape : la préparation</title>
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL : (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
 /* Non-prepared statement */
-if (!$mysqli->query("DROP TABLE IF EXISTS test") || !$mysqli->query("CREATE TABLE test(id INT)")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT, label TEXT)");
 
-/* Prepared statement, stage 1: prepare */
-if (!($stmt = $mysqli->prepare("INSERT INTO test(id) VALUES (?)"))) {
-    echo "Échec de la préparation : (" . $mysqli->errno . ") " . $mysqli->error;
-}
-?>
-]]>
-    </programlisting>
-   </example>
-  </para>
-  <para>
-   La préparation est suivie de l'exécution. Pendant l'exécution, le
-   client lie les valeurs des paramètres et les envoie au serveur.
-   Le serveur crée une requête depuis le template et y lie les valeurs
-   pour l'exécution, en utilisant les ressources internes créées
-   précédemment.
-  </para>
-  <para>
-   <example>
-    <title>Seconde étape : lie et exécute</title>
-    <programlisting role="php">
-<![CDATA[
-<?php
-/* Requête préparée, seconde étape : lie les valeurs et exécute la requête */
+/* Requête préparée, étape 1 : préparation */
+$stmt = $mysqli->prepare("INSERT INTO test(id, label) VALUES (?, ?)");
+
+/* Requête préparée, étape 2 : lie les valeurs et exécute la requête */
 $id = 1;
-if (!$stmt->bind_param("i", $id)) {
-    echo "Échec lors du liage des paramètres : (" . $stmt->errno . ") " . $stmt->error;
-}
+$label = 'PHP';
+$stmt->bind_param("is", $id, $label); // "is" means that $id is bound as an integer and $label as a string
 
-if (!$stmt->execute()) {
-    echo "Échec lors de l'exécution : (" . $stmt->errno . ") " . $stmt->error;
-}
-?>
+$stmt->execute();
 ]]>
     </programlisting>
    </example>
@@ -702,15 +645,13 @@ if (!$stmt->execute()) {
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec de la connexion à MySQL : (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
 /* Requête non préparée */
-if (!$mysqli->query("DROP TABLE IF EXISTS test") || !$mysqli->query("CREATE TABLE test(id INT)")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT, label TEXT)");
 
 /* Requête préparée, étape 1 : la préparation */
 if (!($stmt = $mysqli->prepare("INSERT INTO test(id) VALUES (?)"))) {
@@ -719,53 +660,45 @@ if (!($stmt = $mysqli->prepare("INSERT INTO test(id) VALUES (?)"))) {
 
 /* Requête préparée, étape 2 : lie les valeurs et exécute la requête */
 $id = 1;
-if (!$stmt->bind_param("i", $id)) {
-    echo "Échec lors du liage des paramètres : (" . $stmt->errno . ") " . $stmt->error;
+$stmt->bind_param("is", $id, $label); // "is" means that $id is bound as an integer and $label as a string
+
+$data = [
+    1 => 'PHP',
+    2 => 'Java',
+    3 => 'C++'
+];
+
+foreach ($data as $id => $label) {
+    $stmt->execute();
 }
 
-if (!$stmt->execute()) {
-    echo "Échec lors de l'exécution de la requête : (" . $stmt->errno . ") " . $stmt->error;
-}
-
-/* Requête préparée : on exécute la requête de nouveau, seules les données sont transférées depuis le client vers le serveur */
-for ($id = 2; $id < 5; $id++) {
-    if (!$stmt->execute()) {
-        echo "Échec lors de l'exécution de la requête : (" . $stmt->errno . ") " . $stmt->error;
-    }
-}
-
-/* Il est recommandé de fermer explicitement */
-$stmt->close();
-
-/* Requête non préparée */
-$res = $mysqli->query("SELECT id FROM test");
-var_dump($res->fetch_all());
-?>
+$result = $mysqli->query('SELECT id, label FROM test');
+var_dump($result->fetch_all(MYSQLI_ASSOC));
 ]]>
     </programlisting>
     &example.outputs;
     <screen>
 <![CDATA[
-array(4) {
-  [0]=>
-  array(1) {
-    [0]=>
+array(3) {
+  array(2) {
+    ["id"]=>
     string(1) "1"
+    ["label"]=>
+    string(3) "PHP"
   }
   [1]=>
-  array(1) {
-    [0]=>
+  array(2) {
+    ["id"]=>
     string(1) "2"
+    ["label"]=>
+    string(4) "Java"
   }
   [2]=>
-  array(1) {
-    [0]=>
+  array(2) {
+    ["id"]=>
     string(1) "3"
-  }
-  [3]=>
-  array(1) {
-    [0]=>
-    string(1) "4"
+    ["label"]=>
+    string(3) "C++"
   }
 }
 ]]>
@@ -796,10 +729,18 @@ array(4) {
     <programlisting role="php">
 <![CDATA[
 <?php
-if (!$mysqli->query("INSERT INTO test(id) VALUES (1), (2), (3), (4)")) {
-    echo "Échec lors du Multi-INSERT : (" . $mysqli->errno . ") " . $mysqli->error;
-}
-?>
+ 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli("example.com", "user", "password", "database");
+ 
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT)");
+ 
+$values = [1, 2, 3, 4];
+ 
+$stmt = $mysqli->prepare("INSERT INTO test(id) VALUES (?), (?), (?), (?)");
+$stmt->bind_param('iiii', ...$values);
+$stmt->execute();
 ]]>
     </programlisting>
    </example>
@@ -813,8 +754,7 @@ if (!$mysqli->query("INSERT INTO test(id) VALUES (1), (2), (3), (4)")) {
    Les requêtes préparées utilisent un protocole appelé binaire. Le serveur MySQL
    envoie les données du jeu de résultats "tel que", au format binaire. Les résultats
    ne sont pas linéarisés en chaînes de caractères avant envoi. La bibliothèque cliente
-   ne reçoit donc pas que des chaînes de caractères. Au lieu de cela, elle va recevoir
-   des données binaires, et tentera de les convertir en valeurs dans un type de données
+   reçoit des données binaires et tente de convertir les valeurs en un type de données
    PHP approprié. Par exemple, les résultats depuis une colonne <literal>INT</literal>
    SQL seront fournis comme variables de type entier PHP.
   </para>
@@ -824,32 +764,29 @@ if (!$mysqli->query("INSERT INTO test(id) VALUES (1), (2), (3), (4)")) {
     <programlisting role="php">
 <![CDATA[
 <?php
-$mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
-    !$mysqli->query("CREATE TABLE test(id INT, label CHAR(1))") ||
-    !$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'a')")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli("example.com", "user", "password", "database");
+
+// Requête non préparée
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT, label TEXT)");
+$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'PHP')");
 
 $stmt = $mysqli->prepare("SELECT id, label FROM test WHERE id = 1");
 $stmt->execute();
-$res = $stmt->get_result();
-$row = $res->fetch_assoc();
+$result = $stmt->get_result();
+$row = $result->fetch_assoc();
 
 printf("id = %s (%s)\n", $row['id'], gettype($row['id']));
 printf("label = %s (%s)\n", $row['label'], gettype($row['label']));
-?>
 ]]>
     </programlisting>
     &example.outputs;
     <screen>
 <![CDATA[
 id = 1 (integer)
-label = a (string)
+label = PHP (string)
 ]]>
     </screen>
    </example>
@@ -880,24 +817,19 @@ label = a (string)
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
-    !$mysqli->query("CREATE TABLE test(id INT, label CHAR(1))") ||
-    !$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'a')")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+// Requête non préparée
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT, label TEXT)");
+$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'PHP')");
 
-if (!($stmt = $mysqli->prepare("SELECT id, label FROM test"))) {
-    echo "Échec lors de la préparation de la requête : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$stmt = $mysqli->prepare("SELECT id, label FROM test WHERE id = 1");
+$stmt->execute();
 
-if (!$stmt->execute()) {
-    echo "Échec lors de l'exécution de la requête : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$stmt->bind_result($out_id, $out_label);
 
 $out_id    = NULL;
 $out_label = NULL;
@@ -908,7 +840,6 @@ if (!$stmt->bind_result($out_id, $out_label)) {
 while ($stmt->fetch()) {
     printf("id = %s (%s), label = %s (%s)\n", $out_id, gettype($out_id), $out_label, gettype($out_label));
 }
-?>
 ]]>
     </programlisting>
     &example.outputs;
@@ -933,14 +864,14 @@ id = 1 (integer), label = a (string)
   <para>
    Il est également possible de mettre en mémoire tampon les résultats d'une
    requête préparée en utilisant la fonction
-   <function>mysqli_stmt_store_result</function>.
+   <methodname>mysqli_stmt::store_result</methodname>.
   </para>
   <para>
    <emphasis role="bold">Récupération des résultats en utilisant l'interface mysqli_result</emphasis>
   </para>
   <para>
    Au lieu d'utiliser des résultats liés, les résultats peuvent aussi être récupérées
-   via l'interface mysqli_result. La fonction <function>mysqli_stmt_get_result</function>
+   via l'interface mysqli_result. La fonction <methodname>mysqli_stmt::get_result</methodname>
    retourne un jeu de résultats mis en mémoire tampon.
   </para>
   <para>
@@ -949,31 +880,21 @@ id = 1 (integer), label = a (string)
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
-    !$mysqli->query("CREATE TABLE test(id INT, label CHAR(1))") ||
-    !$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'a')")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+// Requête non préparée
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT, label TEXT)");
+$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'PHP')");
 
-if (!($stmt = $mysqli->prepare("SELECT id, label FROM test ORDER BY id ASC"))) {
-    echo "Échec lors de la préparation de la requête : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$stmt = $mysqli->prepare("SELECT id, label FROM test WHERE id = 1");
+$stmt->execute();
 
-if (!$stmt->execute()) {
-     echo "Échec lors de l'exécution de la requête : (" . $stmt->errno . ") " . $stmt->error;
-}
+$result = $stmt->get_result();
 
-if (!($res = $stmt->get_result())) {
-    echo "Échec lors de la récupération du jeu de résultats : (" . $stmt->errno . ") " . $stmt->error;
-}
-
-var_dump($res->fetch_all());
-?>
+var_dump($result->fetch_all(MYSQLI_ASSOC));
 ]]>
     </programlisting>
     &example.outputs;
@@ -982,10 +903,10 @@ var_dump($res->fetch_all());
 array(1) {
   [0]=>
   array(2) {
-    [0]=>
+    ["id"]=>
     int(1)
-    [1]=>
-    string(1) "a"
+    ["label"]=>
+    string(3) "PHP"
   }
 }
 ]]>
@@ -993,7 +914,7 @@ array(1) {
    </example>
   </para>
   <para>
-   L'utilisation de <classname>mysqli_result interface</classname> offre d'autres avantages
+   L'utilisation de l'interface <classname>mysqli_result</classname> offre d'autres avantages
    d'un point de vue flexibilité dans la navigation dans le jeu de résultats côté client.
   </para>
   <para>
@@ -1002,35 +923,24 @@ array(1) {
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
-    !$mysqli->query("CREATE TABLE test(id INT, label CHAR(1))") ||
-    !$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'a'), (2, 'b'), (3, 'c')")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+/* Non-prepared statement */
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT, label TEXT)");
+$mysqli->query("INSERT INTO test(id, label) VALUES (1, 'PHP'), (2, 'Java'), (3, 'C++')");
 
-if (!($stmt = $mysqli->prepare("SELECT id, label FROM test"))) {
-    echo "Échec lors de la préparation de la requête : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$stmt = $mysqli->prepare("SELECT id, label FROM test");
+$stmt->execute();
 
-if (!$stmt->execute()) {
-     echo "Échec lors de l'exécution de la requête : (" . $stmt->errno . ") " . $stmt->error;
-}
+$result = $stmt->get_result();
 
-if (!($res = $stmt->get_result())) {
-    echo "Échec lors de la récupération du jeu de résultats : (" . $stmt->errno . ") " . $stmt->error;
+for ($row_no = $result->num_rows - 1; $row_no >= 0; $row_no--) {
+    $result->data_seek($row_no);
+    var_dump($result->fetch_assoc());
 }
-
-for ($row_no = ($res->num_rows - 1); $row_no >= 0; $row_no--) {
-    $res->data_seek($row_no);
-    var_dump($res->fetch_assoc());
-}
-$res->close();
-?>
 ]]>
     </programlisting>
     &example.outputs;
@@ -1040,19 +950,19 @@ array(2) {
   ["id"]=>
   int(3)
   ["label"]=>
-  string(1) "c"
+  string(1) "C++"
 }
 array(2) {
   ["id"]=>
   int(2)
   ["label"]=>
-  string(1) "b"
+  string(1) "Java"
 }
 array(2) {
   ["id"]=>
   int(1)
   ["label"]=>
-  string(1) "a"
+  string(1) "PHP"
 }
 ]]>
     </screen>
@@ -1069,7 +979,7 @@ array(2) {
    qu'ils ne sont jamais placés dans la chaîne de requête directement.
    Une astuce doit être fournie au serveur pour spécifier le type de
    variable liée, afin d'effectuer la conversion appropriée. Voir la
-   fonction <function>mysqli_stmt_bind_param</function> pour plus d'informations.
+   fonction <methodname>mysqli_stmt::bind_param</methodname> pour plus d'informations.
   </para>
   <para>
    Une telle séparation est souvent considérée comme la seule fonctionnalité
@@ -1087,7 +997,7 @@ array(2) {
    L'API n'inclut pas d'émulation côté client de la préparation d'une requête.
   </para>
   <para>
-   <emphasis role="bold">Préparation rapide - comparaison de requêtes non préparées</emphasis>
+   <emphasis role="bold">Comparaision rapide de requêtes préparées et non préparées</emphasis>
   </para>
   <para>
    Le table ci-dessous compare les requêtes préparées côté serveur et les requêtes non préparées.
@@ -1121,12 +1031,12 @@ array(2) {
      <row>
       <entry>Chaîne de la requête transférée depuis le client vers le serveur</entry>
       <entry>1 template, liage des paramètres n fois, s'il y en a</entry>
-      <entry>n fois avec les paramètres, s'il y en a</entry>
+      <entry>n fois et analysé à chaque fois</entry>
      </row>
      <row>
       <entry>API de liage des paramètres d'entrée</entry>
-      <entry>Oui, échappement automatique des entrées</entry>
-      <entry>Non, échappement manuelle des entrées</entry>
+      <entry>Ouis</entry>
+      <entry>Non, échappement manuel des entrées</entry>
      </row>
      <row>
       <entry>API de liage des paramètres de sortie</entry>
@@ -1135,23 +1045,23 @@ array(2) {
      </row>
      <row>
       <entry>Support de l'utilisation de l'API mysqli_result</entry>
-      <entry>Oui, utilisation de <function>mysqli_stmt_get_result</function></entry>
+      <entry>Oui, utilisation de <methodname>mysqli_stmt::get_result</methodname></entry>
       <entry>Oui</entry>
      </row>
      <row>
       <entry>Jeu de résultats mis en mémoire tampon</entry>
       <entry>
-       Oui, utilisation de <function>mysqli_stmt_get_result</function> ou liage
-       avec <function>mysqli_stmt_store_result</function>
+       Oui, utilisation de <methodname>mysqli_stmt::get_result</methodname> ou liage
+       avec <methodname>mysqli_stmt::store_result</methodname>
       </entry>
-      <entry>Oui, par défaut avec la fonction <function>mysqli_query</function></entry>
+      <entry>Oui, par défaut avec la fonction <methodname>mysqli::query</methodname></entry>
      </row>
      <row>
       <entry>Jeu de résultats non mis en mémoire tampon</entry>
       <entry>Oui, utiilsation de l'API liage de la sortie</entry>
       <entry>
-       Oui, utilisation de <function>mysqli_real_query</function> avec
-       <function>mysqli_use_result</function>
+       Oui, utilisation de <methodname>mysqli::real_query</methodname> avec
+       <methodname>mysqli::use_result</methodname>
       </entry>
      </row>
      <row>
@@ -1218,30 +1128,21 @@ array(2) {
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") || !$mysqli->query("CREATE TABLE test(id INT)")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT)");
 
-if (!$mysqli->query("DROP PROCEDURE IF EXISTS p") ||
-    !$mysqli->query("CREATE PROCEDURE p(IN id_val INT) BEGIN INSERT INTO test(id) VALUES(id_val); END;")) {
-    echo "Échec lors de la création de la procédure stockée : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP PROCEDURE IF EXISTS p");
+$mysqli->query("CREATE PROCEDURE p(IN id_val INT) BEGIN INSERT INTO test(id) VALUES(id_val); END;");
 
-if (!$mysqli->query("CALL p(1)")) {
-    echo "Échec lors de l'appel à la procédure stockée : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("CALL p(1)");
 
-if (!($res = $mysqli->query("SELECT id FROM test"))) {
-    echo "Échec de la requête : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$result = $mysqli->query("SELECT id FROM test");
 
-var_dump($res->fetch_assoc());
-?>
+var_dump($result->fetch_assoc());
 ]]>
     </programlisting>
     &example.outputs;
@@ -1268,28 +1169,20 @@ array(1) {
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
-if (!$mysqli->query("DROP PROCEDURE IF EXISTS p") ||
-    !$mysqli->query('CREATE PROCEDURE p(OUT msg VARCHAR(50)) BEGIN SELECT "Hi!" INTO msg; END;')) {
-    echo "Échec lors de la création de la procédure stockée : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP PROCEDURE IF EXISTS p");
+$mysqli->query('CREATE PROCEDURE p(OUT msg VARCHAR(50)) BEGIN SELECT "Hi!" INTO msg; END;');
 
+$mysqli->query("SET @msg = ''");
+$mysqli->query("CALL p(@msg)");
 
-if (!$mysqli->query("SET @msg = ''") || !$mysqli->query("CALL p(@msg)")) {
-    echo "Échec de l'appel à la procédure stockée : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$result = $mysqli->query("SELECT @msg as _p_out");
 
-if (!($res = $mysqli->query("SELECT @msg as _p_out"))) {
-    echo "Échec lors de la récupération : (" . $mysqli->errno . ") " . $mysqli->error;
-}
-
-$row = $res->fetch_assoc();
+$row = $result->fetch_assoc();
 echo $row['_p_out'];
-?>
 ]]>
     </programlisting>
     &example.outputs;
@@ -1313,18 +1206,18 @@ Hi!
   <para>
    Les procédures stockées peuvent retourner des jeux de résultats. Les jeux de
    résultats retournés depuis une procédure stockée ne peuvent être récupérés
-   correctement en utilisant la fonction <function>mysqli_query</function>.
-   La fonction <function>mysqli_query</function> combine l'exécution de la requête
+   correctement en utilisant la fonction <methodname>mysqli::query</methodname>.
+   La fonction <methodname>mysqli::query</methodname> combine l'exécution de la requête
    et la récupération du premier jeu de résultats dans un jeu de résultats mis en
    mémoire tampon, s'il y en a. Cependant, il existe d'autres jeux de résultats
    issus de la procédure stockée qui sont cachés de l'utilisateur et qui
-   font que la fonction <function>mysqli_query</function> échoue lors de la
+   font que la fonction <methodname>mysqli::query</methodname> échoue lors de la
    récupération des jeux de résultats attendus de l'utilisateur.
   </para>
   <para>
    Les jeux de résultats retournés depuis une procédure stockée sont
-   récupérés en utilisant la fonction <function>mysqli_real_query</function> ou
-   la fonction <function>mysqli_multi_query</function>.
+   récupérés en utilisant la fonction <methodname>mysqli::real_query</methodname> 
+   ou <methodname>mysqli::multi_query</methodname>.
    Ces deux fonctions autorisent la récupération de n'importe quel nombre
    de jeux de résultats retournés par une requête, comme la requête
    <literal>CALL</literal>. L'échec dans la récupération de tous les jeux de résultats
@@ -1336,38 +1229,25 @@ Hi!
     <programlisting role="php">
 <![CDATA[
 <?php
+ 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
-    !$mysqli->query("CREATE TABLE test(id INT)") ||
-    !$mysqli->query("INSERT INTO test(id) VALUES (1), (2), (3)")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT)");
+$mysqli->query("INSERT INTO test(id) VALUES (1), (2), (3)");
 
-if (!$mysqli->query("DROP PROCEDURE IF EXISTS p") ||
-    !$mysqli->query('CREATE PROCEDURE p() READS SQL DATA BEGIN SELECT id FROM test; SELECT id + 1 FROM test; END;')) {
-    echo "Échec lors de la création de la procédure stockée : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP PROCEDURE IF EXISTS p");
+$mysqli->query('CREATE PROCEDURE p() READS SQL DATA BEGIN SELECT id FROM test; SELECT id + 1 FROM test; END;');
 
-if (!$mysqli->multi_query("CALL p()")) {
-    echo "Échec lors de l'appel à CALL : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->multi_query("CALL p()");
 
 do {
     if ($res = $mysqli->store_result()) {
-        printf("---\n");
-        var_dump($res->fetch_all());
-        $res->free();
-    } else {
-        if ($mysqli->errno) {
-            echo "Échec de STORE : (" . $mysqli->errno . ") " . $mysqli->error;
-        }
+        var_dump($result->fetch_all());
+        $result->free();
     }
-} while ($mysqli->more_results() && $mysqli->next_result());
-?>
+} while ($mysqli->next_result());
 ]]>
     </programlisting>
     &example.outputs;
@@ -1429,44 +1309,76 @@ array(3) {
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
 if ($mysqli->connect_errno) {
     echo "Échec lors de la connexion à MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
 }
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") ||
-    !$mysqli->query("CREATE TABLE test(id INT)") ||
-    !$mysqli->query("INSERT INTO test(id) VALUES (1), (2), (3)")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT)");
+$mysqli->query("INSERT INTO test(id) VALUES (1), (2), (3)");
 
-if (!$mysqli->query("DROP PROCEDURE IF EXISTS p") ||
-    !$mysqli->query('CREATE PROCEDURE p() READS SQL DATA BEGIN SELECT id FROM test; SELECT id + 1 FROM test; END;')) {
-    echo "Échec lors de la création de la procédure stockée : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP PROCEDURE IF EXISTS p");
+$mysqli->query('CREATE PROCEDURE p() READS SQL DATA BEGIN SELECT id FROM test; SELECT id + 1 FROM test; END;');
 
-if (!($stmt = $mysqli->prepare("CALL p()"))) {
-    echo "Échec lors de la préparation : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$stmt = $mysqli->prepare("CALL p()");
 
 if (!$stmt->execute()) {
     echo "Échec lors de l'exécution : (" . $stmt->errno . ") " . $stmt->error;
 }
 
 do {
-    if ($res = $stmt->get_result()) {
-        printf("---\n");
-        var_dump(mysqli_fetch_all($res));
-        mysqli_free_result($res);
-    } else {
-        if ($stmt->errno) {
-            echo "Échec de STORE : (" . $stmt->errno . ") " . $stmt->error;
-        }
+    if ($result = $stmt->get_result()) {
+        var_dump($result->fetch_all());
+        $result->free();
     }
-} while ($stmt->more_results() && $stmt->next_result());
+} while ($stmt->next_results());
 ?>
 ]]>
     </programlisting>
+        &example.outputs;
+    <screen>
+<![CDATA[
+---
+array(3) {
+  [0]=>
+  array(1) {
+    [0]=>
+    int(1)
+  }
+  [1]=>
+  array(1) {
+    [0]=>
+    int(2)
+  }
+  [2]=>
+  array(1) {
+    [0]=>
+    int(3)
+  }
+}
+---
+array(3) {
+  [0]=>
+  array(1) {
+    [0]=>
+    int(2)
+  }
+  [1]=>
+  array(1) {
+    [0]=>
+    int(3)
+  }
+  [2]=>
+  array(1) {
+    [0]=>
+    int(4)
+  }
+}
+]]>
+    </screen>
    </example>
   </para>
   <para>
@@ -1478,28 +1390,42 @@ do {
     <programlisting role="php">
 <![CDATA[
 <?php
-if (!($stmt = $mysqli->prepare("CALL p()"))) {
-    echo "Échec lors de la préparation : (" . $mysqli->errno . ") " . $mysqli->error;
-}
 
-if (!$stmt->execute()) {
-    echo "Échec lors de l'exécution : (" . $stmt->errno . ") " . $stmt->error;
-}
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli("example.com", "user", "password", "database");
 
-do {
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT)");
+$mysqli->query("INSERT INTO test(id) VALUES (1), (2), (3)");
 
-    $id_out = NULL;
-    if (!$stmt->bind_result($id_out)) {
-        echo "Échec lors du liage : (" . $stmt->errno . ") " . $stmt->error;
-    }
+$mysqli->query("DROP PROCEDURE IF EXISTS p");
+$mysqli->query('CREATE PROCEDURE p() READS SQL DATA BEGIN SELECT id FROM test; SELECT id + 1 FROM test; END;');
  
-    while ($stmt->fetch()) {
-        echo "id = $id_out\n";
+$stmt = $mysqli->prepare("CALL p()");
+ 
+$stmt->execute();
+ 
+do {
+    if ($stmt->store_result()) {
+        $stmt->bind_result($id_out);
+        while ($stmt->fetch()) {
+            echo "id = $id_out\n";
+        }
     }
-} while ($stmt->more_results() && $stmt->next_result());
-?>
+} while ($stmt->next_result());
 ]]>
     </programlisting>
+        &example.outputs;
+    <screen>
+<![CDATA[
+id = 1
+id = 2
+id = 3
+id = 2
+id = 3
+id = 4
+]]>
+    </screen>
    </example>
   </para>
   <para>
@@ -1509,8 +1435,8 @@ do {
    <simplelist>
     <member><methodname>mysqli::query</methodname></member>
     <member><methodname>mysqli::multi_query</methodname></member>
-    <member><methodname>mysqli_result::next-result</methodname></member>
-    <member><methodname>mysqli_result::more-results</methodname></member>
+    <member><methodname>mysqli::next_result</methodname></member>
+    <member><methodname>mysqli::more_results</methodname></member>
    </simplelist>
   </para>
  </section>
@@ -1519,12 +1445,11 @@ do {
   <title>Requêtes multiples</title>
   <para>
    MySQL autorise optionnellement le fait d'avoir plusieurs requêtes dans une
-   seule chaîne de requête. L'envoi de requêtes multiples en une fois réduit
-   les aller-retour client serveur mais nécessite une gestion spéciale.
+   seule chaîne de requête mais nécessite une gestion spéciale.
   </para>
   <para>
    Les requêtes multiples ou multi-requêtes doivent être exécutées
-   avec la fonction <function>mysqli_multi_query</function>. Les requêtes
+   avec la fonction <methodname>mysqli::multi_query</methodname>. Les requêtes
    individuelles dans la chaîne de requête sont séparées par un point virgule.
    Ensuite, tous les jeux de résultats retournés par l'exécution des requêtes
    doivent être récupérés.
@@ -1540,30 +1465,25 @@ do {
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-if ($mysqli->connect_errno) {
-    echo "Échec lors de la connexion à MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-}
 
-if (!$mysqli->query("DROP TABLE IF EXISTS test") || !$mysqli->query("CREATE TABLE test(id INT)")) {
-    echo "Échec lors de la création de la table : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->query("DROP TABLE IF EXISTS test");
+$mysqli->query("CREATE TABLE test(id INT)");
 
-$sql = "SELECT COUNT(*) AS _num FROM test; ";
-$sql.= "INSERT INTO test(id) VALUES (1); ";
-$sql.= "SELECT COUNT(*) AS _num FROM test; ";
+$sql = "SELECT COUNT(*) AS _num FROM test;
+        INSERT INTO test(id) VALUES (1); 
+        SELECT COUNT(*) AS _num FROM test; ";
 
-if (!$mysqli->multi_query($sql)) {
-    echo "Échec lors de l'exécution de la multi-requête : (" . $mysqli->errno . ") " . $mysqli->error;
-}
+$mysqli->multi_query($sql);
 
 do {
-    if ($res = $mysqli->store_result()) {
-        var_dump($res->fetch_all(MYSQLI_ASSOC));
-        $res->free();
+    if ($result = $mysqli->store_result()) {
+        var_dump($result->fetch_all(MYSQLI_ASSOC));
+        $result->free();
     }
-} while ($mysqli->more_results() && $mysqli->next_result());
-?>
+} while ($mysqli->next_result());
 ]]>
     </programlisting>
     &example.outputs;
@@ -1591,15 +1511,15 @@ array(1) {
    <emphasis role="bold">D'un point de vue de la sécurité</emphasis>
   </para>
   <para>
-   Les fonctions <function>mysqli_query</function> et
-   <function>mysqli_real_query</function> de l'API ne définissent pas de
+   Les fonctions <methodname>mysqli::query</methodname> et
+   <methodname>mysqli::real_query</methodname> de l'API ne définissent pas de
    drapeau de connexion nécessaire pour l'activation des multi-requêtes sur
    le serveur. Un appel supplémentaire à l'API est utilisé pour les multi-requêtes
    pour réduire la probabilité d'injection SQL accidentelle. Un attaquant peut
    tenter d'ajouter des requêtes comme
    <literal>; DROP DATABASE mysql</literal> ou <literal>; SELECT SLEEP(999)</literal>.
    Si l'attaquant arrive à ajouter ce genre de SQL dans la chaîne de requête
-   mais que <literal>mysqli_multi_query</literal> n'est pas utilisé, le serveur
+   mais que <methodname>mysqli::multi_query</methodname> n'est pas utilisé, le serveur
    n'excutera que la première requête, mais pas la seconde représentant la requête SQL
    malicieuse.
   </para>
@@ -1609,12 +1529,13 @@ array(1) {
     <programlisting role="php">
 <![CDATA[
 <?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
-$res    = $mysqli->query("SELECT 1; DROP TABLE mysql.user");
-if (!$res) {
+$result = $mysqli->query("SELECT 1; DROP TABLE mysql.user");
+if (!$result) {
     echo "Erreur lors de l'exécution de la requête : (" . $mysqli->errno . ") " . $mysqli->error;
 }
-?>
 ]]>
     </programlisting>
     &example.outputs;
@@ -1664,6 +1585,7 @@ to use near 'DROP TABLE mysql.user' at line 1
     <programlisting role="php">
 <![CDATA[
 <?php
+
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("example.com", "user", "password", "database");
 
@@ -1743,6 +1665,7 @@ $mysqli->commit();
     <programlisting role="php">
 <![CDATA[
 <?php
+
 $mysqli = new mysqli("example.com", "user", "password", "database");
 if ($mysqli->connect_errno) {
     echo "Échec lors de la connexion à MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
@@ -1750,7 +1673,6 @@ if ($mysqli->connect_errno) {
 
 $res = $mysqli->query("SELECT 1 AS _one, 'Hello' AS _two FROM DUAL");
 var_dump($res->fetch_fields());
-?>
 ]]>
     </programlisting>
     &example.outputs;
@@ -1827,7 +1749,7 @@ array(2) {
    Les méta-données des jeux de résultats créés en utilisant des requêtes
    préparées sont accessibles de la même façon. Un gestionnaire
    <classname>mysqli_result</classname> utilisable est retourné par
-   la fonction <function>mysqli_stmt_result_metadata</function>.
+   la fonction <methodname>mysqli_stmt::result_metadata</methodname>.
   </para>
   <para>
    <example>
@@ -1835,11 +1757,15 @@ array(2) {
     <programlisting role="php">
 <![CDATA[
 <?php
+ 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli("example.com", "user", "password", "database");
+
 $stmt = $mysqli->prepare("SELECT 1 AS _one, 'Hello' AS _two FROM DUAL");
 $stmt->execute();
-$res = $stmt->result_metadata();
-var_dump($res->fetch_fields());
-?>
+
+$result = $stmt->result_metadata();
+var_dump($result->fetch_fields());
 ]]>
     </programlisting>
    </example>
