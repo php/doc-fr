@@ -139,13 +139,13 @@ Tout le code est censé être compatible avec `error_reporting(E_ALL)`
 Afin d'avoir un manuel en bon français, la traduction de certains termes techniques
 se trouve dans le document ``TRADUCTIONS.txt``.
 
-Il est aussi nécessaire de le relire la traduction pour s'assurer que le texte
+Il est aussi nécessaire de relire la traduction pour s'assurer que le texte
 traduit ait du sens et soit en accordance avec le texte anglais.
 
 Après la relecture d'une traduction le tag/commentaire suivant
 ``<!-- Reviewed: no/yes -->`` doit avoir la valeur `yes`.
 Lors d'une modification d'un fichier relu ce tag doit passer à la valeur ``no``,
-sauf lors de modifications mineures/changements purement XML (e.g. changement d'un element
+sauf lors de modifications mineures/changements purement XML (e.g. changement d'un élément
 `<methodsynopsis>`).
 
 ### Traduire une nouvelle page
@@ -198,7 +198,7 @@ Ne créer et pusher pas des branches différentes de ``master`` sur le repo git 
 Ici, on va lancer une analyse syntaxique de tous les fichiers dans
 les répertoires "functions" de fr/reference/. La technique est simple,
 on configure short_open_tag à Off en ligne de commande pour que PHP n'analyse
-que les exemples commençant par `<?php`, puis on lance la moulinette :
+que les exemples commençants par `<?php`, puis on lance la moulinette :
 
 ```shell
 cd reference
