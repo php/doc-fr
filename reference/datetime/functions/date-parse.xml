@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 34188f8256bdc6f0e6e1965c2be94247997165b6 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes Maintainer: yannick -->
+<!-- EN-Revision: 19e8122137a1d42ed60f17fe2c0c2b69b0b2d16b Maintainer: victor-prdh Status: ready -->
+<!-- Reviewed: no -->
 <refentry xml:id="function.date-parse" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>date_parse</refname>
@@ -13,6 +13,25 @@
    <type>array</type><methodname>date_parse</methodname>
    <methodparam><type>string</type><parameter>datetime</parameter></methodparam>
   </methodsynopsis>
+  <para>
+   <function>date_parse</function> analyse la chaîne  
+   <parameter>datetime</parameter> donnée selon les mêmes règles
+   <function>strtotime</function> et
+   <function>DateTimeImmutable::__construct</function>. Au lieu de 
+   renvoyer un horodatage Unix (avec <function>strtotime</function>) ou
+   un objet <classname>DateTimeImmutable</classname> (avec
+   <function>DateTimeImmutable::__construct</function>), il renvoie un 
+   tableau associatif avec les informations qu'il pourrait détecter dans 
+   la chaîne <parameter>datetime</parameter> donnée.
+  </para>
+  <para>
+   Si aucune information sur un certain groupe d'éléments ne peut être trouvée, ces 
+   éléments du tableau seront définis sur &false; ou seront manquants. Si nécessaire 
+   pour construire un horodatage ou un objet <classname>DateTimeImmutable</classname> 
+   à partir de la même chaîne <parameter>datetime</parameter>, plusieurs champs 
+   peuvent être définis sur  une valeur non-&false;. Voir les exemples ci-dessous
+   pour les cas où cela se produit.
+  </para>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -38,6 +57,47 @@
    Retourne un &array; contenant des informations sur la date/moment analysée en
    cas de succès&return.falseforfailure;.
   </para>
+  <para>
+   Le tableau retourné a des clés pour <literal>year</literal>,
+   <literal>month</literal>, <literal>day</literal>, <literal>hour</literal>,
+   <literal>minute</literal>, <literal>second</literal>,
+   <literal>fraction</literal>, et <literal>is_localtime</literal>.
+  </para>
+  <para>
+   Si <literal>is_localtime</literal> est présent, alors
+   <literal>zone_type</literal> indique le type de fuseau horaire. 
+   Pour le type <literal>1</literal> (décalage UTC) les champs 
+   <literal>zone</literal> et <literal>is_dst</literal> sont ajoutés.
+   Pour le type <literal>2</literal> (abréviation) les champs 
+   <literal>tz_abbr</literal> et <literal>is_dst</literal> sont ajoutés. 
+   Pour le type <literal>3</literal> (identifiant de fuseau horaire) 
+   les champs <literal>tz_abbr</literal> et <literal>tz_id</literal>
+   sont ajoutés.
+  </para>
+  <para>
+   Le tableau inclus les champs <literal>warning_count</literal> et
+   <literal>warnings</literal>. Le premier indique le nombre 
+   d'avertissements. Les clés du tableau <literal>warnings</literal> 
+   indiquent la position dans le paramètre <parameter>datetime</parameter> 
+   où l'avertissement s'est produit, avec la valeur de chaîne décrivant 
+   l'avertissement lui-même. Un exemple ci-dessous montre un tel 
+   avertissement.
+  </para>
+  <para>
+   Le tableau inclus aussi les champs <literal>error_count</literal> et
+   <literal>errors</literal> fields. Le premier indique le nombre 
+   d'erreurs. Les clés du tableau <literal>errors</literal> indiquent 
+   la position dans le paramètre <parameter>datetime</parameter> où l'erreur
+   s'est produite, avec la valeur de chaîne décrivant l'avertissement 
+   lui-même. Un exemple ci-dessous montre un tel avertissement.
+  </para>
+  <warning>
+   <para>
+    Le nombre d'éléments de tableau dans les tableaux <literal>warnings</literal> et
+    <literal>errors</literal> peut être inférieur à <literal>warning_count</literal> 
+    ou <literal>error_count</literal> s'ils se sont produits à la même position.
+   </para>
+  </warning>
  </refsect1>
 
  <refsect1 role="errors">
@@ -76,32 +136,202 @@
   &reftitle.examples;
   <para>
    <example>
-    <title>Exemple avec <function>date_parse</function></title>
+    <title><function>date_parse</function> avec une chaîne
+    <parameter>datetime</parameter> complète</title>
     <programlisting role="php">
 <![CDATA[
 <?php
-print_r(date_parse("2006-12-12 10:00:00.5"));
+var_dump(date_parse("2006-12-12 10:00:00.5"));
 ?>
 ]]>
     </programlisting>
     &example.outputs;
     <screen>
 <![CDATA[
-Array
-(
-    [year] => 2006
-    [month] => 12
-    [day] => 12
-    [hour] => 10
-    [minute] => 0
-    [second] => 0
-    [fraction] => 0.5
-    [warning_count] => 0
-    [warnings] => Array()
-    [error_count] => 0
-    [errors] => Array()
-    [is_localtime] => 
-)
+array(12) {
+  ["year"]=>
+  int(2006)
+  ["month"]=>
+  int(12)
+  ["day"]=>
+  int(12)
+  ["hour"]=>
+  int(10)
+  ["minute"]=>
+  int(0)
+  ["second"]=>
+  int(0)
+  ["fraction"]=>
+  float(0.5)
+  ["warning_count"]=>
+  int(0)
+  ["warnings"]=>
+  array(0) {
+  }
+  ["error_count"]=>
+  int(0)
+  ["errors"]=>
+  array(0) {
+  }
+  ["is_localtime"]=>
+  bool(false)
+}
+]]>
+    </screen>
+   </example>
+  </para>
+
+  <para>
+   Les éléments de fuseau horaire n'apparaissent que s'ils sont inclus 
+   dans la chaîne <parameter>datetime</parameter> donnée. Dans ce cas, 
+   il y aura toujours un élément <literal>zone_type</literal> et 
+   quelques autres en fonction de sa valeur.
+   <example>
+    <title><function>date_parse</function> avec des informations abrégé sur le fuseau horaire</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+var_dump(date_parse("June 2nd, 2022, 10:28:17 BST"));
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(16) {
+  ["year"]=>
+  int(2022)
+  ["month"]=>
+  int(6)
+  ["day"]=>
+  int(2)
+  ["hour"]=>
+  int(10)
+  ["minute"]=>
+  int(28)
+  ["second"]=>
+  int(17)
+  ["fraction"]=>
+  float(0)
+  ["warning_count"]=>
+  int(0)
+  ["warnings"]=>
+  array(0) {
+  }
+  ["error_count"]=>
+  int(0)
+  ["errors"]=>
+  array(0) {
+  }
+  ["is_localtime"]=>
+  bool(true)
+  ["zone_type"]=>
+  int(2)
+  ["zone"]=>
+  int(0)
+  ["is_dst"]=>
+  bool(true)
+  ["tz_abbr"]=>
+  string(3) "BST"
+}
+]]>
+    </screen>
+   </example>
+   <example>
+    <title><function>date_parse</function> avec des informations abrégé sur le fuseau horaire</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+var_dump(date_parse("June 2nd, 2022, 10:28:17 Europe/London"));
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(14) {
+  ["year"]=>
+  int(2022)
+  ["month"]=>
+  int(6)
+  ["day"]=>
+  int(2)
+  ["hour"]=>
+  int(10)
+  ["minute"]=>
+  int(28)
+  ["second"]=>
+  int(17)
+  ["fraction"]=>
+  float(0)
+  ["warning_count"]=>
+  int(0)
+  ["warnings"]=>
+  array(0) {
+  }
+  ["error_count"]=>
+  int(0)
+  ["errors"]=>
+  array(0) {
+  }
+  ["is_localtime"]=>
+  bool(true)
+  ["zone_type"]=>
+  int(3)
+  ["tz_id"]=>
+  string(13) "Europe/London"
+}
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   Si une chaîne <parameter>datetime</parameter> plus minimale est analysée, 
+   moins d'informations sont disponibles. Dans cet exemple, toutes les parties 
+   temporelles sont renvoyées comme &false;.
+   <example>
+    <title>
+     <function>date_parse</function> avec
+     une chaîne minimale
+    </title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+var_dump(date_parse("June 2nd, 2022"));
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(12) {
+  ["year"]=>
+  int(2022)
+  ["month"]=>
+  int(6)
+  ["day"]=>
+  int(2)
+  ["hour"]=>
+  bool(false)
+  ["minute"]=>
+  bool(false)
+  ["second"]=>
+  bool(false)
+  ["fraction"]=>
+  bool(false)
+  ["warning_count"]=>
+  int(0)
+  ["warnings"]=>
+  array(0) {
+  }
+  ["error_count"]=>
+  int(0)
+  ["errors"]=>
+  array(0) {
+  }
+  ["is_localtime"]=>
+  bool(false)
+}
 ]]>
     </screen>
    </example>
@@ -115,44 +345,125 @@ Array
     <programlisting role="php">
 <![CDATA[
 <?php
-print_r(date_parse("2006-12-12 10:00:00.5 +1 week +1 hour"));
+var_dump(date_parse("2006-12-12 10:00:00.5 +1 week +1 hour"));
 ?>
 ]]>
     </programlisting>
     &example.outputs;
     <screen>
 <![CDATA[
-Array
-(
-    [year] => 2006
-    [month] => 12
-    [day] => 12
-    [hour] => 10
-    [minute] => 0
-    [second] => 0
-    [fraction] => 0.5
-    [warning_count] => 0
-    [warnings] => Array
-        (
-        )
-
-    [error_count] => 0
-    [errors] => Array
-        (
-        )
-
-    [is_localtime] =>
-    [relative] => Array
-        (
-            [year] => 0
-            [month] => 0
-            [day] => 7
-            [hour] => 1
-            [minute] => 0
-            [second] => 0
-        )
-
+array(13) {
+  ["year"]=>
+  int(2006)
+  ["month"]=>
+  int(12)
+  ["day"]=>
+  int(12)
+  ["hour"]=>
+  int(10)
+  ["minute"]=>
+  int(0)
+  ["second"]=>
+  int(0)
+  ["fraction"]=>
+  float(0.5)
+  ["warning_count"]=>
+  int(0)
+  ["warnings"]=>
+  array(0) {
+  }
+  ["error_count"]=>
+  int(0)
+  ["errors"]=>
+  array(0) {
+  }
+  ["is_localtime"]=>
+  bool(false)
+  ["relative"]=>
+  array(6) {
+    ["year"]=>
+    int(0)
+    ["month"]=>
+    int(0)
+    ["day"]=>
+    int(7)
+    ["hour"]=>
+    int(1)
+    ["minute"]=>
+    int(0)
+    ["second"]=>
+    int(0)
+  }
+}
 )]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   Certaines strophes, telles que <literal>Thursday</literal> (jeudi) définiront 
+   la partie heure de la chaîne sur <literal>0</literal>. Si <literal>Thursday</literal> 
+   (jeudi) is est passé à<function>DateTimeImmutable::__construct</function> l'heure, 
+   la minute, la seconde et la fraction seront également définies sur
+   <literal>0</literal>. Dans l'exemple ci-dessous, l'élément année 
+   est cependant laissé à &false;.
+   <example>
+    <title><function>date_parse</function> avec des effets secondaires</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+var_dump(date_parse("Thursday, June 2nd"));
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(13) {
+  ["year"]=>
+  bool(false)
+  ["month"]=>
+  int(6)
+  ["day"]=>
+  int(2)
+  ["hour"]=>
+  int(0)
+  ["minute"]=>
+  int(0)
+  ["second"]=>
+  int(0)
+  ["fraction"]=>
+  float(0)
+  ["warning_count"]=>
+  int(0)
+  ["warnings"]=>
+  array(0) {
+  }
+  ["error_count"]=>
+  int(0)
+  ["errors"]=>
+  array(0) {
+  }
+  ["is_localtime"]=>
+  bool(false)
+  ["relative"]=>
+  array(7) {
+    ["year"]=>
+    int(0)
+    ["month"]=>
+    int(0)
+    ["day"]=>
+    int(0)
+    ["hour"]=>
+    int(0)
+    ["minute"]=>
+    int(0)
+    ["second"]=>
+    int(0)
+    ["weekday"]=>
+    int(4)
+  }
+}
+]]>
     </screen>
    </example>
   </para>
@@ -162,7 +473,9 @@ Array
   &reftitle.seealso;
   <para>
    <simplelist>
-    <member><function>checkdate</function></member>
+    <member><function>date_parse_from_format</function> pour  analyser 
+     le parameters <parameter>datetime</parameter> avec un format spécifique</member>
+    <member><function>checkdate</function> pour une validation de date Grégorienne</member>
     <member><function>getdate</function></member>
    </simplelist>
   </para>
