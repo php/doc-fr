@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 34188f8256bdc6f0e6e1965c2be94247997165b6 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes Maintainer: yannick -->
+<!-- EN-Revision: 5c951013ca04161992efed8b86fb40f55669958e Maintainer: victor-prdh Status: ready -->
+<!-- Reviewed: no -->
 <refentry xml:id="function.strtotime" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>strtotime</refname>
@@ -20,7 +20,10 @@
    et de la transformer en timestamp Unix (le nombre de secondes depuis
    le 1er Janvier 1970 à 00:00:00 UTC), relativement au timestamp
    <parameter>baseTimestamp</parameter>, ou à la date courante si ce dernier
-   est omis.
+   est omis. L'analyse de la chaîne de date est définie dans 
+   <link linkend="datetime.formats">les formats de date et d'heure</link> 
+   et comporte plusieurs considérations subtiles. Il est fortement recommandé 
+   d'en examiner tous les détails.
   </simpara>
   <warning>
    <para>
@@ -127,7 +130,6 @@ echo strtotime("last Monday"), "\n";
 <?php
 $str = 'Pas bon';
 
-// Avant PHP 5.1.0, vous devez comparer avec  -1, au lieu de false
 if (($timestamp = strtotime($str)) === false) {
    echo "La chaîne ($str) est boguée";
 } else {
@@ -144,6 +146,19 @@ if (($timestamp = strtotime($str)) === false) {
   &reftitle.notes;
   <note>
    <para>
+    Dans ce cas, la date "relative" signifie également que si un composant 
+    particulier de l'horodatage n'est pas fourni, il sera extrait textuellement de 
+    <parameter>baseTimestamp</parameter>. Autrement dit, 
+    <code>strtotime('February')</code>, s'il est exécuté le 31 mai 2022, sera 
+    interprété comme le <literal>31 février 2022</literal>, qui débordera sur 
+    un horodatage le <literal>3 mars</literal>. (Dans une année bissextile, 
+    ce serait le <literal>2 mars</literal>.) L'utilisation de 
+    <code>strtotime('1 February')</code> ou <code>strtotime('first day of February')</code>
+    éviterait ce problème.
+   </para>
+  </note>
+  <note>
+   <para>
     Si le chiffre des années est précisé sur deux chiffres, les valeurs entre
     00-69 correspondent à 2000-2069 et 70-99 à 1970-1999. Voyez les notes après
     concernant les différences possibles entres systèmes 32-bit (des dates peuvent
@@ -158,40 +173,16 @@ if (($timestamp = strtotime($str)) === false) {
     entier de 32 bits signé).
    </para>
    <para>
-    Avant PHP 5.1.0, toutes les plates-formes ne supportaient pas les timestamp négatifs
-    et dans ce cas, l'intervalle de date était limitée à environs l'époque Unix.
-    Cela signifiait que les dates antérieures au 1 Janvier 1970 ne fonctionnait pas
-    sous Windows, quelques distributions Linux et quelques autres systèmes.
-   </para>
-  </note>
-   <para>
     Pour les versions 64-bit de PHP, l'intervalle valide d'un timestamp
     est réellement infini, sachant que 64 bits peut représenter approximativement
     293 milliards d'années dans n'importe quelle direction.
-   </para>
-  <note>
-   <para>
-    Les dates aux formats <literal>m/d/y</literal> ou <literal>d-m-y</literal>
-    sont analysées en regardant le séparateur entre les différentes parties :
-    si le séparateur est un slash (<literal>/</literal>), alors le format américain
-    <literal>m/d/y</literal> est supposé ; si le séparateur est un tiret
-    (<literal>-</literal>) ou un point (<literal>.</literal>), alors le format
-    Européen <literal>d-m-y</literal> sera supposé. Si toutefois l'année est fournie
-    sur deux digits, et que le séparateur est un tiret (<literal>-</literal>),
-    la date sera analysée comme étant au format <literal>y-m-d</literal>.
-   </para>
-   <para>
-    Pour éviter des ambiguïtés éventuelles, le mieux est d'utiliser le format ISO 8601
-    (<literal>YYYY-MM-DD</literal>) ou encore d'utiliser la méthode
-    <methodname>DateTime::createFromFormat</methodname> lorsque c'est possible.
    </para>
   </note>
   <note>
    <para>
     L'utilisation de cette fonction sur des opérations mathématiques
     n'est pas conseillée. Il vaut mieux utiliser dans ce cas
-    <methodname>DateTime::add</methodname> et <methodname>DateTime::sub</methodname>
-    en PHP 5.3 et suivants, ou <methodname>DateTime::modify</methodname> en PHP 5.2.
+    <methodname>DateTime::add</methodname> et <methodname>DateTime::sub</methodname>.
    </para>
   </note>
  </refsect1>
@@ -200,8 +191,9 @@ if (($timestamp = strtotime($str)) === false) {
   &reftitle.seealso;
   <para>
    <simplelist>
+    <member><classname>DateTimeImmutable</classname></member>
+    <member><methodname>DateTimeImmutable::createFromFormat</methodname></member>
     <member><link linkend="datetime.formats">Les formats sur les dates</link></member>
-    <member><methodname>DateTime::createFromFormat</methodname></member>
     <member><function>checkdate</function></member>
     <member><function>strptime</function></member>
    </simplelist>

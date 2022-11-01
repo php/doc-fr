@@ -1,38 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: cc13d6f1e32fa264f6fd10678e32951560242f20 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
-
+<!-- EN-Revision: c85c9d1d4429496b45f03cd5e77e896821b4f7f3 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 <refentry xml:id="mysqli.insert-id" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>mysqli::$insert_id</refname>
   <refname>mysqli_insert_id</refname>
-  <refpurpose>Retourne l'identifiant automatiquement généré utilisé par la dernière requête</refpurpose>
+  <refpurpose>Retourne la valeur généré pour une colonne AUTO_INCREMENT par la dernière requête</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <para>&style.oop;</para>
-  <fieldsynopsis><type>mixed</type><varname linkend="mysqli.insert-id">mysqli->insert_id</varname></fieldsynopsis>
+  <fieldsynopsis><type class="union"><type>int</type><type>string</type></type><varname linkend="mysqli.insert-id">mysqli-&gt;insert_id</varname></fieldsynopsis>
   <para>&style.procedural;</para>
   <methodsynopsis>
-   <type>mixed</type><methodname>mysqli_insert_id</methodname>
-   <methodparam><type>mysqli</type><parameter>link</parameter></methodparam>
+   <type class="union"><type>int</type><type>string</type></type><methodname>mysqli_insert_id</methodname>
+   <methodparam><type>mysqli</type><parameter>mysql</parameter></methodparam>
   </methodsynopsis>
   <para>
-   La fonction <function>mysqli_insert_id</function> retourne l'identifiant généré
-   par une requête (généralement INSERT) sur une table avec une colonne possédant
-   l'attribut AUTO_INCREMENT. Si aucune instruction INSERT ou UPDATE n'a été envoyé
-   grâce à cette connexion, ou si la table modifié ne possède pas de colone
-   avec l'attribut AUTO_INCREMENT, cette fonction retournera zéro.
+   Retourne l'ID généré par une requête <literal>INSERT</literal> ou
+   <literal>UPDATE</literal> sur une table avec une colonne ayant l'attribut
+   <literal>AUTO_INCREMENT</literal>. Dans le cas des requêtes multilignes
+   <literal>INSERT</literal>, ceci retourne la première valeur automatiquement
+   généré qui a été inséré avec succès.
   </para>
-  <note>
-   <para>
-    Exécuter une commande INSERT ou UPDATE utilisant la fonction 
-    LAST_INSERT_ID() modifiera aussi la valeur retournée par la 
-    fonction <function>mysqli_insert_id</function>.
-   </para>
-  </note>
+  <para>
+   Exécuter une requête <literal>INSERT</literal> ou <literal>UPDATE</literal>
+   utilisant la fonction MySQL <literal>LAST_INSERT_ID()</literal> modifiera
+   aussi la valeur retourné par <function>mysqli_insert_id</function>.
+   Si <literal>LAST_INSERT_ID(expr)</literal> a été utilisé pour générer la
+   valeur de <literal>AUTO_INCREMENT</literal>, ceci retourne la valeur de la
+   dernière <literal>expr</literal> à la place de la valeur généré de
+   <literal>AUTO_INCREMENT</literal>.
+  </para>
+  <para>
+   Retourne <literal>0</literal> si la requête précédente n'a pas changé la
+   valeur de <literal>AUTO_INCREMENT</literal>.
+   <function>mysqli_insert_id</function> doit être appelé immédiatement après
+   que la requête ait généré la valeur.
+ </para>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -51,10 +57,15 @@
    Retourne zéro s'il n'y a pas eu de requête sur la connexion ou si la dernière requête n'a
    pas modifié la valeur de l'<literal>AUTO_INCREMENT</literal>.
   </para>
+  <para>
+   Seul les requêtes émises par la connexion courante affecte la valeur de retour.
+   La valeur n'est pas affecté par les requêtes utilisant d'autres connexions
+   ou clients.
+  </para>
   <note>
    <para>
     Si le nombre est plus grand que la valeur maximale d'un entier,
-    <function>mysqli_insert_id</function> retournera une chaîne le représentant.
+    elle sera retourné sous une &string;
    </para>
   </note>
  </refsect1>
@@ -62,31 +73,23 @@
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>Exemple avec <varname>$mysqli->insert_id</varname></title>
+   <title>Exemple avec <varname>$mysqli-&gt;insert_id</varname></title>
    <para>&style.oop;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
-
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
 
 $mysqli->query("CREATE TABLE myCity LIKE City");
 
 $query = "INSERT INTO myCity VALUES (NULL, 'Stuttgart', 'DEU', 'Stuttgart', 617000)";
 $mysqli->query($query);
 
-printf ("Le nouvel enregistrement a l'id %d.\n", $mysqli->insert_id);
+printf("New record has ID %d.\n", $mysqli->insert_id);
 
 /* drop table */
 $mysqli->query("DROP TABLE myCity");
-
-/* Fermeture de la connexion */
-$mysqli->close();
 ?>
 ]]>
    </programlisting>
@@ -94,40 +97,31 @@ $mysqli->close();
    <programlisting role="php">
 <![CDATA[
 <?php
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $link = mysqli_connect("localhost", "my_user", "my_password", "world");
-
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
 
 mysqli_query($link, "CREATE TABLE myCity LIKE City");
 
 $query = "INSERT INTO myCity VALUES (NULL, 'Stuttgart', 'DEU', 'Stuttgart', 617000)";
 mysqli_query($link, $query);
 
-printf ("Le nouvel enregistrement a l'id %d.\n", mysqli_insert_id($link));
+printf("New record has ID %d.\n", mysqli_insert_id($link));
 
 /* drop table */
 mysqli_query($link, "DROP TABLE myCity");
-
-/* Fermeture de la connexion */
-mysqli_close($link);
 ?>
 ]]>
    </programlisting>
    &examples.outputs;
    <screen>
 <![CDATA[
-Le nouvel enregistrement a l'id 1.
+New record has ID 1.
 ]]>
    </screen>
   </example>
  </refsect1>
 
 </refentry>
-
 <!-- Keep this comment at the end of the file
 Local variables:
 mode: sgml

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 0c9c2dd669fe9395eaa73d487fbd160f9057429a Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: f8b0bb410016270b696b28d3d416672dd2f7e66b Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 <refentry xml:id="function.parse-ini-file" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>parse_ini_file</refname>
@@ -205,8 +204,7 @@ function yesno($expression)
     return($expression ? 'Yes' : 'No');
 }
 
-// Lit le chemin du php.ini en utilisant php_ini_loaded_file() 
-// cette fonction est disponible depuis PHP 5.2.4
+// Lit le chemin du php.ini en utilisant php_ini_loaded_file()
 $ini_path = php_ini_loaded_file();
 
 // Analyse de php.ini
@@ -232,10 +230,11 @@ echo '(chargé ) magic_quotes_gpc = ' . yesno(get_cfg_var('magic_quotes_gpc')) .
    <example>
     <title>Interpolation de Valeur</title>
     <para>
-     En plus d'évaluer les constantes, certain caractères ont une signification
+     En plus d'évaluer les constantes, certains caractères ont une signification
      particulière dans une valeur ini.
-     Additionellement, les variables d'environement et des valeurs définies
-     précédement peuvent être lu en utilisant la syntaxe <code>${}</code>.
+     Additionnellement, les variables d'environment et options de configuration
+     définies précédemment (voir <function>get_cfg_var</function>) peuvent être
+     lu en utilisant la syntaxe <code>${}</code>.
     </para>
     <programlisting>
 <![CDATA[
@@ -254,22 +253,67 @@ negative_two = ~1
 ; () is used for grouping
 seven = (8|7)&(6|5)
 
-; \ is used to escape a value.
-newline_is = "\\n" ; results in the string "\n", not a newline character.
-with quotes = "She said \"Exactly my point\"." ; Results in a string with quote marks in it.
-
 path = ${PATH}
 also_five = ${five}
 
 ]]>
     </programlisting>
-    &example.outputs.similar;
-    <screen>
+   </example>
+  </para>
+  <para>
+   <example>
+    <title>Échapper des Caractères</title>
+    <para>
+     Certains caractères ont une signification particulière dans les chaînes à guillemets doubles et doivent
+     être échappé en les préfixant d'un antislash.
+     Tout d'abord, ce sont les guillemets double <code>"</code> comme le marqueur de frontière,
+     et l'antislash <code>\</code> lui-même (si suivit d'un des caractères spéciaux) :
+    </para>
+    <programlisting>
 <![CDATA[
-(parsed) magic_quotes_gpc = Yes
-(loaded) magic_quotes_gpc = Yes
+quoted = "She said \"Exactly my point\"." ; Results in a string with quote marks in it.
+hint = "Use \\\" to escape double quote" ; Results in: Use \" to escape double quote
 ]]>
-    </screen>
+    </programlisting>
+    <para>
+     Il y a une exception pour les chemins Windows-esque : il est possible de ne pas échapper
+     l'antislash traînant si la chaîne cité est directement suivit d'un retour à la ligne :
+    </para>
+    <programlisting>
+<![CDATA[
+save_path = "C:\Temp\"
+]]>
+    </programlisting>
+    <para>
+     Si l'on doit échapper une guillemet double suivit d'un retour à la ligne dans une
+     valeur multiligne, il est possible d'utiliser la concaténation de valeur de la manière
+     suivante (il y a une chaîne guillemet double directement suivit d'une autre) :
+    </para>
+    <programlisting>
+<![CDATA[
+long_text = "Lorem \"ipsum\"""
+ dolor" ; Results in: Lorem "ipsum"\n dolor
+]]>
+    </programlisting>
+    <para>
+     Un autre caractère avec une signification particulière est <code>$</code> (le signe dollar).
+     Il doit être échappé s'il est suivit d'une accolade ouvrante :
+    </para>
+    <programlisting>
+<![CDATA[
+code = "\${test}"
+]]>
+    </programlisting>
+    <para>
+     L'échappement de caractères n'est pas supporté dans le mode <constant>INI_SCANNER_RAW</constant>
+     (dans ce mode tous les caractères sont traité "tel quel").
+    </para>
+    <para>
+     Il est à noter que l'analyseur INI ne supporte pas les séquences d'échappement standard
+     (<code>\n</code>, <code>\t</code>, etc.).
+     Si nécessaire, le résultat de <function>parse_ini_file</function> doit
+     être post-procédé avec la fonction <function>stripcslashes</function>.
+    </para>
    </example>
   </para>
  </refsect1>
@@ -302,7 +346,7 @@ also_five = ${five}
     et <literal>false</literal> donnent "" (chaîne vide). Les valeurs
     <literal>on</literal>, <literal>yes</literal> et
     <literal>true</literal> donnent "1", à moins que le mode
-    <constant>INI_SCANNER_TYPED</constant> ne soit utilisé (à partir de PHP 5.6.1).
+    <constant>INI_SCANNER_TYPED</constant> ne soit utilisé.
     Les caractères <literal>?{}|&amp;~!()^"</literal> ne doivent pas être utilisés
     n'importe où dans la clé et ont une signification spéciale dans la valeur.
    </simpara>

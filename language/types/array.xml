@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 6de2e5772f11997fb9a8c0fa2406fbb2c73b3579 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 6b56d3399322cc86ec06a212f767601952bfc6d1 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
-<!-- CREDITS: DavidA -->
-
 <sect1 xml:id="language.types.array">
  <title>Les tableaux</title>
 
@@ -275,8 +272,58 @@ array(4) {
     <para>
      Comme vous pouvez le voir, la dernière valeur <literal>"d"</literal>
      a été assignée à la clé <literal>7</literal>. Ceci est du au fait que
-     le dernier entier le plus grand utilisé auparavant était <literal>6</literal>.
+     la dernière clé entière la plus grande utilisé auparavant était <literal>6</literal>.
     </para>
+   </example>
+
+   <example>
+    <title>Exemple complexe sur la modification de type et l'écrasement</title>
+    <para>
+     Cet exemple inclus toutes les variations de modification de type de clés
+     et écrasements des éléments.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$array = array(
+    1    => 'a',
+    '1'  => 'b', // la valeur "a" sera écrasé par "b"
+    1.5  => 'c', // la valeur "b" sera écrasé par "c"
+    -1 => 'd',
+    '01'  => 'e', // comme ceci n'est pas une chaîne de caractère entière elle N'écrasera PAS la clé pour 1
+    '1.5' => 'f', // comme ceci n'est pas une chaîne de caractère entière elle N'écrasera PAS la clé pour 1
+    true => 'g', // la valeur "c" sera écrasé par "g"
+    false => 'h',
+    '' => 'i',
+    null => 'j', // la valeur "i" sera écrasé par "j"
+    'k', // la valeur "k" est assigné la clé 2. Ceci est du au fait que la dernière clé entière la plus grande utilisé auparavant était 1
+    2 => 'l', // la valeur "k" sera écrasé par "l"
+);
+var_dump($array);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(7) {
+  [1]=>
+  string(1) "g"
+  [-1]=>
+  string(1) "d"
+  ["01"]=>
+  string(1) "e"
+  ["1.5"]=>
+  string(1) "f"
+  [0]=>
+  string(1) "h"
+  [""]=>
+  string(1) "j"
+  [2]=>
+  string(1) "l"
+}
+]]>
+    </screen>
    </example>
   </sect3>
   
@@ -322,10 +369,12 @@ string(3) "foo"
 
    <note>
     <para>
-     Les accolades et les crochets peuvent être utilisés pour accéder
-     aux éléments d'un tableau (i.e. <literal>$array[42]</literal> et
-     <literal>$array{42}</literal> feront exactement la même chose dans
-     l'exemple ci-dessus).
+     Antérieur à PHP 8.0.0, les crochets et accolades pouvait être utilisé de
+     façon interchangeable pour accéder aux éléments d'un tableau (e.g.
+     <literal>$array[42]</literal> et <literal>$array{42}</literal> feraient
+     tous deux la même chose dans l'exemple ci-dessus).
+     La syntaxe avec les accolades a été rendue obsolète en PHP 7.4.0 et n'est
+     plus supportée à partir de PHP 8.0.0.
     </para>
    </note>
 
@@ -339,9 +388,6 @@ function getArray() {
 }
 
 $secondElement = getArray()[1];
-
-// ou
-list(, $secondElement) = getArray();
 ?>
 ]]>
     </programlisting>
@@ -351,8 +397,8 @@ list(, $secondElement) = getArray();
     <para>
      Une tentative d'accès à une clé d'un tableau qui n'a pas été définie
      revient à tenter d'accéder à une variable non définie : une alerte de
-     niveau <constant>E_NOTICE</constant> sera émise, et le résultat vaudra
-     &null;.
+     niveau <constant>E_WARNING</constant> sera émise (E_NOTICE avant PHP 8.0.0),
+     et le résultat vaudra &null;.
     </para>
    </note>
    <note>
@@ -386,20 +432,26 @@ $arr[] = <replaceable>valeur</replaceable>;
 // <replaceable>valeur</replaceable> peut être n'importe quel type</synopsis>
 
    <para>
-    Si <varname>$arr</varname> n'existe pas lors de l'assignation, il sera
-    créé ; c'est ainsi une façon détournée de créer un tableau. Cette pratique
-    est cependant découragée car si <varname>$arr</varname> contient déjà
-    quelques valeurs (i.e. <type>string</type> depuis la variable demandée)
+    Si lors de l'assignation <varname>$arr</varname> n'existe pas ou est défini
+    à &null; ou &false;, il sera créé ; c'est ainsi une façon détournée de créer un tableau.
+    Cette pratique est cependant découragée car si <varname>$arr</varname>
+    contient déjà quelques valeurs (i.e. <type>string</type> depuis la variable demandée)
     alors cette valeur restera en place et <literal>[]</literal> peut attendre
     un <link linkend="language.types.string.substr">opérateur d'accès
     sur une chaîne</link>. C'est toujours un meilleur choix que d'initialiser
-    une variable par affectation direct.
+    une variable par affectation directe.
    </para>
    <note>
     <simpara>
      À partir de PHP 7.1.0, l'application de l'opérateur d'index vide sur une 
      chaîne lève une erreur fatale. Auparavant, la chaîne aurait été convertie 
      silencieusement en tableau.
+    </simpara>
+   </note>
+   <note>
+    <simpara>
+     À partir de PHP 8.1.0, créer un nouveau tableau à partir de &false; est obsolète.
+     Créer un nouveau tableau depuis &null; et les valeurs indéfinies est toujours autorisé.
     </simpara>
    </note>
 
@@ -499,6 +551,140 @@ Array
    </note>
 
   </sect3>
+
+  <sect3 xml:id="language.types.array.syntax.destructuring">
+   <title>Déstructuration de tableau</title>
+
+   <para>
+    Les tableaux peuvent être déstructurés en utilisant <literal>[]</literal>
+    (à partir de PHP 7.1.0) ou <function>list</function>.
+    Ces constructions peuvent être utilisées pour déstructurer un tableau en variables distinctes.
+   </para>
+
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$tableau_source = ['foo', 'bar', 'baz'];
+
+[$foo, $bar, $baz] = $tableau_source;
+
+echo $foo;    // prints "foo"
+echo $bar;    // prints "bar"
+echo $baz;    // prints "baz"
+?>
+]]>
+    </programlisting>
+   </informalexample>
+
+   <para>
+    La déstructuration de tableau peut être utilisée dans un &foreach;
+    pour déstructurer un tableau multidimensionnel tout en itérant sur celui-ci.
+   </para>
+
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$tableau_source = [
+    [1, 'John'],
+    [2, 'Jane'],
+];
+
+foreach ($tableau_source as [$id, $name]) {
+    // Logique utilisant $id et $name
+}
+?>
+]]>
+    </programlisting>
+   </informalexample>
+
+   <para>
+    Les éléments du tableau seront ignorés si la variable n'est pas fournie.
+    Le tableau commence toujours à l'index <literal>0</literal>.
+   </para>
+
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$tableau_source = ['foo', 'bar', 'baz'];
+
+// Assigne l'élément situé à l'indice 2 à la variable $baz 
+[, , $baz] = $tableau_source;
+
+echo $baz;    // Affiche "baz"
+?>
+]]>
+    </programlisting>
+   </informalexample>
+
+   <para>
+    A partir de PHP 7.1.0, les tableaux associatifs peuvent aussi être déstructurés.
+    Cela permet de sélectionner plus facilement le bon élément dans les tableaux
+    à indexation numérique, car l'index peut être explicitement spécifié.
+   </para>
+
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$tableau_source = ['foo' => 1, 'bar' => 2, 'baz' => 3];
+
+// Assigne l'élément situé à l'indice 'baz' à la variable $three
+['baz' => $three] = $tableau_source;
+
+echo $three;    // Affiche "3"
+
+$tableau_source = ['foo', 'bar', 'baz'];
+
+// Assigne l'élément situé à l'indice 2 à la variable $baz
+[2 => $baz] = $tableau_source;
+
+echo $baz;    // Affiche "baz"
+?>
+]]>
+    </programlisting>
+   </informalexample>
+
+   <para>
+    La déstructuration de tableau peut être utilisée pour permuter facilement
+    deux variables.
+   </para>
+
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$a = 1;
+$b = 2;
+
+[$b, $a] = [$a, $b];
+
+echo $a;    // Affiche 2
+echo $b;    // Affiche 1
+?>
+]]>
+    </programlisting>
+   </informalexample>
+
+   <note>
+    <para>
+     L'opérateur de décomposition (<literal>...</literal>) n'est pas
+     supporté dans les assignations.
+    </para>
+   </note>
+
+   <note>
+    <para>
+     Une tentative d'accès à une clé d'un tableau qui n'a pas été définie
+     revient à tenter d'accéder à une variable non définie : une alerte de
+     niveau <constant>E_WARNING</constant> sera émise (E_NOTICE avant PHP 8.0.0),
+     et le résultat vaudra &null;.
+    </para>
+   </note>
+  </sect3>
+
  </sect2><!-- end syntax -->
 
  <sect2 xml:id="language.types.array.useful-funcs">
@@ -574,7 +760,7 @@ echo $foo[bar];
    <para>
     C'est incorrect, mais ça fonctionne. La raison est que ce code a une constante
     indéfinie (<literal>bar</literal>) plutôt qu'une &string;
-    (<literal>'bar'</literal> - noter les guillemets).
+    (<literal>'bar'</literal> - notez les guillemets).
     Cela fonctionne car PHP convertit automatiquement une <emphasis>chaîne nue</emphasis>
     (une chaîne sans guillemets qui ne correspond à aucun symbole connu) en une chaîne
     qui la contient. Actuellement, s'il n'y a aucune constante nommée <constant>bar</constant>,
@@ -583,9 +769,12 @@ echo $foo[bar];
    
    <warning>
     <simpara>
-     La solution de recours qui considère une constante non-définie comme une chaîne de caractère vide est dépréciée depuis
-     PHP 7.2.0, et émet une erreur de niveau <constant>E_WARNING</constant>.
-     Précédemment, une erreur de niveau  <constant>E_NOTICE</constant> était émise.
+     La solution de recours qui considère une constante non-définie comme une
+     chaîne de caractères nu est une erreur de niveau <constant>E_NOTICE</constant>.
+     Ceci est obsolète à partir de PHP 7.2.0, et émet une erreur de niveau
+     <constant>E_WARNING</constant>.
+     À partir de PHP 8.0.0, ceci a été retiré et lance une exception
+     <classname>Error</classname>.
     </simpara>
    </warning>
 
@@ -775,7 +964,7 @@ $error_descriptions[8] = "This is just an informal notice";
       Pour être plus clair, dans une chaîne entourée de guillemets doubles,
       il est valide de ne pas entourer les indexes d'un tableau avec des
       guillemets, et donc, <literal>"$foo[bar]"</literal> est valide. Voir
-      les exemples ci-dessous pour plus détails mais aussi la section sur
+      les exemples ci-dessous pour plus de détails mais aussi la section sur
       l'<link linkend="language.types.string.parsing">analyse des variables
       dans les chaînes</link>.
      </simpara>
@@ -800,9 +989,46 @@ $error_descriptions[8] = "This is just an informal notice";
    Si un objet est converti en un tableau, le résultat sera un tableau dont les
    éléments sont les propriétés de l'objet. Les clés sont les noms des membres,
    avec une légère exception : les variables ayant un nom sous forme d'entier sont
-   inaccessible; les variables privées auront le nom de la classe
+   inaccessibles ; les variables privées auront le nom de la classe
    ajouté au nom de la variable ; les variables protégées auront un '*' ajouté
-   au nom de la variable. Ce comportement peut amener à des résultats inattendus :
+   au nom de la variable.
+   Ces valeurs préfixées ont des octets <literal>NUL</literal> des deux côtés.
+   Les <link linkend="language.oop5.properties.typed-properties">propriétés typées</link>
+   non-initialisées sont silencieusement défaussés.
+  </para>
+
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class A {
+    private $B;
+    protected $C;
+    public $D;
+    function __construct()
+    {
+        $this->{1} = null;
+    }
+}
+var_export((array) new A());
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+array (
+  '' . "\0" . 'A' . "\0" . 'B' => NULL,
+  '' . "\0" . '*' . "\0" . 'C' => NULL,
+  'D' => NULL,
+  1 => NULL,
+)
+]]>
+   </screen>
+  </informalexample>
+
+  <para>
+   Ces octets <literal>NUL</literal> peuvent amener à des résultats inattendus :
   </para>
 
   <informalexample>
@@ -823,6 +1049,19 @@ var_dump((array) new B());
 ?>
 ]]>
    </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+array(3) {
+  ["BA"]=>
+  NULL
+  ["AA"]=>
+  NULL
+  ["AA"]=>
+  NULL
+}
+]]>
+   </screen>
   </informalexample>
 
   <para>
@@ -843,6 +1082,102 @@ var_dump((array) new B());
    <function>array_diff</function> ainsi qu'avec les
    <link linkend="language.operators.array">opérateurs de tableaux</link>.
   </para>
+ </sect2>
+
+ <sect2 xml:id="language.types.array.unpacking">
+  <title>Déballage des tableaux</title>
+
+  <para>
+   Un tableau préfixé par <code>...</code> sera déballé sur place lors de la définition du tableau.
+   Seul les tableaux et les objets qui implémente <interfacename>Traversable</interfacename> peuvent être déballé.
+   Le déballage de tableau avec <code>...</code> est disponible à partir de PHP 7.4.0.
+  </para>
+
+  <para>
+   Il est possible de déballer plusieurs fois, et d'ajouter des éléments
+   normaux avant et après l'opérateur <code>...</code> :
+
+   <example>
+    <title>Déballage simple de tableau</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Using short array syntax.
+// Also, works with array() syntax.
+$arr1 = [1, 2, 3];
+$arr2 = [...$arr1]; //[1, 2, 3]
+$arr3 = [0, ...$arr1]; //[0, 1, 2, 3]
+$arr4 = [...$arr1, ...$arr2, 111]; //[1, 2, 3, 1, 2, 3, 111]
+$arr5 = [...$arr1, ...$arr1]; //[1, 2, 3, 1, 2, 3]
+
+function getArr() {
+  return ['a', 'b'];
+}
+$arr6 = [...getArr(), 'c' => 'd']; //['a', 'b', 'c' => 'd']
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+
+  <para>
+   Déballer un tableau avec l'opérateur <code>...</code> suit les sémantiques de la fonction <function>array_merge</function>.
+   C'est-à-dire, que les clés ultérieures écrasent les valeurs antérieures
+   et les clés numériques sont renumérotées :
+
+   <example>
+    <title>Déballage de tableau avec clé dupliqué</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// string key
+$arr1 = ["a" => 1];
+$arr2 = ["a" => 2];
+$arr3 = ["a" => 0, ...$arr1, ...$arr2];
+var_dump($arr3); // ["a" => 2]
+
+// integer key
+$arr4 = [1, 2, 3];
+$arr5 = [4, 5, 6];
+$arr6 = [...$arr4, ...$arr5];
+var_dump($arr6); // [1, 2, 3, 4, 5, 6]
+// Which is [0 => 1, 1 => 2, 2 => 3, 3 => 4, 4 => 5, 5 => 6]
+// where the original integer keys have not been retained.
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
+
+  <note>
+   <para>
+    Les clés qui ne sont ni des entiers, ni des chaînes lance une <classname>TypeError</classname>.
+    De telles clés peuvent uniquement être généré par un objet <interfacename>Traversable</interfacename>.
+   </para>
+  </note>
+  <note>
+   <para>
+    Antérieur à PHP 8.1, le déballage de tableau qui avait une clé sous forme de chaîne n'est pas supporté :
+   </para>
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$arr1 = [1, 2, 3];
+$arr2 = ['a' => 4];
+$arr3 = [...$arr1, ...$arr2];
+// Fatal error: Uncaught Error: Cannot unpack array with string keys in example.php:5
+
+$arr4 = [1, 2, 3];
+$arr5 = [4, 5];
+$arr6 = [...$arr4, ...$arr5]; // works. [1, 2, 3, 4, 5]
+?>
+]]>
+    </programlisting>
+   </informalexample>
+  </note>
+
  </sect2>
 
  <sect2 xml:id="language.types.array.examples">

@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: e41806c30bf6975e452c0d4ce35ab0984c2fa68c Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: bb6247b68128cab1b166b49a3a73a87f40333267 Maintainer: jpauli Status: ready -->
 <!-- Reviewed: yes -->
-
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.fwrite">
  <refnamediv>
   <refname>fwrite</refname>
@@ -12,15 +11,15 @@
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <type>int</type><methodname>fwrite</methodname>
-   <methodparam><type>resource</type><parameter>handle</parameter></methodparam>
-   <methodparam><type>string</type><parameter>string</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>length</parameter></methodparam>
+   <type class="union"><type>int</type><type>false</type></type><methodname>fwrite</methodname>
+   <methodparam><type>resource</type><parameter>stream</parameter></methodparam>
+   <methodparam><type>string</type><parameter>data</parameter></methodparam>
+   <methodparam choice="opt"><type class="union"><type>int</type><type>null</type></type><parameter>length</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
   <simpara>
    <function>fwrite</function> écrit le contenu de la chaîne
-   <parameter>string</parameter> dans le fichier pointé par
-   <parameter>handle</parameter>.
+   <parameter>data</parameter> dans le fichier pointé par
+   <parameter>stream</parameter>.
   </simpara>
  </refsect1>
 
@@ -29,13 +28,13 @@
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>handle</parameter></term>
+     <term><parameter>stream</parameter></term>
      <listitem>
       &fs.file.pointer;
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>string</parameter></term>
+     <term><parameter>data</parameter></term>
      <listitem>
       <para>
        La chaîne à écrire.
@@ -51,12 +50,6 @@
        <parameter>length</parameter> octets, ou à la fin de la
        chaîne (le premier des deux).
       </para>
-      <para>
-       Notez que si <parameter>length</parameter> est fourni, alors l'option de
-       configuration
-       <link linkend="ini.magic-quotes-runtime">magic_quotes_runtime</link>
-       sera ignorée, et les slash seront conservés.
-      </para>
      </listitem>
     </varlistentry>
    </variablelist>
@@ -66,9 +59,79 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <simpara>
-   <function>fwrite</function> retourne le nombre d'octets écrits, ou
-   &false; si une erreur survient.
+   <function>fwrite</function> retourne le nombre d'octets écrits&return.falseforfailure;.
   </simpara>
+ </refsect1>
+
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <para>
+   La fonction <function>fwrite</function> emet une <constant>E_WARNING</constant> si une erreur survient.
+  </para>
+ </refsect1>
+ 
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>8.0.0</entry>
+      <entry>
+       <parameter>length</parameter> est désormais nullable.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple avec <function>fwrite</function></title>
+    <programlisting role="php">
+     <![CDATA[
+<?php
+$filename = 'test.txt';
+$somecontent = "Ajout de chaîne dans le fichier\n";
+
+// Assurons nous que le fichier est accessible en écriture
+if (is_writable($filename)) {
+
+    // Dans notre exemple, nous ouvrons le fichier $filename en mode d'ajout
+    // Le pointeur de fichier est placé à la fin du fichier
+    // c'est là que $somecontent sera placé
+    if (!$fp = fopen($filename, 'a')) {
+         echo "Impossible d'ouvrir le fichier ($filename)";
+         exit;
+    }
+
+    // Ecrivons quelque chose dans notre fichier.
+    if (fwrite($fp, $somecontent) === FALSE) {
+        echo "Impossible d'écrire dans le fichier ($filename)";
+        exit;
+    }
+
+    echo "L'écriture de ($somecontent) dans le fichier ($filename) a réussi";
+
+    fclose($fp);
+
+} else {
+    echo "Le fichier $filename n'est pas accessible en écriture.";
+}
+?>
+]]>
+    </programlisting>
+   </example>
+  </para>
  </refsect1>
 
  <refsect1 role="notes">
@@ -105,9 +168,9 @@ function fwrite_stream($fp, $string) {
   </note>
   <note>
    <para>
-    Si <parameter>handle</parameter> est ouvert en mode ajout (<literal>append</literal>),
+    Si <parameter>stream</parameter> est ouvert en mode ajout (<literal>append</literal>),
     <function>fwrite</function> sera atomique (sauf si la taille de
-    <parameter>string</parameter> excède la taille du bloc du système de fichiers,
+    <parameter>data</parameter> excède la taille du bloc du système de fichiers,
     sur quelques plates-formes, et tant que le fichier se trouve sur le système de fichiers
     local). Ainsi, il n'est pas nécessaire d'utiliser la fonction <function>flock</function>
     sur une ressource avant d'appeler la fonction <function>fwrite</function> ;
@@ -136,48 +199,6 @@ fclose($fp);
   </note>
  </refsect1>
 
- <refsect1 role="examples">
-  &reftitle.examples;
-  <para>
-   <example>
-    <title>Exemple avec <function>fwrite</function></title>
-    <programlisting role="php">
-<![CDATA[
-<?php
-$filename = 'test.txt';
-$somecontent = "Ajout de chaîne dans le fichier\n";
-
-// Assurons nous que le fichier est accessible en écriture
-if (is_writable($filename)) {
-
-    // Dans notre exemple, nous ouvrons le fichier $filename en mode d'ajout
-    // Le pointeur de fichier est placé à la fin du fichier
-    // c'est là que $somecontent sera placé
-    if (!$handle = fopen($filename, 'a')) {
-         echo "Impossible d'ouvrir le fichier ($filename)";
-         exit;
-    }
-
-    // Ecrivons quelque chose dans notre fichier.
-    if (fwrite($handle, $somecontent) === FALSE) {
-        echo "Impossible d'écrire dans le fichier ($filename)";
-        exit;
-    }
-
-    echo "L'écriture de ($somecontent) dans le fichier ($filename) a réussi";
-
-    fclose($handle);
-
-} else {
-    echo "Le fichier $filename n'est pas accessible en écriture.";
-}
-?>
-]]>
-    </programlisting>
-   </example>
-  </para>
- </refsect1>
-
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
@@ -193,7 +214,6 @@ if (is_writable($filename)) {
  </refsect1>
 
 </refentry>
-
 <!-- Keep this comment at the end of the file
 Local variables:
 mode: sgml

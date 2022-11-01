@@ -1,24 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: c9ee929e0fdbbd8e9e9803a6baeea1dd9e4e85fb Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
-
+<!-- EN-Revision: 2d5c6bed30ea22d847bf03dad1072f075694b4c3 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 <refentry xml:id="mysqli-stmt.affected-rows" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>mysqli_stmt::$affected_rows</refname>
   <refname>mysqli_stmt_affected_rows</refname>
-  <refpurpose>Retourne le nombre total de lignes modifiées, effacées ou insérées par la dernière
-   requête</refpurpose>
+  <refpurpose>Retourne le nombre total de lignes modifiées, effacées insérées,
+   ou correspondant par la dernière requête</refpurpose>
  </refnamediv>
  
  <refsect1 role="description">
   &reftitle.description;
   <para>&style.oop;</para>
-  <fieldsynopsis><type>int</type><varname linkend="mysqli-stmt.affected-rows">mysqli_stmt->affected_rows</varname></fieldsynopsis>
+  <fieldsynopsis><type class="union"><type>int</type><type>string</type></type><varname linkend="mysqli-stmt.affected-rows">mysqli_stmt-&gt;affected_rows</varname></fieldsynopsis>
   <para>&style.procedural;</para>
   <methodsynopsis>
-   <type>int</type><methodname>mysqli_stmt_affected_rows</methodname>
-   <methodparam><type>mysqli_stmt</type><parameter>stmt</parameter></methodparam>
+   <type class="union"><type>int</type><type>string</type></type><methodname>mysqli_stmt_affected_rows</methodname>
+   <methodparam><type>mysqli_stmt</type><parameter>statement</parameter></methodparam>
   </methodsynopsis>
   <para>
    Retourne le nombre de lignes affectées par une requête
@@ -26,10 +24,8 @@
    ou <literal>DELETE</literal>.
   </para>
   <para>
-   La fonction <function>mysqli_stmt_affected_rows</function> ne fonctionne que sur les 
-   requêtes qui modifient la table. Si vous désirez récupérer le nombre de lignes retournées
-   par une requête SELECT, utilisez plutôt la requête
-   <function>mysqli_stmt_num_rows</function>.
+   Fonctionne comme <function>mysqli_stmt_num_rows</function> pour
+   les requêtes <literal>SELECT</literal>.
   </para>
  </refsect1>
  
@@ -45,17 +41,20 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Un entier supérieur à zéro indique le nombre de lignes affectées ou
-   retrouvées. Zéro indique qu'aucun enregistrement n'a été modifié par une
-   requête UPDATE/DELETE, aucune ligne ne correspond à la clause WHERE dans la
-   requête ou bien qu'aucune requête n'a été encore exécutée. -1 indique que la
-   dernière requête a retourné une erreur. NULL indique qu'un argument invalide
-   a été fourni à la fonction.
+   Un entier plus grand que zéro indique le nombre de lignes affectées ou recherchées.
+   Zéro indique qu'aucun enregistrement n'a été modifié par une requête du type
+   <literal>UPDATE</literal>, aucune ligne ne correspond à la clause
+   <literal>WHERE</literal> dans la requête ou bien qu'aucune requête
+   n'a été exécutée. <literal>-1</literal> indique que la requête a retourné
+   une erreur ou que, pour une requête <literal>SELECT</literal>,
+   <function>mysqli_stmt_affected_rows</function> a été appelé avant d'appeler
+   <function>mysqli_stmt_store_result</function>.
   </para>
   <note>
    <para>
-    Si le nombre de lignes affectées est plus grand que la valeur entière maximale de PHP,
-    le nombre de lignes affectées sera retourné comme une chaîne de caractères.
+    Si le nombre de lignes affectées est plus grand que la valeur maximale
+    (<constant>PHP_INT_MAX</constant>) que peut prendre un entier, le nombre
+    de lignes affectées sera retourné en tant que chaîne de caractères.
    </para>
   </note>
  </refsect1>
@@ -63,17 +62,13 @@
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>&style.oop;</title>
+   <title>Exemple de <methodname>mysqli_stmt_affected_rows</methodname></title>
+   <para>&style.oop;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
-
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
 
 /* Création d'une table temporaire */
 $mysqli->query("CREATE TEMPORARY TABLE myCountry LIKE Country");
@@ -81,39 +76,25 @@ $mysqli->query("CREATE TEMPORARY TABLE myCountry LIKE Country");
 $query = "INSERT INTO myCountry SELECT * FROM Country WHERE Code LIKE ?";
 
 /* Préparation de la requête */
-if ($stmt = $mysqli->prepare($query)) {
+$stmt = $mysqli->prepare($query);
 
-    /* Insertion de la variable */
-    $code = 'A%';
-    $stmt->bind_param("s", $code);
+/* Lie une variable à un paramètre fictif */
+$code = 'A%';
+$stmt->bind_param("s", $code);
 
-    /* Exécution de la requête */
-    $stmt->execute();
+/* Exécution de la requête */
+$stmt->execute();
 
-    printf("Lignes insérées : %d\n", $stmt->affected_rows);
-
-    /* Fermeture du traitement */
-    $stmt->close();
-}
-
-/* Fermeture de la connexion */
-$mysqli->close();
+printf("Lignes insérées : %d\n", $stmt->affected_rows);
 ?>
 ]]>
    </programlisting>
-  </example>
-  <example>
-   <title>&style.procedural;</title>
+   <para>&style.procedural;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $link = mysqli_connect("localhost", "my_user", "my_password", "world");
-
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
 
 /* Création d'une table temporaire */
 mysqli_query($link, "CREATE TEMPORARY TABLE myCountry LIKE Country");
@@ -121,23 +102,16 @@ mysqli_query($link, "CREATE TEMPORARY TABLE myCountry LIKE Country");
 $query = "INSERT INTO myCountry SELECT * FROM Country WHERE Code LIKE ?";
 
 /* Préparation de la requête */
-if ($stmt = mysqli_prepare($link, $query)) {
+$stmt = mysqli_prepare($link, $query);
 
-    /* Insertion de la variable */
-    $code = 'A%';
-    mysqli_stmt_bind_param($stmt, "s", $code);
+/* Lie une variable à un paramètre fictif */
+$code = 'A%';
+mysqli_stmt_bind_param($stmt, "s", $code);
 
-    /* Exécution de la requête */
-    mysqli_stmt_execute($stmt);
+/* Exécution de la requête */
+mysqli_stmt_execute($stmt);
 
-    printf("Lignes insérées : %d\n", mysqli_stmt_affected_rows($stmt));
-
-    /* Fermeture du traitement */
-    mysqli_stmt_close($stmt);
-}
-
-/* Fermeture de la connexion */
-mysqli_close($link);
+printf("Lignes insérées : %d\n", mysqli_stmt_affected_rows($stmt));
 ?>
 ]]>
    </programlisting>
@@ -155,13 +129,12 @@ Lignes insérées : 17
   <para>
    <simplelist>
     <member><function>mysqli_stmt_num_rows</function></member>
-    <member><function>mysqli_prepare</function></member>
+    <member><function>mysqli_stmt_store_result</function></member>
    </simplelist>
   </para>
  </refsect1>
  
 </refentry>
-
 <!-- Keep this comment at the end of the file
 Local variables:
 mode: sgml

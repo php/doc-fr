@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: a626743ba6f7c4a3c8f1e192ee2f888035b7fe7f Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: 655c1b1b946b6c48d21582b0f00bba3340dc1e3f Maintainer: victor-prdh Status: ready -->
 <!-- Reviewed: no -->
-<!-- CREDITS: DavidA -->
 <refentry xml:id="dateperiod.construct" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>DatePeriod::__construct</refname>
@@ -33,6 +32,18 @@
   <para>
    Crée un nouvel objet <classname>DatePeriod</classname>.
   </para>
+  <para>
+   Les objets<classname>DatePeriod</classname> peuvent être utilisés comme itérateur pour
+   générer un certain nombre d'objets <classname>DateTimeImmutable</classname> ou
+   <classname>DateTime</classname> à partir d'une <parameter>start</parameter>
+   date (date de début), un <parameter>interval</parameter>, et une <parameter>end</parameter>
+   date (date de fin) ou du nombre de <parameter>récurrences</parameter>.
+  </para>
+  <para>
+   La classe des objets renvoyés est équivalente à la classe ancêtre
+   <classname>DateTimeImmutable</classname> ou <classname>DateTime</classname>
+   fournis pas l'objet <parameter>start</parameter>.
+  </para>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -43,7 +54,8 @@
      <term><parameter>start</parameter></term>
      <listitem>
       <para>
-       La date de début de la période.
+       La date de début de la période. Inclus par défaut dans le jeu
+       de résultats.
       </para>
      </listitem>
     </varlistentry>
@@ -60,6 +72,8 @@
      <listitem>
       <para>
        Le nombre de récurrences. Doit être plus grand que <literal>0</literal>.
+       Le nombre de résultats renvoyés est supérieur d'une unité, car la date de 
+       début est incluse dans le jeu de résultats par défaut.
       </para>
      </listitem>
     </varlistentry>
@@ -67,7 +81,8 @@
      <term><parameter>end</parameter></term>
      <listitem>
       <para>
-       La date de fin de la période.
+       La date de fin de la période. Non inclus par défaut dans le jeu
+       de résultats.
       </para>
      </listitem>
     </varlistentry>
@@ -75,17 +90,43 @@
      <term><parameter>isostr</parameter></term>
      <listitem>
       <para>
-       Une spécification ISO 8601 de la répétition de l'intervalle.
-       Les occurrences zéro (<literal>R0/</literal>) ne sont pas supportée.
+       Un sous-ensemble de la 
+       <link xlink:href="&url.iso-8601.repeating_intervals;">
+       spécification ISO 8601 de la répétition de l'intervalle</link>.
       </para>
+      <para>
+       Exemples de certaines fonctionnalités de spécification d'intervalle 
+       ISO 8601 que PHP ne prend pas en charge :
+      </para>
+      <orderedlist>
+       <listitem>
+        <simpara>
+         Les occurrences zéro (<literal>R0/</literal>)
+        </simpara>
+       </listitem>
+       <listitem>
+        <simpara>
+         Décalages horaires autres que UTC (<literal>Z</literal>), tels que <literal>+02:00</literal>.
+        </simpara>
+       </listitem>
+      </orderedlist>
      </listitem>
     </varlistentry>
     <varlistentry>
      <term><parameter>options</parameter></term>
      <listitem>
       <para>
+       Un champ de bits qui peut être utilisé pour contrôler certains 
+       comportements avec les dates de début et de fin.
+      </para>
+      <para>
        Peut être configuré à <constant>DatePeriod::EXCLUDE_START_DATE</constant>
        pour exclure la date de début du jeu de dates de récursion dans
+       la période.
+      </para>
+      <para>
+       Peut être configuré à <constant>DatePeriod::INCLUDE_END_DATE</constant>
+       pour inclure la date de fin du jeu de dates de récursion dans
        la période.
       </para>
      </listitem>
@@ -106,6 +147,12 @@
       </row>
      </thead>
      <tbody>
+      <row>
+       <entry>8.2.0</entry>
+       <entry>
+        La constante <constant>DatePeriod::INCLUDE_END_DATE</constant> a été ajoutée.
+       </entry>
+      </row>
       <row>
        <entry>7.2.19, 7.3.6, 7.4.0</entry>
        <entry>
@@ -190,8 +237,46 @@ foreach ($period as $date) {
     </screen>
    </example>
   </para>
+
+  <para>
+   <example>
+    <title>DatePeriod montrant tous les derniers jeudis du mois sur une année</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$begin = new DateTime('2021-12-31');
+$end = new DateTime('2022-12-31 23:59:59');
+
+$interval = DateInterval::createFromDateString('last thursday of next month');
+$period = new DatePeriod($begin, $interval, $end, DatePeriod::EXCLUDE_START_DATE);
+
+foreach ($period as $dt) {
+    echo $dt->format('l Y-m-d'), "\n";
+}
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Thursday 2022-01-27
+Thursday 2022-02-24
+Thursday 2022-03-31
+Thursday 2022-04-28
+Thursday 2022-05-26
+Thursday 2022-06-30
+Thursday 2022-07-28
+Thursday 2022-08-25
+Thursday 2022-09-29
+Thursday 2022-10-27
+Thursday 2022-11-24
+Thursday 2022-12-29
+]]>
+    </screen>
+   </example>
+  </para>
  </refsect1>
-<refsect1 role="notes">
+ <refsect1 role="notes">
   &reftitle.notes;
   <simpara>
    Les nombres de répétitions non liés spécifiés dans la section 4.5 

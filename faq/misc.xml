@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: gui Status: ready -->
+<!-- EN-Revision: 3e08a8aae657492bdcdc7c550099ddf072042fa9 Maintainer: gui Status: ready -->
 <!-- Reviewed: yes -->
 
  <chapter xml:id="faq.misc" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -78,129 +78,6 @@
      </para>
     </answer>
    </qandaentry>
-
-   <qandaentry xml:id="faq.misc.arguments.references">
-    <question>
-     <para>
-      Que signifie le caractère "&amp;" devant les arguments dans les déclarations
-      des fonctions comme la fonction <function>asort</function> ?
-     </para>
-    </question>
-    <answer>
-     <para>
-      Cela signifie que cet argument est
-      <link linkend="language.references.pass">passé par référence</link>
-      et que la fonction le modifiera, comme expliqué dans la documentation.
-      Vous pouvez passer uniquement des variables de cette façon et vous
-      n'avez pas besoin de les passer avec le caractère "&amp;" dans l'appel de la fonction
-      (car <link linkend="ini.allow-call-time-pass-reference">obsolète</link>).
-     </para>
-    </answer>
-   </qandaentry>
-   
-   <qandaentry xml:id="faq.misc.registerglobals">
-    <question>
-     <para>
-      Comment puis-je gérer la directive <literal>register_globals</literal> ?
-     </para>
-    </question>
-    <answer>
-     <para>
-      Pour plus d'informations concernant l'implication sur la sécurité de la 
-      directive <literal>register_globals</literal>, lisez le chapitre sur la sécurité
-      concernant l'<link linkend="security.globals">utilisation de register_globals</link>.
-     </para>
-     <para>
-      Il est préférable d'utiliser les 
-      <link linkend="language.variables.superglobals">superglobals</link>,
-      plutôt que de remettre à <literal>on</literal> la directive 
-      <literal>register_globals</literal>.
-     </para>
-     <para>
-      Si vous êtes sur un serveur mutualisé avec la directive 
-      <literal>register_globals</literal> de positionnée à <literal>off</literal>
-      et que vous devez utiliser des applications qui requièrent que cette option soit à
-      <literal>on</literal> ou si vous êtes hébergés sur un serveur qui a cette directive d'activée
-      mais que vous voudriez éliminer ce risque sécuritaire, vous devriez émuler
-      l'argument opposé avec PHP. C'est toujours une bonne idée que de demander tout d'abord
-      s'il est possible de modifier cette option dans la configuration de PHP mais si cela n'est
-      pas possible, vous pouvez utiliser ces astuces de compatibilité.
-     </para>
-     <para>
-      <example>
-       <title>Émulation des Register Globals</title>
-        <para>
-         Ceci émulera la directive <literal>register_globals</literal> à <literal>On</literal>. 
-         Si vous modifiez la directive
-         <link linkend="ini.variables-order">variables_order</link>, modifiez la variable
-         <varname>$superglobals</varname> pour qu'elle corresponde à votre nouvelle
-         directive..
-       </para>
-       <programlisting role="php">
-<![CDATA[
-<?php
-// Émulation de register_globals à on
-if (!ini_get('register_globals')) {
-    $superglobals = array($_SERVER, $_ENV,
-        $_FILES, $_COOKIE, $_POST, $_GET);
-    if (isset($_SESSION)) {
-        array_unshift($superglobals, $_SESSION);
-    }
-    foreach ($superglobals as $superglobal) {
-        extract($superglobal, EXTR_SKIP);
-    }
-}
-?>
-]]>
-       </programlisting>
-       <para>
-        Ceci émulera register_globals à Off. Gardez à l'esprit que ce code doit être appelé au tout
-        début de votre script ou après la fonction
-        <function>session_start</function> si vous l'utilisez pour commencer votre session.
-       </para>
-       <programlisting role="php">
-<![CDATA[
-<?php
-// Émulation de register_globals à off
-function unregister_GLOBALS()
-{
-    if (!ini_get('register_globals')) {
-        return;
-    }
-
-    // Vous pouvez vouloir modifier cela pour avoir une erreur plus jolie
-    if (isset($_REQUEST['GLOBALS']) || isset($_FILES['GLOBALS'])) {
-    die('Tentative d\'effacement des GLOBALS détectée');
-    }
-
-    // Les variables à ne jamais effacer
-    $noUnset = array('GLOBALS',  '_GET',
-    '_POST',    '_COOKIE',
-    '_REQUEST', '_SERVER',
-    '_ENV',     '_FILES');
-
-    $input = array_merge($_GET,    $_POST,
-    $_COOKIE, $_SERVER,
-    $_ENV,    $_FILES,
-    isset($_SESSION) && is_array($_SESSION) ? $_SESSION : array());
-
-    foreach ($input as $k => $v) {
-        if (!in_array($k, $noUnset) && isset($GLOBALS[$k])) {
-            unset($GLOBALS[$k]);
-        }
-    }
-}
-
-unregister_GLOBALS();
-
-?>
-]]>
-       </programlisting>
-      </example>
-     </para>
-    </answer>
-   </qandaentry>
-
   </qandaset>
  </chapter>
 

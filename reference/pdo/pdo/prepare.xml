@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: e41806c30bf6975e452c0d4ce35ab0984c2fa68c Maintainer: yannick Status: ready -->
+<!-- EN-Revision: be16163656562ed69efb725818ea471e194e23d8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
-
 <refentry xml:id="pdo.prepare" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>PDO::prepare</refname>
@@ -13,14 +12,14 @@
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <modifier>public</modifier> <type>PDOStatement</type><methodname>PDO::prepare</methodname>
-   <methodparam><type>string</type><parameter>statement</parameter></methodparam>
-   <methodparam choice="opt"><type>array</type><parameter>driver_options</parameter><initializer>array()</initializer></methodparam>
+   <modifier>public</modifier> <type class="union"><type>PDOStatement</type><type>false</type></type><methodname>PDO::prepare</methodname>
+   <methodparam><type>string</type><parameter>query</parameter></methodparam>
+   <methodparam choice="opt"><type>array</type><parameter>options</parameter><initializer>[]</initializer></methodparam>
   </methodsynopsis>
 
   <para>
    Prépare une requête SQL à être exécutée par la méthode
-   <function>PDOStatement::execute</function>. Le modèle de déclaration peut contenir
+   <methodname>PDOStatement::execute</methodname>. Le modèle de déclaration peut contenir
    zéro ou plusieurs paramètres nommés (<literal>:nom</literal>) ou marqueurs
    (<literal>?</literal>) pour lesquels les valeurs réelles seront substituées
    lorsque la requête sera exécutée.
@@ -32,7 +31,7 @@
   <para>
    Vous devez inclure un marqueur avec un nom unique pour chaque valeur que
    vous souhaitez passer dans la requête lorsque vous appelez
-   <function>PDOStatement::execute</function>. Vous ne pouvez pas utiliser
+   <methodname>PDOStatement::execute</methodname>. Vous ne pouvez pas utiliser
    un marqueur avec deux noms identiques dans une requête préparée, à moins que 
    le mode émulation ne soit actif.
   </para>
@@ -46,13 +45,13 @@
    </para>
   </note>
   <para>
-   Appeler <function>PDO::prepare</function> et
-   <function>PDOStatement::execute</function> pour les requêtes
+   Appeler <methodname>PDO::prepare</methodname> et
+   <methodname>PDOStatement::execute</methodname> pour les requêtes
    qui doivent être exécutées plusieurs fois avec différentes valeurs de
    paramètres optimisent les performances de votre application en autorisant
    le pilote à négocier coté client et/ou serveur avec le cache des requêtes
-   et les meta-informations. Deplus appeler <function>PDO::prepare</function> et
-   <function>PDOStatement::execute</function> aident à prévenir les attaques par
+   et les meta-informations. Deplus appeler <methodname>PDO::prepare</methodname> et
+   <methodname>PDOStatement::execute</methodname> aident à prévenir les attaques par
    injection SQL en éliminant le besoin de protéger les paramètres manuellement.
   </para>
   <para>
@@ -63,7 +62,7 @@
   </para>
   <note>
    <simpara>
-    À partir de PHP 5.3.0, l'analyseur utilisé pour les déclarations préparés
+    L'analyseur utilisé pour les déclarations préparés
     émulées et pour réécrire les paramètres nommés ou du style point
     d'intérogation supporte l'échappement antislash non standard pour les
     guillemets simple et double. Ceci signifie que des guillemets terminant qui
@@ -75,13 +74,18 @@
     supporté nativement par le pilote.
    </simpara>
   </note>
+  <para>
+   À partir de PHP 7.4.0, les points d'interrogation peuvent être échappés en les dédoublant.
+   Cela signifie que la chaîne <literal>??</literal> sera traduite en <literal>?</literal>
+   lors de l'envoi de la requête à la base de données.
+  </para>
  </refsect1>
  <refsect1 role="parameters">
   &reftitle.parameters;
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>statement</parameter></term>
+     <term><parameter>query</parameter></term>
      <listitem>
       <para>
        Doit être un modèle de requête SQL valide pour le serveur de base de données ciblée.
@@ -89,7 +93,7 @@
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>driver_options</parameter></term>
+     <term><parameter>options</parameter></term>
      <listitem>
       <para>
        Ce tableau contient une ou plusieurs paires clé=&gt;valeur pour définir
@@ -110,16 +114,16 @@
   &reftitle.returnvalues;
   <para>
    Si le serveur de base de données prépare avec succès cette requête,
-   <function>PDO::prepare</function> retourne un objet <classname>PDOStatement</classname>.
+   <methodname>PDO::prepare</methodname> retourne un objet <classname>PDOStatement</classname>.
    Si le serveur de base de données ne réussit pas à préparer la requête,
-   <function>PDO::prepare</function> retourne &false; ou émet une exception
-   <classname>PDOException</classname> (suivant le <link
-   linkend="pdo.error-handling">gestionnaire des erreurs</link>).
+   <methodname>PDO::prepare</methodname> retourne &false; ou émet une exception
+   <classname>PDOException</classname> (suivant le
+   <link linkend="pdo.error-handling">gestionnaire des erreurs</link>).
   </para>
   <note>
    <para>
     L'émulation de requêtes préparées ne communique pas avec le serveur de base
-    de données. Aussi, la fonction <function>PDO::prepare</function> ne vérifie
+    de données. Aussi, la fonction <methodname>PDO::prepare</methodname> ne vérifie
     pas la requête.
    </para>
   </note>
@@ -137,10 +141,11 @@
 $sql = 'SELECT nom, couleur, calories
     FROM fruit
 WHERE calories < :calories AND couleur = :couleur';
-$sth = $dbh->prepare($sql, array(PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY));
-$sth->execute(array(':calories' => 150, ':couleur' => 'red'));
+$sth = $dbh->prepare($sql, [PDO::ATTR_CURSOR => PDO::CURSOR_FWDONLY]);
+$sth->execute(['calories' => 150, 'couleur' => 'red']);
 $red = $sth->fetchAll();
-$sth->execute(array(':calories' => 175, ':couleur' => 'yellow'));
+/* Les clés du tableau peuvent être préfixées par des deux-points ":" également (facultatif) */
+$sth->execute([':calories' => 175, ':couleur' => 'yellow']);
 $yellow = $sth->fetchAll();
 ?>
 ]]>
@@ -155,10 +160,25 @@ $yellow = $sth->fetchAll();
 $sth = $dbh->prepare('SELECT nom, couleur, calories
     FROM fruit
     WHERE calories < ? AND couleur = ?');
-$sth->execute(array(150, 'rouge'));
+$sth->execute([150, 'rouge']);
 $red = $sth->fetchAll();
-$sth->execute(array(175, 'jaune'));
+$sth->execute([175, 'jaune']);
 $yellow = $sth->fetchAll();
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Modèle de déclaration SQL avec un point d'interrogation échappé</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+/* note: ceci n'est valable que pour les bases de données PostgreSQL */
+$sth = $dbh->prepare('SELECT * FROM issues WHERE tag::jsonb ?? ?');
+$sth->execute(['feature']);
+$featureIssues = $sth->fetchAll();
+$sth->execute(['performance']);
+$performanceIssues = $sth->fetchAll();
 ?>
 ]]>
     </programlisting>
@@ -170,14 +190,13 @@ $yellow = $sth->fetchAll();
   &reftitle.seealso;
   <para>
    <simplelist>
-    <member><function>PDO::exec</function></member>
-    <member><function>PDO::query</function></member>
-    <member><function>PDOStatement::execute</function></member>
+    <member><methodname>PDO::exec</methodname></member>
+    <member><methodname>PDO::query</methodname></member>
+    <member><methodname>PDOStatement::execute</methodname></member>
    </simplelist>
   </para>
  </refsect1>
 </refentry>
-
 <!-- Keep this comment at the end of the file
 Local variables:
 mode: sgml

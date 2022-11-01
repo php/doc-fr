@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 508869e1df6458162c162d71669f5e81abd65d50 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: a916b9bd3dd9db2137f65b7efd571c593c093b2f Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
-
 <refentry xml:id="event.add" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Event::add</refname>
@@ -32,6 +31,7 @@
    <methodname>Event::add</methodname> n'a aucun effet.
   </para>
  </refsect1>
+
  <refsect1 role="parameters">
   &reftitle.parameters;
   <variablelist>
@@ -47,24 +47,100 @@
    </varlistentry>
   </variablelist>
  </refsect1>
+
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne &true; en cas de succès, sinon &false;
+   &return.success;
   </para>
  </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Ajout d'un signal personnalisé</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+/*
+Lancez dans une fenêtre de terminal :
+
+$ php examples/signal.php
+
+Dans une autre fenêtre de terminal, trouvez le pid et envoyez SIGTERM, par exemple :
+
+$ ps aux | grep examp
+ruslan    3976  0.2  0.0 139896 11256 pts/1    S+   10:25   0:00 php examples/signal.php
+ruslan    3978  0.0  0.0   9572   864 pts/2    S+   10:26   0:00 grep --color=auto examp
+
+$ kill -TERM 3976
+
+Dans la première fenêtre du terminal, vous devriez voir ce qui suit :
+
+Signal attrapé 15
+*/
+
+class MyEventSignal {
+    private $base, $ev;
+    public function __construct($base) {
+        $this->base = $base;
+        $this->ev = Event::signal($base, SIGTERM, array($this, 'eventSighandler'));
+        $this->ev->add();
+    }
+    public function eventSighandler($no, $c) {
+        echo "Signal attrapé $no\n";
+        $this->base->exit();
+    }
+}
+
+$base = new EventBase();
+$c = new MyEventSignal($base);
+
+$base->loop();
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+Signal attrapé 15
+]]>
+   </screen>
+  </example>
+
+  <example>
+   <title>Ajout d'une minuterie</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$base = new EventBase();
+$n = 2;
+$e = Event::timer($base, function($n) use (&$e) {
+    echo "$n secondes écoulées\n";
+    $e->delTimer();
+}, $n);
+$e->add($n);
+$base->loop();
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+2 secondes écoulées
+]]>
+   </screen>
+  </example>
+ </refsect1>
+ 
  <refsect1 role="seealso">
   &reftitle.seealso;
   <simplelist>
-   <member>
-    <methodname>Event::addSignal</methodname>
-   </member>
-   <member>
-    <methodname>Event::addTimer</methodname>
-   </member>
-   <member>
-    <methodname>Event::del</methodname>
-   </member>
+   <member><methodname>Event::add</methodname></member>
+   <member><methodname>Event::del</methodname></member>
+   <member><methodname>Event::signal</methodname></member>
+   <member><methodname>Event::timer</methodname></member>
   </simplelist>
  </refsect1>
 </refentry>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: cfcfe6e059a1edb4d644cf5046d4fc8dfdc27450 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 1508d46d0998c4843a22d28460bb6c4244290129 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="pdo.error-handling" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -15,13 +15,14 @@
     <constant>PDO::ERRMODE_SILENT</constant>
    </para>
    <para>
-    C'est le mode par défaut. PDO définit simplement le code d'erreur à inspecter
-    grâce aux méthodes <function>PDO::errorCode</function> et
-    <function>PDO::errorInfo</function> sur les objets représentant
+    Antérieur à PHP 8.0.0, c'est le mode par défaut.
+    PDO définit simplement le code d'erreur à inspecter
+    grâce aux méthodes <methodname>PDO::errorCode</methodname> et
+    <methodname>PDO::errorInfo</methodname> sur les objets représentant
     les requêtes, mais aussi ceux représentant les bases de données ; si l'erreur
     résulte d'un appel à l'objet représentant la requête, vous pouvez appeler
-    la méthode <function>PDOStatement::errorCode</function> ou la méthode
-    <function>PDOStatement::errorInfo</function> sur l'objet.
+    la méthode <methodname>PDOStatement::errorCode</methodname> ou la méthode
+    <methodname>PDOStatement::errorInfo</methodname> sur l'objet.
     Si l'erreur résulte d'un appel sur l'objet représentant une base de données,
     vous pouvez également appeler ces deux mêmes méthodes sur l'objet.
    </para>
@@ -41,6 +42,7 @@
     <constant>PDO::ERRMODE_EXCEPTION</constant>
    </para>
    <para>
+    À partir de PHP 8.0.0, c'est le mode par défaut.
     En plus de définir le code d'erreur, PDO lancera une exception
     <classname>PDOException</classname> et y définit les propriétés
     afin de représenter le code d'erreur et les informations complémentaires.
@@ -67,9 +69,9 @@
  <para>
   PDO utilise les codes erreurs SQL-92 SQLSTATE ; chaque pilote PDO est
   responsable de lier ses codes natifs aux codes SQLSTATE appropriés.
-  La méthode <function>PDO::errorCode</function> retourne un code
+  La méthode <methodname>PDO::errorCode</methodname> retourne un code
   SQLSTATE unique. Si vous avez besoin d'informations spécifiques sur
-  l'erreur, PDO vous propose également la méthode <function>PDO::errorInfo</function>
+  l'erreur, PDO vous propose également la méthode <methodname>PDO::errorInfo</methodname>
   qui retourne un tableau contenant le code SQLSTATE, le code d'erreur spécifique
   du pilote et la chaîne décrivant l'erreur provenant du pilote.
  </para>
@@ -84,24 +86,31 @@ $dsn = 'mysql:dbname=testdb;host=127.0.0.1';
 $user = 'dbuser';
 $password = 'dbpass';
 
-try {
-    $dbh = new PDO($dsn, $user, $password);
-    $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    echo 'Échec lors de la connexion : ' . $e->getMessage();
-}
+$dbh = new PDO($dsn, $user, $password);
+$dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+// Cela provoquera une PDOException (lorsque la table n'existe pas).
+$dbh->query("SELECT wrongcolumn FROM wrongtable");
 ?>
 ]]>
    </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Fatal error: Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'testdb.wrongtable' doesn't exist in /tmp/pdo_test.php:10
+Stack trace:
+#0 /tmp/pdo_test.php(10): PDO->query('SELECT wrongcol...')
+#1 {main}
+  thrown in /tmp/pdo_test.php on line 10
+]]>
+   </screen>
   </example>
  </para>
  <note>
   <para>
-   <function>PDO::__construct</function> va toujours lancer une exception
+   <methodname>PDO::__construct</methodname> va toujours lancer une exception
    <classname>PDOException</classname> si la connexion échoue suivant la configuration
-   de <constant>PDO::ATTR_ERRMODE</constant>. Les exceptions non attrappées deviennent
-   des erreurs fatales.
+   de <constant>PDO::ATTR_ERRMODE</constant>.
   </para>
  </note>
  <para>
@@ -114,17 +123,7 @@ $dsn = 'mysql:dbname=test;host=127.0.0.1';
 $user = 'googleguy';
 $password = 'googleguy';
 
-/*
-    L'utilisation des blocs try/catch autour du constructeur est toujours valide
-    même si nous définissons le ERRMODE à WARNING sachant que PDO::__construct
-    va toujours lancer une exception PDOException si la connexion échoue.
-*/
-try {
-    $dbh = new PDO($dsn, $user, $password, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_WARNING));
-} catch (PDOException $e) {
-    echo 'Échec de la connexion : ' . $e->getMessage();
-    exit;
-}
+$dbh = new PDO($dsn, $user, $password, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_WARNING));
 
 // Ceci fera que PDO lancera une erreur de niveau E_WARNING au lieu d'une exception (lorsque la table n'existe pas)
 $dbh->query("SELECT wrongcolumn FROM wrongtable");
@@ -135,7 +134,7 @@ $dbh->query("SELECT wrongcolumn FROM wrongtable");
     <screen>
 <![CDATA[
 Warning: PDO::query(): SQLSTATE[42S02]: Base table or view not found: 1146 Table 'test.wrongtable' doesn't exist in
-/tmp/pdo_test.php on line 18
+/tmp/pdo_test.php on line 9
 ]]>
     </screen>
   </example>

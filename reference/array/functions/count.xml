@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: cd943f94a013b74df8765ab8e1a620a916a64a85 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 3ef3e56c80f7ae6b6a7291b7eb57dc6250b50801 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
-<!-- CREDITS: DavidA. -->
 <refentry xml:id="function.count" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>count</refname>
-  <refpurpose>Compte tous les éléments d'un tableau ou quelque chose d'un objet</refpurpose>
+  <refpurpose>Compte tous les éléments d'un tableau ou dans un objet <interfacename>Countable</interfacename></refpurpose>
  </refnamediv>
+
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
@@ -16,23 +15,13 @@
    <methodparam choice="opt"><type>int</type><parameter>mode</parameter><initializer><constant>COUNT_NORMAL</constant></initializer></methodparam>
   </methodsynopsis>
   <para>
-   Compte tous les éléments d'un tableau ou quelque chose d'un objet.
-  </para>
-  <para>
-   Pour les objets, <function>count</function> retourne le nombre de 
-   propriétés non-statiques, sans tenir compte de la visibilité. Si
-   <link linkend="ref.spl">SPL</link> est disponible, vous pouvez
-   utiliser la fonction <function>count</function> en implémentant
-   l'interface <classname>Countable</classname>. Cette interface a exactement
-   une méthode, <methodname>Countable::count</methodname>, qui retourne la
-   valeur retournée par la fonction <function>count</function>.
-  </para>
-  <para>
-   Reportez-vous à la section sur les  
-   <link linkend="language.types.array">Tableaux</link> du manuel, pour plus de
-   détails sur le fonctionnement des tableaux en PHP.
+   Compte tous les éléments dans un tableau quand utilisé avec un &array;.
+   Quand utilisé avec un objet qui implémente l'interface
+   <interfacename>Countable</interfacename>, ceci retourne la valeur de la
+   méthode <methodname>Countable::count</methodname>.
   </para>
  </refsect1>
+
  <refsect1 role="parameters">
   &reftitle.parameters;
   <para>
@@ -41,7 +30,7 @@
      <term><parameter>value</parameter></term>
      <listitem>
       <para>
-       Un tableau ou un objet <classname>Countable</classname>.
+       Un tableau ou un objet <interfacename>Countable</interfacename>.
       </para>
      </listitem>
     </varlistentry>
@@ -68,22 +57,54 @@
    </variablelist>
   </para>
  </refsect1>
+
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
    Retourne le nombre d'éléments dans <parameter>value</parameter>.
-   Quand le paramètre n'est ni un &array;, ni un &object; qui implémente 
-   l'interface <classname>Countable</classname>, <literal>1</literal> sera retourné. 
-   Il y a néanmoins une exception
-   : si le paramètre <parameter>value</parameter> vaut &null;,
-   <literal>0</literal> sera retourné.
+   Antérieur à PHP 8.0.0, si le paramètre n'est ni un &array;, ni un &object;
+   qui implémente l'interface <interfacename>Countable</interfacename>,
+   <literal>1</literal> était retourné, sauf si <parameter>value</parameter>
+   était &null;, au quel cas <literal>0</literal> était retourné.
   </para>
  </refsect1>
- 
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>8.0.0</entry>
+      <entry>
+       <function>count</function> lance désormais une <classname>TypeError</classname>
+       pour des types dénombrables invalides passés au paramètre
+       <parameter>value</parameter>.
+      </entry>
+     </row>
+     <row>
+      <entry>7.2.0</entry>
+      <entry>
+       <function>count</function> génère désormais un avertissement pour
+       des types dénombrables invalides passés au paramètre
+       <parameter>value</parameter>.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
+ </refsect1>
+
  <refsect1 role="examples">
   &reftitle.examples;
   <para>
-   <example>
+   <example xml:id="count.example.basic">
     <title>Exemple avec <function>count</function></title>
     <programlisting role="php">
 <![CDATA[
@@ -93,6 +114,28 @@ $a[1] = 3;
 $a[2] = 5;
 var_dump(count($a));
 
+$b[0]  = 7;
+$b[5]  = 9;
+$b[10] = 11;
+var_dump(count($b));
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen role="php">
+<![CDATA[
+int(3)
+int(3)
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   <example xml:id="count.example.badexample">
+    <title>Exemple de <function>count</function> avec un argument non Countable|array (contre-exemple - ne pas faire ceci)</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
 $b[0]  = 7;
 $b[5]  = 9;
 $b[10] = 11;
@@ -108,19 +151,34 @@ var_dump(count(false));
     <screen role="php">
 <![CDATA[
 int(3)
+int(0)
+int(1)
+]]>
+    </screen>
+    &example.outputs.72;
+    <screen role="php">
+<![CDATA[
 int(3)
 
-Warning: count(): Parameter must be an array or an object that implements Countable in … on line 12 // as of PHP 7.2
+Warning: count(): Parameter must be an array or an object that implements Countable in … on line 12
 int(0)
 
-Warning: count(): Parameter must be an array or an object that implements Countable in … on line 14 // as of PHP 7.2
+Warning: count(): Parameter must be an array or an object that implements Countable in … on line 14
 int(1)
+]]>
+    </screen>
+    &example.outputs.8;
+    <screen role="php">
+<![CDATA[
+int(3)
+
+Fatal error: Uncaught TypeError: count(): Argument #1 ($var) must be of type Countable .. on line 12
 ]]>
     </screen>
    </example>
   </para>
   <para>
-   <example>
+   <example xml:id="count.example.recursive">
     <title>Exemple de récursivité avec <function>count</function></title>
     <programlisting role="php">
 <![CDATA[
@@ -129,40 +187,54 @@ $food = array('fruits' => array('orange', 'banana', 'apple'),
               'veggie' => array('carrot', 'collard', 'pea'));
 
 // count récursif
-echo count($food, COUNT_RECURSIVE); // affiche 8
+var_dump(count($food, COUNT_RECURSIVE));
 
 // count normal
-echo count($food); // affiche 2
+var_dump(count($food));
 
 ?>
 ]]>
     </programlisting>
+    &example.outputs;
+    <screen role="php">
+<![CDATA[
+int(8)
+int(2)
+]]>
+    </screen>
+   </example>
+  </para>
+  <para>
+   <example xml:id="count.example.countable">
+    <title>Objet <interfacename>Countable</interfacename></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class CountOfMethods implements Countable
+{
+    private function someMethod()
+    {
+    }
+    public function count(): int
+    {
+        return count(get_class_methods($this));
+    }
+}
+$obj = new CountOfMethods();
+var_dump(count($obj));
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen role="php">
+<![CDATA[
+int(2)
+]]>
+    </screen>
    </example>
   </para>
  </refsect1>
- <refsect1 role="changelog">
-  &reftitle.changelog;
-  <informaltable>
-   <tgroup cols="2">
-    <thead>
-     <row>
-      <entry>&Version;</entry>
-      <entry>&Description;</entry>
-     </row>
-    </thead>
-    <tbody>
-     <row>
-      <entry>7.2.0</entry>
-      <entry>
-       <function>count</function> va maintenant générer un avertissement sur 
-       des types dénombrables non valides sont passés au paramètre 
-       <parameter>value</parameter>.
-      </entry>
-     </row>
-    </tbody>
-   </tgroup>
-  </informaltable>
- </refsect1>
+
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
@@ -172,6 +244,7 @@ echo count($food); // affiche 2
     <member><function>empty</function></member>
     <member><function>strlen</function></member>
     <member><function>is_countable</function></member>
+    <member><link linkend="language.types.array">Les tableaux</link></member>
    </simplelist>
   </para>
  </refsect1>

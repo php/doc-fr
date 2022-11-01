@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: cd943f94a013b74df8765ab8e1a620a916a64a85 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
-
+<!-- EN-Revision: 08e0e7dd68dd0ea36002eb9f839d1b07c701f266 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 <refentry xml:id="function.usort" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>usort</refname>
@@ -16,10 +14,8 @@
    <methodparam><type>callable</type><parameter>callback</parameter></methodparam>
   </methodsynopsis>
   <para>
-   <function>usort</function> va trier le tableau <parameter>array</parameter>
-   avec ses valeurs, en utilisant une fonction définie par l'utilisateur.
-   Si un tableau doit être trié avec un critère complexe, il est préférable
-   d'utiliser cette fonction.
+   Trie <parameter>array</parameter> sur place suivant les valeurs
+   en utilisant une fonction de comparaison définie par l'utilisateur.
   </para>
   &note.sort-unstable;
   &note.no-key-association;
@@ -44,16 +40,6 @@
        &return.callbacksort;
       </para>
       &callback.cmp;
-      <caution>
-       <para>
-        Le fait de retourner des valeurs <emphasis>non entières</emphasis>
-        depuis la fonction de comparaison, comme des valeurs de type &float;
-        fera que l'intervalle sera transtypé en &integer; en se basant sur
-        la valeur retournée par la fonction de rappel. Aussi des valeurs comme
-        0.99 et 0.1 sera toutes les deux transformées en la valeur 0, et leur
-        comparaison sera égale.
-       </para>
-      </caution>
      </listitem>
     </varlistentry>
    </variablelist>
@@ -63,8 +49,25 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   &return.success;
+   &return.true.always;
   </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     &array.changelog.by-ref;
+    </tbody>
+   </tgroup>
+  </informaltable>
  </refsect1>
 
  <refsect1 role="examples">
@@ -103,6 +106,28 @@ foreach ($a as $key => $value) {
 4: 6
 ]]>
     </screen>
+    <para>
+     L'opérateur combiné peut être utilisé pour
+     simplifier la comparaison interne.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+function cmp($a, $b)
+{
+    return $a <=> $b;
+}
+ 
+$a = array(3, 2, 5, 6, 1);
+ 
+usort($a, "cmp");
+ 
+foreach ($a as $key => $value) {
+    echo "$key: $value\n";
+}
+?>
+]]>
+    </programlisting>
    </example>
   </para>
   <note>
@@ -130,7 +155,7 @@ $fruits[2]["fruit"] = "grapes";
 
 usort($fruits, "cmp");
 
-while (list($key, $value) = each($fruits)) {
+foreach ($fruits as $key => $value) {
     echo "\$fruits[$key]: " . $value["fruit"] . "\n";
 }
 ?>
@@ -160,9 +185,9 @@ $fruits[2]: lemons
 <![CDATA[
 <?php
 class TestObj {
-    var $name;
+    private string $name;
 
-    function TestObj($name)
+    function __construct($name)
     {
         $this->name = $name;
     }
@@ -170,12 +195,7 @@ class TestObj {
     /* Ceci est une fonction de comparaison statique */
     static function cmp_obj($a, $b)
     {
-        $al = strtolower($a->name);
-        $bl = strtolower($b->name);
-        if ($al == $bl) {
-            return 0;
-        }
-        return ($al > $bl) ? +1 : -1;
+        return strtolower($a->name) <=> strtolower($b->name);
     }
 }
 
@@ -183,7 +203,7 @@ $a[] = new TestObj("c");
 $a[] = new TestObj("b");
 $a[] = new TestObj("d");
 
-usort($a, array("TestObj", "cmp_obj"));
+usort($a, [TestObj::class, "cmp_obj"]);
 
 foreach ($a as $item) {
     echo $item->name . "\n";
@@ -204,7 +224,7 @@ d
     <title>
      Exemple avec <function>usort</function> en utilisant
      une <link linkend="functions.anonymous">closure</link>
-     pour trier un tableau multi-dimensionnel
+     pour trier un tableau multidimensionnel
     </title>
     <programlisting role="php">
 <![CDATA[
@@ -236,17 +256,54 @@ z, c
 ]]>
     </screen>
    </example>
+   <example xml:id="function.usort.examples.multiple-axes">
+    <title>
+     Exemple d'utilisation de l'opérateur combiné avec <function>usort</function>.
+    </title>
+    <para>
+     L'opérateur combiné permet une comparaison directe de valeurs composées sur
+     plusieurs axes. 
+     Dans l'exemple suivant, <literal>$people</literal> est trié par nom de famille, 
+     puis par prénom si le nom de famille correspond.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$people[0] = ['first' => 'Adam', 'last' => 'West'];
+$people[1] = ['first' => 'Alec', 'last' => 'Baldwin'];
+$people[2] = ['first' => 'Adam', 'last' => 'Baldwin'];
+ 
+function sorter(array $a, array $b) {
+    return [$a['last'], $a['first']] <=> [$b['last'], $b['first']];
+}
+ 
+usort($people, 'sorter');
+ 
+foreach ($people as $person) {
+    print $person['last'] . ', ' . $person['first'] . PHP_EOL;
+}
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Baldwin, Adam
+Baldwin, Alec
+West, Adam
+]]>
+    </screen>
+   </example>
   </para>
  </refsect1>
 
  <refsect1 role="seealso">
   &reftitle.seealso;
-  <para>
-   <simplelist>
-    <member><function>uasort</function></member>
-    <member>&seealso.array.sorting;</member>
-   </simplelist>
-  </para>
+  <simplelist>
+   <member><function>uasort</function></member>
+   <member><function>uksort</function></member>
+   <member>&seealso.array.sorting;</member>
+  </simplelist>
  </refsect1>
 
 </refentry>

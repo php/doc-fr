@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: aebf045bfb7f4f2350db5e1e908cf290be334075 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
-
+<!-- EN-Revision: c2eca73ef79ebe78cebb34053e41b565af504c4f Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 <refentry xml:id="function.pg-delete" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>pg_delete</refname>
@@ -14,29 +12,27 @@
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <type>mixed</type><methodname>pg_delete</methodname>
-   <methodparam><type>resource</type><parameter>connection</parameter></methodparam>
+   <type class="union"><type>string</type><type>bool</type></type><methodname>pg_delete</methodname>
+   <methodparam><type>PgSql\Connection</type><parameter>connection</parameter></methodparam>
    <methodparam><type>string</type><parameter>table_name</parameter></methodparam>
-   <methodparam><type>array</type><parameter>assoc_array</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>options</parameter><initializer>PGSQL_DML_EXEC</initializer></methodparam>
+   <methodparam><type>array</type><parameter>conditions</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>flags</parameter><initializer><constant>PGSQL_DML_EXEC</constant></initializer></methodparam>
   </methodsynopsis>
   <para>
-   <function>pg_delete</function> efface les lignes d'une table
-   spécifiées par les clés et valeur du tableau associatif
-   <parameter>assoc_array</parameter>. Si <parameter>option</parameter>
-   est spécifié, <function>pg_convert</function> est appliqué à
-   <parameter>assoc_array</parameter> avec cette option.
+   <function>pg_delete</function> efface les lignes d'une table spécifiées par
+   les clés et valeur du tableau associatif <parameter>conditions</parameter>.
   </para>
   <para>
-   Si <literal>options</literal> est fournit,
+   Si <parameter>flags</parameter> est fournit,
    <function>pg_convert</function> est appliqué à
-   <literal>assoc_array</literal> avec les drapeaux fournit.
+   <parameter>conditions</parameter> avec les drapeaux fournit.
   </para>
   <para>
-   Par défaut <function>pg_delete</function> passe des valeurs brutes. Les valeurs
-   doivent être échappé ou l'option PGSQL_DML_ESCAPE doit être fournit.
-   PGSQL_DML_ESCAPE met des guillemets et échappe les paramètres/idantifiants.
-   Par conséquent, les noms de table/colonnes doivent être sensible à la casse.
+   Par défaut <function>pg_delete</function> passe des valeurs brutes.
+   Les valeurs doivent être échappé ou le drapeau <constant>PGSQL_DML_ESCAPE</constant>
+   doit être spécifié dans <parameter>flags</parameter>.
+   <constant>PGSQL_DML_ESCAPE</constant> met des guillemets et échappe les paramètres/identifiants.
+   Par conséquent, les noms de table/colonnes deviennent sensible à la casse.
   </para>
   <para>
    Notez que ni l'échappement ni les requêtes préparer peuvent protéger des
@@ -52,9 +48,7 @@
     <varlistentry>
      <term><parameter>connection</parameter></term>
      <listitem>
-      <para>
-       Ressource de connexion PostgreSQL.
-      </para>
+      &pgsql.parameter.connection;
      </listitem>
     </varlistentry>
     <varlistentry>
@@ -66,7 +60,7 @@
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>assoc_array</parameter></term>
+     <term><parameter>conditions</parameter></term>
      <listitem>
       <para>
        Un &array; où les clés sont les noms des champs de la table 
@@ -76,7 +70,7 @@
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>options</parameter></term>
+     <term><parameter>flags</parameter></term>
      <listitem>
       <para>
        Toute combinaison des valeurs suivantes :
@@ -87,7 +81,7 @@
        <constant>PGSQL_DML_ASYNC</constant> ou
        <constant>PGSQL_DML_STRING</constant>.
        Si <constant>PGSQL_DML_STRING</constant> fait partie du paramètre
-       <parameter>options</parameter> alors, la requête sera retournée.
+       <parameter>flags</parameter> alors, la requête sera retournée.
        Lorsque la constante <constant>PGSQL_DML_NO_CONV</constant> ou la constante
        <constant>PGSQL_DML_ESCAPE</constant> est définie,aucun appel à la fonction
        <function>pg_convert</function> ne sera faite en interne.
@@ -102,8 +96,25 @@
   &reftitle.returnvalues;
   <para>
    &return.success;  Retourne une &string; si <constant>PGSQL_DML_STRING</constant>
-   est passé dans le paramètre <parameter>options</parameter>.
+   est passé dans le paramètre <parameter>flags</parameter>.
   </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     &pgsql.changelog.connection-object;
+    </tbody>
+   </tgroup>
+  </informaltable>
  </refsect1>
 
  <refsect1 role="examples">
@@ -118,7 +129,7 @@
  // Ceci est sûr quelque peu, car toutes les valeurs sont échappées
  // Cependant PostgreSSQL supporte les JSON/Tableaux. Ceci ne sont pas
  // sûr ni par échappement ni par les requêtes préparés.
- $res = pg_delete($db, 'post_log', $_POST);
+ $res = pg_delete($db, 'post_log', $_POST, PG_DML_ESCAPE);
  if ($res) {
      echo "Les données POSTées ont été effacées : $res\n";
  } else {
@@ -131,39 +142,6 @@
   </para>
  </refsect1>
 
- <refsect1 role="changelog">
-  &reftitle.changelog;
-  <para>
-   <informaltable>
-    <tgroup cols="2">
-     <thead>
-      <row>
-       <entry>&Version;</entry>
-       <entry>&Description;</entry>
-      </row>
-     </thead>
-     <tbody>
-      <row>
-       <entry>5.6.0</entry>
-       <entry>
-        La fonction n'est plus expérimentale. Ajout de la constante
-        <constant>PGSQL_DML_ESCAPE</constant> ainsi que du support
-        des types de données &true;/&false; et &null;.
-       </entry>
-      </row>
-      <row>
-       <entry>5.5.3/5.4.19</entry>
-       <entry>
-        Les injections SQL directes dans <parameter>table_name</parameter>
-        et les injections SQL indirectes via les identifiants ont été résolues.
-       </entry>
-      </row>
-     </tbody>
-    </tgroup>
-   </informaltable>
-  </para>
- </refsect1>
-
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
@@ -173,7 +151,6 @@
   </para>
  </refsect1>
 </refentry>
-
 <!-- Keep this comment at the end of the file
 Local variables:
 mode: sgml

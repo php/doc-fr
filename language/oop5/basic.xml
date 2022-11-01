@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 02f3bf57175c48abff767ad2c0961c6cfe58a39e Maintainer: yannick Status: ready -->
+<!-- EN-Revision: c36ce0b514faa2efce1427ae87ba9ea25cc038ad Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
  <sect1 xml:id="language.oop5.basic" xmlns="http://docbook.org/ns/docbook">
   <title>Syntaxe de base</title>
@@ -163,6 +162,57 @@ $instance = new $className(); // new SimpleClass()
 ]]>
     </programlisting>
    </example>
+
+   <para>
+    À partir de PHP 8.0.0, l'utilisation de <literal>new</literal> avec des
+    expressions arbitraires est supportée.
+    Ceci permet des instantiations plus complexes si l'expression produit une
+    <type>string</type>. L'expression doit être entourée de parenthèses.
+   </para>
+   <example>
+    <title>Créer une instance en utilisant une expression arbitraire</title>
+    <para>
+     Dans l'exemple donné, nous montrons plusieurs exemples d'expressions
+     arbitraires valides qui produisent un nom de classe.
+     Ceci montre un appel de fonction, une concaténation de chaînes
+     et la constante <constant>::class</constant>.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+class ClassA extends \stdClass {}
+class ClassB extends \stdClass {}
+class ClassC extends ClassB {}
+class ClassD extends ClassA {}
+
+function getSomeClass(): string
+{
+    return 'ClassA';
+}
+
+var_dump(new (getSomeClass()));
+var_dump(new ('Class' . 'B'));
+var_dump(new ('Class' . 'C'));
+var_dump(new (ClassD::class));
+?>
+]]>
+    </programlisting>
+    &example.outputs.8;
+    <screen>
+<![CDATA[
+object(ClassA)#1 (0) {
+}
+object(ClassB)#1 (0) {
+}
+object(ClassC)#1 (0) {
+}
+object(ClassD)#1 (0) {
+}
+
+]]>
+    </screen>
+   </example>
    <para>
     Dans le contexte de la classe, il est possible de créer un nouvel objet
     avec <literal>new self</literal> et <literal>new parent</literal>.
@@ -284,7 +334,7 @@ echo (new DateTime())->format('Y');
     donc il est possible d'avoir une propriété et une méthode avec le même nom.
     Faire référence à la fois a une propriété ainsi qu'une méthode ont la même
     notation, et le fait qu'une propriété sera accédée ou qu'une méthode sera appelée,
-    dépend seulement du contexte, c'est à dire si l'utilisation est un accès variable
+    dépend seulement du contexte, c'est-à-dire si l'utilisation est un accès variable
     ou un appel de fonction.
    </para>
    <example>
@@ -321,7 +371,7 @@ method
     en la mettant entre parenthèses.
    </para>
    <example>
-    <title>Appeler une fonction anonyme enregistré dans une propriété</title>
+    <title>Appeler une fonction anonyme enregistrée dans une propriété</title>
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -353,19 +403,24 @@ echo ($obj->bar)(), PHP_EOL;
   <sect2 xml:id="language.oop5.basic.extends">
    <title>Le mot-clé <literal>extends</literal></title>
    <para>
-    Une classe peut hériter des constantes, méthodes, et des propriétés d'une autre classe en
+    Une classe peut hériter des constantes, méthodes et des propriétés d'une autre classe en
     utilisant le mot-clé <literal>extends</literal> dans la déclaration.
     Il n'est pas possible d'étendre plusieurs classes : une classe peut
     uniquement hériter d'une seule classe de base.
    </para>
    <para>
-    Les constantes, méthodes, et propriétés hérités peuvent être surchargés en les redéclarant avec le
+    Les constantes, méthodes et propriétés héritées peuvent être redéfinies en les redéclarant avec le
     même nom que dans la classe parente. Cependant, si la classe parente a défini
-    une méthode comme <link linkend="language.oop5.final">final</link>, alors celle-ci
-    ne sera pas surchargeable. Il est possible d'accéder aux
-    méthodes ou une propriétés statiques surchargées en y faisant référence avec l'opérateur
+    une méthode ou constante comme <link linkend="language.oop5.final">final</link>,
+    alors celles-ci ne peuvent pas être redéfinies. Il est possible d'accéder aux
+    méthodes ou propriétés statiques redéfinies en y faisant référence avec l'opérateur
     <link linkend="language.oop5.paamayim-nekudotayim">parent::</link>.
    </para>
+   <note>
+    <simpara>
+     À partir de PHP 8.1.0, les constantes peuvent être déclaré comme finale.
+    </simpara>
+   </note>
    <example>
     <title>Héritage simple d'une classe</title>
     <programlisting role="php">
@@ -553,10 +608,10 @@ Stack trace:
 
    <para>
     Le mot clé <literal>class</literal> est également utilisé
-    pour la résolution des noms de classes. Vous pouvez récupérer une chaîne
-    contenant le nom qualifié complet de la classe <literal>ClassName</literal>
-    en utilisant <literal>ClassName::class</literal>. C'est particulièrement
-    pratique avec les classes utilisant des
+    pour la résolution des noms de classes.
+    Il est possible d'obtenir le nom complètement qualifié d'une classe
+    <literal>ClassName</literal> en utilisant <literal>ClassName::class</literal>.
+    C'est particulièrement utile avec les classes utilisant des
     <link linkend="language.namespaces">espaces de noms</link>.
    </para>
    <para>
@@ -585,8 +640,8 @@ NS\ClassName
    <note>
     <para>
      La résolution du nom de classe en utilisant <literal>::class</literal> est une
-     transformation lors de la compilation. C'est à dire à l'instant où la chaine du
-     nom de classe est crée aucun auto-chargement n'a encore eu lieu. Par conséquent,
+     transformation lors de la compilation. C'est-à-dire à l'instant où la chaine du
+     nom de classe est créé aucun autochargement n'a encore eu lieu. Par conséquent,
      les noms de classes sont étendues même si la classe n'existe pas. Aucune erreur
      n'est émise dans ce cas là.
     </para>
@@ -679,7 +734,7 @@ if (is_null($repository)) {
    <para>
     L'opérateur nullsafe est mieux utilisé quand null est considéré une valeur valide
     et potentiellement attendu pour une propriété ou valeur de retour d'une méthode.
-    Pour indiquer une erreur, une exception lancé est préférable.
+    Pour indiquer une erreur, lancer une exception est préférable.
    </para>
   </note>
  </sect2>

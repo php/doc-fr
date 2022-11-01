@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: dec1f8445ab2af7fbafef012fb7907ab2cd349b5 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 6b48028aef8211f89ae6c9fefe64177de2f86e12 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
-
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.mkdir">
  <refnamediv>
   <refname>mkdir</refname>
@@ -13,13 +12,13 @@
   &reftitle.description;
   <methodsynopsis>
    <type>bool</type><methodname>mkdir</methodname>
-   <methodparam><type>string</type><parameter>pathname</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>mode</parameter><initializer>0777</initializer></methodparam>
+   <methodparam><type>string</type><parameter>directory</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>permissions</parameter><initializer>0777</initializer></methodparam>
    <methodparam choice="opt"><type>bool</type><parameter>recursive</parameter><initializer>&false;</initializer></methodparam>
-   <methodparam choice="opt"><type>resource</type><parameter>context</parameter></methodparam>
+   <methodparam choice="opt"><type class="union"><type>resource</type><type>null</type></type><parameter>context</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
   <para>
-   Tente de créer un dossier.
+   Tente de créer le dossier spécifier par <parameter>directory</parameter>.
   </para>
  </refsect1>
  
@@ -28,30 +27,31 @@
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>pathname</parameter></term>
+     <term><parameter>directory</parameter></term>
      <listitem>
       <para>
        Le chemin du dossier.
+       &tip.fopen-wrapper;
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>mode</parameter></term>
+     <term><parameter>permissions</parameter></term>
      <listitem>
       <para>
-       Le mode par défaut est le mode 0777, ce qui correspond au maximum de
-       droits possible. Pour plus d'informations sur les modes, lisez en
+       Les permissions par défaut est 0777, ce qui correspond au maximum de
+       droits possible. Pour plus d'informations sur les permissions, lisez en
        détail la documentation de la fonction <function>chmod</function>.
       </para>
       <note>
        <para>
-        <parameter>mode</parameter> est ignoré sous Windows.
+        <parameter>permissions</parameter> est ignoré sous Windows.
        </para>
       </note>
       <para>
-       Notez que vous aurez à préciser le mode en base octale,
+       Notez que vous aurez à préciser les<parameter>permissions</parameter> en base octale,
        ce qui signifie que vous aurez probablement un 0 comme premier chiffre.
-       Le mode sera aussi modifié par le umask courant, que vous pouvez
+       Les <parameter>permissions</parameter> sera aussi modifié par le umask courant, que vous pouvez
        modifier avec la fonction <function>umask</function>.
       </para>
      </listitem>
@@ -60,8 +60,8 @@
      <term><parameter>recursive</parameter></term>
      <listitem>
       <para>
-       Permet la création de répertoires imbriqués spécifiés dans le 
-       <parameter>pathname</parameter>.
+       Si &true;, alors tous les répertoires parents au <parameter>directory</parameter> spécifié seront également créés,
+       avec les mêmes permissions.
       </para>
      </listitem>
     </varlistentry>
@@ -80,8 +80,28 @@
   <para>
    &return.success;
   </para>
+  <note>
+   <para>
+    Si le répertoire à créer existe déjà, cela est considéré
+    comme une erreur et &false; sera toujours retourné.
+    Les fonctions <function>is_dir</function> ou <function>file_exists</function> peuvent être utilisée
+    pour vérifier si le répertoire existe déjà avant d'essayer de le créer.
+   </para>
+  </note>
  </refsect1>
- 
+
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <para>
+   Émet une alerte de niveau <constant>E_WARNING</constant> si le dossier
+   existe déjà.
+  </para>
+  <para>
+   Émet une alerte de niveau <constant>E_WARNING</constant> si les permissions
+   empêchent la création du dossier.
+  </para>
+ </refsect1>
+
  <refsect1 role="examples">
   &reftitle.examples;
   <para>
@@ -102,14 +122,14 @@ mkdir("/path/to/my/dir", 0700);
     <programlisting role="php">
 <![CDATA[
 <?php
-// Structure de répertoire désirée
+// Structure de dossier désirée
 $structure = './depth1/depth2/depth3/';
 
-// Pour créer une stucture imbriquée, le paramètre $recursive 
+// Pour créer une structure imbriquée, le paramètre $recursive
 // doit être spécifié.
 
 if (!mkdir($structure, 0777, true)) {
-    die('Echec lors de la création des répertoires...');
+    die('Échec lors de la création des dossiers...');
 }
 
 // ...
@@ -120,30 +140,18 @@ if (!mkdir($structure, 0777, true)) {
   </para>  
  </refsect1>
 
- <refsect1 role="errors">
-  &reftitle.errors;
-  <para>
-   Emet une alerte de niveau <constant>E_WARNING</constant> si le dossier
-   existe déjà.
-  </para>
-  <para>
-   Emet une alerte de niveau <constant>E_WARNING</constant> si les permissions
-   empéchent la création du dossier.
-  </para>
- </refsect1>
- 
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
    <simplelist>
     <member><function>is_dir</function></member>
     <member><function>rmdir</function></member>
+    <member><function>umask</function></member>
    </simplelist>
   </para>
  </refsect1>
  
 </refentry>
-
 <!-- Keep this comment at the end of the file
 Local variables:
 mode: sgml

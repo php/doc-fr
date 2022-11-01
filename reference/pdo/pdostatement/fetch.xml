@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: e440c79af15cf829549736b2a292b5f8f6887142 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
-
+<!-- EN-Revision: eae19eb5fe0f5bebcbce382ea7a505cedeb5a883 Maintainer: yannick Status: ready -->
+<!-- Reviewed: no -->
 <refentry xml:id="pdostatement.fetch" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>PDOStatement::fetch</refname>
@@ -14,15 +13,15 @@
   &reftitle.description;
   <methodsynopsis>
    <modifier>public</modifier> <type>mixed</type><methodname>PDOStatement::fetch</methodname>
-   <methodparam choice="opt"><type>int</type><parameter>fetch_style</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>cursor_orientation</parameter><initializer>PDO::FETCH_ORI_NEXT</initializer></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter>cursor_offset</parameter><initializer>0</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>mode</parameter><initializer>PDO::FETCH_DEFAULT</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>cursorOrientation</parameter><initializer>PDO::FETCH_ORI_NEXT</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>cursorOffset</parameter><initializer>0</initializer></methodparam>
   </methodsynopsis>
   
   <para>
    Récupère une ligne depuis un jeu de résultats associé à l'objet
    <literal>PDOStatement</literal>. Le paramètre
-   <parameter>fetch_style</parameter> détermine la façon dont PDO retourne
+   <parameter>mode</parameter> détermine la façon dont PDO retourne
    la ligne.
   </para>
  </refsect1>
@@ -32,7 +31,7 @@
   <para>
    <variablelist>
     <varlistentry>
-     <term><parameter>fetch_style</parameter></term>
+     <term><parameter>mode</parameter></term>
      <listitem>
       <para>
        Contrôle comment la prochaine ligne sera retournée à l'appelant. Cette valeur
@@ -53,7 +52,7 @@
          <literal>PDO::FETCH_BOUND</literal>: retourne &true; et assigne les valeurs
          des colonnes de votre jeu de résultats dans les variables PHP à laquelle
          elles sont liées avec la méthode
-         <function>PDOStatement::bindColumn</function>
+         <methodname>PDOStatement::bindColumn</methodname>
          </para></listitem>
         <listitem><para>
          <literal>PDO::FETCH_CLASS</literal>: retourne une nouvelle instance
@@ -102,7 +101,7 @@
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>cursor_orientation</parameter></term>
+     <term><parameter>cursorOrientation</parameter></term>
      <listitem>
       <para>
        Pour un objet PDOStatement représentant un curseur scrollable,
@@ -113,12 +112,12 @@
        scrollable pour votre objet PDOStatement, vous devez définir
        l'attribut <literal>PDO::ATTR_CURSOR</literal> à <literal>PDO::CURSOR_SCROLL</literal>
        lorsque vous préparez la requête SQL avec la fonction
-       <function>PDO::prepare</function>.
+       <methodname>PDO::prepare</methodname>.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>offset</parameter></term>
+     <term><parameter>cursorOffset</parameter></term>
      <listitem>
       <para> 
        Pour un objet PDOStatement représentant un curseur scrollable pour
@@ -132,7 +131,7 @@
        lequel le paramètre <literal>cursor_orientation</literal> est défini
        à <literal>PDO::FETCH_ORI_REL</literal>, cette valeur spécifie la ligne
        à récupérer relativement à la position du curseur avant l'appel à la fonction
-       <function>PDOStatement::fetch</function>.
+       <methodname>PDOStatement::fetch</methodname>.
       </para>
      </listitem>
     </varlistentry>
@@ -144,7 +143,7 @@
   &reftitle.returnvalues;
   <para>
    La valeur retournée par cette fonction en cas de succès dépend du type récupéré.
-   Dans tous les cas, &false; est retourné si une erreur survient.
+   Dans tous les cas, &false; est retourné si une erreur survient ou s'il n'y a plus de lignes.
   </para>
  </refsect1>
  
@@ -221,35 +220,23 @@ PDO::FETCH_OBJ: Retourne la ligne suivante en tant qu'objet anonyme ayant les no
 <![CDATA[
 <?php
 function readDataForwards($dbh) {
-  $sql = 'SELECT hand, won, bet FROM mynumbers ORDER BY BET';
-  try {
+    $sql = 'SELECT hand, won, bet FROM mynumbers ORDER BY BET';
     $stmt = $dbh->prepare($sql, array(PDO::ATTR_CURSOR, PDO::CURSOR_SCROLL));
     $stmt->execute();
     while ($row = $stmt->fetch(PDO::FETCH_NUM, PDO::FETCH_ORI_NEXT)) {
-      $data = $row[0] . "\t" . $row[1] . "\t" . $row[2] . "\n";
-      print $data;
+        $data = $row[0] . "\t" . $row[1] . "\t" . $row[2] . "\n";
+        print $data;
     }
-    $stmt = null;
-  }
-  catch (PDOException $e) {
-    print $e->getMessage();
-  }
 }
 function readDataBackwards($dbh) {
-  $sql = 'SELECT hand, won, bet FROM mynumbers ORDER BY bet';
-  try {
+    $sql = 'SELECT hand, won, bet FROM mynumbers ORDER BY bet';
     $stmt = $dbh->prepare($sql, array(PDO::ATTR_CURSOR, PDO::CURSOR_SCROLL));
     $stmt->execute();
     $row = $stmt->fetch(PDO::FETCH_NUM, PDO::FETCH_ORI_LAST);
     do {
-      $data = $row[0] . "\t" . $row[1] . "\t" . $row[2] . "\n";
-      print $data;
+        $data = $row[0] . "\t" . $row[1] . "\t" . $row[2] . "\n";
+        print $data;
     } while ($row = $stmt->fetch(PDO::FETCH_NUM, PDO::FETCH_ORI_PRIOR));
-    $stmt = null;
-  }
-  catch (PDOException $e) {
-    print $e->getMessage();
-  }
 }
 
 print "Lecture en avant :\n";
@@ -333,17 +320,16 @@ Je suis Bob.
   &reftitle.seealso;
   <para>
    <simplelist>
-    <member><function>PDO::prepare</function></member>
-    <member><function>PDOStatement::execute</function></member>
-    <member><function>PDOStatement::fetchAll</function></member>
-    <member><function>PDOStatement::fetchColumn</function></member>
-    <member><function>PDOStatement::fetchObject</function></member>
-    <member><function>PDOStatement::setFetchMode</function></member>
+    <member><methodname>PDO::prepare</methodname></member>
+    <member><methodname>PDOStatement::execute</methodname></member>
+    <member><methodname>PDOStatement::fetchAll</methodname></member>
+    <member><methodname>PDOStatement::fetchColumn</methodname></member>
+    <member><methodname>PDOStatement::fetchObject</methodname></member>
+    <member><methodname>PDOStatement::setFetchMode</methodname></member>
    </simplelist>
   </para>
  </refsect1>
 </refentry>
-
 <!-- Keep this comment at the end of the file
 Local variables:
 mode: sgml

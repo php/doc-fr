@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: cd943f94a013b74df8765ab8e1a620a916a64a85 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: e8c83816e0ca7a4136a5991b2227ddf00fa9adc6 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <!-- CREDITS: DavidA. -->
 <refentry xml:id="function.array-map" xmlns="http://docbook.org/ns/docbook">
@@ -20,12 +19,15 @@
   <para>
    <function>array_map</function> retourne un &array; contenant
    les résultats de l'application de la fonction de rappel
-   <parameter>callback</parameter> à l'index correspondant de
+   <parameter>callback</parameter> à la valeur correspondant de
    <parameter>array</parameter> (et <parameter>arrays</parameter> si plus de
    tableaux sont fourni) utilisé en tant qu'arguments pour la fonction de rappel.
    Le nombre de paramètres que la fonction de rappel <parameter>callback</parameter>
    accepte devrait correspondre au nombre de tableaux passé à
    <function>array_map</function>.
+   Les tableaux d'entrées en surplus sont ignorés.
+   Une <classname>ArgumentCountError</classname> est lancé si un nombre
+   insuffisant d'arguments sont fourni.
   </para>
  </refsect1>
 
@@ -42,9 +44,9 @@
       </para>
       <para>
        &null; peut être passé comme valeur à <parameter>callback</parameter>
-       pour executer une opération zip sur plusieurs tableaux.
+       pour exécuter une opération zip sur plusieurs tableaux.
        Si seulement <parameter>array</parameter> est fourni,
-       <methodname>array_map</methodname> retournera le tableau d'entré.
+       <methodname>array_map</methodname> retournera le tableau d'entrée.
       </para>
      </listitem>
     </varlistentry>
@@ -73,16 +75,33 @@
   &reftitle.returnvalues;
   <para>
    Retourne un &array; contenant les résultats de l'application de la fonction
-   de rappel <parameter>callback</parameter> à l'index correspondant de
+   de rappel <parameter>callback</parameter> à la valeur correspondant de
    <parameter>array</parameter> (et <parameter>arrays</parameter> si plus de
    tableaux sont fourni) utilisé en tant qu'arguments pour la fonction de rappel.
   </para>
   <para>
    Le &array; retourné conservera les clés du tableau passé en argument, 
    si et seulement si, un seul tableau est passé. Si plusieurs tableaux 
-   sont passés comme argument, le &array; retourné aura des clés séquentielle
+   sont passés comme argument, le &array; retourné aura des clés séquentielles
    sous la forme d'&integer;.
   </para>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     &array.changelog.by-ref;
+    </tbody>
+   </tgroup>
+  </informaltable>
  </refsect1>
 
  <refsect1 role="examples">
@@ -123,17 +142,20 @@ Array
   </para>
   <para>
    <example>
-    <title><function>array_map</function> : utilisation d'une fonction 
-     quelconque (depuis PHP 5.3.0)</title>
+    <title><function>array_map</function> utilisant une fonction quelconque</title>
     <programlisting role="php">
 <![CDATA[
 <?php
 
-$func = function($value) {
+$func = function(int $value): int {
     return $value * 2;
 };
 
 print_r(array_map($func, range(1, 5)));
+
+// Ou à partir de PHP 7.4.0 :
+
+print_r(array_map(fn($value): int => $value * 2, range(1, 5)));
 
 ?>
 ]]>
@@ -158,12 +180,12 @@ Array
     <programlisting role="php">
 <![CDATA[
 <?php
-function show_Spanish($n, $m)
+function show_Spanish(int $n, string $m): string
 {
     return "Le nombre {$n} se dit {$m} en Espagnol";
 }
 
-function map_Spanish($n, $m)
+function map_Spanish(int $n, string $m): array
 {
     return [$n => $m];
 }
@@ -380,6 +402,43 @@ array(1) {
     [1]=>
     string(5) "value"
   }
+}
+]]>
+    </screen>
+   </example>
+   <example>
+    <title><function>array_map</function> - tableaux associatifs</title>
+    <para>
+     Même si <function>array_map</function> ne supporte pas directement
+     l'utilisation des clés d'un tableau comme entrée, ceci peut être simulé
+     en utilisant <function>array_keys</function>.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$arr = [
+    'v1' => 'First release',
+    'v2' => 'Second release',
+    'v3' => 'Third release',
+];
+// Note: Antérieur à 7.4.0, il faut utiliser la syntaxe plus longue pour les
+// fonctions anonymes à la place.
+$callback = fn(string $k, string $v): string => "$k was the $v";
+$result = array_map($callback, array_keys($arr), array_values($arr));
+var_dump($result);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+array(3) {
+  [0]=>
+  string(24) "v1 was the First release"
+  [1]=>
+  string(25) "v2 was the Second release"
+  [2]=>
+  string(24) "v3 was the Third release"
 }
 ]]>
     </screen>
