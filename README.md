@@ -23,16 +23,16 @@ La traduction française suivra la modification faite dans la documentation angl
 
 ## 1: Installation
 
-Pour construire la documentation il faut posséder à minimal les trois repository suivant :
+Pour construire la documentation il faut posséder à minima les trois repository suivant :
  - ``php/doc-base`` : qui possède les outils pour construire la documentation
    trouvée sur ``github.com`` : https://github.com/php/doc-base
  - ``php/doc-en`` : la version anglaise de la documentation sur laquelle se rabattre quand
    la version française est inexistante pour une page : https://github.com/php/doc-en
  - ``php/doc-fr`` : la version française de la documentation : https://github.com/php/doc-fr
 
-> Note : vous pouvez cloner à partir du miroir GitHub, mais pour que la documentation puisse
-> être construite le dossier où se situe la documentation anglaise *doit* être nommé ``en``
-> et celui de la documentation française *doit* être nommé ``fr``.
+> Note : vous pouvez cloner à partir du miroir GitHub, mais le dossier où se situe la
+> documentation anglaise *doit* être nommé ``en`` et celui de la documentation française
+> *doit* être nommé ``fr`` afin de pouvoir construire la documentation.
 
 ## 2: Construire la documentation
 
@@ -86,7 +86,7 @@ Ceci ce manifeste par le commentaire suivant en haut de chaque fichier XML :
 ```
 
 Lors de la mise à jour d'un fichier pour répliquer les changements effectués sur la version
-anglaise il est primordial de mettre à jour le hache git du commit anglais.
+anglaise il est primordial de mettre à jour la clé de hachage `git-hash` du commit anglais.
 
 Le statut du rev-check peut actuellement être consulté sur le site des outils de la documentation
 de PHP : http://doc.php.net/revcheck.php?p=filesummary&lang=fr
@@ -150,11 +150,14 @@ sauf lors de modifications mineures/changements purement XML (e.g. changement d'
 
 ### Traduire une nouvelle page
 
-La traduction d'une nouvelle page anglaise en français est relativement simple,
-copier/coller le fichier en question, ajouter le commentaire de revision tracking
-avec le hache de commit de la version du fichier anglais que vous venez de copier,
-ceci permet de s'assurer que le fichier soit bien à jour après que la traduction
-soit faite.
+La traduction d'une nouvelle page anglaise en français est relativement simple:
+1. Copier le fichier à traduire
+2. Coller-le au même emplacement, mais dans votre dossier ``fr``
+3. Ajouter le commentaire de revision tracking avec la clé de hachage `git-hash` de la
+version du fichier anglais que vous venez de copier
+
+La clé de hachage `git-hash` permet de s'assurer que le fichier soit bien à jour après
+que la traduction soit faite.
 
 Il est à noter que le fichier doit être *entièrement* (modulo les exemples) traduit
 avant d'être ajouté au repo git officiel.
@@ -183,7 +186,7 @@ dans la votre.
 
 ### Utilisateur ayant un accès VCS (c.à.d un compte @php.net, avec du karma sur doc-fr)
 
-Il n'est pas nécessaire de passer par une pull request et vous pouvez commit et
+Il n'est pas nécessaire de passer par une pull request. Vous pouvez commit et
 push directement sur la branche ``master`` du repo doc-fr sur https://github.com.
 
 Éviter les "merge commit" et préférez un ``git rebase`` suivi d'un merge fast-forward.

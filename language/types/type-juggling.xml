@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: e2f53f0f601cd3e97ebdb516e51de1825d0106ea Maintainer: girgias Status: ready -->
+<!-- EN-Revision: 161dde4fe721309398dd324edbf02aec409f127b Maintainer: girgias Status: ready -->
 <!-- Reviewed: no -->
 <sect1 xml:id="language.types.type-juggling">
  <title>Jonglage de type</title>
 
  <simpara>
-  PHP ne requis pas une définition de type explicite dans les déclarations de variables.
+  PHP ne requiert pas une définition de type explicite dans les déclarations de variables.
   Dans ce cas, le type d'une variable est déterminé en fonction de la valeur qu'elle a stocké.
-  C'est-à-dire, si une <type>string</type> est assigné à la variable
+  C'est-à-dire, si une <type>string</type> est assignée à la variable
   <varname>$var</varname>, alors <varname>$var</varname> est de type
-  <type>string</type>. Si après une valeur <type>int</type> est assigné à
+  <type>string</type>. Si après une valeur <type>int</type> est assignée à
   <varname>$var</varname>, elle sera de type <type>int</type>.
  </simpara>
 
@@ -46,7 +46,7 @@
  </note>
 
  <simpara>
-  Pour forcer une variable a être évaluer comme un type particulier, voir la
+  Pour forcer une variable a être évaluée comme un type particulier, voir la
   section sur le <link linkend="language.types.typecasting">casting de type</link>.
   Pour changer le type d'une variable, voir la fonction <function>settype</function>.
  </simpara>
@@ -65,7 +65,7 @@
    comme des <type>float</type>s, et le résultat sera un <type>float</type>.
    Sinon, les opérandes sont interprétés comme des <type>int</type>s,
    et le résultat sera aussi un <type>int</type>.
-   À partir de PHP 8.0.0, si un des opérandes ne peut être interprétés une
+   À partir de PHP 8.0.0, si un des opérandes ne peut être interprété une
    <classname>TypeError</classname> est lancée.
   </simpara>
  </sect2>
@@ -81,7 +81,10 @@
   </simpara>
 
   <simpara>
-   Dans ce contexte la valeur sera interprété comme une <type>string</type>.
+   Dans ce contexte la valeur sera interprétée comme une <type>string</type>.
+   Si la valeur ne peut pas être interprétée, une
+   <classname>TypeError</classname> est levée.
+   Antérieur à PHP 7.4.0, une <constant>E_RECOVERABLE_ERROR</constant> était soulevée.
   </simpara>
  </sect2>
 
@@ -95,7 +98,7 @@
   </simpara>
 
   <simpara>
-   Dans ce contexte la valeur sera interprété comme un <type>bool</type>.
+   Dans ce contexte la valeur sera interprétée comme un <type>bool</type>.
   </simpara>
  </sect2>
 
@@ -132,56 +135,156 @@
   </simpara>
  </sect2>
 
- <sect2>
+ <sect2 xml:id="language.types.type-juggling.function">
   <title>Contextes de fonctions</title>
 
   <simpara>
-   Ceci est le contexte quand une valeur est passé à un paramètre ou propriété
-   typé ou retourné depuis une fonction qui déclare un type de retour.
+   Ceci est le contexte quand une valeur est passée à un paramètre ou propriété
+   typée ou retournée depuis une fonction qui déclare un type de retour.
   </simpara>
 
   <para>
-   Dans ce contexte, quand le mode de typage coercitif est actif (par défaut),
-   seul les valeurs scalaires peuvent être convertie en une autre valeur scalaire.
-   Pour les déclarations de types simples le comportement est le suivant :
-   <itemizedlist>
-    <listitem>
-     <simpara>
-      Type de déclaration <type>bool</type> : valeur est interprété comme <type>bool</type>.
-     </simpara>
-     <simpara>
-      Type de déclaration <type>int</type> : valeur est interprété comme <type>int</type>
-      si la conversion est bien-définie. C.-à-d. si la chaîne est
-      <link linkend="language.types.numeric-strings">numeric</link>.
-     </simpara>
-     <simpara>
-      Type de déclaration <type>float</type> : valeur est interprété comme <type>float</type>
-      si la conversion est bien-définie. C.-à-d. si la chaîne est
-      <link linkend="language.types.numeric-strings">numeric</link>.
-     </simpara>
-     <simpara>
-      Type de déclaration <type>string</type> : valeur est interprété comme <type>string</type>.
-     </simpara>
-    </listitem>
-   </itemizedlist>
-
-   Si la déclaration de type est une union, voir la section à propos du
-   <link linkend="language.types.declarations.union.coercive">Typage coercitif avec les types d'union</link>.
+   Dans ce contexte, la valeur doit être une valeur du type.
+   Il existe deux exceptions, la première est la suivante : si la valeur est de
+   type <type>int</type> et que le type déclaré est <type>float</type>, alors
+   l'entier est converti en nombre à virgule flottante.
+   La seconde est la suivante : si la valeur et le type déclaré sont des types
+   <emphasis>scalar</emphasis> et que le mode de typage coercitif est actif
+   (valeur par défaut), la valeur peut être convertie en une valeur scalaire
+   acceptée.
+   Voir ci-dessous pour une description de ce comportement.
   </para>
 
   <warning>
    <simpara>
-    <link linkend="functions.internal">Les fonctions internes</link> convertissent automatiquement &null; en type scalaire,
+    <link linkend="functions.internal">Les fonctions internes</link>
+    contraigne automatiquement &null; aux types scalaires,
     ce comportement est <emphasis>OBSOLÈTE</emphasis> à partir de PHP 8.1.0.
    </simpara>
   </warning>
+
+  <sect3 xml:id="language.types.type-juggling.function.simple">
+   <title>Typage coercitif avec déclarations de type simples</title>
+   <itemizedlist>
+    <listitem>
+     <simpara>
+      Type de déclaration <type>bool</type> : valeur est interprétée comme <type>bool</type>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Type de déclaration <type>int</type> : valeur est interprétée comme <type>int</type>
+      si la conversion est bien-définie. C.-à-d. si la chaîne est
+      <link linkend="language.types.numeric-strings">numeric</link>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Type de déclaration <type>float</type> : valeur est interprétée comme <type>float</type>
+      si la conversion est bien-définie. C.-à-d. si la chaîne est
+      <link linkend="language.types.numeric-strings">numeric</link>.
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      Type de déclaration <type>string</type> : valeur est interprétée comme <type>string</type>.
+     </simpara>
+    </listitem>
+   </itemizedlist>
+  </sect3>
+
+  <sect3 xml:id="language.types.type-juggling.function.union">
+   <title>Typage coercitif avec unions de type</title>
+   <para>
+    Lorsque <literal>strict_types</literal> n’est pas activé, les
+    déclarations de type scalaire sont soumises à des contraintes de type
+    implicites limitées.
+    Si le type exact de la valeur ne fait pas partie de l’union, le type cible
+    est choisi dans l’ordre de préférence suivant :
+
+    <orderedlist>
+     <listitem>
+      <simpara>
+       <type>int</type>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <type>float</type>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <type>string</type>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <type>bool</type>
+      </simpara>
+     </listitem>
+    </orderedlist>
+
+    Si le type existe tous les deux dans l’union et que la valeur peut être
+    forcée au type sous la sémantique de vérification de type existante PHP,
+    alors le type est choisi. Sinon, le type suivant est essayé.
+   </para>
+
+   <caution>
+    <para>
+     À titre d’exception, si la valeur est une chaîne et que <type>int</type> et <type>float</type> font
+     tous deux partie de l’union, le type préféré est déterminé par la
+     sémantique « chaîne numérique ».
+     Par exemple, pour <literal>"42"</literal> <type>int</type> est choisi,
+     tandis que pour <literal>"42.0"</literal> <type>float</type> est choisi.
+    </para>
+   </caution>
+
+   <note>
+    <para>
+     Les types qui ne font pas partie de la liste de préférences ci-dessus ne
+     sont pas des cibles admissibles à la coercition implicite. En particulier,
+     aucune contrainte implicite aux types <literal>null</literal> et
+     <literal>false</literal> ne se produit.
+    </para>
+   </note>
+
+   <example>
+    <title>Exemple de types contraints à une partie type de l'union</title>
+    <programlisting>
+<![CDATA[
+// int|string
+42    --> 42          // exact type
+"42"  --> "42"        // exact type
+new ObjectWithToString --> "Result of __toString()"
+                      // object never compatible with int, fall back to string
+42.0  --> 42          // float compatible with int
+42.1  --> 42          // float compatible with int
+1e100 --> "1.0E+100"  // float too large for int type, fall back to string
+INF   --> "INF"       // float too large for int type, fall back to string
+true  --> 1           // bool compatible with int
+[]    --> TypeError   // array not compatible with int or string
+
+// int|float|bool
+"45"    --> 45        // int numeric string
+"45.0"  --> 45.0      // float numeric string
+
+"45X"   --> true      // not numeric string, fall back to bool
+""      --> false     // not numeric string, fall back to bool
+"X"     --> true      // not numeric string, fall back to bool
+[]      --> TypeError // array not compatible with int, float or bool
+]]>
+    </programlisting>
+   </example>
+  </sect3>
+
  </sect2>
 
  <sect2 xml:id="language.types.typecasting">
   <title>Cast de type</title>
 
   <simpara>
-   Le casting de type convertie la valeur à un type donnée en écrivant le type
+   Le casting de type converti la valeur à un type donnée en écrivant le type
    entre parenthèse avant la valeur à convertir.
   </simpara>
 
@@ -217,7 +320,7 @@ $bar = (bool) $foo;   // $bar is a boolean
     <literal>(binary)</literal> est un alias du cast <literal>(string)</literal>.
     <literal>(double)</literal> et <literal>(real)</literal> sont des alias du
     cast <literal>(float)</literal>.
-    Ces casts n'utilisent pas le nom de type canonique est ne sont pas recommandé.
+    Ces casts n'utilisent pas le nom de type canonique et ne sont pas recommandés.
    </para>
   </note>
 
@@ -239,9 +342,9 @@ $bar = (bool) $foo;   // $bar is a boolean
   <caution>
    <simpara>
     Le cast <literal>(binary)</literal> et le préfixe <literal>b</literal>
-    existe uniquement pour la compatibilité ascendante. Actuellement
-    <literal>(binary)</literal> et <literal>(string)</literal> sont identique,
-    mais ceci peut changer et ne devrait pas être invoqué.
+    existent uniquement pour la compatibilité ascendante. Actuellement
+    <literal>(binary)</literal> et <literal>(string)</literal> sont identiques,
+    mais ceci peut changer : vous ne devriez pas compter dessus.
    </simpara>
   </caution>
 
@@ -281,7 +384,7 @@ $binary = b"binary string";
   <!-- TODO Remove or move into string context section? -->
   <note>
    <simpara>
-    Au lieu de cast une variable en une <type>string</type>, il est également possible
+    Au lieu de transtyper une variable en une <type>string</type>, il est également possible
     d'entourer la variable de guillemets doubles.
    </simpara>
 
@@ -304,8 +407,8 @@ if ($fst === $str) {
   </note>
 
   <para>
-   Il n'est pas forcément évident ce qui se produira exactement lors d'un casting
-   entre certains types. Pour plus d'informations, voir ces sections :
+   Ce qui se produira exactement lors d'un transtypage entre certains types
+   n'est pas forcément évident. Pour plus d'informations, voir ces sections :
    <simplelist>
     <member><link linkend="language.types.boolean.casting">Convertir en boolean</link></member>
     <member><link linkend="language.types.integer.casting">Convertir en integer</link></member>
@@ -328,12 +431,6 @@ if ($fst === $str) {
     l'exemple suivant est valable pour toutes les versions de PHP :
    </simpara>
 
-   <para>
-    De plus, puisque PHP supporte l'indexation des chaînes de caractères
-    via des positions en utilisant la même syntaxe que pour les tableaux,
-    l'exemple suivant est vrai pour toutes les versions de PHP :
-   </para>
-
    <informalexample>
     <programlisting role="php">
 <![CDATA[
@@ -348,7 +445,7 @@ echo $a;       // bar
 
    <simpara>
     Voir la section sur l'<link linkend="language.types.string.substr">accès
-    aux chaînes par caractères</link> pour plus d'informations.
+    aux chaînes par caractère</link> pour plus d'informations.
    </simpara>
   </note>
  </simplesect>

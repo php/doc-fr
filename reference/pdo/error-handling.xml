@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: eae19eb5fe0f5bebcbce382ea7a505cedeb5a883 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 1508d46d0998c4843a22d28460bb6c4244290129 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="pdo.error-handling" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -86,24 +86,31 @@ $dsn = 'mysql:dbname=testdb;host=127.0.0.1';
 $user = 'dbuser';
 $password = 'dbpass';
 
-try {
-    $dbh = new PDO($dsn, $user, $password);
-    $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    echo 'Échec lors de la connexion : ' . $e->getMessage();
-}
+$dbh = new PDO($dsn, $user, $password);
+$dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+// Cela provoquera une PDOException (lorsque la table n'existe pas).
+$dbh->query("SELECT wrongcolumn FROM wrongtable");
 ?>
 ]]>
    </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Fatal error: Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'testdb.wrongtable' doesn't exist in /tmp/pdo_test.php:10
+Stack trace:
+#0 /tmp/pdo_test.php(10): PDO->query('SELECT wrongcol...')
+#1 {main}
+  thrown in /tmp/pdo_test.php on line 10
+]]>
+   </screen>
   </example>
  </para>
  <note>
   <para>
-   <methodname>PDO::__construct</methodname> va toujours lancer une exception
-   <classname>PDOException</classname> si la connexion échoue suivant la configuration
-   de <constant>PDO::ATTR_ERRMODE</constant>. Les exceptions non attrappées deviennent
-   des erreurs fatales.
+   <methodname>PDO::__construct</methodname> lance toujours une exception
+   <classname>PDOException</classname> si la connexion échoue, quelle que soit la configuration
+   de <constant>PDO::ATTR_ERRMODE</constant>.
   </para>
  </note>
  <para>
@@ -116,17 +123,7 @@ $dsn = 'mysql:dbname=test;host=127.0.0.1';
 $user = 'googleguy';
 $password = 'googleguy';
 
-/*
-    L'utilisation des blocs try/catch autour du constructeur est toujours valide
-    même si nous définissons le ERRMODE à WARNING sachant que PDO::__construct
-    va toujours lancer une exception PDOException si la connexion échoue.
-*/
-try {
-    $dbh = new PDO($dsn, $user, $password, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_WARNING));
-} catch (PDOException $e) {
-    echo 'Échec de la connexion : ' . $e->getMessage();
-    exit;
-}
+$dbh = new PDO($dsn, $user, $password, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_WARNING));
 
 // Ceci fera que PDO lancera une erreur de niveau E_WARNING au lieu d'une exception (lorsque la table n'existe pas)
 $dbh->query("SELECT wrongcolumn FROM wrongtable");
@@ -137,7 +134,7 @@ $dbh->query("SELECT wrongcolumn FROM wrongtable");
     <screen>
 <![CDATA[
 Warning: PDO::query(): SQLSTATE[42S02]: Base table or view not found: 1146 Table 'test.wrongtable' doesn't exist in
-/tmp/pdo_test.php on line 18
+/tmp/pdo_test.php on line 9
 ]]>
     </screen>
   </example>

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 926842882dbed9c74ab7b951e78db96d42ee43ea Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 4f5e2b22575131fa5e9c3004b1c874e1acb06573 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 <refentry xml:id="domdocument.registernodeclass" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -9,7 +8,7 @@
  </refnamediv>
  <refsect1 role="description">
   &reftitle.description;
-  <methodsynopsis>
+  <methodsynopsis role="DOMDocument">
    <modifier>public</modifier> <type>bool</type><methodname>DOMDocument::registerNodeClass</methodname>
    <methodparam><type>string</type><parameter>baseClass</parameter></methodparam>
    <methodparam><type class="union"><type>string</type><type>null</type></type><parameter>extendedClass</parameter></methodparam>
@@ -133,7 +132,6 @@ Text dans un fils
 ]]>
     </screen>
    </example>
-
   </para>
   <para>
    <example>
@@ -141,34 +139,44 @@ Text dans un fils
     <para>
      Lors de l'instanciation d'un <classname>DOMDocument</classname>
      personnalisé, la propriété <varname>ownerDocument</varname> se réfère
-     à la classe instanciée, signifiant qu'il n'est pas nécessaire (et en fait,
-     par possible) d'utiliser
-     <function>DOMDocument::registerNodeClass</function> avec
-     <classname>DOMDocument</classname>
+     à la classe instanciée. Cependant, si toutes les références à cette classe
+     sont supprimées, elle sera détruite et une nouvelle instance de
+     <classname>DOMDocument</classname> sera créée à la place. Pour cette raison,
+     vous pouvez utiliser la méthode <function>DOMDocument::registerNodeClass</function>
+     avec <classname>DOMDocument</classname>
     </para>
     <programlisting role="php">
 <![CDATA[
 <?php
-class myDOMDocument extends DOMDocument {
+class MyDOMDocument extends DOMDocument {
 }
 
-class myOtherDOMDocument extends DOMDocument {
+class MyOtherDOMDocument extends DOMDocument {
 }
 
-// Création d'un document myDOMDocument avec quelques fragments XML
-$doc = new myDOMDocument;
+// Création d'un document MyDOMDocument avec quelques fragments XML
+$doc = new MyDOMDocument;
 $doc->loadXML("<root><element><child>texte dans un fils</child></element></root>");
 
 $child = $doc->getElementsByTagName("child")->item(0);
 
-// Le propriétaire courant du nœud est myDOMDocument
+// Le propriétaire courant du nœud est MyDOMDocument
+var_dump(get_class($child->ownerDocument));
+// MyDOMDocument est détruit
+unset($doc);
+// Et une nouvelle instance de DOMDocument est créée
 var_dump(get_class($child->ownerDocument));
 
-// Importation d'un nœud depuis myDOMDocument
-$newdoc = new myOtherDOMDocument;
+// Importation d'un nœud depuis MyDOMDocument
+$newdoc = new MyOtherDOMDocument;
 $child = $newdoc->importNode($child);
 
-// Le nouveau propriétaire du nœud a changé en myOtherDOMDocument
+// Enregistre un DOMDocument personnalisé
+$newdoc->registerNodeClass("DOMDocument", "MyOtherDOMDocument");
+
+var_dump(get_class($child->ownerDocument));
+unset($doc);
+// Un nouveau MyOtherDOMDocument est créé
 var_dump(get_class($child->ownerDocument));
 ?>
 ]]>
@@ -176,8 +184,10 @@ var_dump(get_class($child->ownerDocument));
     &example.outputs;
     <screen role="xml">
 <![CDATA[
-string(13) "myDOMDocument"
-string(18) "myOtherDOMDocument"
+string(13) "MyDOMDocument"
+string(11) "DOMDocument"
+string(18) "MyOtherDOMDocument"
+string(18) "MyOtherDOMDocument"
 ]]>
     </screen>
    </example>
