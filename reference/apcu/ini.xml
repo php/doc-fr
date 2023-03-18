@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 2b5c6c13ce31e8da096cca92b92e11fd4087973b Maintainer: moradZahid Status: ready -->
+<!-- EN-Revision: e2695046bf46e79e8ad0fcd2c5dab2a88ebafa2f Maintainer: moradZahid Status: ready -->
 <!-- Reviewed: no -->
 <section xml:id="apcu.configuration" xmlns="http://docbook.org/ns/docbook">
  &reftitle.runtime;
@@ -19,15 +19,24 @@
   l'extension, peut être copié dans le document root et exécuté par le 
   navigateur. Ce script fournit une analyse détaillée du fonctionnement interne
   de APCu. Si la bibliothèque GD est activée dans PHP alors le script peut afficher
-  des graphiques pertinents. Par exemple, si APCu est en fonctionnement, le nombre
-  <literal>Cache full count</literal> (sur la gauche) indique le nombre de fois que  
-  le cache a atteint sa capacité maximale et a été obligé de supprimer toute entrée
-  qui n'a pas été appelée dans les dernières <literal>apc.ttl</literal> secondes. 
-  Ce nombre doit être le plus petit possible pour une configuration optimale.
-  Si le cache est constamment rempli, il sera obligé de libérer de l'espace ce qui 
-  aura pour conséquence de diminuer ses performances.  
-  La méthode la plus simple pour minimiser ce nombre est d'allouer plus de mémoire à
-  APCu.
+  des graphiques pertinents.
+ </para>
+ <para>
+  Si APCu fonctionne, le nombre de <literal>Cache full count</literal> (à gauche)
+  affichera le nombre de fois où le cache a atteint sa capacité maximale et a dû
+  évacuer des entrées pour libérer de la mémoire. Pendant l'évacuation, si
+  <literal>apc.ttl</literal> a été spécifié, APCu essaiera d'abord de supprimer les
+  entrées expirées, c'est-à-dire les entrées dont le TTL a expiré ou les entrées
+  qui n'ont pas de TTL défini et qui n'ont pas été consultées au cours des dernières
+  <literal>apc.ttl</literal> secondes. Si <literal>apc.ttl</literal> n'a pas été
+  défini ou si la suppression des entrées expirées n'a pas libéré suffisamment
+  d'espace, APCu effacera l'intégralité du cache.
+ </para>
+ <para>
+  Le nombre d'évictions devrait être minimal dans un cache bien configuré. Si le
+  cache est constamment rempli et donc libéré de force, le brassage résultant aura
+  des effets préjudiciables sur les performances du script. Le moyen le plus simple
+  de réduire ce nombre est d'allouer plus de mémoire à APCu.
  </para>
  <para>
   Lorsque APCu est compilé avec mmap (Memory Mapping), il n'utilisera qu'un seul
@@ -202,16 +211,13 @@
     </term>
     <listitem>
      <para>
-      La durée en seconde qu'une entrée de cache est autorisée à
-      rester inactive dans son emplacement, au cas où cet emplacement
-      est réclamée par une autre entrée. Laisser à zéro cette valeur 
-      signifie que potentiellement, le cache d'APC pourrait être
-      rempli par des entrées jamais appelées alors que de nouvelles
-      entrées ne seront pas mises en cache. Lorsqu'un événement signalant le manque 
-      de mémoire disponible se produit, le cache sera complètement effacé si 
-      <literal>apc.ttl</literal> est égal à 0. Sinon, lorsque 
-      <literal>apc.ttl</literal> est strictement supérieur à 0, APC tentera 
-      de retirer les entrées dont la durée de vie a expiré.
+      Considérer que les entrées de cache sans TTL explicite sont expirées si elles
+      n'ont pas été consultées depuis autant de secondes. En effet, cela permet à ces
+      entrées d'être opportunément supprimées lors d'une insertion dans le cache,
+      ou avant une suppression complète. Notez que parce que la suppression est
+      opportuniste, les entrées peuvent toujours être lisibles même si si elles sont
+      plus anciennes que <literal>apc.ttl</literal> secondes. Ce paramètre n'a aucun
+      effet sur les entrées de cache pour lesquelles un un TTL explicite est spécifié.
      </para>
     </listitem>
    </varlistentry>
