@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 78d273c6d4b08d0ee04b69bc3a9230a39b99d60f Maintainer: pierrick Status: ready -->
+<!-- Reviewed: yes -->
+
+<sect1 xml:id="control-structures.match" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>match</title>
+ <?phpdoc print-version-for="match"?>
+ <para>
+  L'expression <literal>match</literal> permet d'effectuer une évaluation basée sur le
+  contrôle d'identité d'une valeur.
+  De la même manière qu'une instruction <literal>switch</literal>, une expression
+  <literal>match</literal> a une expression sujet qui est
+  comparée à plusieurs alternatives. Contrairement à <literal>switch</literal>,
+  elle s'évalue à une valeur, comme les expressions ternaires.
+  Contrairement à <literal>switch</literal>, la comparaison est une vérification d'identité
+  (<code>===</code>) plutôt qu'un contrôle d'égalité faible (<code>==</code>).
+  Les expressions Match sont disponibles depuis PHP 8.0.0.
+ </para>
+
+ <example>
+  <title>Structure d'une expression <literal>match</literal> </title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+$return_value = match (subject_expression) {
+    single_conditional_expression => return_expression,
+    conditional_expression1, conditional_expression2 => return_expression,
+};
+?>
+]]>
+  </programlisting>
+
+   <example>
+  <title>Utilisation de base des expressions <literal>match</literal></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$food = 'cake';
+
+$return_value = match ($food) {
+    'apple' => 'This food is an apple',
+    'bar' => 'This food is a bar',
+    'cake' => 'This food is a cake',
+};
+
+var_dump($return_value);
+?>
+]]>
+  </programlisting>
+  &example.outputs;
+   <screen>
+<![CDATA[
+string(19) "This food is a cake"
+]]>
+   </screen>
+  </example>
+
+  <note>
+   <simpara>
+    Le résultat d'une expression <literal>match</literal> n'a pas besoin d'être utilisé.
+   </simpara>
+  </note>
+  <note>
+   <simpara>
+    Une expression <literal>match</literal> <emphasis>doit</emphasis>
+    être terminée par un point-virgule <literal>;</literal>.
+   </simpara>
+  </note>
+ </example>
+
+ <para>
+  L'expression <literal>match</literal> est similaire à une instruction
+  <literal>switch</literal> mais présente quelques différences essentielles:
+
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     Une expression <literal>match</literal> compare les valeurs de manière stricte (<code>===</code>)
+     et non de manière faible comme le fait l'instruction switch.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Une expression <literal>match</literal> renvoie une valeur.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Les expressions <literal>match</literal> ne passent pas aux cas suivants comme le font les
+     les instructions <literal>switch</literal>.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Une expression <literal>match</literal> doit être exhaustive.
+    </simpara>
+   </listitem>
+  </itemizedlist>
+ </para>
+
+ <para>
+  Comme les instructions <literal>switch</literal>, les expressions <literal>match</literal>
+  sont exécutées bras par bras. Au début, aucun code n'est exécuté.
+  Les expressions conditionnelles ne sont évaluées que si toutes les expressions conditionnelles
+  précédentes ne correspondent pas à l'expression de l'objet.
+  Seule l'expression de retour correspondant à l'expression conditionnelle correspondante sera évaluée.
+  Par exemple :
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$result = match ($x) {
+    foo() => ...,
+    $this->bar() => ..., // $this->bar() n'est pas appelé si foo() === $x
+    $this->baz => beep(), // beep() n'est pas appelé sauf si $x === $this->baz
+    // etc.
+};
+?>
+]]>
+   </programlisting>
+  </informalexample>
+ </para>
+
+ <para>
+  Les bras de l'expression de <literal>match</literal> peuvent contenir plusieurs expressions
+  séparées par une virgule.  Il s'agit d'un OU logique et d'une abréviation pour plusieurs bras
+  avec le même côté droit.
+ </para>
+ <para>
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$result = match ($x) {
+    // Ce bras
+    $a, $b, $c => 5,
+    // Est équivalent à ces trois bras :
+    $a => 5,
+    $b => 5,
+    $c => 5,
+};
+?>
+]]>
+   </programlisting>
+  </informalexample>
+ </para>
+ <para>
+  Le motif <literal>default</literal> est un cas particulier.
+  Ce motif correspond à tout ce qui n'a pas été recherché précédemment.
+  Par exemple :
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$expressionResult = match ($condition) {
+    1, 2 => foo(),
+    3, 4 => bar(),
+    default => baz(),
+};
+?>
+]]>
+   </programlisting>
+  </informalexample>
+  <note>
+   <simpara>
+    L'utilisation de plusieurs modèles par défaut entraînera une erreur
+   <constant>E_FATAL_ERROR</constant>.
+   </simpara>
+  </note>
+ </para>
+
+ <para>
+  Une expression <literal>match</literal> doit être exhaustive. Si l'expression
+  n'est traitée par aucun bras de correspondance, une erreur
+ <classname>UnhandledMatchError</classname> est lancée.
+ </para>
+
+ <example>
+ <title>Exemple d'une expression match non gérée</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+$condition = 5;
+
+try {
+    match ($condition) {
+        1, 2 => foo(),
+        3, 4 => bar(),
+    };
+} catch (\UnhandledMatchError $e) {
+    var_dump($e);
+}
+?>
+]]>
+  </programlisting>
+  &example.outputs;
+  <screen>
+<![CDATA[
+object(UnhandledMatchError)#1 (7) {
+  ["message":protected]=>
+  string(33) "Unhandled match value of type int"
+  ["string":"Error":private]=>
+  string(0) ""
+  ["code":protected]=>
+  int(0)
+  ["file":protected]=>
+  string(9) "/in/ICgGK"
+  ["line":protected]=>
+  int(6)
+  ["trace":"Error":private]=>
+  array(0) {
+  }
+  ["previous":"Error":private]=>
+  NULL
+}
+]]>
+  </screen>
+ </example>
+
+ <sect2>
+  <title>Utilisation d'expressions match pour gérer les contrôles de non-identité</title>
+  <para>
+   Il est possible d'utiliser une expression <literal>match</literal> pour traiter
+   les cas conditionnels de non-identité en utilisant <code>true</code> comme expression sujet.
+  </para>
+
+  <example>
+  <title>Utilisation d'une expression match généralisée pour effectuer des branchements sur des plages d'entiers</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$age = 23;
+
+$result = match (true) {
+    $age >= 65 => 'senior',
+    $age >= 25 => 'adult',
+    $age >= 18 => 'young adult',
+    default => 'kid',
+};
+
+var_dump($result);
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+string(11) "young adult"
+]]>
+   </screen>
+  </example>
+
+  <example>
+  <title>Utilisation d'une expression match généralisée pour effectuer des branchements sur le contenu d'une chaîne de caractères</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$text = 'Bienvenue chez nous';
+
+$result = match (true) {
+    str_contains($text, 'Welcome') || str_contains($text, 'Hello') => 'en',
+    str_contains($text, 'Bienvenue') || str_contains($text, 'Bonjour') => 'fr',
+    // ...
+};
+
+var_dump($result);
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+string(2) "fr"
+]]>
+   </screen>
+  </example>
+ </sect2>
+</sect1>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
