@@ -1,0 +1,568 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 9cc4767b2ddf65c4ed592c9deb818cbb2c9def7b Maintainer: pierrick Status: ready -->
+<!-- Reviewed: no -->
+<chapter xml:id="features.dtrace" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>DTrace Traçage dynamique</title>
+
+ <sect1 xml:id="features.dtrace.introduction">
+  <title>Introduction à PHP et DTrace</title>
+
+  <para>
+   DTrace est un framework de traçage toujours disponible, à faible surcharge,
+   disponible sur plusieurs plateformes, incluant Solaris, macOS,
+   Oracle Linux et BSD.  DTrace peut tracer le comportement du système d'exploitation
+   et l'exécution des programmes utilisateurs. Il peut afficher les valeurs des arguments et être
+   utilisé pour déduire des statistiques de performance.  Les sondes sont contrôlées par des scripts
+   créés par l'utilisateur et écrits dans le langage de script DTrace D. Cela
+   permet une analyse efficace des points de données.
+  </para>
+
+  <para>
+   Les sondes PHP qui ne sont pas activement surveillées par le script DTrace
+   D de l'utilisateur ne contiennent pas de code instrumenté, il n'y a donc
+   pas de dégradation des performances lors de l'exécution normale de l'application.
+   Les sondes qui sont surveillées ont un coût de fonctionnement assez faible pour
+   généralement permettre la surveillance de DTrace sur les systèmes de production.
+  </para>
+
+  <para>
+   PHP incorpore des sondes de "Traçage Statique Défini par l'Utilisateur" (USDT)
+   qui sont déclenchées au moment de l'exécution. Par exemple, lorsqu'un script D
+   surveille la sonde d'<literal>function-entry</literal> de PHP, alors,
+   chaque fois qu'une fonction du script PHP est appelée, cette sonde est déclenchée et
+   le code d'action du script D associé est exécuté.  Ce code d'action
+   pourrait, par exemple, imprimer les arguments de la sonde tels que l'emplacement du fichier
+   source de la fonction PHP. L'action peut également regrouper des données
+   comme le nombre de fois où chaque fonction est appelée.
+  </para>
+
+  <para>
+   Seules les sondes PHP USDT sont décrites ici.  Référez-vous à la documentation externe
+   générale et spécifique au système d'exploitation pour voir comment
+   DTrace peut être utilisé pour tracer des fonctions arbitraires, et comment il peut être utilisé
+   pour tracer le comportement du système d'exploitation. Notez que toutes les fonctionnalités
+   de DTrace ne sont pas disponibles dans toutes les implémentations de DTrace.
+  </para>
+
+  <para>
+   Les sondes statiques DTrace sont incluses à partir de PHP 5.4.  Avant cela, elles
+   étaient disponibles via une extension <link xmlns="http://docbook.org/ns/docbook"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xlink:href="&url.pecl;">PECL</link>, qui est maintenant
+   obsolète.
+  </para>
+
+  <para>
+   Les sondes DTrace statiques dans PHP peuvent alternativement être utilisées avec la fonction
+   SystemTap sur certaines distributions Linux.
+  </para>
+ </sect1>
+
+ <sect1 xml:id="features.dtrace.dtrace">
+  <title>Utiliser PHP et DTrace</title>
+  <para>
+   PHP peut être configuré avec les sondes statiques DTrace sur les plateformes
+   qui supportent le traçage dynamique DTrace.
+  </para>
+
+  <sect2 xml:id="features.dtrace.install">
+   <title>Configurer PHP pour les sondes statiques de DTrace</title>
+
+   <para>
+    Référez-vous à la documentation spécifique de la plateforme externe pour activer
+    le support de DTrace du système d'exploitation DTrace. Par exemple, sur Oracle Linux
+    démarrez un noyau UEK3 et faites :
+
+    <informalexample>
+     <programlisting role="php">
+<![CDATA[
+# modprobe fasttrap
+# chmod 666 /dev/dtrace/helper
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+   <para>
+    Au lieu d'utiliser <literal>chmod</literal>, vous pouvez utiliser une règle de paquetage
+    ACL pour limiter l'accès au périphérique à un utilisateur spécifique.
+   </para>
+
+   <para>
+    Construire PHP avec le paramètre de configuration <literal>--enable-dtrace</literal>:
+    <informalexample>
+     <programlisting role="php">
+<![CDATA[
+# ./configure --enable-dtrace ...
+# make
+# make install
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+   <para>
+    Cela permet d'activer les sondes statiques dans le cœur de PHP.  Toutes les extensions PHP
+    qui fournissent leurs propres sondes doivent être construites séparément en tant qu'extensions
+    partagées.
+   </para>
+  </sect2>
+
+  <sect2 xml:id="features.dtrace.static-probes">
+  <title>Sondes statiques DTrace dans le cœur de PHP</title>
+  <table>
+   <title>Les sondes statiques suivantes sont disponibles dans PHP</title>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>Nom de la sonde</entry>
+      <entry>Description de la sonde</entry>
+      <entry>Arguments de la sonde</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry><literal>request-startup</literal></entry>
+      <entry>Se déclenche lorsqu'une requête démarre.</entry>
+      <entry>char *<varname>file</varname>, char *<varname>request_uri</varname>, char *<varname>request_method</varname></entry>
+     </row>
+     <row>
+      <entry><literal>request-shutdown</literal></entry>
+      <entry>Se déclenche lorsqu'une requête s'arrête.</entry>
+      <entry>char *<varname>file</varname>, char *<varname>request_uri</varname>, char *<varname>request_method</varname></entry>
+     </row>
+     <row>
+      <entry><literal>compile-file-entry</literal></entry>
+      <entry>Se déclenche lorsque la compilation d'un script commence.</entry>
+      <entry>char *<varname>compile_file</varname>, char *<varname>compile_file_translated</varname></entry>
+     </row>
+     <row>
+      <entry><literal>compile-file-return</literal></entry>
+      <entry>Se déclenche lorsque la compilation d'un script se termine.</entry>
+      <entry>char *<varname>compile_file</varname>, char *<varname>compile_file_translated</varname></entry>
+     </row>
+     <row>
+      <entry><literal>execute-entry</literal></entry>
+      <entry>Se déclenche lorsqu'un tableau d'opcodes doit être exécuté.
+      Par exemple, il se déclenche lors d'appels de fonction, d'inclusions et de reprises de
+      générateur.</entry>
+      <entry>char *<varname>request_file</varname>, int <varname>lineno</varname></entry>
+     </row>
+     <row>
+      <entry><literal>execute-return</literal></entry>
+      <entry>Se déclenche après l'exécution d'un tableau d'opcodes.</entry>
+      <entry>char *<varname>request_file</varname>, int <varname>lineno</varname></entry>
+     </row>
+     <row>
+      <entry><literal>function-entry</literal></entry>
+      <entry>Se déclenche lorsque le moteur de PHP entre dans une fonction PHP ou un appel de méthode.</entry>
+      <entry>char *<varname>function_name</varname>, char *<varname>request_file</varname>, int <varname>lineno</varname>, char *<varname>classname</varname>, char *<varname>scope</varname></entry>
+     </row>
+     <row>
+      <entry><literal>function-return</literal></entry>
+      <entry>Se déclenche lorsque le moteur PHP revient d'une fonction PHP ou d'un appel de méthode.</entry>
+      <entry>char *<varname>function_name</varname>, char *<varname>request_file</varname>, int <varname>lineno</varname>, char *<varname>classname</varname>, char *<varname>scope</varname></entry>
+     </row>
+     <row>
+      <entry><literal>exception-thrown</literal></entry>
+      <entry>Se déclenche lorsqu'une exception est émise.</entry>
+      <entry>char *<varname>classname</varname></entry>
+     </row>
+     <row>
+      <entry><literal>exception-caught</literal></entry>
+      <entry>Se déclenche lorsqu'une exception est attrapée.</entry>
+      <entry>char *<varname>classname</varname></entry>
+     </row>
+     <row>
+      <entry><literal>error</literal></entry>
+      <entry>Se déclenche lorsqu'une erreur survient, quel que soit le niveau de <link linkend="ini.error-reporting">error_reporting</link>.</entry>
+      <entry>char *<varname>errormsg</varname>, char *<varname>request_file</varname>, int <varname>lineno</varname></entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </table>
+  <para>
+   Les extensions PHP peuvent également disposer de sondes statiques supplémentaires.
+  </para>
+  </sect2>
+
+  <sect2 xml:id="features.dtrace.list-probes">
+   <title>Liste des sondes statiques DTrace de PHP</title>
+   <para>
+    Pour lister les sondes disponibles, démarrez un processus PHP puis exécutez :
+    <informalexample>
+     <programlisting>
+<![CDATA[
+# dtrace -l
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+
+   <para>
+    Le résultat sera similaire à celui qui suit :
+    <informalexample>
+     <programlisting>
+<![CDATA[
+   ID   PROVIDER            MODULE                          FUNCTION NAME
+   [ . . . ]
+    4   php15271               php               dtrace_compile_file compile-file-entry
+    5   php15271               php               dtrace_compile_file compile-file-return
+    6   php15271               php                        zend_error error
+    7   php15271               php  ZEND_CATCH_SPEC_CONST_CV_HANDLER exception-caught
+    8   php15271               php     zend_throw_exception_internal exception-thrown
+    9   php15271               php                 dtrace_execute_ex execute-entry
+   10   php15271               php           dtrace_execute_internal execute-entry
+   11   php15271               php                 dtrace_execute_ex execute-return
+   12   php15271               php           dtrace_execute_internal execute-return
+   13   php15271               php                 dtrace_execute_ex function-entry
+   14   php15271               php                 dtrace_execute_ex function-return
+   15   php15271               php              php_request_shutdown request-shutdown
+   16   php15271               php               php_request_startup request-startup
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+
+   <para>
+    Les valeurs de la colonne Provider sont <literal>php</literal> et
+    l'identifiant du processus PHP en cours d'exécution.
+   </para>
+
+   <para>
+    Si le serveur web Apache est en cours d'exécution, le nom du module peut être,
+    par exemple, <filename>libphp5.so</filename>, et il y aurait
+    plusieurs blocs de listes, un par processus Apache en cours d'exécution.
+   </para>
+
+   <para>
+    La colonne Fonction fait référence à l'implémentation interne en C
+    de PHP, où chaque fournisseur est situé.
+   </para>
+
+   <para>
+    Si un processus PHP n'est pas en cours d'exécution, aucune sonde PHP ne sera affichée.
+   </para>
+  </sect2>
+
+  <sect2 xml:id="features.dtrace.examples">
+   <title>DTrace avec un exemple PHP</title>
+   <para>
+    Cet exemple montre les bases du langage de script DTrace D.
+    <example>
+     <title><filename>all_probes.d</filename> pour tracer toutes les sondes statiques PHP avec DTrace</title>
+     <programlisting>
+<![CDATA[
+#!/usr/sbin/dtrace -Zs
+
+#pragma D option quiet
+
+php*:::compile-file-entry
+{
+    printf("PHP compile-file-entry\n");
+    printf("  compile_file              %s\n", copyinstr(arg0));
+    printf("  compile_file_translated   %s\n", copyinstr(arg1));
+}
+
+php*:::compile-file-return
+{
+    printf("PHP compile-file-return\n");
+    printf("  compile_file              %s\n", copyinstr(arg0));
+    printf("  compile_file_translated   %s\n", copyinstr(arg1));
+}
+
+php*:::error
+{
+    printf("PHP error\n");
+    printf("  errormsg                  %s\n", copyinstr(arg0));
+    printf("  request_file              %s\n", copyinstr(arg1));
+    printf("  lineno                    %d\n", (int)arg2);
+}
+
+php*:::exception-caught
+{
+    printf("PHP exception-caught\n");
+    printf("  classname                 %s\n", copyinstr(arg0));
+}
+
+php*:::exception-thrown
+{
+    printf("PHP exception-thrown\n");
+    printf("  classname                 %s\n", copyinstr(arg0));
+}
+
+php*:::execute-entry
+{
+    printf("PHP execute-entry\n");
+    printf("  request_file              %s\n", copyinstr(arg0));
+    printf("  lineno                    %d\n", (int)arg1);
+}
+
+php*:::execute-return
+{
+    printf("PHP execute-return\n");
+    printf("  request_file              %s\n", copyinstr(arg0));
+    printf("  lineno                    %d\n", (int)arg1);
+}
+
+php*:::function-entry
+{
+    printf("PHP function-entry\n");
+    printf("  function_name             %s\n", copyinstr(arg0));
+    printf("  request_file              %s\n", copyinstr(arg1));
+    printf("  lineno                    %d\n", (int)arg2);
+    printf("  classname                 %s\n", copyinstr(arg3));
+    printf("  scope                     %s\n", copyinstr(arg4));
+}
+
+php*:::function-return
+{
+    printf("PHP function-return\n");
+    printf("  function_name             %s\n", copyinstr(arg0));
+    printf("  request_file              %s\n", copyinstr(arg1));
+    printf("  lineno                    %d\n", (int)arg2);
+    printf("  classname                 %s\n", copyinstr(arg3));
+    printf("  scope                     %s\n", copyinstr(arg4));
+}
+
+php*:::request-shutdown
+{
+    printf("PHP request-shutdown\n");
+    printf("  file                      %s\n", copyinstr(arg0));
+    printf("  request_uri               %s\n", copyinstr(arg1));
+    printf("  request_method            %s\n", copyinstr(arg2));
+}
+
+php*:::request-startup
+{
+    printf("PHP request-startup\n");
+    printf("  file                      %s\n", copyinstr(arg0));
+    printf("  request_uri               %s\n", copyinstr(arg1));
+    printf("  request_method            %s\n", copyinstr(arg2));
+}
+]]>
+     </programlisting>
+    </example>
+   </para>
+
+   <para>
+    Ce script utilise l'option <literal>-Z</literal> de
+    <filename>dtrace</filename>, ce qui lui permet d'être exécuté lorsqu'il n'y
+    aucun processus PHP en cours d'execution.  Si cette option était omise, le script
+    se terminerait immédiatement parce qu'il sait qu'aucune des sondes à
+    surveiller n'existe.
+   </para>
+
+   <para>
+    Le script trace tous les points de sonde statiques de PHP pendant la
+    durée d'un script PHP en cours d'exécution. Exécutez le script D :
+    <informalexample>
+     <programlisting>
+<![CDATA[
+# ./all_probes.d
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+
+   <para>
+    Exécutez un script ou une application PHP.  Le script D de surveillance
+    affichera les arguments de chaque sonde au fur et à mesure qu'elle se déclenche.
+   </para>
+
+   <para>
+    Lorsque la surveillance est terminée, le script D peut être interrompu par une commande
+   <literal>^C</literal>.
+   </para>
+
+   <para>
+    Sur les machines multi-CPU, l'ordre des sondes peut ne pas être séquentiel.
+    Cela dépend du CPU qui a traité les sondes,
+    et de la façon dont les threads migrent d'un CPU à l'autre.  L'affichage des horodatages des sondes
+    permet de réduire la confusion, par exemple :
+    <informalexample>
+     <programlisting>
+<![CDATA[
+php*:::function-entry
+{
+      printf("%lld: PHP function-entry ", walltimestamp);
+      [ . . .]
+}
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+  </sect2>
+
+  <sect2 xml:id="features.dtrace.references">
+   <title>Voir aussi</title>
+   <simplelist>
+    <member><link linkend="oci8.dtrace">OCI8 et le traçage dynamique DTrace</link></member>
+   </simplelist>
+  </sect2>
+ </sect1>
+
+ <sect1 xml:id="features.dtrace.systemtap">
+  <title>Utiliser SystemTap avec les sondes statiques DTrace de PHP</title>
+  <para>
+   Sur certaines distributions Linux, l'utilitaire de traçage SystemTap peut
+   être utilisé pour tracer les sondes statiques DTrace de PHP.  Ceci est disponible avec
+   PHP 5.4.20 et PHP 5.5.
+  </para>
+
+  <sect2 xml:id="features.dtrace.systemtap-install">
+   <title>Installer PHP avec SystemTap</title>
+
+   <para>
+    Installez le paquet de développement SDT de SystemTap:
+    <informalexample>
+     <programlisting role="shell">
+<![CDATA[
+# yum install systemtap-sdt-devel
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+
+   <para>
+    Installer PHP avec les sondes DTrace activées:
+    <informalexample>
+     <programlisting role="shell">
+<![CDATA[
+# ./configure --enable-dtrace ...
+# make
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+  </sect2>
+
+  <sect2 xml:id="features.dtrace.systemtap-list-probes">
+   <title>Liste des sondes statiques avec SystemTap</title>
+
+   <para>
+    Les sondes statiques dans PHP peuvent être listées en utilisant <filename>stap</filename>:
+    <informalexample>
+     <programlisting>
+<![CDATA[
+# stap -l 'process.provider("php").mark("*")' -c 'sapi/cli/php -i'
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+
+   <para>
+    Cela produit:
+    <informalexample>
+     <programlisting>
+<![CDATA[
+process("sapi/cli/php").provider("php").mark("compile__file__entry")
+process("sapi/cli/php").provider("php").mark("compile__file__return")
+process("sapi/cli/php").provider("php").mark("error")
+process("sapi/cli/php").provider("php").mark("exception__caught")
+process("sapi/cli/php").provider("php").mark("exception__thrown")
+process("sapi/cli/php").provider("php").mark("execute__entry")
+process("sapi/cli/php").provider("php").mark("execute__return")
+process("sapi/cli/php").provider("php").mark("function__entry")
+process("sapi/cli/php").provider("php").mark("function__return")
+process("sapi/cli/php").provider("php").mark("request__shutdown")
+process("sapi/cli/php").provider("php").mark("request__startup")
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+  </sect2>
+
+  <sect2 xml:id="features.dtrace.systemtap-examples">
+   <title>SystemTap avec un Exemple PHP</title>
+
+   <para>
+    <example>
+     <title><filename>all_probes.stp</filename> pour tracer toutes les sondes statiques PHP avec SystemTap</title>
+     <programlisting role="shell">
+<![CDATA[
+probe process("sapi/cli/php").provider("php").mark("compile__file__entry") {
+    printf("Probe compile__file__entry\n");
+    printf("  compile_file %s\n", user_string($arg1));
+    printf("  compile_file_translated %s\n", user_string($arg2));
+}
+probe process("sapi/cli/php").provider("php").mark("compile__file__return") {
+    printf("Probe compile__file__return\n");
+    printf("  compile_file %s\n", user_string($arg1));
+    printf("  compile_file_translated %s\n", user_string($arg2));
+}
+probe process("sapi/cli/php").provider("php").mark("error") {
+    printf("Probe error\n");
+    printf("  errormsg %s\n", user_string($arg1));
+    printf("  request_file %s\n", user_string($arg2));
+    printf("  lineno %d\n", $arg3);
+}
+probe process("sapi/cli/php").provider("php").mark("exception__caught") {
+    printf("Probe exception__caught\n");
+    printf("  classname %s\n", user_string($arg1));
+}
+probe process("sapi/cli/php").provider("php").mark("exception__thrown") {
+    printf("Probe exception__thrown\n");
+    printf("  classname %s\n", user_string($arg1));
+}
+probe process("sapi/cli/php").provider("php").mark("execute__entry") {
+    printf("Probe execute__entry\n");
+    printf("  request_file %s\n", user_string($arg1));
+    printf("  lineno %d\n", $arg2);
+}
+probe process("sapi/cli/php").provider("php").mark("execute__return") {
+    printf("Probe execute__return\n");
+    printf("  request_file %s\n", user_string($arg1));
+    printf("  lineno %d\n", $arg2);
+}
+probe process("sapi/cli/php").provider("php").mark("function__entry") {
+    printf("Probe function__entry\n");
+    printf("  function_name %s\n", user_string($arg1));
+    printf("  request_file %s\n", user_string($arg2));
+    printf("  lineno %d\n", $arg3);
+    printf("  classname %s\n", user_string($arg4));
+    printf("  scope %s\n", user_string($arg5));
+}
+probe process("sapi/cli/php").provider("php").mark("function__return") {
+    printf("Probe function__return: %s\n", user_string($arg1));
+    printf(" function_name %s\n", user_string($arg1));
+    printf("  request_file %s\n", user_string($arg2));
+    printf("  lineno %d\n", $arg3);
+    printf("  classname %s\n", user_string($arg4));
+    printf("  scope %s\n", user_string($arg5));
+}
+probe process("sapi/cli/php").provider("php").mark("request__shutdown") {
+    printf("Probe request__shutdown\n");
+    printf("  file %s\n", user_string($arg1));
+    printf("  request_uri %s\n", user_string($arg2));
+    printf("  request_method %s\n", user_string($arg3));
+}
+probe process("sapi/cli/php").provider("php").mark("request__startup") {
+    printf("Probe request__startup\n");
+    printf("  file %s\n", user_string($arg1));
+    printf("  request_uri %s\n", user_string($arg2));
+    printf("  request_method %s\n", user_string($arg3));
+}
+]]>
+     </programlisting>
+    </example>
+   </para>
+   <para>
+    Le script ci-dessus va tracer tous les points de sonde statique de PHP
+    pendant toute la durée de l'exécution d'un script PHP :
+    <informalexample>
+     <programlisting>
+<![CDATA[
+# stap -c 'sapi/cli/php test.php' all_probes.stp
+]]>
+     </programlisting>
+    </informalexample>
+   </para>
+  </sect2>
+ </sect1>
+</chapter>
+
+<!-- Keep this comment at the end of the file
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
