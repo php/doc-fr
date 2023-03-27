@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 76874c0982c06b2cdfeb12427bb319e34c6066d8 Maintainer: pierrick Status: ready -->
+<!-- Reviewed: yes -->
+<sect1 xml:id="language.oop5.variance" xmlns="http://docbook.org/ns/docbook">
+ <title>Covariance et Contravariance</title>
+
+ <para>
+  À partir de PHP 7.2.0, la contravariance partielle a été introduite en supprimant les restrictions de type
+  sur les paramètres d'une méthode enfant. À partir de PHP 7.4.0, la covariance et la contravariance complètes
+  ont été ajoutées.
+ </para>
+ <para>
+  La covariance permet à une méthode enfant de retourner un type plus spécifique que le type de retour
+  de sa méthode parente. En revanche, la contravariance permet à un type de paramètre d'être moins spécifique
+  dans une méthode enfant que dans celui de la méthode parente.
+ </para>
+ <para>
+  Une déclaration de type est considérée comme plus spécifique dans le cas suivant :
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     Un type est retiré d'un
+    <link linkend="language.types.type-system.composite.union">type union</link>
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Un type est ajouté à un
+    <link linkend="language.types.type-system.composite.intersection">type d'intersection</link>
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Un type de classe est transformé en un type de classe enfant
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+    <type>iterable</type> est remplacé par <type>array</type> ou <classname>Traversable</classname>
+    </simpara>
+   </listitem>
+  </itemizedlist>
+
+  Un type de classe est considéré moins spécifique si l'inverse est vrai.
+ </para>
+
+ <sect2 xml:id="language.oop5.variance.covariance">
+  <title>Covariance</title>
+
+  <para>
+   Pour illustrer le fonctionnement de la covariance, une simple classe parente abstraite, <varname>Animal</varname>
+   est créée. <varname>Animal</varname> sera étendu par des classes enfants,
+  <varname>Cat</varname> et <varname>Dog</varname>.
+  </para>
+
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+abstract class Animal
+{
+    protected string $name;
+
+    public function __construct(string $name)
+    {
+        $this->name = $name;
+    }
+
+    abstract public function speak();
+}
+
+class Dog extends Animal
+{
+    public function speak()
+    {
+        echo $this->name . " barks";
+    }
+}
+
+class Cat extends Animal
+{
+    public function speak()
+    {
+        echo $this->name . " meows";
+    }
+}
+]]>
+   </programlisting>
+  </informalexample>
+
+  <para>
+   Notez qu'il n'y a pas de méthodes qui renvoient des valeurs dans cet exemple. Quelques fabriques
+   seront ajoutées et renverront un nouvel objet de classe de type <varname>Animal</varname>,
+  <varname>Cat</varname>, ou <varname>Dog</varname>.
+  </para>
+
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+interface AnimalShelter
+{
+    public function adopt(string $name): Animal;
+}
+
+class CatShelter implements AnimalShelter
+{
+    public function adopt(string $name): Cat // au lieu de renvoyer le type de classe Animal, il peut renvoyer le type de classe Cat
+    {
+        return new Cat($name);
+    }
+}
+
+class DogShelter implements AnimalShelter
+{
+    public function adopt(string $name): Dog // au lieu de renvoyer le type de classe Animal, il peut renvoyer le type de classe Dog
+    {
+        return new Dog($name);
+    }
+}
+
+$kitty = (new CatShelter)->adopt("Ricky");
+$kitty->speak();
+echo "\n";
+
+$doggy = (new DogShelter)->adopt("Mavrick");
+$doggy->speak();
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Ricky meows
+Mavrick barks
+]]>
+   </screen>
+  </informalexample>
+ </sect2>
+
+ <sect2 xml:id="language.oop5.variance.contravariance">
+  <title>Contravariance</title>
+
+  <para>
+   En reprenant l'exemple précédent avec les classes <varname>Animal</varname>,
+   <varname>Cat</varname> et <varname>Dog</varname>, deux classes appelées
+   <varname>Food</varname> et <varname>AnimalFood</varname> sont incluses, et
+   une méthode <varname>eat(AnimalFood $food)</varname> est ajoutée à la classe abstraite
+   <varname>Animal</varname> .
+  </para>
+
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+class Food {}
+
+class AnimalFood extends Food {}
+
+abstract class Animal
+{
+    protected string $name;
+
+    public function __construct(string $name)
+    {
+        $this->name = $name;
+    }
+
+    public function eat(AnimalFood $food)
+    {
+        echo $this->name . " eats " . get_class($food);
+    }
+}
+]]>
+   </programlisting>
+  </informalexample>
+
+  <para>
+   Afin de voir le comportement de la contravariance, la méthode
+   méthode <varname>eat</varname> est surchargée dans la classe <varname>Dog</varname> afin d'autoriser
+   n'importe quel objet de type <varname>Food</varname>. La classe <varname>Cat</varname> reste inchangée.
+  </para>
+
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+class Dog extends Animal
+{
+    public function eat(Food $food) {
+        echo $this->name . " eats " . get_class($food);
+    }
+}
+]]>
+   </programlisting>
+  </informalexample>
+
+  <para>
+   L'exemple suivant montre le comportement de la contravariance.
+  </para>
+
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$kitty = (new CatShelter)->adopt("Ricky");
+$catFood = new AnimalFood();
+$kitty->eat($catFood);
+echo "\n";
+
+$doggy = (new DogShelter)->adopt("Mavrick");
+$banana = new Food();
+$doggy->eat($banana);
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Ricky eats AnimalFood
+Mavrick eats Food
+]]>
+   </screen>
+
+  <para>
+   Mais que se passe-t-il si <varname>$kitty</varname> essaie de manger (<methodname>eat</methodname>) la
+   banane (<varname>$banana</varname>) ?
+  </para>
+
+   <programlisting role="php">
+<![CDATA[
+$kitty->eat($banana);
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Fatal error: Uncaught TypeError: Argument 1 passed to Animal::eat() must be an instance of AnimalFood, instance of Food given
+]]>
+   </screen>
+  </informalexample>
+ </sect2>
+</sect1>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
