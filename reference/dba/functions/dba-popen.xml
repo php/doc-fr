@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: b95d28e6ec86e4a71e012737d36ebdc1cf009180 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 9264401165d31437c4afd80ec936f775ae23d367 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes Maintainer: yannick -->
 
 <refentry xml:id="function.dba-popen" xmlns="http://docbook.org/ns/docbook">
@@ -15,8 +15,10 @@
    <type class="union"><type>resource</type><type>false</type></type><methodname>dba_popen</methodname>
    <methodparam><type>string</type><parameter>path</parameter></methodparam>
    <methodparam><type>string</type><parameter>mode</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>handler</parameter></methodparam>
-   <methodparam rep="repeat"><type>mixed</type><parameter>args</parameter></methodparam>
+   <methodparam choice="opt"><type class="union"><type>string</type><type>null</type></type><parameter>handler</parameter><initializer>&null;</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>permission</parameter><initializer>0644</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>map_size</parameter><initializer>0</initializer></methodparam>
+   <methodparam choice="opt"><type class="union"><type>int</type><type>null</type></type><parameter>flags</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
   <para>
    <function>dba_popen</function> établit une connexion persistante
@@ -57,40 +59,46 @@
        <link linkend="dba.requirements">gestionnaire</link> qui doit être
        utilisé pour accéder à <parameter>path</parameter>. Le gestionnaire
        reçoit tous les paramètres supplémentaires passés à la fonction
-       <function>dba_popen</function>.
+       <function>dba_popen</function>. Si le paramètre <parameter>handler</parameter> est &null;,
+       alors le gestionnaire par défaut est invoqué.
       </para>
      </listitem>
     </varlistentry>
     <varlistentry>
-     <term><parameter>args</parameter></term>
+     <term><parameter>permission</parameter></term>
      <listitem>
       <para>
-       Paramètre &string; optionnels qui sont transmis au pilote.
-      </para>
-      <para>
-       Les pilotes <literal>cdb</literal>, <literal>cdb_make</literal>,
-       <literal>flatfile</literal>, <literal>inifile</literal>,
-       <literal>qdbm</literal> et <literal>tcadb</literal>
-       ne supportent pas de paramètres additionels.
+       Paramètre optionnel de type entier (&integer;) qui est passé au pilote. Il a la même signification
+       que le paramètre <parameter>permissions</parameter> de la fonction <function>chmod</function>,
+       et sa valeur par défaut est <literal>0644</literal>.
       </para>
       <para>
        Les pilotes <literal>db1</literal>, <literal>db2</literal>,
        <literal>db3</literal>, <literal>db4</literal>, <literal>dbm</literal>,
-       <literal>gdbm</literal>, et
-       <literal>ndbm</literal> supportent un paramètre additionel
-       <literal>$filemode</literal>, qui a la même signification que le
-       paramètre <literal>$mode</literal> de <function>chmod</function>,
-       et à comme valeur par défaut <literal>0644</literal>.
+       <literal>gdbm</literal>,
+       <literal>ndbm</literal> et <literal>lmdb</literal> prennent en charge le paramètre
+       <parameter>permission</parameter>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>map_size</parameter></term>
+     <listitem>
+      <para>
+       Paramètre optionnel de type &integer; qui est passé au pilote. Sa valeur doit être un multiple de la
+       taille de page du système d'exploitation, ou zéro pour utiliser la taille de mappe par défaut.
       </para>
       <para>
-       Le pilote <literal>lmdb</literal> supporte deux paramètres additionels.
-       Le premier permet de définir le <literal>$filemode</literal>
-       (voir description ci-dessus), et le second permet de définir la
-       <literal>$mapsize</literal>, dont la valeur devrait être un multiple de
-       la taille de page du système d'exploitation, ou zéro pour utiliser la
-       mapsize par défaut.
-       La paramètre <literal>$mapsize</literal> est supporté à partir de
-       PHP 7.3.14 et 7.4.2, respectivement.
+       Le pilote <literal>lmdb</literal> accepte le paramètre <parameter>map_size</parameter>.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>flags</parameter></term>
+     <listitem>
+      <para>
+       Permet de passer des drapeaux aux pilotes de base de données. Actuellement, seul le pilote LMDB avec
+       les drapeaux <constant>DBA_LMDB_USE_SUB_DIR</constant> et <constant>DBA_LMDB_NO_SUB_DIR</constant> est pris en charge.
       </para>
      </listitem>
     </varlistentry>
@@ -104,7 +112,48 @@
    Retourne un gestionnaire positif en cas de succès&return.falseforfailure;.
   </para>
  </refsect1>
- 
+
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <para>
+   La valeur &false; est renvoyée et une erreur de niveau <constant>E_WARNING</constant> est émise lorsque
+   le paramètre <parameter>handler</parameter> est &null;, mais qu'aucun gestionnaire par défaut n'est disponible.
+  </para>
+ </refsect1>
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+        <row>
+          <entry>Version</entry>
+          <entry>Description</entry>
+        </row>
+      </thead>
+      <tbody>
+        <row>
+          <entry>8.2.0</entry>
+          <entry>
+            Le paramètre <parameter>flags</parameter> a été ajouté.
+          </entry>
+        </row>
+        <row>
+          <entry>8.1.0</entry>
+          <entry>
+            Le paramètre <parameter>handler</parameter> est maintenant nullable.
+          </entry>
+        </row>
+        <row>
+          <entry>7.3.14, 7.4.2</entry>
+          <entry>
+            Le pilote <literal>lmdb</literal> prend maintenant en charge un paramètre <parameter>map_size</parameter> supplémentaire.
+          </entry>
+        </row>
+      </tbody>
+    </tgroup>
+  </informaltable>
+ </refsect1> 
+
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
