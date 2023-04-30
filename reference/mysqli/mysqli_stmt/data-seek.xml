@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 035c126c0393fe154bac46e2c3c489ebadce48a5 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 51c34024efa35d5691825b3e61037ffe61c46d20 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 <refentry xml:id="mysqli-stmt.data-seek" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>mysqli_stmt::data_seek</refname>
   <refname>mysqli_stmt_data_seek</refname>
-  <refpurpose>Déplace le pointeur de résultat</refpurpose>
+  <refpurpose>Ajuste le pointeur de résultat vers une ligne arbitraire dans le résultat mis en mémoire tampon.</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -22,10 +22,11 @@
    <methodparam><type>int</type><parameter>offset</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Déplace le pointeur du résultat <parameter>statement</parameter>
-   de <parameter>offset</parameter> lignes.
+   Cette fonction déplace le pointeur du jeu de résultats mis en mémoire tampon
+   vers une ligne arbitraire spécifiée par le paramètre <parameter>offset</parameter>.
   </para>
   <para>
+   Cette fonction ne fonctionne que sur le jeu de résultats interne mis en mémoire tampon.
    <function>mysqli_stmt_store_result</function> doit être appelée
    avant la fonction <function>mysqli_stmt_data_seek</function>.
   </para>
@@ -63,38 +64,12 @@
    <programlisting role="php">
 <![CDATA[
 <?php
-/* Ouvre la connexion */
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
-/* Vérifie la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
-
 $query = "SELECT Name, CountryCode FROM City ORDER BY Name";
-if ($stmt = $mysqli->prepare($query)) {
-
-    /* Exécute la requête */
-    $stmt->execute();
-
-    /* Lie les variables de résultat */
-    $stmt->bind_result($name, $code);
-
-    /* Stock le résultat */
-    $stmt->store_result();
-
-    /* Va à la ligne 400 */
-    $stmt->data_seek(399);
-
-    /* Lit une valeur */
-    $stmt->fetch();
-
-    printf ("Villle : %s Code Pays : %s\n", $name, $code);
-
-    /* Ferme la commande */
-    $stmt->close();
-}
+$stmt = $mysqli->prepare($query);
+$stmt->execute();
 
 /* Ferme la connexion */
 $mysqli->close();
@@ -128,20 +103,18 @@ if ($stmt = mysqli_prepare($link, $query)) {
     /* Stock le résultat */
     mysqli_stmt_store_result($stmt);
 
-    /* Va à la ligne 400 */
-    mysqli_stmt_data_seek($stmt, 399);
+    $stmt->bind_result($name, $code);
 
-    /* Lit une valeur */
-    mysqli_stmt_fetch($stmt);
+    $stmt->store_result();
 
-    printf ("Ville : %s Code Pays : %s\n", $name, $code);
+    /* Lit la ligne n°400 */
+    $stmt->data_seek(399);
 
     /* Ferme la commande */
     mysqli_stmt_close($stmt);
 }
 
-/* Ferme la connexion */
-mysqli_close($link);
+printf("Ville: %s  Code Pays : %s\n", $name, $code);
 ?>
 ]]>
    </programlisting>
