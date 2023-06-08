@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 6c3091b54b66181db5f81ef5afe1d2e8b6efdeac Maintainer: pierrick Status: ready -->
+<!-- EN-Revision: 16b11ae4604f3c38f9011c46137ddcbf9238154b Maintainer: pierrick Status: ready -->
 <!-- Reviewed: no -->
  <chapter xml:id="language.enumerations" xmlns="http://docbook.org/ns/docbook">
   <title>Les énumérations</title>
@@ -726,6 +726,103 @@ Baz Enum:int {
 ?>
 ]]>
   </programlisting>
+ </sect1>
+
+ <sect1 xml:id="language.enumerations.object-differences.inheritance">
+
+  <title>Pourquoi les enums ne sont pas extensibles</title>
+
+  <simpara>
+   Les classes ont des contrats sur leurs méthodes :
+  </simpara>
+
+  <programlisting role="php">
+<![CDATA[
+<?php
+
+class A {}
+class B extends A {}
+
+function foo(A $a) {}
+
+function bar(B $b) {
+    foo($b);
+}
+?>
+]]>
+ </programlisting>
+
+  <simpara>
+   Ce code est sûr du point de vue du type, car B suit le contrat de A, et par la magie de la
+   co/contra-variance, toute attente que l'on peut avoir à l'égard des méthodes sera
+   préservée, sauf exceptions.
+  </simpara>
+
+  <simpara>
+   Les enums ont des contrats sur leurs cas, pas sur les méthodes :
+  </simpara>
+
+  <programlisting role="php">
+<![CDATA[
+<?php
+enum ErrorCode {
+    case SOMETHING_BROKE;
+}
+
+function quux(ErrorCode $errorCode)
+{
+    // Quand écrit, ce code semble couvrir tous les cas de figure
+    match ($errorCode) {
+        ErrorCode::SOMETHING_BROKE => true,
+    }
+}
+
+?>
+]]>
+  </programlisting>
+
+  <simpara>
+   L'instruction &match; dans la fonction <code>quux</code> peut être analysée statiquement pour couvrir
+   tous les cas d'ErrorCode.
+  </simpara>
+
+  <simpara>
+   Mais imaginons qu'il soit permis d'étendre les enums :
+  </simpara>
+
+
+  <programlisting role="php">
+<![CDATA[
+<?php
+// Code d'expérience de pensée où les enums ne sont pas finaux.
+// Notez que cela ne fonctionnera pas en PHP.
+enum MoreErrorCode extends ErrorCode {
+    case PEBKAC;
+}
+
+function fot(MoreErrorCode $errorCode) {
+    quux($errorCode);
+}
+
+fot(MoreErrorCode::PEBKAC);
+
+?>
+]]>
+ </programlisting>
+
+  <simpara>
+   En vertu des règles d'héritage normales, une classe qui en étend une autre passera
+   le contrôle de type.
+  </simpara>
+
+  <simpara>
+   Le problème serait que l'instruction &match; dans <code>quux()</code> ne couvre plus tous les cas.
+   Parce qu'elle ne connaît pas <code>MoreErrorCode::PEBKAC</code>, la correspondance lèvera une exception.
+  </simpara>
+
+  <simpara>
+   Pour cette raison, les enums sont finaux et ne peuvent pas être étendus.
+  </simpara>
  </sect1>
 
  <sect1 xml:id="language.enumerations.examples">
