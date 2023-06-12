@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 383a659e1f0f7aa3330b31a095a1e927611d4c71 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 968c2bc60de3e93d7f38be0b9d2d1b9685a16ea7 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <chapter xml:id="mysqlinfo.concepts" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Concepts</title>
@@ -42,24 +42,23 @@
   
   <para>
    Les requêtes n'utilisant pas la mémoire tampon, les requêtes
-   MySQL exécutent leur requête et retournent une
-   <type>ressource</type> tandis que les données sont toujours
-   en attente sur le serveur MySQL pour être récupérées. Cela
-   utilise moins de mémoire côté PHP, mais peut augmenter la charge
+   MySQL exécutent leur requête et puis attendent
+   que les données du serveur MySQL soient récupérées. Cela utilise moins de mémoire
+   côté PHP, mais peut augmenter la charge
    sur le serveur. À moins que le jeu de résultats complet ait été
    récupéré depuis le serveur, aucune autre requête peut être
    envoyée sur la même connexion. Les requêtes n'utilisant pas la
    mémoire tampon peuvent également faire référence à un 
-   "use result".
+   "use result". Une fois que toutes les lignes de l'ensemble de résultats
+   ont été récupérées, l'ensemble de résultats disparaît et il n'est plus possible de le parcourir à nouveau.
   </para>
 
   <para>
-   Suivant ces caractéristiques, les requêtes utilisant la mémoire
-   tampon devraient être utilisées dans les cas où vous attendez
-   seulement un jeu de résultats limité ou avez besoin de savoir la
-   quantité de lignes retournées avant de lire toutes les lignes.
-   Le mode sans mémoire tampon doit être utilisé lorsque vous
-   attendez plus de résultats.
+   Suivant ces caractéristiques, Les requêtes non mises en mémoire tampon doivent être utilisées uniquement
+   lorsqu'on s'attend à obtenir un grand ensemble de résultats qui sera traité séquentiellement.
+   Les requêtes non mises en mémoire tampon présentent plusieurs pièges qui les rendent plus
+   difficiles à utiliser, par exemple le nombre de lignes dans l'ensemble de résultats n'est pas connu
+   avant que la dernière ligne ne soit récupérée.
   </para>
   
   <para>
@@ -75,12 +74,10 @@
 <![CDATA[
 <?php
 $mysqli  = new mysqli("localhost", "my_user", "my_password", "world");
-$uresult = $mysqli->query("SELECT Name FROM City", MYSQLI_USE_RESULT);
+$unbufferedResult = $mysqli->query("SELECT Name FROM City", MYSQLI_USE_RESULT);
 
-if ($uresult) {
-   while ($row = $uresult->fetch_assoc()) {
-       echo $row['Name'] . PHP_EOL;
-   }
+foreach ($unbufferedResult as $row) {
+    echo $row['Name'] . PHP_EOL;
 }
 ?>
 ]]>
@@ -92,14 +89,12 @@ if ($uresult) {
    <programlisting role="php">
 <![CDATA[
 <?php
-$pdo = new PDO("mysql:host=localhost;dbname=world", 'my_user', 'my_pass');
+$pdo = new PDO("mysql:host=localhost;dbname=world", 'my_user', 'my_password');
 $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
 
-$uresult = $pdo->query("SELECT Name FROM City");
-if ($uresult) {
-   while ($row = $uresult->fetch(PDO::FETCH_ASSOC)) {
-       echo $row['Name'] . PHP_EOL;
-   }
+$unbufferedResult = $pdo->query("SELECT Name FROM City");
+foreach ($unbufferedResult as $row) {
+    echo $row['Name'] . PHP_EOL;
 }
 ?>
 ]]>
