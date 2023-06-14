@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- $Revision$ -->
+<!-- EN-Revision: 10717d82267e5d341669ef78a5a6a29ad419da7e Maintainer: pierrick Status: ready -->
+<!-- Reviewed: no -->
+
+<sect1 xml:id="fpm.status" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Page d'état</title>
+ 
+ <para>
+  Cette page fournit des informations sur la configuration et le contenu de la page d'état du FPM. Voir aussi
+  <function>fpm_get_status</function>.
+ </para>
+
+ <sect2 xml:id="fpm.status.configuration">
+  <title>Configuration</title>
+  
+  <para>
+   La page d'état de FPM peut être activée en définissant le paramètre
+   <link linkend="pm.status-path">pm.status_path</link>
+   dans la configuration du pool FPM.
+  </para>
+
+  <caution>
+   <para>
+    Pour des raisons de sécurité, la page d'état du FPM devrait être limitée aux requêtes internes ou aux IP de clients
+    connues, car la page révèle les URL des requêtes et des informations sur les ressources disponibles.
+   </para>
+  </caution>
+  
+  <para>
+   Selon la configuration du serveur web, il peut être nécessaire de configurer le serveur web pour
+   autoriser les requêtes directement vers ce chemin, en contournant les scripts PHP. Un exemple de configuration
+   pour Apache avec FPM écoutant sur UDS et <literal>pm.status_path</literal> fixé à
+   <literal>/fpm-status</literal>:
+  </para>
+
+  <informalexample>
+   <programlisting role="apache-conf">
+    <![CDATA[
+<LocationMatch "/fpm-status">
+ Order Allow,Deny
+ Allow from 127.0.0.1
+ ProxyPass "unix:/var/run/php-fpm.sock|fcgi://localhost/fpm-status"
+</LocationMatch>
+]]>
+   </programlisting>
+  </informalexample>
+
+  <para>
+   Après le rechargement ou le redémarrage de FPM et du serveur web, la page d'état sera accessible à partir
+   du navigateur (à condition que la requête provienne d'une adresse IP autorisée si la restriction d'IP a été
+   configurée).
+  </para>
+ </sect2>
+
+ <sect2 xml:id="fpm.status.parameters">
+  <title>Paramètres de la requête</title>
+
+  <para>
+   Le format de la page d'état peut être modifié en spécifiant l'un des paramètres de requête
+   suivants :
+  </para>
+  
+  <simplelist>
+   <member><literal>html</literal></member>
+   <member><literal>json</literal></member>
+   <member><literal>openmetrics</literal></member>
+   <member><literal>xml</literal></member>
+  </simplelist>
+
+  <para>
+   Des informations supplémentaires peuvent également être retournées en utilisant le paramètre de requête <literal>full</literal>.
+  </para>
+  
+  <para>
+   Exemple d'URL de page d'état :
+  </para>
+  
+  <simplelist>
+   <member>
+    <literal>https://localhost/fpm-status</literal>
+    - Brève sortie dans le format texte par défaut
+   </member>
+   <member>
+    <literal>https://localhost/fpm-status?full</literal>
+    - Résultats complets dans le format de texte par défaut
+   </member>
+   <member>
+    <literal>https://localhost/fpm-status?json</literal>
+    - Résultat succinct au format JSON
+   </member>
+   <member>
+    <literal>https://localhost/fpm-status?html&amp;full</literal>
+    - Résultats complets au format HTML
+   </member>
+  </simplelist>
+ </sect2>
+ 
+ <sect2 xml:id="fpm.status.contents">
+  <title>Informations affichées</title>
+
+  <para>
+   Les valeurs de date et d'heure utilisent le format d'horodatage Unix dans les sorties JSON et XML,
+   sinon elles utilisent le format résultant de l'exemple suivant
+   <literal>"03/Jun/2021:07:21:46 +0100"</literal>.
+  </para>
+  
+  <table>
+   <title>Informations de base - Toujours affichées sur la page d'état</title>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>Paramètre</entry>
+      <entry>Description</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>pool</entry>
+      <entry>Le nom du pool de processus FPM.</entry>
+     </row>
+     <row>
+      <entry>proccess manager</entry>
+      <entry>Le type de gestionnaire de processus - statique, dynamique ou à la demande.</entry>
+     </row>
+     <row>
+      <entry>start time</entry>
+      <entry>Date et heure du dernier démarrage du pool de processus.</entry>
+     </row>
+     <row>
+      <entry>start since</entry>
+      <entry>Temps en secondes écoulées depuis le dernier démarrage du pool de processus.</entry>
+     </row>
+     <row>
+      <entry>accepted conn</entry>
+      <entry>Nombre total de connexions acceptées.</entry>
+     </row>
+     <row>
+      <entry>listen queue</entry>
+      <entry>Nombre de requêtes (backlog) en attente d'un processus libre.</entry>
+     </row>
+     <row>
+      <entry>max listen queue</entry>
+      <entry>Le nombre maximum de requêtes vues dans la file d'attente à un moment donné.</entry>
+     </row>
+     <row>
+      <entry>listen queue len</entry>
+      <entry>Taille maximale autorisée de la file d'attente.</entry>
+     </row>
+     <row>
+      <entry>idle processes</entry>
+      <entry>Nombre de processus actuellement inactifs (en attente de requêtes).</entry>
+     </row>
+     <row>
+      <entry>active processes</entry>
+      <entry>Nombre de processus qui traitent actuellement des requêtes.</entry>
+     </row>
+     <row>
+      <entry>total processes</entry>
+      <entry>Nombre total de processus en cours.</entry>
+     </row>
+     <row>
+      <entry>max active processes</entry>
+      <entry>Nombre maximal de processus actifs simultanément.</entry>
+     </row>
+     <row>
+      <entry>max children reached</entry>
+      <entry>
+       Le nombre maximal de processus a-t-il déjà été atteint ? Si oui, la valeur affichée est
+       <literal>1</literal>, sinon la valeur affichée est <literal>0</literal>.
+      </entry>
+     </row>
+     <row>
+      <entry>slow requests</entry>
+      <entry>
+       Le nombre total de requêtes qui ont atteint le délai configuré de
+       <literal>request_slowlog_timeout</literal>.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </table>
+
+  <table>
+   <title>Informations par processus - affichées uniquement en mode de sortie complète (<literal>full</literal>)</title>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>Paramètre</entry>
+      <entry>Description</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>pid</entry>
+      <entry>Le PID système du processus.</entry>
+     </row>
+     <row>
+      <entry>state</entry>
+      <entry>L'état du processus - Idle, Running, ...</entry>
+     </row>
+     <row>
+      <entry>start time</entry>
+      <entry>La date/heure à laquelle le processus a démarré.</entry>
+     </row>
+     <row>
+      <entry>start since</entry>
+      <entry>Le nombre de secondes écoulées depuis le début du processus.</entry>
+     </row>
+     <row>
+      <entry>requests</entry>
+      <entry>Le nombre total de requêtes servies.</entry>
+     </row>
+     <row>
+      <entry>request duration</entry>
+      <entry>Le temps total en secondes passées à traiter les requêtes.</entry>
+     </row>
+     <row>
+      <entry>request method</entry>
+      <entry>La méthode HTTP de la dernière requête servie.</entry>
+     </row>
+     <row>
+      <entry>request uri</entry>
+      <entry>
+       L'URI de la dernière requête servie (après traitement par le serveur web, il peut toujours s'agir de
+       <literal>/index.php</literal> si vous utilisez un motif de redirection du contrôleur frontal).
+      </entry>
+     </row>
+     <row>
+      <entry>content length</entry>
+      <entry>La longueur du corps de la requête, en octets, de la dernière requête.</entry>
+     </row>
+     <row>
+      <entry>user</entry>
+      <entry>L'utilisateur HTTP (<literal>PHP_AUTH_USER</literal>) de la dernière requête.</entry>
+     </row>
+     <row>
+      <entry>script</entry>
+      <entry>
+       Le chemin complet du script exécuté par la dernière requête. Ce sera
+       <literal>'-'</literal> si non applicable (par exemple, les requêtes de la page d'état).
+      </entry>
+     </row>
+     <row>
+      <entry>last request cpu</entry>
+      <entry>
+       Le %cpu de la dernière requête. Ce sera 0 si le processus n'est pas au repos car le
+       calcul est effectué lorsque le traitement de la requête est terminé.
+      </entry>
+     </row>
+     <row>
+      <entry>last request memory</entry>
+      <entry>
+       La quantité maximale de mémoire consommée par la dernière requête. Cette valeur sera 0 si le processus
+       n'est pas au repos, car le calcul est effectué lorsque le traitement de la requête est terminé.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </table>
+
+  <note>
+   <para>
+    Toutes les valeurs sont spécifiques au pool et sont réinitialisées lorsque FPM est redémarré.
+   </para>
+  </note>
+
+  <note>
+   <para>
+    Le format de sortie OpenMetrics utilise différents types de paramètres pour mieux s'adapter au format OpenMetrics.
+    Les paramètres et les descriptions de leurs valeurs sont inclus dans la sortie du format OpenMetrics.
+   </para>
+  </note>
+ </sect2>
+
+ <sect2 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>8.1.0</entry>
+      <entry>Le format openmetrics a été ajouté.</entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
+ </sect2>
+</sect1>
+
+ <!-- Keep this comment at the end of the file
+ Local variables:
+ mode: sgml
+ sgml-omittag:t
+ sgml-shorttag:t
+ sgml-minimize-attributes:nil
+ sgml-always-quote-attributes:t
+ sgml-indent-step:1
+ sgml-indent-data:t
+ indent-tabs-mode:nil
+ sgml-parent-document:nil
+ sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+ sgml-exposed-tags:nil
+ sgml-local-catalogs:nil
+ sgml-local-ecat-files:nil
+ End:
+ vim600: syn=xml fen fdm=syntax fdl=2 si
+ vim: et tw=78 syn=sgml
+ vi: ts=1 sw=1
+ -->
