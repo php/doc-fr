@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 789af834328bf5d492ed174a4fedb226ccaf4b27 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: a0fcdcb58023bd4cb017fdba511df29b9f7a25f5 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <refentry xml:id="function.easter-date" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -18,13 +18,6 @@
   <para>
    Retourne un timestamp UNIX pour Pâques, à minuit, pour une année donnée.
   </para>
-  <warning>
-   <para>
-    Cette fonction génère une alerte si la date tombe hors de
-    la zone de validité des horodatages UNIX (c'est à dire typiquement avant
-    1970 ou après 2037 sur les systèmes 32bit).
-   </para>
-  </warning>
   <para>
    La date de Pâques a été fixée par le concile
    de Nicée, en 325 de notre ère, comme étant le dimanche
@@ -51,9 +44,8 @@
      <term><parameter>year</parameter></term>
      <listitem>
       <para>
-       L'année, sous la forme d'un nombre compris entre
-       1970 et 2037. Si omis ou &null;, la valeur par défaut sera l'année
-       courante suivant l'heure locale.
+       L'année, doit être un nombre compris entre 1970 et 2037 pour les systèmes 32 bits, ou entre 1970 et 2 000 000 000 pour les systèmes 64 bits.
+       Si omis ou &null;, la valeur par défaut sera l'année courante suivant l'heure locale.
       </para>
      </listitem>
     </varlistentry>
@@ -78,6 +70,14 @@
   </para>
  </refsect1>
 
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <para>
+   Une <classname>ValueError</classname> est déclenchée si l'année est antérieure à 1970 ou postérieure à 2037
+   lors de l'exécution sur un système 32 bits, ou postérieure à 2 000 000 000 sur un système 64 bits.
+  </para>
+ </refsect1>
+
  <refsect1 role="changelog">
   &reftitle.changelog;
   <informaltable>
@@ -90,9 +90,25 @@
     </thead>
     <tbody>
      <row>
+      <entry>8.3.0</entry>
+      <entry>
+       Sur les systèmes 64 bits, le paramètre <parameter>year</parameter> accepte désormais des valeurs dans la plage de 1970 à
+       2 000 000 000.
+      </entry>
+     </row>
+     <row>
       <entry>8.0.0</entry>
       <entry>
        <parameter>year</parameter> est désormais nullable.
+      </entry>
+     </row>
+     <row>
+      <entry>8.0.0</entry>
+      <entry>
+       Une <classname>ValueError</classname> est désormais déclenchée lorsque
+       <parameter>year</parameter> est en dehors de la plage autorisée.
+       Auparavant, une alerte <constant>E_WARNING</constant> était générée
+       et la fonction retournait &false;.
       </entry>
      </row>
     </tbody>
@@ -112,6 +128,23 @@
 echo date("M-d-Y", easter_date(1999));        // Apr-04-1999
 echo date("M-d-Y", easter_date(2000));        // Apr-23-2000
 echo date("M-d-Y", easter_date(2001));        // Apr-15-2001
+
+?>
+]]>
+    </programlisting>
+   </example>
+   <example>
+    <title>Utilisation de <function>easter_date</function> avec <classname>DateTime</classname></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+$timestamp = easter_date(2023);
+
+$datetime = new \DateTime();
+$datetime->setTimestamp($timestamp);
+
+echo $datetime->format('M-d-Y'); // Avr-09-2023
 
 ?>
 ]]>
