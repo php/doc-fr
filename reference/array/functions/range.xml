@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 9b89d5c26bba2f062bfbaba2e8c4c8cd89646770 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 62421b98a97fe576987878055e17cf755eb395af Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 <refentry xml:id="function.range" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -16,6 +16,17 @@
   </methodsynopsis>
   <para>
    Crée un tableau contenant un intervalle d'éléments.
+  </para>
+  <para>
+   Si à la fois <parameter>start</parameter> et <parameter>end</parameter> sont des
+   <type>string</type>, et que <parameter>step</parameter> est de type
+   <type>int</type>, le tableau produit sera une séquence d'octets.
+   Sinon, le tableau produit sera une séquence de nombres.
+  </para>
+  <para>
+   La séquence est croissante si <parameter>start</parameter> est inférieur ou égal à
+   <parameter>end</parameter>.
+   Sinon, la séquence est décroissante.
   </para>
  </refsect1>
  <refsect1 role="parameters">
@@ -34,8 +45,7 @@
      <term><parameter>end</parameter></term>
      <listitem>
       <para>
-       La séquence se termine lorsque la valeur
-       <parameter>end</parameter> est atteinte.
+       Dernière valeur possible de la séquence.
       </para>
      </listitem>
     </varlistentry>
@@ -43,24 +53,187 @@
      <term><parameter>step</parameter></term>
      <listitem>
       <para>
-       Si une valeur est donnée au paramètre <parameter>step</parameter>,
-       elle sera utilisée comme valeur incrémentale (ou décrémentale) entre
-       les éléments de la séquence.
-       <parameter>step</parameter> ne doit pas être égal à <literal>0</literal>
-       et ne doit pas excéder l'intervalle spécifié.
-       S'il n'est pas spécifié, <parameter>step</parameter> vaut par défaut 1.
+       <parameter>step</parameter> indique de combien la séquence produite progresse
+       entre les valeurs de la séquence.
       </para>
-     </listitem>
-    </varlistentry>
-   </variablelist>
+      <para>
+       <parameter>step</parameter> peut être négatif pour les séquences décroissantes.
+      </para>
+      <para>
+       Si <parameter>step</parameter> est un <type>float</type> sans partie
+       fractionnaire, il est interprété comme un <type>int</type>.
+      </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
   </para>
  </refsect1>
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Retourne un tableau d'éléments depuis <parameter>start</parameter> jusqu'à
-   <parameter>end</parameter>, inclusif.
+   Retourne une séquence d'éléments sous forme d'un tableau <type>array</type> avec le premier
+   élément étant <parameter>start</parameter> allant jusqu'à
+   <parameter>end</parameter>, chaque valeur de la séquence étant
+   séparée de <parameter>step</parameter> valeurs.
   </para>
+  <para>
+   Le dernier élément du tableau retourné est soit <parameter>end</parameter>
+   soit l'élément précédent de la séquence,
+   en fonction de la valeur de <parameter>step</parameter>.
+  </para>
+  <para>
+   Si à la fois <parameter>start</parameter> et <parameter>end</parameter> sont
+   des <type>string</type>, et que <parameter>step</parameter> est de type <type>int</type>
+   le tableau produit sera une séquence d'octets,
+   généralement des caractères <abbrev>ASCII</abbrev> latins.
+  </para>
+  <para>
+   Si au moins l'un des <parameter>start</parameter>, <parameter>end</parameter>
+   ou <parameter>step</parameter> est de type <type>float</type>,
+   le tableau produit sera une séquence de <type>float</type>.
+  </para>
+  <para>
+   Sinon, le tableau produit sera une séquence de <type>int</type>.
+  </para>
+ </refsect1>
+ 
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     Si <parameter>step</parameter> est égal à <literal>0</literal>,
+     une <classname>ValueError</classname> est générée.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Si <parameter>start</parameter>, <parameter>end</parameter>,
+     ou <parameter>step</parameter> ne sont pas <function>is_finite</function>,
+     une <classname>ValueError</classname> est générée.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Si <parameter>step</parameter> est négatif,
+     mais la plage produite est croissante
+     (c'est-à-dire <code>$start &lt;= $end</code>),
+     une <classname>ValueError</classname> est générée.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Si <parameter>start</parameter> ou <parameter>end</parameter>
+     est la chaîne vide <literal>''</literal>,
+     un <constant>E_WARNING</constant> est émis et
+     la chaîne vide sera interprétée comme <literal>0</literal>.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Si <parameter>start</parameter> ou <parameter>end</parameter>
+     est une chaîne non-<link linkend="language.types.numeric-strings">numérique</link>
+     avec plus d'un octet, un <constant>E_WARNING</constant> est émis.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Si <parameter>start</parameter> ou <parameter>end</parameter> est une chaîne
+     qui est implicitement convertie en <type>int</type> parce que l'autre valeur
+     de limite est un nombre, un <constant>E_WARNING</constant> est émis.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     Si <parameter>step</parameter> est de type <type>float</type>,
+     et que <parameter>start</parameter> et <parameter>end</parameter> sont
+     des chaînes non-<link linkend="language.types.numeric-strings">numériques</link>,
+     un <constant>E_WARNING</constant> est émis.
+    </simpara>
+   </listitem>
+  </itemizedlist>
+ </refsect1>
+
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>&Version;</entry>
+      <entry>&Description;</entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry>8.3.0</entry>
+      <entry>
+       Si à la fois <parameter>start</parameter> et <parameter>end</parameter>
+       sont des chaînes, alors <function>range</function> produira désormais
+       systématiquement un tableau de <type>string</type>.
+       Auparavant, si l'une des valeurs limites était une chaîne numérique,
+       l'autre valeur limite était implicitement convertie en <type>int</type>.
+      </entry>
+     </row>
+     <row>
+      <entry>8.3.0</entry>
+      <entry>
+       Un <constant>E_WARNING</constant> est désormais émis si
+       <parameter>start</parameter> ou <parameter>end</parameter>
+       est une chaîne qui est implicitement convertie en <type>int</type>
+       parce que l'autre valeur limite est un nombre.
+      </entry>
+     </row>
+     <row>
+      <entry>8.3.0</entry>
+      <entry>
+       Un <constant>E_WARNING</constant> est désormais émis si
+       <parameter>start</parameter> ou <parameter>end</parameter>
+       est une chaîne non-<link linkend="language.types.numeric-strings">numérique</link>
+       avec plus d'un octet.
+      </entry>
+     </row>
+     <row>
+      <entry>8.3.0</entry>
+      <entry>
+       Un <constant>E_WARNING</constant> est désormais émis si
+       <parameter>start</parameter> ou <parameter>end</parameter>
+       est la chaîne vide.
+      </entry>
+     </row>
+     <row>
+      <entry>8.3.0</entry>
+      <entry>
+       Si <parameter>step</parameter> est de type <type>float</type> sans
+       partie fractionnaire, il sera interprété comme un <type>int</type>.
+      </entry>
+     </row>
+     <row>
+      <entry>8.3.0</entry>
+      <entry>
+       Une <classname>ValueError</classname> est désormais générée si
+       <parameter>step</parameter> est négatif lors de la production d'une plage croissante.
+      </entry>
+     </row>
+     <row>
+      <entry>8.3.0</entry>
+      <entry>
+       Une <classname>ValueError</classname> est désormais générée si
+       <parameter>step</parameter> n'est pas fini.
+      </entry>
+     </row>
+     <row>
+      <entry>8.3.0</entry>
+      <entry>
+       Une <classname>TypeError</classname> est désormais générée si
+       <parameter>start</parameter> ou <parameter>end</parameter>
+       est un tableau, un objet, ou une ressource.
+       Auparavant, elles étaient implicitement converties en <type>int</type>.
+      </entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
  </refsect1>
  
  <refsect1 role="examples">
@@ -71,49 +244,28 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-// array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
-foreach (range(0, 12) as $number) {
-    echo $number;
-}
+echo implode(', ', range(0, 12)), PHP_EOL;
 
-echo "\n";
+echo implode(', ', range('a', 'i')), PHP_EOL;
 
-// La paramètre de pas (step)
-// array(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
-foreach (range(0, 100, 10) as $number) {
-    echo $number;
-}
+echo implode(', ', range('c', 'a')), PHP_EOL;
 
-echo "\n";
-
-// Utilisation d'une séquence de caractères
-// array('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i');
-foreach (range('a', 'i') as $letter) {
-    echo $letter;
-}
-
-echo "\n";
-
-// array('c', 'b', 'a');
-foreach (range('c', 'a') as $letter) {
-    echo $letter;
-}
+echo implode(', ', range('A', 'z')), PHP_EOL;
 ?>
 ]]>
     </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100
+a, b, c, d, e, f, g, h, i
+c, b, a
+A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, [, \, ], ^, _, `, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z
+]]>
+    </screen>
    </example>
   </para>
- </refsect1>
- 
- <refsect1 role="notes">
-  &reftitle.notes;
-  <note>
-   <para>
-    Les valeurs des caractères de séquence sont limitées à une longueur d'un.
-    Si une longueur supérieure à un est entrée, seul le premier caractère
-    est utilisé.
-   </para>
-  </note>
  </refsect1>
  
  <refsect1 role="seealso">
