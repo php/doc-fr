@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 55f70d19870c396f3bf86b6c45826da3cb7e525f Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 2b3715871c83b928ac496e6c777d6be9f0d71cbf Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <refentry xml:id="function.ob-get-status" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -41,106 +41,142 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   Si la fonction est appelée sans le paramètre <parameter>full_status</parameter>
-   ou avec le paramètre <parameter>full_status</parameter> = &false;, un tableau simple avec
-   les éléments suivants sera retourné :
-   <informalexample>
+   Si le paramètre <parameter>full_status</parameter> est omis ou égal à &false;, un simple tableau
+   contenant des informations sur l'état du niveau de sortie actif est renvoyé.
+  </para>
+  <para>
+   Si le paramètre <parameter>full_status</parameter> est égal à &true;, un tableau
+   avec un élément pour chaque niveau de tampon de sortie actif est renvoyé.
+   Le niveau de sortie est utilisé comme clé du tableau de niveau supérieur et chaque élément du tableau
+   est lui-même un autre tableau contenant des informations sur un niveau de sortie actif.
+  </para>
+  <para>
+   Un tableau vide est renvoyé si la mise en mémoire tampon de sortie n'est pas activée.
+  </para>
+  <para>
+   <segmentedlist>
+    <title>Éléments renvoyés par la fonction <function>ob_get_status</function></title>
+    <segtitle>Clé</segtitle><segtitle>Valeur</segtitle>
+    <seglistitem>
+     <seg>name</seg>
+     <seg>
+      Nom du gestionnaire de sortie actif tel que défini par le paramètre <parameter>callback</parameter>
+      de la fonction <function>ob_start</function>,
+      <link linkend="ini.output-handler">output_handler</link> si
+      <link linkend="ini.output-buffering">output_buffering</link> est activé
+      ou <literal>'default output handler'</literal> si aucun n'est défini
+     </seg>
+    </seglistitem>
+    <seglistitem>
+     <seg>type</seg>
+     <seg>
+      <literal>0</literal> (gestionnaire interne) ou
+      <literal>1</literal> (gestionnaire fourni par l'utilisateur)
+     </seg>
+    </seglistitem>
+    <seglistitem>
+     <seg>flags</seg>
+     <seg>
+      Masque de bits des indicateurs définis par la fonction <function>ob_start</function>,
+      le type de gestionnaire de sortie (voir ci-dessus)
+      et l'état du processus de mise en mémoire tampon
+      (<link linkend="outcontrol.constants">
+       <constant>PHP_OUTPUT_HANDLER_<replaceable>*</replaceable></constant>
+      </link> constantes).
+      Si le gestionnaire a traité avec succès le tampon et n'a pas renvoyé &false;,
+      <constant>PHP_OUTPUT_HANDLER_STARTED</constant> et
+      <constant>PHP_OUTPUT_HANDLER_PROCESSED</constant> seront définis.
+      Si le gestionnaire a échoué lors du traitement du tampon ou a renvoyé &false;,
+      <constant>PHP_OUTPUT_HANDLER_STARTED</constant> et
+      <constant>PHP_OUTPUT_HANDLER_DISABLED</constant> seront définis.
+     </seg>
+    </seglistitem>
+    <seglistitem>
+     <seg>level</seg>
+     <seg>
+      Niveau d'imbrication de la sortie (à partir de zéro). Notez que la valeur renvoyée pour le
+      même niveau par la fonction <function>ob_get_level</function> est décalée d'un.
+      Le premier niveau est <literal>0</literal> pour <function>ob_get_status</function>,
+      et <literal>1</literal> pour <function>ob_get_level</function>.
+     </seg>
+    </seglistitem>
+    <seglistitem>
+     <seg>chunk_size</seg>
+     <seg>
+      Taille du fragment en octets. Défini par la fonction <function>ob_start</function>
+      ou <link linkend="ini.output-buffering">output_buffering</link> s'il est activé
+      et sa valeur est définie sur un entier positif
+     </seg>
+    </seglistitem>
+    <seglistitem>
+     <seg>buffer_size</seg>
+     <seg>
+      Taille du tampon de sortie en octets
+     </seg>
+    </seglistitem>
+    <seglistitem>
+     <seg>buffer_used</seg>
+     <seg>
+      Taille des données dans le tampon de sortie en octets
+     </seg>
+    </seglistitem>
+   </segmentedlist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+    <example>
+    <title>Tableau renvoyé lorsque le paramètre <parameter>full_status</parameter> est égal à &true;</title>
     <screen>
 <![CDATA[
 Array
 (
-    [level] => 2
     [type] => 0
-    [status] => 0
-    [name] => URL-Rewriter
-    [del] => 1
+    [flags] => 112
+    [level] => 2
+    [chunk_size] => 0
+    [buffer_size] => 16384
+    [buffer_used] => 1024
 )
 ]]>
     </screen>
-   </informalexample>
-   <segmentedlist>
-    <title>Résultats simples pour la fonction <function>ob_get_status</function></title>
-    <segtitle>Clé</segtitle>
-    <segtitle>Valeur</segtitle>
-    <seglistitem>
-     <seg>level</seg>
-     <seg>Niveau de sortie désiré</seg>
-    </seglistitem>
-    <seglistitem>
-     <seg>type</seg>
-     <seg><literal>0</literal> (gestionnaire interne) ou <literal>1</literal> (gestionnaire fournit par l'utilisateur)</seg>
-    </seglistitem>
-    <seglistitem>
-     <seg>status</seg>
-     <seg>Un parmi <literal>PHP_OUTPUT_HANDLER_START</literal> (0), <literal>PHP_OUTPUT_HANDLER_CONT</literal> (1) ou <literal>PHP_OUTPUT_HANDLER_END</literal> (2)</seg>
-    </seglistitem>
-    <seglistitem>
-     <seg>name</seg>
-     <seg>Nom du gestionnaire de sortie actif ou ' default output handler' si aucun n'est défini</seg>
-    </seglistitem>
-    <seglistitem>
-     <seg>del</seg>
-     <seg>Flag d'effacement tel que défini par <function>ob_start</function></seg>
-    </seglistitem>
-   </segmentedlist>
+   </example>
   </para>
   <para>
-   Si la fonction est appelée avec le paramètre <parameter>full_status</parameter>
-   défini à &true;, un tableau avec un élément par tampon de sortie actif est
-   retourné. Le niveau de sortie est utilisé en tant que clé du tableau de
-   niveau élevé et chaque élément du tableau est un autre tableau contenant les
-   informations sur le statut du niveau du tampon actif.
-   <informalexample>
+   <example>
+    <title>Tableau renvoyé lorsque le paramètre <parameter>full_status</parameter> est égal à &true;</title>
     <screen>
 <![CDATA[
 Array
 (
     [0] => Array
         (
-            [chunk_size] => 0
-            [size] => 40960
-            [block_size] => 10240
-            [type] => 1
-            [status] => 0
             [name] => default output handler
-            [del] => 1
+            [type] => 0
+            [flags] => 112
+            [level] => 1
+            [chunk_size] => 0
+            [buffer_size] => 16384
+            [buffer_used] => 2048
         )
 
     [1] => Array
         (
-            [chunk_size] => 0
-            [size] => 40960
-            [block_size] => 10240
-            [type] => 0
-            [buffer_size] => 0
-            [status] => 0
             [name] => URL-Rewriter
-            [del] => 1
+            [type] => 0
+            [flags] => 112
+            [level] => 2
+            [chunk_size] => 0
+            [buffer_size] => 16384
+            [buffer_used] => 1024
         )
 
 )
 ]]>
     </screen>
-   </informalexample>
-  </para>
-  <para>
-   La sortie complète contient les éléments suivants :
-   <segmentedlist>
-    <title>Résultats complets pour la fonction <function>ob_get_status</function></title>
-    <segtitle>Clé</segtitle>
-    <segtitle>Valeur</segtitle>
-    <seglistitem>
-     <seg>chunk_size</seg>
-     <seg>Taille telle que définie par la fonction <function>ob_start</function></seg>
-    </seglistitem>
-    <seglistitem>
-     <seg>size</seg>
-     <seg>...</seg></seglistitem>
-    <seglistitem>
-     <seg>blocksize</seg>
-     <seg>...</seg>
-    </seglistitem>
-   </segmentedlist>
+   </example>
   </para>
  </refsect1>
 
@@ -150,6 +186,7 @@ Array
    <simplelist>
     <member><function>ob_get_level</function></member>
     <member><function>ob_list_handlers</function></member>
+    <member><function>ob_start</function></member>
    </simplelist>
   </para>
  </refsect1>
