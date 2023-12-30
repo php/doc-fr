@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 6ab6ea465889620fc2a8cdaf7b008cbaed83c523 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 87a266cdd7f53bc86cd22d21af289b9a75f57f94 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.ob-list-handlers">
@@ -29,11 +29,29 @@
   &reftitle.returnvalues;
   <para>
    Retourne un tableau avec le gestionnaire d'affichage en
-   cours d'utilisation (s'il existe). Si
-   <link linkend="ini.output-buffering">output_buffering</link> est activé
-   ou si une fonction anonyme est utilisée avec <function>ob_start</function>,
-   <function>ob_list_handlers</function> retournera un tableau avec comme
-   valeur d'entrée : <literal>"default output handler"</literal>.
+   cours d'utilisation (s'il existe).
+  </para>
+  <para>
+   Si <link linkend="ini.output-buffering">output_buffering</link> est activé
+   et qu'aucun <link linkend="ini.output-handler">output_handler</link> n'est défini,
+   ou si aucun rappel ou &null; n'a été passé à <function>ob_start</function>,
+   <literal>"default output handler"</literal> est renvoyé.
+   Activer <link linkend="ini.output-buffering">output_buffering</link>
+   et définir un <link linkend="ini.output-handler">output_handler</link>
+   équivaut à passer
+   une <link linkend="functions.internal">fonction interne (intégrée)</link>
+   à <function>ob_start</function>.
+  </para>
+  <para>
+   Si un <type>callable</type> a été passé à <function>ob_start</function>,
+   le <link linkend="language.namespaces.basics">nom complètement qualifié</link>
+   du <type>callable</type> est renvoyé.
+   Si le <type>callable</type> est un objet implémentant
+   <link linkend="language.oop5.magic.invoke">__invoke()</link>,
+   le <link linkend="language.namespaces.basics">nom complètement qualifié</link>
+   de la méthode <link linkend="language.oop5.magic.invoke">__invoke()</link> de l'objet est renvoyé.
+   Si le <type>callable</type> est une <classname>Closure</classname>,
+   <literal>"Closure::__invoke"</literal> est renvoyé.
   </para>
  </refsect1>
 
@@ -45,17 +63,70 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-//Utilisation de output_buffering=On
-print_r(ob_list_handlers());
+// utilisation output_buffering=On, sans output_handler défini
+var_dump(ob_list_handlers());
 ob_end_flush();
 
-ob_start("ob_gzhandler");
-print_r(ob_list_handlers());
-ob_end_flush();
+// aucun rappel ou null
+ob_start();
+var_dump(ob_list_handlers());
 
-// Fonctions anonymes
+// Fonction anonyme
 ob_start(function($string) { return $string; });
-print_r(ob_list_handlers());
+var_dump(ob_list_handlers());
+ob_end_flush();
+
+// fonction fléchée
+ob_start(fn($string) => $string);
+var_dump(ob_list_handlers());
+ob_end_flush();
+
+// callable de première classe
+$firstClassCallable = userDefinedFunction(...);
+
+ob_start([$firstClassCallable, '__invoke']);
+var_dump(ob_list_handlers());
+ob_end_flush();
+
+// fonction interne (intégrée)
+ob_start('print_r');
+var_dump(ob_list_handlers());
+ob_end_flush();
+
+// fonction définie par l'utilisateur
+function userDefinedFunction($string, $flags) { return $string; };
+
+ob_start('userDefinedFunction');
+var_dump(ob_list_handlers());
+ob_end_flush();
+
+class MyClass {
+    public static function staticHandle($string) {
+        return $string;
+    }
+
+    public static function handle($string) {
+        return $string;
+    }
+
+    public function __invoke($string) {
+        return $string;
+    }
+}
+
+// classe et méthode statique
+ob_start(['MyClass','staticHandle']);
+var_dump(ob_list_handlers());
+ob_end_flush();
+
+// objet et méthode non statique
+ob_start([new MyClass,'handle']);
+var_dump(ob_list_handlers());
+ob_end_flush();
+
+// objet invoquable
+ob_start(new MyClass);
+var_dump(ob_list_handlers());
 ob_end_flush();
 ?>
 ]]>
@@ -63,20 +134,46 @@ ob_end_flush();
     &example.outputs;
     <screen>
 <![CDATA[
-Array
-(
-    [0] => default output handler
-)
-
-Array
-(
-    [0] => ob_gzhandler
-)
-
-Array
-(
-    [0] => Closure::__invoke
-)
+array(1) {
+  [0]=>
+  string(22) "default output handler"
+}
+array(1) {
+  [0]=>
+  string(22) "default output handler"
+}
+array(1) {
+  [0]=>
+  string(7) "print_r"
+}
+array(1) {
+  [0]=>
+  string(19) "userDefinedFunction"
+}
+array(1) {
+  [0]=>
+  string(17) "Closure::__invoke"
+}
+array(1) {
+  [0]=>
+  string(17) "Closure::__invoke"
+}
+array(1) {
+  [0]=>
+  string(17) "Closure::__invoke"
+}
+array(1) {
+  [0]=>
+  string(21) "MyClass::staticHandle"
+}
+array(1) {
+  [0]=>
+  string(15) "MyClass::handle"
+}
+array(1) {
+  [0]=>
+  string(17) "MyClass::__invoke"
+}
 ]]>
     </screen>
    </example>
