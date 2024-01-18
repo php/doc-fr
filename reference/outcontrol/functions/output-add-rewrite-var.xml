@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: c6a8e42bdbbb814124b84d45d95cd793129aac6b Maintainer: jpauli Status: ready -->
+<!-- EN-Revision: b0d9505811e05bc11b58ef23167f3855c742edba Maintainer: jpauli Status: ready -->
 <!-- Reviewed: no -->
 
 <refentry xmlns="http://docbook.org/ns/docbook" xml:id="function.output-add-rewrite-var">
@@ -17,26 +17,34 @@
    <methodparam><type>string</type><parameter>value</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Cette fonction ajoute une nouvelle paire nom/valeur au mécanisme de réécriture d'URL.
-   Le nom et la valeur sera ajouté aux URL (en tant que paramètre GET) et aux formulaires
-   (en tant que champs cachés) de la même façon que pour les identifiants de session
-   lorsque la réécriture d'URL est activée avec <link
-   linkend="ini.session.use-trans-sid">session.use_trans_sid</link>.
+   Cette fonction démarre le gestionnaire de tampon de sortie <literal>'URL-Rewriter'</literal>
+   s'il n'est pas actif,
+   stocke les paramètres <parameter>name</parameter> et <parameter>value</parameter>,
+   et lorsque le tampon est vidé, réécrit les <acronym>URL</acronym>s
+   et les formulaires en fonction des paramètres <acronym>ini</acronym> applicables.
+   Les appels ultérieurs à cette fonction stockeront toutes les paires nom/valeur
+   supplémentaires jusqu'à ce que le gestionnaire soit désactivé.
   </para>
   <para>
-   Ce comportement est contrôlé par les options
-   <link
-    linkend="ini.url-rewriter.tags">url_rewriter.tags</link> et
-    <link linkend="ini.url-rewriter.hosts">url_rewriter.hosts</link> du &php.ini;.
+   Lorsque le tampon de sortie est vidé
+   (en appelant <function>ob_flush</function>, <function>ob_end_flush</function>,
+   <function>ob_get_flush</function> ou à la fin du script),
+   le gestionnaire <literal>'URL-Rewriter'</literal> ajoute les paires nom/valeur
+   en tant que paramètres de requête aux <acronym>URL</acronym>s dans les attributs des balises HTML
+   et ajoute des champs cachés aux formulaires en fonction des valeurs des
+   directives de configuration <link linkend="ini.url-rewriter.tags">url_rewriter.tags</link> et
+   <link linkend="ini.url-rewriter.hosts">url_rewriter.hosts</link>.
   </para>
   <para>
-   Il est à noter que cette fonction ne peut être appellé avec succès au plus
-   une fois par requête.
+   Chaque paire nom/valeur ajoutée au gestionnaire <literal>'URL-Rewriter'</literal>
+   est ajoutée aux <acronym>URL</acronym>s et/ou formulaires
+   même si cela résulte en des paramètres de requête d'<acronym>URL</acronym> dupliqués
+   ou des éléments avec les mêmes attributs de nom.
   </para>
   <note>
    <simpara>
-    L'appel à cette fonction démarre implicitement la temporisation de
-    sortie si elle n'est pas déjà activée.
+    Une fois que le gestionnaire <literal>'URL-Rewriter'</literal> a été désactivé,
+    il ne peut pas être redémarré.
    </simpara>
   </note>
  </refsect1>
@@ -87,13 +95,13 @@
       <row>
        <entry>7.1.0</entry>
        <entry>
-        Antérieur à php 7.1.0, la réécriture des variables définis par 
-        <function>output_add_rewrite_var</function> utilisait la même mémoire 
-        tampon de sortie que le module de session trans sid. À partir de PHP 7.1.0, le 
-        tampon de sortie dédié est utilisé, <link linkend="ini.url-rewriter.tags">
-        url_rewriter.tags</link> 
-        est utilisé uniquement pour les fonctions de sortie, ajout de <link 
-        linkend="ini.url-rewriter.tags">url_rewriter.hosts</link>.
+        À partir de PHP 7.1.0, un tampon de sortie dédié est utilisé,
+        <link linkend="ini.url-rewriter.tags">url_rewriter.tags</link>
+        est utilisé uniquement pour les fonctions de sortie et
+        <link linkend="ini.url-rewriter.tags">url_rewriter.hosts</link> est disponible.
+        Antérieur à PHP 7.1.0, les variables de réécriture définies par <function>output_add_rewrite_var</function>
+        partageaient un tampon de sortie avec la prise en charge transparente de l'ID de session
+        (voir <link linkend="ini.session.trans-sid-tags">session.trans_sid_tags</link>).
        </entry>
       </row>
      </tbody>
@@ -110,6 +118,8 @@
     <programlisting role="php">
 <![CDATA[
 <?php
+ini_set('url_rewriter.tags', 'a=href,form=');
+
 output_add_rewrite_var('var', 'value');
 
 // Quelques liens
@@ -155,8 +165,6 @@ Array
     <member><function>ob_list_handlers</function></member>
     <member><link linkend="ini.url-rewriter.tags">url_rewriter.tags</link></member>
     <member><link linkend="ini.url-rewriter.hosts">url_rewriter.hosts</link></member>
-    <member><link linkend="ini.session.trans-sid-tags">session.trans_sid_tags</link></member>
-    <member><link linkend="ini.session.trans-sid-hosts">session.trans_sid_hosts</link></member>
    </simplelist>
   </para>
  </refsect1>

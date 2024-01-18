@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 86e6094e86b84a51d00ab217ac50ce8dde33d82a Maintainer: yannick Status: ready -->
+<!-- EN-Revision: c2c5f47c53f58b5a50b5cc3c30116cb2aecf2d3c Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <section xml:id="outcontrol.configuration" xmlns="http://docbook.org/ns/docbook">
@@ -21,30 +21,31 @@
     <tbody>
     <row>
      <entry><link linkend="ini.output-buffering">output_buffering</link></entry>
-     <entry>"0"</entry>
+     <entry><literal>"0"</literal></entry>
      <entry>PHP_INI_PERDIR</entry>
      <entry></entry>
     </row>
     <row>
      <entry><link linkend="ini.output-handler">output_handler</link></entry>
-     <entry>NULL</entry>
+     <entry>&null;</entry>
      <entry>PHP_INI_PERDIR</entry>
      <entry></entry>
     </row>
     <row>
      <entry><link linkend="ini.implicit-flush">implicit_flush</link></entry>
-     <entry>"0"</entry>
+     <entry><literal>"0"</literal></entry>
      <entry>PHP_INI_ALL</entry>
      <entry></entry>
     </row>
     <row>
      <entry><link linkend="ini.url-rewriter.tags">url_rewriter.tags</link></entry>
-     <entry>"a=href,area=href,frame=src,form=,fieldset="</entry>
+     <entry><literal>"form="</literal></entry>
      <entry>PHP_INI_ALL</entry>
-     <entry>Avant PHP 7.1.0, il était utilisé pour 
-      la réécriture d'URL quand le SID transparent était activé. Depuis PHP 
-      7.1.0, il est uniquement utilisé par la fonction
+     <entry>
+      À partir de PHP 7.1.0, ce paramètre INI n'a d'effet que sur
       <function>output_add_rewrite_var</function>.
+      Antérieur à PHP 7.1.0, ce paramètre INI activait la prise en charge transparente
+      de l'ID de session (voir <link linkend="ini.session.trans-sid-tags">session.trans_sid_tags</link>).
      </entry>
     </row>
     <row>
@@ -68,13 +69,12 @@
    </term>
    <listitem>
     <para>
-     Vous pouvez activer la bufferisation de sortie pour tous les fichiers
-     avec cette directive, en lui passant la valeur <literal>On</literal>.
-     Si vous souhaitez limiter la taille du buffer à une certaine taille,
-     vous pouvez alors indiquer un nombre maximum d'octets à la place de
-     <literal>On</literal>. Par exemple, <literal>output_buffering=4096</literal>).
-     Cette directive est toujours désactivée en ligne
-     de commande.
+     La mise en mémoire tampon de la sortie pour tous les fichiers peut être activée
+     en définissant cette directive sur <literal>"On"</literal>.
+     Pour limiter la taille du tampon, un nombre/quantité correspondant au
+     nombre maximal d'octets autorisés peut être utilisé à la place de
+     <literal>"On"</literal> pour la valeur de cette directive.
+     Par exemple, <literal>output_buffering=4096</literal>.
     </para>
    </listitem>
   </varlistentry>
@@ -86,18 +86,26 @@
    </term>
    <listitem>
     <para>
-     Vous pouvez rediriger le résultat de tous vos scripts à une fonction
-     avant leur envoi au navigateur. Par exemple, si vous configurez
-     output_handler à <function>mb_output_handler</function>, l'encodage
-     des caractères sera adapté de manière transparente. Configurer
-     une telle fonction active automatiquement la bufferisation de sortie.
+     La sortie des scripts peut être redirigée vers une fonction.
+     Par exemple, en définissant <literal>output_handler</literal>
+     sur <function>mb_output_handler</function>, le codage des caractères sera
+     converti de manière transparente vers le codage spécifié.
+     La configuration de n'importe quel gestionnaire de sortie active
+     automatiquement la mise en mémoire tampon de la sortie.
     </para>
     <note>
      <para>
-      Vous ne pouvez pas utiliser simultanément <function>mb_output_handler</function> avec
-      <function>ob_iconv_handler</function>, non plus que
-      <function>ob_gzhandler</function> avec
-      <link linkend="ini.zlib.output-compression">zlib.output_compression</link>.
+      <function>mb_output_handler</function> et
+      <function>ob_iconv_handler</function> ne peuvent pas être utilisés ensemble,
+      et <function>ob_gzhandler</function> et
+      <link linkend="ini.zlib.output-compression">zlib.output_compression</link>
+      ne peuvent pas être utilisés avec l'un des éléments suivants :
+      <function>mb_output_handler</function>,
+      <function>ob_gzhandler</function>,
+      <link linkend="ini.zlib.output-compression">zlib.output_compression</link>,
+      le gestionnaire 'URL-Rewriter'
+      (voir <link linkend="ini.session.use-trans-sid">session.use_trans_sid</link>
+      et <function>output_add_rewrite_var</function>).
      </para>
     </note>
     <note>
@@ -120,9 +128,9 @@
      à PHP que le buffer de sortie doit être vidé automatiquement après
      chaque fonction d'affichage. Cela revient à appeler la fonction
      <function>flush</function> après chaque appel à
-     <function>print</function>
-     ou <function>echo</function>
-     et pour tous les blocs <literal>HTML</literal>.
+     toute fonction produisant une sortie (comme
+     <function>print</function> ou <function>echo</function>)
+     et chaque bloc HTML.
     </para>
     <para>
      Lorsque vous utilisez PHP en environnement web, activer cette
@@ -144,47 +152,51 @@
     </term>
     <listitem>
      <simpara>
-      Spécifie quelles sont les balises HTML qui doivent
-      être réécrites par les valeurs de la fonction
-      <function>output_add_rewrite_var</function>. Par défaut, il vaut
- <literal>a=href,area=href,frame=src,input=src,form=fakeentry,fieldset=</literal>.
+      <literal>url_rewriter.tags</literal> spécifie les balises HTML et les attributs
+      dans lesquels les URLs sont réécrites par les valeurs de
+      <function>output_add_rewrite_var</function>. Par défaut, c'est <literal>"form="</literal>.
      </simpara>
      <simpara>
-     <literal>form</literal> est une balise spéciale. La variable de formulaire 
-     <literal>&lt;input hidden="session_id" name="session_name"&gt;</literal> 
-     est ajoutée.
-    </simpara>
-    <note>
-     <simpara>
-      Avant PHP 7.1.0, <link linkend="ini.url-rewriter.tags">url_rewriter.tags</link>
-      était utilisé pour spécifier 
-      <link linkend="ini.session.trans-sid-tags">session.trans_sid_tags</link>. 
-      À partir de PHP 7.1.0, <literal>fieldset</literal> n'est plus considéré comme 
-      une balise spéciale.
+      Ajouter <literal>"form="</literal> ou n'importe quel attribut <literal>form</literal>
+      ajoutera un élément <literal>input</literal> caché dans le <literal>form</literal>
+      avec un attribut de nom et de valeur pour chaque paire nom-valeur transmise à
+      <function>output_add_rewrite_var</function>.
      </simpara>
-    </note>
+     <caution>
+      <simpara>
+       Ajouter la même balise plus d'une fois à <literal>url_rewriter.tags</literal>
+       utilisera uniquement la première occurrence pendant le processus de réécriture d'URL.
+      </simpara>
+     </caution>
+     <note>
+      <simpara>
+       Antérieur à PHP 7.1.0, <link linkend="ini.url-rewriter.tags">url_rewriter.tags</link>
+       était utilisé pour spécifier 
+       <link linkend="ini.session.trans-sid-tags">session.trans_sid_tags</link>. 
+      </simpara>
+     </note>
     </listitem>
    </varlistentry>
-  
-  <varlistentry xml:id="ini.url-rewriter.hosts">
-   <term>
-    <parameter>url_rewriter.hosts</parameter>
-    <type>string</type>
-   </term>
-   <listitem>
-    <simpara>
-     <literal>url_rewriter.hosts</literal> spécifie les hôtes qui sont réécrits 
-     pour includes les valeurs de la fonction
-     <function>output_add_rewrite_var</function>.
-     Par défaut <literal>$_SERVER['HTTP_HOST']</literal>. Plusieurs 
-     hôtes peuvent être spécifiés séparé par ",", aucun espace n'est autorisé 
-     entre les hôtes. Par exemple : 
-     <literal>php.net,wiki.php.net,bugs.php.net</literal>
-    </simpara>
-   </listitem>
-  </varlistentry>
 
- </variablelist>
+   <varlistentry xml:id="ini.url-rewriter.hosts">
+    <term>
+     <parameter>url_rewriter.hosts</parameter>
+     <type>string</type>
+    </term>
+    <listitem>
+     <simpara>
+      <literal>url_rewriter.hosts</literal> spécifie les hôtes qui sont réécrits 
+      pour includes les valeurs de la fonction
+      <function>output_add_rewrite_var</function>.
+      Par défaut <literal>$_SERVER['HTTP_HOST']</literal>. Plusieurs 
+      hôtes peuvent être spécifiés séparé par une virgule, aucun espace n'est autorisé 
+      entre les hôtes. Par exemple : 
+      <literal>php.net,wiki.php.net,bugs.php.net</literal>
+     </simpara>
+    </listitem>
+   </varlistentry>
+
+  </variablelist>
  </para>
 </section>
 
