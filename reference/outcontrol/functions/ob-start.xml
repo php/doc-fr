@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 9e0a39029d6e66cd5f7c7e8cfecf76fdb8ad7f49 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: e8f4c442c963211fd01031177619c41e220863bc Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 <refentry xml:id="function.ob-start" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -17,36 +17,23 @@
    <methodparam choice="opt"><type>int</type><parameter>flags</parameter><initializer><constant>PHP_OUTPUT_HANDLER_STDFLAGS</constant></initializer></methodparam>
   </methodsynopsis>
   <para>
-   <function>ob_start</function> démarre la temporisation de sortie. 
-   Tant qu'elle est enclenchée, aucune donnée, hormis les en-têtes, 
-   n'est envoyée au navigateur, mais temporairement mise en tampon.
+   Cette fonction active la mise en mémoire tampon de la sortie.
+   Lorsque la mise en mémoire tampon est active, aucune sortie n'est envoyée depuis le script ;
+   au lieu de cela, la sortie est stockée dans une mémoire tampon interne.
+   Consultez <xref linkend="outcontrol.what-output-is-buffered"/>
+   pour savoir exactement quelles sorties sont concernées.
   </para>
   <para>
-   Le contenu de ce tampon peut être copié dans une chaîne
-   avec la fonction <function>ob_get_contents</function>. Pour afficher le
-   contenu de ce tampon, utilisez <function>ob_end_flush</function>. Au
-   contraire, <function>ob_end_clean</function> effacera le contenu de ce
-   tampon.
-  </para>
-  <warning>
-   <para>
-    Quelques serveurs web (par exemple Apache) modifient le dossier de
-    travail d'un script lorsqu'il appelle une fonction de rappel.
-    Vous pouvez revenir à un comportement normal en ajoutant
-    <literal>chdir(dirname($_SERVER['SCRIPT_FILENAME']))</literal>
-    dans votre fonction de rappel.
-   </para>
-  </warning>
-  <para>
-   Les tampons de sortie sont gérés par pile, c'est-à-dire que vous pouvez
-   appeler plusieurs fois <function>ob_start</function> simultanément.
-   Assurez-vous que vous appelez <function>ob_end_flush</function>
-   suffisamment souvent. Si plusieurs fonctions de rappel sont actives,
-   les contenus seront filtrés séquentiellement, dans l'ordre d'emboîtement.
+   Les tampons de sortie sont empilables, c'est-à-dire
+   <function>ob_start</function> peut être appelée pendant qu'un autre tampon est actif.
+   Si plusieurs tampons de sortie sont actifs,
+   la sortie est filtrée séquentiellement
+   à travers chacun d'eux dans l'ordre d'emboîtement.
+   Consultez <xref linkend="outcontrol.nesting-output-buffers"/> pour plus de détails.
   </para>
   <para>
-   Si les tampons de sortie sont encore actif quand le script se termine,
-   PHP affiche le contenu automatiquement.
+   Consultez <xref linkend="outcontrol.user-level-output-buffers"/>
+   pour une description détaillée des tampons de sortie.
   </para>
  </refsect1>
 
@@ -58,18 +45,16 @@
      <term><parameter>callback</parameter></term>
      <listitem>
       <para>
-       Une fonction optionnelle de rappel peut être spécifiée.
-       Cette fonction prend une chaîne comme paramètre, et
-       retourne une chaîne. Elle sera appelée lorsque le tampon sera envoyé
-       ou supprimé (avec les fonctions <function>ob_flush</function>,
-       <function>ob_clean</function> ou des fonctions similaires)
-       ou lorsque le tampon sera envoyé
-       au navigateur à la fin du script et recevra le contenu du tampon de
-       sortie. Lorsque la fonction <parameter>callback</parameter> est
-       appelée, elle doit retourner un nouveau contenu pour le tampon de sortie :
-       celui-ci sera envoyé au navigateur. Si <parameter>callback</parameter>
-       n'est pas une fonction accessible, la fonction retournera &false;.
-       Voici la signature de la fonction de rappel :
+       Un <parameter>callback</parameter> <type>callable</type> optionnel peut être
+       spécifié. Il peut également être contourné en passant &null;.
+      </para>
+      <para>
+       <parameter>callback</parameter> est invoqué lorsque le tampon de sortie est
+       vidé (envoyé), nettoyé, ou lorsque le tampon de sortie est vidé
+       à la fin du script.
+      </para>
+      <para>
+       La signature du <parameter>callback</parameter> est la suivante :
       </para>
       <para>
        <methodsynopsis>
@@ -90,44 +75,38 @@
          <term><parameter>phase</parameter></term>
          <listitem>
           <simpara>
-           Masque de bits de <link linkend="outcontrol.constants">constantes
-           <constant>PHP_OUTPUT_HANDLER_*</constant></link>.
+           Masque de bits des constantes
+           <link linkend="constant.php-output-handler-start">
+            <constant>PHP_OUTPUT_HANDLER_<replaceable>*</replaceable></constant>
+           </link>.
+           Consultez <xref linkend="outcontrol.flags-passed-to-output-handlers"/>
+           pour plus de détails.
           </simpara>
          </listitem>
         </varlistentry>
        </variablelist>
       </para>
       <para>
-       Si <parameter>callback</parameter> retourne &false;,
-       l'entrée originale est envoyée au navigateur.
+       Si <parameter>callback</parameter> renvoie &false;,
+       le contenu du tampon est renvoyé.
+       Consultez <xref linkend="outcontrol.output-handler-return-values"/>
+       pour plus de détails.
       </para>
+      <warning>
+       <simpara>
+        Appeler l'une des fonctions suivantes à partir d'un gestionnaire de sortie
+        entraînera une erreur fatale :
+        <function>ob_clean</function>, <function>ob_end_clean</function>,
+        <function>ob_end_flush</function>, <function>ob_flush</function>,
+        <function>ob_get_clean</function>, <function>ob_get_flush</function>,
+        <function>ob_start</function>.
+       </simpara>
+      </warning>
       <para>
-       Le paramètre <parameter>callback</parameter> peut être annulé
-       en y passant la valeur &null;.
+       Consultez <xref linkend="outcontrol.output-handlers"/>
+       et <xref linkend="outcontrol.working-with-output-handlers"/>
+       pour plus de détails sur les <parameter>callback</parameter>s (gestionnaires de sortie).
       </para>
-      <para>
-       <function>ob_end_clean</function>, <function>ob_end_flush</function>,
-       <function>ob_clean</function>, <function>ob_flush</function> et
-       <function>ob_start</function> ne doivent pas être appelés depuis une
-       fonction de rappel. Si vous les appelez depuis une fonction de
-       rappel, le comportement ne sera pas défini. Si vous voulez effacer
-       le contenu du tampon, retournez "" (une chaîne vide) depuis la fonction
-       de rappel. Vous ne pourrez jamais appeler les fonctions utilisant
-       la fonction de temporisation de sortie comme
-       <literal>print_r($expression, true)</literal> ou
-       <literal>highlight_file($filename, true)</literal> depuis une fonction de
-       rappel.
-      </para>
-      <note>
-       <para>
-        La fonction <function>ob_gzhandler</function> a été
-        introduite pour faciliter l'envoi de fichiers compressés
-        avec gzip aux navigateurs web qui supportent les pages
-        compressées. <function>ob_gzhandler</function>
-        détermine le type d'encodage accepté par un navigateur,
-        et retourne le contenu le plus adéquat.
-       </para>
-      </note>
      </listitem>
     </varlistentry>
     <varlistentry>
@@ -136,9 +115,10 @@
       <para>
        Si le paramètre optionnel <parameter>chunk_size</parameter> est passé,
        la fonction de rappel est appelée à chaque nouvelle ligne après 
-       <parameter>chunk_size</parameter> octets d'affichage. La valeur
-       par défaut <literal>0</literal> (zéro) signifie que l'affichage
-       de la fonction ne sera appelé que lorsque le buffer de sortie est clos.
+       <parameter>chunk_size</parameter> octets d'affichage.
+       La valeur par défaut <literal>0</literal> signifie
+       que toute la sortie est mise en mémoire tampon jusqu'à ce que la mémoire tampon soit désactivée.
+       Consultez <xref linkend="outcontrol.buffer-size"/> pour plus de détails.
       </para>
      </listitem>
     </varlistentry>
@@ -149,11 +129,12 @@
        Le paramètre <parameter>flags</parameter> est un masque qui contrôle
        les opérations qui peuvent être effectuées sur le tampon de sortie.
        Par défaut, il autorise le tampon de sortie à être nettoyé, envoyé
-       et supprimé, ce qui peut être défini explicitement avec les constantes
-       <constant>PHP_OUTPUT_HANDLER_CLEANABLE</constant> |
-       <constant>PHP_OUTPUT_HANDLER_FLUSHABLE</constant> |
-       <constant>PHP_OUTPUT_HANDLER_REMOVABLE</constant>, ou
-       <constant>PHP_OUTPUT_HANDLER_STDFLAGS</constant> comme alias.
+       et supprimé, ce qui peut être défini explicitement avec les
+       <link linkend="outcontrol.constants.buffer-control-flags">
+        indicateurs de contrôle de la mémoire tampon
+       </link>.
+       Consultez <xref linkend="outcontrol.operations-on-buffers"/>
+       pour plus de détails.
       </para>
       <para>
        Chaque drapeau contrôle l'accès à un jeu de fonctions, tel décrit
@@ -171,16 +152,12 @@
            <entry><constant>PHP_OUTPUT_HANDLER_CLEANABLE</constant></entry>
            <entry>
             <function>ob_clean</function>,
-            <function>ob_end_clean</function> et
-            <function>ob_get_clean</function>.
            </entry>
           </row>
           <row>
            <entry><constant>PHP_OUTPUT_HANDLER_FLUSHABLE</constant></entry>
            <entry>
             <function>ob_end_flush</function>,
-            <function>ob_flush</function> et
-            <function>ob_get_flush</function>.
            </entry>
           </row>
           <row>
@@ -188,6 +165,7 @@
            <entry>
             <function>ob_end_clean</function>,
             <function>ob_end_flush</function> et
+            <function>ob_get_clean</function>.
             <function>ob_get_flush</function>.
            </entry>
           </row>
