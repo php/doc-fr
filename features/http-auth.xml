@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 2d1981cc3003cd94f5fb88e0473eed2c5b26efde Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 61d5b83d9145d58515ad4c93c6125a339fb5eeda Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="features.http-auth" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -17,8 +17,8 @@
   <varname>AUTH_TYPE</varname> contenant respectivement le nom d'utilisateur, le mot de passe et
   le type d'identification. Ces variables prédéfinies sont trouvées dans les tableaux
   <varname>$_SERVER</varname>.
-  <emphasis>Seulement</emphasis> les méthodes d'identification simple ("Basic") et de type "Digest"
-  sont supportées. Reportez-vous à la fonction
+  <emphasis>Seulement</emphasis> les méthodes d'identification simple ("Basic")
+  est supportée. Reportez-vous à la fonction
   <function>header</function> pour plus d'informations.
  </simpara>
  
@@ -40,72 +40,6 @@ if (!isset($_SERVER['PHP_AUTH_USER'])) {
 } else {
     echo "<p>Bonjour, {$_SERVER['PHP_AUTH_USER']}.</p>";
     echo "<p>Votre mot de passe est {$_SERVER['PHP_AUTH_PW']}.</p>";
-}
-?>
-]]>
-   </programlisting>
-  </example>
- </para>
- 
- <para>
-  <example>
-   <title>Exemple d'identification HTTP Digest</title>
-   <para>
-    Cet exemple montre comment appliquer l'utilisation d'un script
-    d'identification HTTP de type "Digest". Pour plus d'informations,
-    lisez la documentation <link xlink:href="&url.rfc;2617">RFC 2617</link>.
-   </para>
-   <programlisting role="php">
-<![CDATA[
-<?php
-$realm = 'Restricted area';
-
-//utilisateur => mot de passe
-$users = array('admin' => 'mypass', 'guest' => 'guest');
-
-
-if (empty($_SERVER['PHP_AUTH_DIGEST'])) {
-    header('HTTP/1.1 401 Unauthorized');
-    header('WWW-Authenticate: Digest realm="'.$realm.
-           '",qop="auth",nonce="'.uniqid().'",opaque="'.md5($realm).'"');
-
-    die('Texte utilisé si le visiteur utilise le bouton d\'annulation');
-}
-
-// analyse la variable PHP_AUTH_DIGEST
-if (!($data = http_digest_parse($_SERVER['PHP_AUTH_DIGEST'])) ||
-    !isset($users[$data['username']]))
-    die('Mauvaise Pièce d\'identité!');
-
-
-// Génération de réponse valide
-$A1 = md5($data['username'] . ':' . $realm . ':' . $users[$data['username']]);
-$A2 = md5($_SERVER['REQUEST_METHOD'].':'.$data['uri']);
-$valid_response = md5($A1.':'.$data['nonce'].':'.$data['nc'].':'.$data['cnonce'].':'.$data['qop'].':'.$A2);
-
-if ($data['response'] != $valid_response)
-    die('Mauvaise Pièce d\'identitée!');
-
-// ok, utilisateur & mot de passe valide
-echo 'Vous êtes identifié en tant que : ' . $data['username'];
-
-
-// fonction pour analyser l'en-tête http auth
-function http_digest_parse($txt)
-{
-    // protection contre les données manquantes
-    $needed_parts = array('nonce'=>1, 'nc'=>1, 'cnonce'=>1, 'qop'=>1, 'username'=>1, 'uri'=>1, 'response'=>1);
-    $data = array();
-    $keys = implode('|', array_keys($needed_parts));
- 
-    preg_match_all('@(' . $keys . ')=(?:([\'"])([^\2]+?)\2|([^\s,]+))@', $txt, $matches, PREG_SET_ORDER);
-
-    foreach ($matches as $m) {
-        $data[$m[1]] = $m[3] ? $m[3] : $m[4];
-        unset($needed_parts[$m[1]]);
-    }
-
-    return $needed_parts ? false : $data;
 }
 ?>
 ]]>
