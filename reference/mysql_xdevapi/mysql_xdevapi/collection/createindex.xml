@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 5a20fd035d9e63be7ccc3b4ac2e361a10a5add32 Maintainer: Fan2Shrek Status: ready -->
+<!-- Reviewed: yes -->
+<refentry xml:id="mysql-xdevapi-collection.createindex" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <refnamediv>
+  <refname>Collection::createIndex</refname>
+  <refpurpose>Créer un index de collection</refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <modifier>public</modifier> <type>void</type><methodname>mysql_xdevapi\Collection::createIndex</methodname>
+   <methodparam><type>string</type><parameter>index_name</parameter></methodparam>
+   <methodparam><type>string</type><parameter>index_desc_json</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+    Créer un index sur la collection.
+  </para>
+  <para>
+    Une exception est lancée si un index portant le même nom existe déjà,
+    ou si la définition de l'index n'est pas correctement formée.
+   </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <variablelist>
+   <varlistentry>
+    <term><parameter>index_name</parameter></term>
+    <listitem>
+     <para>
+      Le nom de l'index à créer. Ce nom doit être un nom d'index valide tel que
+      accepté par la requête SQL <literal>CREATE INDEX</literal>.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><parameter>index_desc_json</parameter></term>
+    <listitem>
+     <para>
+      La définition de l'index à créer. Elle contient un tableau d'objets IndexField,
+      et chaque objet décrit un seul membre de document à inclure dans l'index,
+      et une chaîne facultative pour le type d'index qui pourrait être INDEX (par défaut) ou SPATIAL.
+     </para>
+     <para>
+      Une description IndexField unique se compose des champs suivants :
+     </para>
+     <itemizedlist>
+      <listitem>
+        <para>
+          <code>field</code>: chaîne, le chemin complet du document vers le membre du document ou le champ à indexer.
+        </para>
+      </listitem>
+      <listitem>
+       <para>
+        <code>type</code>: chaîne, l'un des types de colonnes SQL pris en charge pour mapper le champ.
+        Pour les types numériques, le mot-clé facultatif UNSIGNED peut suivre.
+        Pour le type TEXT, la longueur à considérer pour l'indexation peut être ajoutée.
+       </para>
+      </listitem>
+      <listitem>
+        <para>
+          <code>unique</code>: booléen, (facultatif) true si le champ doit être éxisté dans le document.
+          Par défaut à &false;, sauf pour <literal>GEOJSON</literal> où il est par défaut à &true;.
+         </para>
+       </listitem>
+      <listitem>
+        <para>
+          <code>options</code>: entier, (facultatif) drapeaux d'options spéciaux à utiliser
+          lors du décodage de données <literal>GEOJSON</literal>.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          <code>srid</code>: entier, (facultatif) valeur srid à utiliser lors
+          du décodage de données <literal>GEOJSON</literal>.
+        </para>
+      </listitem>
+      </itemizedlist>
+
+      <para>
+        C'est une erreur d'inclure d'autres champs non décrits ci-dessus dans
+        les documents IndexDefinition ou IndexField.
+      </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para></para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple de <function>mysql_xdevapi\Collection::createIndex</function></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$session = mysql_xdevapi\getSession("mysqlx://user:password@localhost");
+$session->sql("DROP DATABASE IF EXISTS addressbook")->execute();
+$session->sql("CREATE DATABASE addressbook")->execute();
+
+$schema     = $session->getSchema("addressbook");
+$collection = $schema->createCollection("people");
+
+// Créer un index de texte
+$collection->createIndex(
+  'myindex1',
+  '{"fields": [{
+    "field": "$.name",
+    "type": "TEXT(25)",
+    "required": true}],
+    "unique": false}'
+);
+
+// Un index spatial
+$collection->createIndex(
+  'myindex2',
+  '{"fields": [{
+    "field": "$.home",
+    "type": "GEOJSON",
+    "required": true}],
+    "type": "SPATIAL"}'
+);
+
+// Index avec plusieurs champs
+$collection->createIndex(
+  'myindex3',
+  '{"fields": [
+    {
+      "field": "$.name",
+      "type": "TEXT(20)",
+      "required": true
+    },
+    {
+      "field": "$.age",
+      "type": "INTEGER"
+    },
+    {
+      "field": "$.job",
+      "type": "TEXT(30)",
+      "required": false
+    }
+  ],
+  "unique": true
+  }'
+);
+]]>
+   </programlisting>
+  </example>
+ </refsect1>
+
+</refentry>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
