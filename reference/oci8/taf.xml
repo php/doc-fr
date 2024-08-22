@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: f4c44b86948f70a7e89f582b500e2595452e00f0 Maintainer: Fan2Shrek Status: ready -->
+<!-- Reviewed: yes -->
+<chapter xml:id="oci8.taf" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Le support de la reprise transparente d'application (TAF) d'OCI8</title>
+ <para>
+  TAF est une fonctionnalité de la base de données Oracle qui fournit une haute disponibilité.
+  Elle permet aux applications PHP OCI8 de se reconnecter automatiquement à une
+  base de données préconfigurée lorsque la connectivité à la base de données échoue en raison
+  d'une panne d'instance ou de réseau.
+ </para>
+ <para>
+  Dans un système de base de données Oracle configuré, TAF se produit lorsque l'application PHP
+  détecte que l'instance de base de données est hors service ou injoignable. Elle établit une connexion
+  à un autre nœud dans une configuration Oracle <link xlink:href="&url.oracle.taf.rac;">RAC</link>,
+  une base de données de secours à chaud, ou la même instance de base de données
+  elle-même. Consultez le <link xlink:href="&url.oracle.taf.ociguide;">Guide du programmeur de l'interface d'appel Oracle</link>
+  pour plus d'informations sur OCI TAF.
+ </para>
+ <para>
+  Une fonction de rappel d'application peut être enregistrée
+  avec <function>oci_register_taf_callback</function>. Pendant
+  la reprise, le traitement normal de l'application s'arrête et le rappel enregistré est invoqué.
+  La fonction de rappel notifie l'application des événements de reprise. Si la reprise réussit,
+  le traitement normal reprendra. Si la reprise est abandonnée, toutes les opérations de base de données
+  suivantes dans l'application échoueront en raison de l'absence de connexion disponible.
+ </para>
+ <para>
+  Lorsque la connexion échoue sur une autre base de données, la fonction de rappel peut
+  réinitialiser tout état de connexion nécessaire, par exemple en rejouant
+  les commandes ALTER SESSION nécessaires si le service de base de données n'avait pas
+  -failover_restore activé.
+ </para>
+ <para>
+  Une fonction de rappel d'application peut être supprimée en appelant <function>oci_unregister_taf_callback</function>.
+ </para>
+
+ <section>
+  <title>Configuration de la reprise transparente d'application</title>
+  <para>
+   TAF peut être configuré du côté PHP OCI8 ou dans la configuration de la
+   base de données. Si les deux sont configurés, les paramètres côté base de données
+   ont la priorité.
+  </para>
+  <para>
+   Configurer TAF dans PHP OCI8 (le côté client) en incluant le
+   paramètre FAILOVER_MODE dans la partie CONNECT_DATA d'un
+   descripteur de connexion. Consultez la section
+   Configuration de la reprise transparente d'application
+   du <link xlink:href="&url.oracle.taf.clientconfig;">
+   Guide de l'administrateur Oracle Database Net Services</link>
+   pour plus d'informations sur la configuration côté client de TAF.
+  </para>
+  <para>
+   Un exemple de tnsnames.ora pour configurer TAF reconnectant à
+   la même instance de base de données :
+  </para>
+  <para>
+    <informalexample>
+     <screen>
+<![CDATA[
+    ORCL =
+      (DESCRIPTION =
+        (ADDRESS = (PROTOCOL = TCP)(HOST = 127.0.0.1)(PORT = 1521))
+        (CONNECT_DATA =
+          (SERVICE_NAME = orclpdb1)
+          (FAILOVER_MODE =
+            (TYPE = SELECT)
+            (METHOD = BASIC)
+            (RETRIES = 20)
+            (DELAY = 15))))
+ ]]>
+     </screen>
+   </informalexample>
+  </para>
+  <para>
+   Il est également possible de configurer TAF du côté de la base de données
+   en modifiant le service cible avec
+   <link xlink:href="&url.oracle.taf.srvctl;">srvctl</link>
+   (pour RAC) ou la procédure empaquetée
+   <link xlink:href="&url.oracle.taf.dbmsservice;">
+   DBMS_SERVICE.MODIFY_SERVICE</link>
+   (pour les bases de données à instance unique).
+  </para>
+ </section>
+ <section>
+  <title>Utilisation des fonction de rappels TAF dans OCI8</title>
+  <para>
+   Une fonction de rappel TAF est une fonction d'application qui peut être
+   enregistrée pour être appelée pendant la reprise. Elle est appelée
+   plusieurs fois pendant la reprise de la connexion de l'application.
+  </para>
+  <para>
+   La fonction de rappel est appelée pour la première fois lorsqu'une perte de connexion est détectée.
+   Cela permet à l'application d'agir en conséquence pour
+   les retards à venir de la reprise. Si la reprise est réussie,
+   la fonction de rappel est invoquée après que la connexion soit rétablie
+   et utilisable. À ce moment, l'application peut resynchroniser
+   les paramètres de session et prendre des actions telles que
+   informer l'utilisateur qu'une reprise a eu lieu. Si la reprise
+   est infructueuse, un rappel se produit pour informer l'application
+   qu'une reprise n'a pas eu lieu et que la connexion n'est pas utilisable.
+  </para>
+  <para>
+   L'interface d'une fonction de rappel TAF définie par l'utilisateur est la suivante :
+  </para>
+  <methodsynopsis>
+   <type>int</type><methodname>userCallbackFn</methodname>
+   <methodparam><type>resource</type><parameter>connection</parameter></methodparam>
+   <methodparam><type>int</type><parameter>event</parameter></methodparam>
+   <methodparam><type>int</type><parameter>type</parameter></methodparam>
+  </methodsynopsis>
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>connection</parameter></term>
+     <listitem>
+      <para>
+       La connexion Oracle sur laquelle le rappel TAF a été
+       enregistré via <function>oci_register_taf_callback</function>.
+       La connexion n'est pas valide tant que la
+       reprise n'est pas terminée avec succès.
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>event</parameter></term>
+     <listitem>
+      <para>
+       L'événement de reprise indique l'état actuel de
+       la reprise.
+      </para>
+      <para>
+       <itemizedlist>
+        <listitem>
+         <para>
+          <constant>OCI_FO_BEGIN</constant> indique que
+          la reprise a détecté une perte de connexion et que
+          la reprise commence. 
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <constant>OCI_FO_END</constant> indique que la
+          reprise a réussi.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <constant>OCI_FO_ABORT</constant> indique que
+          la reprise a échoué et qu'il n'y a pas d'option
+          de réessayer.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <constant>OCI_FO_ERROR</constant> indique également
+          que la reprise a échoué, mais il donne à
+          l'application l'opportunité de gérer l'erreur
+          et de retourner OCI_FO_RETRY pour réessayer la reprise.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+           <constant>OCI_FO_REAUTH</constant> indique que
+           un utilisateur Oracle a été réauthentifié.
+         </para>
+        </listitem>
+       </itemizedlist>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>type</parameter></term>
+     <listitem>
+      <para>
+       Le type de reprise. Cela permet au rappel de savoir
+       quel type de reprise l'application a demandé. Les
+       valeurs habituelles sont les suivantes :
+      </para>
+      <para>
+       <itemizedlist>
+        <listitem>
+         <para>
+          <constant>OCI_FO_SESSION</constant> indique que
+          l'utilisateur a demandé uniquement la reprise de session.
+          Par exemple, si la connexion d'un utilisateur est perdue,
+          une nouvelle session est automatiquement créée pour
+          l'utilisateur sur la base de secours. Ce type de reprise
+          ne tente pas de récupérer les SELECT.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <constant>OCI_FO_SELECT</constant> indique que
+          l'utilisateur a demandé la reprise SELECT également.
+          Il permet aux utilisateurs avec des curseurs ouverts
+          de continuer à les récupérer après une défaillance.
+         </para>
+        </listitem>
+       </itemizedlist>
+      </para>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>return value</parameter></term>
+     <listitem>
+      <para>
+       <itemizedlist>
+        <listitem>
+         <para>
+          <literal>0</literal> indique que les étapes de reprise
+          doivent continuer normalement.
+         </para>
+        </listitem>
+        <listitem>
+         <para>
+          <constant>OCI_FO_RETRY</constant> indique que
+          la reprise doit être tentée à nouveau par Oracle.
+          En cas d'erreur lors de la reprise vers une nouvelle
+          connexion, TAF est capable de réessayer la reprise.
+          En général, le code de l'application doit dormir
+          pendant un certain temps avant de retourner OCI_FO_RETRY.
+         </para>
+        </listitem>
+       </itemizedlist>
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+  <example>
+   <title>Enregistrement d'une fonction de rappel TAF</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+// Définition de la fonction de rappel de l'espace utilisateur
+class MyClass {
+    public static $retry_count;
+    public static function TAFCallback($conn, $event, $type)
+    {
+        switch ($event) {
+            case OCI_FO_BEGIN:
+                printf(" Failing Over ... Please stand by\n");
+                printf(" Failover type was found to be %s \n",
+                       (($type==OCI_FO_SESSION) ? "SESSION"
+                        :(($type==OCI_FO_SELECT) ? "SELECT" : "UNKNOWN!")));
+                self::$retry_count = 0;
+                break;
+            case OCI_FO_ABORT:
+                // L'application ne peut pas continuer à utiliser la base de données
+                printf(" Failover aborted. Failover will not take place.\n");
+                break;
+            case OCI_FO_END:
+                // Reprise réussie. Informer les utilisateurs qu'une reprise a eu lieu.
+                printf(" Failover ended ... resuming services\n");
+                break;
+            case OCI_FO_REAUTH:
+                printf(" Failed over user ... resuming services\n");
+                // Rejouer toutes les commandes ALTER SESSION associées à cette connexion
+                // par exemple oci_parse($conn, 'ALTER SESSION ...');
+                break;
+            case OCI_FO_ERROR:
+                // Stopper les tentatives si nous avons déjà essayé 20 fois.
+                if (self::$retry_count >= 20)
+                    return 0;
+                printf(" Failover error received. Sleeping...\n");
+                sleep(10);
+                self::$retry_count++;
+                return OCI_FO_RETRY; // retry failover
+                break;
+            default:
+                printf("Bad Failover Event: %d.\n", $event);
+                break;
+        }
+        return 0;
+    }
+}
+
+$fn_name = 'MyClass::TAFCallback';
+
+$conn = oci_connect('hr', 'welcome', 'orcl');
+$sysconn = oci_connect('system', 'oracle', 'orcl');
+
+// Utiliser une connexion privilégiée pour construire une instruction SQL qui initiera la reprise
+$sql = <<< 'END'
+select unique 'alter system disconnect session '''||sid||','||serial#||''''
+from v$session_connect_info
+where sid = sys_context('USERENV', 'SID')
+END;
+
+$s = oci_parse($conn, $sql);
+oci_execute($s);
+$r = oci_fetch_array($s);
+$disconnectssql = $r[0];
+
+oci_register_taf_callback($conn, $fn_name); // Register TAFCallback to Oracle TAF
+
+print "Parsing user query\n";
+$sql = "select systimestamp from dual";
+$stmt = oci_parse($conn, $sql);
+
+// Par exemple, si une perte de connexion se produit à ce moment, oci_execute() détectera
+// la perte et la reprise commencera. Pendant la reprise, oci_execute() invoquera
+// la fonction de rappel TAF plusieurs fois. Si la reprise réussit,
+// une nouvelle connexion est créée de manière transparente et oci_execute() continuera comme
+// d'habitude. Les paramètres de session de la connexion peuvent être réinitialisés dans la fonction de rappel TAF.
+// Si la reprise est abandonnée, oci_execute() renverra une erreur
+// car une connexion valide n'est pas disponible.
+
+// Déconnecter l'utilisateur, ce qui initie la reprise
+print "Disconnecting the user\n";
+$discsql = oci_parse($sysconn, $disconnectssql);
+oci_execute($discsql);
+
+print "Executing user query\n";
+$e = oci_execute($stmt);
+if (!$e) {
+    $m = oci_error($stmt);
+    trigger_error("Could not execute statement: ". $m['message'], E_USER_ERROR);
+}
+$row = oci_fetch_array($stmt);
+print $row[0] . "\n";
+
+// faire d'autres instructions SQL avec la nouvelle connexion, si elle est valide
+// $stmt = oci_parse($conn,  . . .);
+
+?>
+]]>
+   </programlisting>
+  </example>
+ </section>
+
+ <section>
+  &reftitle.seealso;
+  <simplelist>
+   <member><function>oci_register_taf_callback</function></member>
+   <member><function>oci_unregister_taf_callback</function></member>
+  </simplelist>
+ </section>
+
+
+</chapter>
+
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
