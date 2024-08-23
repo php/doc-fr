@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 035c126c0393fe154bac46e2c3c489ebadce48a5 Maintainer: Fan2Shrek Status: ready -->
+<!-- Reviewed: yes -->
+<refentry xml:id="mysqli.execute-query" xmlns="http://docbook.org/ns/docbook">
+ <refnamediv>
+  <refname>mysqli::execute_query</refname>
+  <refname>mysqli_execute_query</refname>
+  <refpurpose>Prépare, lie les paramètres et exécute une instruction SQL</refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <para>&style.oop;</para>
+  <methodsynopsis role="mysqli">
+   <modifier>public</modifier> <type class="union"><type>mysqli_result</type><type>bool</type></type><methodname>mysqli::execute_query</methodname>
+   <methodparam><type>string</type><parameter>query</parameter></methodparam>
+   <methodparam choice="opt"><type class="union"><type>array</type><type>null</type></type><parameter>params</parameter><initializer>&null;</initializer></methodparam>
+  </methodsynopsis>
+  <para>&style.procedural;</para>
+  <methodsynopsis>
+   <type class="union"><type>mysqli_result</type><type>bool</type></type><methodname>mysqli_execute_query</methodname>
+   <methodparam><type>mysqli</type><parameter>mysql</parameter></methodparam>
+   <methodparam><type>string</type><parameter>query</parameter></methodparam>
+   <methodparam choice="opt"><type class="union"><type>array</type><type>null</type></type><parameter>params</parameter><initializer>&null;</initializer></methodparam>
+  </methodsynopsis>
+  <para>
+   Prépare la requête SQL, lie les paramètres et l'exécute.
+   La méthode <methodname>mysqli::execute_query</methodname> est un raccourci pour
+   <methodname>mysqli::prepare</methodname>,
+   <methodname>mysqli_stmt::bind_param</methodname>,
+   <methodname>mysqli_stmt::execute</methodname>,
+   et <methodname>mysqli_stmt::get_result</methodname>.
+  </para>
+  <para>
+   Le modèle de déclaration peut contenir zéro ou plusieurs marqueurs de paramètres
+   (<literal>?</literal>) également appelés espaces réservés.
+   Les valeurs des paramètres doivent être fournies sous forme de tableau
+   utilisant le paramètre <parameter>params</parameter>.
+  </para>
+  <para>
+   Une déclaration préparée est créée sous le capot, mais elle n'est jamais exposée
+   en dehors de la fonction. Il est impossible d'accéder aux propriétés de la
+   déclaration comme on le ferait avec l'objet <classname>mysqli_stmt</classname>.
+   En raison de cette limitation, les informations d'état sont copiées dans l'objet
+   <classname>mysqli</classname> et sont disponibles en utilisant ses méthodes, par exemple
+   <function>mysqli_affected_rows</function> ou <function>mysqli_error</function>.
+  </para>
+  <note>
+   <para>
+    Dans le cas où une instruction est passée à
+    <function>mysqli_execute_query</function> qui est plus longue que
+    <literal>max_allowed_packet</literal> du serveur, les codes d'erreur retournés
+    sont différents en fonction du système d'exploitation.
+    Le comportement est le suivant :
+   </para>
+   <itemizedlist>
+    <listitem>
+     <para>
+      Sur Linux renvoie un code d'erreur de 1153.
+      Le message d'erreur signifie <quote>réception d'un paquet plus grand que
+      <literal>max_allowed_packet</literal> octets</quote>
+      (<quote>got a packet bigger than
+      <literal>max_allowed_packet</literal> bytes</quote>).
+     </para>
+    </listitem>
+    <listitem>
+     <para>
+      Sur Windows renvoie un code d'erreur de 2006.
+      Ce message d'erreur signifie <quote>le serveur a disparu</quote>
+      (<quote>server has gone away</quote>).
+     </para>
+    </listitem>
+   </itemizedlist>
+  </note>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <para>
+   <variablelist>
+    &mysqli.link.description;
+    <varlistentry>
+     <term><parameter>query</parameter></term>
+     <listitem>
+      <para>
+       La requête, sous forme de chaîne. Elle doit consister en une seule instruction SQL.
+      </para>
+      <para>
+       La déclaration SQL peut contenir zéro ou plusieurs marqueurs de paramètres
+       représentés par un point d'interrogation (<literal>?</literal>)
+       aux positions appropriées.
+      </para>
+      <note>
+<!-- Copied from https://dev.mysql.com/doc/c-api/8.0/en/mysql-stmt-prepare.html -->
+       <para>
+        Les marqueurs de paramètres ne sont autorisés que dans certains endroits des instructions SQL.
+        Par exemple, ils sont autorisés dans la liste <literal>VALUES()</literal> d'une instruction
+        <literal>INSERT</literal> (pour spécifier les valeurs de colonnes pour une ligne), ou dans une
+        comparaison avec une colonne dans une clause <literal>WHERE</literal> pour spécifier une valeur de comparaison.
+        Cependant, ils ne sont pas autorisés pour les identifiants (tels que les noms de table ou de colonne).
+       </para>
+      </note>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>params</parameter></term>
+     <listitem>
+      <para>
+       Une liste optionnelle avec autant d'éléments qu'il y a de paramètres liés dans l'instruction SQL en cours d'exécution. Chaque valeur est traitée comme une &string;.
+      </para>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Renvoie &false; en cas d'échec. Pour les requêtes réussies qui produisent un jeu de résultats, telles que
+   <literal>SELECT, SHOW, DESCRIBE</literal> ou <literal>EXPLAIN</literal>, renvoie
+   un objet <classname>mysqli_result</classname>. Pour les autres requêtes réussies,
+   renvoie &true;.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple de <methodname>mysqli::execute_query</methodname></title>
+   <para>&style.oop;</para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli('localhost', 'my_user', 'my_password', 'world');
+
+$query = 'SELECT Name, District FROM City WHERE CountryCode=? ORDER BY Name LIMIT 5';
+$result = $mysqli->execute_query($query, ['DEU']);
+foreach ($result as $row) {
+    printf("%s (%s)\n", $row["Name"], $row["District"]);
+}
+]]>
+   </programlisting>
+   <para>&style.procedural;</para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$link = mysqli_connect("localhost", "my_user", "my_password", "world");
+
+$query = 'SELECT Name, District FROM City WHERE CountryCode=? ORDER BY Name LIMIT 5';
+$result = mysqli_execute_query($link, $query, ['DEU']);
+foreach ($result as $row) {
+    printf("%s (%s)\n", $row["Name"], $row["District"]);
+}
+]]>
+   </programlisting>
+   &examples.outputs.similar;
+   <screen>
+<![CDATA[
+Aachen (Nordrhein-Westfalen)
+Augsburg (Baijeri)
+Bergisch Gladbach (Nordrhein-Westfalen)
+Berlin (Berliini)
+Bielefeld (Nordrhein-Westfalen)
+]]>
+   </screen>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>mysqli_prepare</function></member>
+    <member><function>mysqli_stmt_execute</function></member>
+    <member><function>mysqli_stmt_bind_param</function></member>
+    <member><function>mysqli_stmt_get_result</function></member>
+   </simplelist>
+  </para>
+ </refsect1>
+
+</refentry>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
