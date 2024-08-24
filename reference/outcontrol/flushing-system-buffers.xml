@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 7ad99aeafea66a1562f668aa3cb11dcc9d9cb951 Maintainer: Fan2Shrek Status: ready -->
+<!-- Reviewed: yes -->
+<chapter xml:id="outcontrol.flushing-system-buffers" xmlns="http://docbook.org/ns/docbook">
+ <title>Laver les tampons système</title>
+ <para>
+  PHP apporte deux façons de vider
+  (envoyer et supprimer le contenu) les tampons système :
+  à travers l'appel de <function>flush</function>
+  et en activant le vidage de tampon implicite
+  avec <function>ob_implicit_flush</function>
+  ou le paramètre <link linkend="ini.implicit-flush">implicit_flush</link>
+  de &php.ini;.
+ </para>
+
+ <section>
+  <title>Comportement de vidage de tampon de sortie</title>
+  <para>
+   Avec le vidage de tampon implicite désactivé, PHP ne lave la sortie que
+   lorsque <function>flush</function> est appelée ou lorsque le script se termine.
+  </para>
+  <para>
+   Avec le vidage de tampon implicite activé, PHP tentera de laver
+   après chaque bloc de code produisant de la sortie.
+   La sortie dans ce contexte est des données de longueur non nulle qui sont :
+   <itemizedlist xml:id="outputcontrol.what-is-output">
+    <listitem>
+     <simpara>
+      hors des balises <literal>&#60;?php ?&#62;</literal>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      afficher par des constructions de langage et des fonctions
+      dont le but explicite est d'afficher des variables ou des chaînes fournies par l'utilisateur telles que
+      <function>echo</function>, <function>print</function>,
+      <function>printf</function>, <function>var_dump</function>,
+      <function>var_export</function>, <function>vprintf</function>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      affichées par des fonctions dont le but est de collecter et de produire
+      des données/informations sur le script en cours ou PHP telles que
+      <function>debug_print_backtrace</function>, <function>phpcredits</function>,
+      <function>phpinfo</function>,
+      <methodname>ReflectionExtension::info</methodname>
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      afficher par PHP sur une exception non capturée ou une erreur non gérée
+      (sous réserve des paramètres de
+      <link linkend="ini.display-errors">display_errors</link>
+      et <link linkend="ini.error-reporting">error_reporting</link>)
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      tout ce qui est écrit dans <literal>php://output</literal>
+     </simpara>
+    </listitem>
+   </itemizedlist>
+  </para>
+  <note>
+   <simpara>
+    Afficher des chaînes vides ou envoyer des en-têtes n'est pas considéré comme une sortie
+    et ne déclenchera pas d'opération de vidage de tampon.
+   </simpara>
+  </note>
+  <warning>
+   <simpara>
+    Si le vidage de tampon implicite est activé, les caractères de contrôle
+    (par exemple <literal>"\n"</literal>, <literal>"\r"</literal>,
+    <literal>"\0"</literal>)
+    déclencheront également un vidage de tampon.
+   </simpara>
+  </warning>
+ </section>
+
+ <section>
+  <title>Limitations</title>
+  <para>
+   Cette fonctionnalité ne peut pas laver les tampons de sortie de niveau utilisateur.
+   Pour les utiliser ensemble, les tampons de sortie de niveau utilisateur doivent être lavés
+   avant de laver les tampons système pour que PHP produise une sortie.
+  </para>
+  <warning>
+   <simpara>
+    Appeler <function>flush</function> ou activer le vidage de tampon implicite
+    peut interférer avec les gestionnaires de sortie des tampons de sortie de niveau utilisateur
+    qui définissent et envoient des en-têtes dans un contexte web
+    (par exemple <function>ob_gzhandler</function>)
+    en envoyant des en-têtes avant que ces gestionnaires ne le fassent.
+   </simpara>
+  </warning>
+  <para>
+   La mise en tampon mise en œuvre par le logiciel/matériel sous-jacent
+   ne peut pas être remplacée par PHP et doit être prise en compte
+   lors de l'utilisation des fonctions de contrôle des tampons de PHP.
+   Vérifier les paramètres de mise en tampon des serveurs web/navigateurs/consoles
+   et travailler avec ceux-ci peut atténuer les problèmes potentiels.
+   Travailler dans un contexte web, soit les paramètres de mise en tampon du serveur web
+   ou la mise en tampon du script pourrait être ajustée pour fonctionner en tandem
+   alors que travailler autour des stratégies de mise en tampon de divers navigateurs
+   peut être réalisé en ajustant la mise en tampon dans le script PHP.
+   Sur les consoles qui implémentent la mise en tampon de ligne,
+   les caractères de nouvelle ligne pourraient être insérés aux endroits appropriés
+   avant de vider la sortie.
+  </para>
+ </section>
+
+ <section>
+  <title><acronym>SAPI</acronym> Differences In Flushing</title>
+  <para>
+   Même si le vidage de tampon est implémenté par chaque <acronym>SAPI</acronym>
+   de manière légèrement différente,
+   ces implémentations tombent dans l'une des deux catégories :
+   <itemizedlist>
+    <listitem>
+     <simpara>
+      Les <acronym>SAPI</acronym>s utilisés dans un contexte web videront d'abord les en-têtes
+      suivis de la sortie.
+      <literal>Apache2Handler</literal>, <literal>CGI</literal>,
+      <literal>FastCGI</literal> et <literal>FPM</literal>
+      sont de tels <acronym>SAPI</acronym>s
+     </simpara>
+    </listitem>
+    <listitem>
+     <simpara>
+      d'autre <acronym>SAPI</acronym>s
+      tels que <literal>CLI</literal> et <literal>embed</literal>
+      videront la sortie uniquement
+     </simpara>
+    </listitem>
+   </itemizedlist>
+  </para>
+ </section>
+
+</chapter>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->

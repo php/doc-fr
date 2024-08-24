@@ -1,0 +1,628 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 7ad99aeafea66a1562f668aa3cb11dcc9d9cb951 Maintainer: Fan2Shrek Status: ready -->
+<!-- Reviewed: yes -->
+<chapter xml:id="outcontrol.user-level-output-buffers" xmlns="http://docbook.org/ns/docbook" xmlns:xi="http://www.w3.org/2001/XInclude">
+ <title>Tampons de sortie au niveau utilisateur</title>
+ <para>
+  La bufferisation de sortie au niveau utilisateur de PHP peut commencé, manipulé
+  et terminé depuis le code PHP.
+  Chacun de ces tampons inclut un tampon de sortie
+  et une fonction de gestion de sortie associée.
+ </para>
+
+ <section xml:id="outcontrol.what-output-is-buffered">
+  <title>Quelle sortie est bufferisée ?</title>
+  <para>
+    Les tampons de sortie au niveau utilisateur de PHP bufferisent toute la sortie
+    après leur démarrage jusqu'à ce qu'ils soient désactivés ou que le script se termine.
+    La sortie dans le contexte des tampons de sortie au niveau utilisateur de PHP
+    est tout ce que PHP afficherait ou enverrait au navigateur.
+    En termes pratiques, la sortie est toute donnée de longueur non nulle qui est :
+   <itemizedlist>
+    <xi:include xpointer="xmlns(db=http://docbook.org/ns/docbook) xpointer(id('outputcontrol.what-is-output')/*)"><xi:fallback/></xi:include>
+   </itemizedlist>
+  </para>
+  <note>
+   <simpara>
+    Les données écrites directement dans <literal>stdout</literal>
+    ou passées à une fonction SAPI avec une fonctionnalité similaire
+    ne seront pas capturées par les tampons de sortie au niveau utilisateur.
+    Cela inclut
+    l'écriture de données dans <literal>stdout</literal> avec <function>fwrite</function>
+    ou l'envoi d'en-têtes avec <function>header</function>
+    ou <function>setcookie</function>.
+   </simpara>
+  </note>
+ </section>
+
+ <section>
+  <title>Démarrer un tampon de sortie</title>
+  <para>
+   Les tampons de sortie au niveau utilisateur peuvent être démarrés
+   en utilisant la fonction <function>ob_start</function> ou en définissant
+   les paramètres <link linkend="ini.output-buffering">output_buffering</link>
+   et <link linkend="ini.output-handler">output_handler</link> de &php.ini;.
+   Tant l'un que l'autre peuvent créer des tampons de sortie,
+   <function>ob_start</function> est plus flexible
+   car il accepte des fonctions définies par l'utilisateur comme gestionnaires de sortie
+   et les opérations autorisées sur le tampon (flush, clean, remove)
+   peuvent être définies également.
+   Les tampons de sortie démarrés avec <function>ob_start</function> seront actifs
+   à partir de la ligne où la fonction a été appelée,
+   tandis que ceux démarrés avec
+   <link linkend="ini.output-buffering">output_buffering</link>
+   bufferiseront la sortie à partir de la première ligne du script.
+  </para>
+  <para>
+   PHP est également livré avec un gestionnaire de sortie intégré <literal>"URL-Rewriter"</literal>
+   qui démarre son propre tampon de sortie et ne permet que deux instances de celui-ci
+   à fonctionner en même temps 
+   (une pour la réécriture d'URL au niveau utilisateur
+   et une pour le support transparent des identifiants de session).
+   Ces tampons peuvent être démarrés en appelant
+   la fonction <function>output_add_rewrite_var</function>
+   et/ou en activant le paramètre
+   <link linkend="ini.session.use-trans-sid">session.use_trans_sid</link>
+   de &php.ini;.
+  </para>
+  <para>
+   L'extension <literal>zlib</literal> a son propre tampon de sortie
+   qui peut être activé en utilisant le paramètre
+   <link linkend="ini.zlib.output-compression">zlib.output_compression</link>
+   de &php.ini;.
+  </para>
+  <note>
+   <simpara>
+    Tant que <literal>"URL-Rewriter"</literal> est spécial
+    en ce qu'il ne permet que deux instances de celui-ci à fonctionner en même temps,
+    tous les tampons de sortie au niveau utilisateur utilisent les mêmes tampons sous-jacents
+    utilisés par <function>ob_start</function>
+    avec leur fonctionnalité implémentée par une fonction de gestion de sortie personnalisée.
+    En tant que tel, toute leur fonctionnalité peut être émulée par du code utilisateur.
+   </simpara>
+  </note>
+ </section>
+
+ <section xml:id="outcontrol.nesting-output-buffers">
+  <title>Imbrication des tampons de sortie</title>
+  <para>
+   Si un tampon de sortie est actif lorsqu'un nouveau tampon est démarré,
+   le nouveau tampon sera imbriqué à l'intérieur du tampon précédemment actif.
+   Le tampon interne se comportera de la même manière, que ce soit imbriqué ou non,
+   mais la sortie bufferisée par celui-ci ne sera pas bufferisée par le tampon externe.
+   Seule la sortie vidée par le tampon interne sera bufferisée par le tampon externe.
+  </para>
+  <para>
+   La plupart des fonctions <literal>ob_<replaceable>*</replaceable></literal>
+   ne fonctionnent qu'avec le tampon de sortie actif (le dernier démarré)
+   donc seul le tampon actif peut être vidé, nettoyé et désactivé.
+   Les fonctions qui fonctionnent avec d'autres tampons sont
+   <function>ob_list_handlers</function>
+   qui retourne la liste de tous les gestionnaires de sortie en cours d'utilisation
+   et <function>ob_get_status</function>
+   qui peut retourner des informations sur le tampon actif uniquement
+   ou sur tous les tampons en cours d'utilisation.
+  </para>
+  <para>
+   Appeler <function>ob_get_level</function>
+   ou <function>ob_get_status</function> retournera
+   le niveau d'imbrication du tampon de sortie actif.
+  </para>
+  <caution>
+   <simpara>
+    La valeur pour les niveaux identiques entre <function>ob_get_level</function>
+    et <function>ob_get_status</function> diffère d'un.
+    Pour <function>ob_get_level</function>
+    le premier niveau est <literal>1</literal>,
+    tandis que pour <function>ob_get_status</function>
+    le premier niveau est <literal>0</literal>.
+   </simpara>
+  </caution>
+ </section>
+
+ <section xml:id="outcontrol.buffer-size">
+  <title>Taille du tampon</title>
+  <para>
+   Les tailles des tampons de sortie sont exprimées par des entiers
+   et représentent le nombre d'octets que le tampon peut stocker sans vidage de tampon.
+   Lorsque la taille de la sortie dans le tampon dépasse la taille du tampon,
+   le contenu du tampon est envoyé au gestionnaire de sortie,
+   sa valeur de retour est lavée et le tampon est vidé.
+  </para>
+  <para>
+   Avec l'exception de <literal>"URL-Rewriter"</literal>,
+   la taille des tampons de sortie peut être définie lorsque le tampon est démarré.
+   Si défini à <literal>0</literal>,
+   le tampon de sortie est uniquement limité par la mémoire disponible pour PHP.
+   Si défini à <literal>1</literal>,
+   le tampon est lavé après chaque bloc de code produisant
+   une sortie de longueur non nulle.
+  </para>
+  <para>
+   La taille des tampons de sortie peut être récupérée en appelant
+   <function>ob_get_status</function>.
+  </para>
+  <para>
+   Les tampons de sortie démarrés avec <function>ob_start</function>
+   auront leur taille de tampon définie à la valeur entière passée
+   au deuxième paramètre <parameter>chunk_size</parameter> de la fonction.
+   Si omis, il est défini à <literal>0</literal>.
+  </para>
+  <para>
+   Le tampon de sortie démarré avec
+   <link linkend="ini.output-buffering">output_buffering</link>
+   défini à <literal>"On"</literal> aura sa taille de tampon définie à <literal>0</literal>.
+   Si défini à un entier, la taille du tampon correspondra à ce nombre.
+  </para>
+  <para>
+   La taille du tampon de sortie de <literal>"URL-Rewriter"</literal> est définie à <literal>0</literal>,
+   donc il est uniquement limité par la mémoire disponible pour PHP.
+  </para>
+  <para>
+   La taille du tampon de sortie de <literal>zlib</literal> est contrôlée par le paramètre
+   <link linkend="ini.zlib.output-compression">zlib.output_compression</link>
+   de &php.ini;.
+   Si défini à <literal>"On"</literal>, la taille du tampon sera <literal>"16K"</literal>/<literal>16384</literal>.
+   Si défini à un entier, la taille du tampon correspondra à ce nombre en octets.
+  </para>
+ </section>
+
+ <section xml:id="outcontrol.operations-on-buffers">
+  <title>Opérations autorisées sur les tampons</title>
+  <para>
+   Les opérations autorisées sur les tampons peuvent être contrôlées
+   en passant un des
+   <link linkend="outcontrol.constants.buffer-control-flags">drapeaux de contrôle de tampon</link>
+   au troisième paramètre <parameter>flags</parameter> de <function>ob_start</function>.
+   Si omis, toutes les opérations sont autorisées par défaut.
+   Si <literal>0</literal> est utilisé à la place,
+   le tampon ne peut pas être lavé, nettoyé ou désactivé
+   mais son contenu peut toujours être récupéré.
+  </para>
+  <para>
+   <constant>PHP_OUTPUT_HANDLER_CLEANABLE</constant> permet à
+   <function>ob_clean</function> de nettoyer le contenu du tampon.
+  </para>
+  <warning>
+   <simpara>
+    L'absence du drapeau <constant>PHP_OUTPUT_HANDLER_CLEANABLE</constant>
+    n'empêchera pas <function>ob_end_clean</function>
+    ou <function>ob_get_clean</function> de nettoyer le contenu du tampon.
+   </simpara>
+  </warning>
+  <para>
+   <constant>PHP_OUTPUT_HANDLER_FLUSHABLE</constant> permet à
+   <function>ob_flush</function> de vider le contenu du tampon.
+  </para>
+  <warning>
+   <simpara>
+    L'absence du drapeau <constant>PHP_OUTPUT_HANDLER_FLUSHABLE</constant>
+    n'empêchera pas <function>ob_end_flush</function>
+    ou <function>ob_get_flush</function> de vider le contenu du tampon.
+   </simpara>
+  </warning>
+  <para>
+   <constant>PHP_OUTPUT_HANDLER_REMOVABLE</constant> permet à 
+   <function>ob_end_clean</function>, <function>ob_end_flush</function>,
+   <function>ob_get_clean</function> ou <function>ob_get_flush</function>
+   de désactiver le tampon.
+  </para>
+  <para>
+   <constant>PHP_OUTPUT_HANDLER_STDFLAGS</constant>,
+   la combinaison des trois drapeaux, permet à chacune des trois opérations
+   d'être effectuée sur le tampon.
+  </para>
+ </section>
+
+ <section>
+  <title>Laver, accéder et nettoyer le contenu du tampon</title>
+  <para>
+   Laver envoie et supprime le contenu du tampon actif.
+   Les tampons de sortie sont lavés lorsque la taille de la sortie
+   dépasse la taille du tampon, le script se termine ou 
+   <function>ob_flush</function>, <function>ob_end_flush</function>,
+   ou <function>ob_get_flush</function> est appelé.
+  </para>
+  <caution>
+   <simpara>
+    Appeler <function>ob_end_flush</function>
+    ou <function>ob_get_flush</function> désactivera le tampon actif.
+   </simpara>
+  </caution>
+  <caution>
+   <simpara>
+    Laver les tampons va laver la valeur de retour du gestionnaire de sortie
+    qui peut différer du contenu du tampon.
+    Par exemple, utiliser <function>ob_gzhandler</function> va compresser
+    la sortie et laver la sortie compressée.
+   </simpara>
+  </caution>
+  <para>
+   Le contenu du tampon actif peut être récupéré en appelant
+   ou <function>ob_get_flush</function>.
+  </para>
+  <para>
+   Si seule la longueur du contenu du tampon est nécessaire,
+   <function>ob_get_length</function> ou <function>ob_get_status</function>
+   va retourner la longueur du contenu en octets.
+  </para>
+  <caution>
+   <simpara>
+    Appeler <function>ob_get_clean</function>
+    ou <function>ob_get_flush</function> désactivera le tampon actif
+    après avoir retourné son contenu.
+   </simpara>
+  </caution>
+  <para>
+   Le contenu du tampon actif peut être nettoyé en appelant
+   <function>ob_clean</function>, <function>ob_end_clean</function>
+   ou <function>ob_get_clean</function>.
+  </para>
+  <caution>
+   <simpara>
+    Appeler <function>ob_end_clean</function>
+    ou <function>ob_get_clean</function> désactivera le tampon actif.
+   </simpara>
+  </caution>
+ </section>
+
+ <section>
+  <title>Désactiver les tampons</title>
+  <para>
+   Les tampons de sortie peuvent être désactivés en appelant
+   <function>ob_end_clean</function>, <function>ob_end_flush</function>,
+   <function>ob_get_flush</function> ou <function>ob_get_clean</function>.
+  </para>
+  <warning>
+   <simpara>
+    Les tampons de sortie démarrés sans le drapeau
+    <constant>PHP_OUTPUT_HANDLER_REMOVABLE</constant>
+    ne peuvent pas être désactivés et généreront une <constant>E_NOTICE</constant>.
+   </simpara>
+  </warning>
+  <para>
+   Chaque tampon de sortie qui n'a pas été désactivé à la fin du script
+   ou lorsque <function>exit</function> est appelé sera lavé
+   et désactivé par le processus de terminaison de PHP.
+   Les tampons seront lavés et désactivés dans l'ordre inverse
+   de leur démarrage.
+   Le dernier tampon démarré sera le premier,
+   le premier tampon démarré sera le dernier à être lavé et désactivé.
+  </para>
+  <caution>
+   <simpara>
+    Si le vidage de tampon du contenu du tampon n'est pas désiré,
+    un gestionnaire de sortie personnalisé doit être utilisé pour empêcher le vidage de tampon lors de la fermeture.
+   </simpara>
+  </caution>
+ </section>
+
+ <section xml:id="outcontrol.output-handlers">
+  <title>Gestionnaires de sortie</title>
+  <para>
+   Les gestionnaires de sortie sont des <type>callable</type>s associés aux tampons de sortie
+   qui sont invoqués en appelant <function>ob_clean</function>,
+   <function>ob_flush</function>, <function>ob_end_flush</function>,
+   <function>ob_get_flush</function>, <function>ob_end_clean</function>,
+   <function>ob_get_clean</function> ou pendant le processus de terminaison de PHP.
+  </para>
+  <note>
+   <simpara>
+    Le processus de terminaison va vider les valeurs de retour des gestionnaires de sortie
+   </simpara>
+  </note>
+  <para>
+   Si omit ou &null; lors du démarrage du tampon de sortie
+   le gestionnaire de sortie interne <literal>"gestionnaire de sortie par défaut"</literal> sera utilisé
+   qui retourne le contenu du tampon non modifié lorsqu'il est invoqué.
+   Les gestionnaires de sortie peuvent être utilisés pour retourner une version modifiée
+   du contenu du tampon et/ou avoir des effets secondaires (par exemple, envoyer des en-têtes).
+  </para>
+  <para>
+   PHP arrive avec deux gestionnaires de sortie internes :
+   <literal>"default output handler"</literal>
+   et <literal>"URL-Rewriter"</literal> (qui est intégré dans
+   son propre tampon de sortie et seulement jusqu'à deux instances de celui-ci peuvent être démarrées).
+  </para>
+  <para>
+   L'extension groupé inclut quatre gestionnaires de sortie supplémentaires :
+   <function>mb_output_handler</function>, <function>ob_gzhandler</function>,
+   <function>ob_iconv_handler</function>, <function>ob_tidyhandler</function>.
+  </para>
+ </section>
+
+ <section xml:id="outcontrol.working-with-output-handlers">
+  <title>Travailler avec les gestionnaires de sortie</title>
+  <para>
+   Lorsque invoqués, les gestionnaires de sortie reçoivent le contenu du tampon
+   et un masque indiquant l'état de la bufferisation de sortie.
+  </para>
+  <para>
+   <methodsynopsis>
+    <type>string</type>
+    <methodname>
+     <replaceable>handler</replaceable>
+    </methodname>
+    <methodparam>
+     <type>string</type>
+     <parameter>buffer</parameter>
+    </methodparam>
+    <methodparam choice="opt">
+     <type>int</type>
+     <parameter>phase</parameter>
+    </methodparam>
+   </methodsynopsis>
+   <variablelist>
+    <varlistentry>
+     <term><parameter>buffer</parameter></term>
+     <listitem>
+      <simpara>
+       Le contenu du tampon.
+      </simpara>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><parameter>phase</parameter></term>
+     <listitem>
+      <simpara>
+       Un masque de bits des 
+       <link linkend="constant.php-output-handler-start">
+        constantes
+        <constant>PHP_OUTPUT_HANDLER_<replaceable>*</replaceable></constant>
+       </link>.
+      </simpara>
+     </listitem>
+    </varlistentry>
+   </variablelist>
+  </para>
+  <warning>
+   <simpara>
+    Appeler l'une des fonctions suivantes depuis un gestionnaire de sortie
+    résultera en une erreur fatale :
+    <function>ob_clean</function>, <function>ob_end_clean</function>,
+    <function>ob_end_flush</function>, <function>ob_flush</function>,
+    <function>ob_get_clean</function>, <function>ob_get_flush</function>,
+    <function>ob_start</function>.
+   </simpara>
+  </warning>
+  <note>
+   <simpara>
+    Si le <constant>PHP_OUTPUT_HANDLER_DISABLED</constant> d'un gestionnaire est défini,
+    le gestionnaire ne sera pas invoqué en appelant
+    <function>ob_end_clean</function>, <function>ob_end_flush</function>,
+    <function>ob_get_clean</function>, <function>ob_get_flush</function>
+    ou pendant le processus de terminaison de PHP.
+    Ce drapeau n'a pas d'effet lors de l'appel de <function>ob_clean</function>
+    ou <function>ob_flush</function>.
+   </simpara>
+  </note>
+  <note>
+   <simpara>
+    Le répertoire de travail du script peut changer à l'intérieur de la fonction d'arrêt
+    sous certains serveurs web, par exemple Apache ou le serveur web intégré.
+   </simpara>
+  </note>
+ </section>
+
+ <section xml:id="outcontrol.flags-passed-to-output-handlers">
+  <title>Drapeaux passés aux gestionnaires de sortie</title>
+  <para>
+   Le masque de bits passé au deuxième paramètre <parameter>phase</parameter>
+   du gestionnaire de sortie fournit des informations sur l'invocation du gestionnaire.
+  </para>
+  <note>
+   <simpara>
+    Le masque de bits peut inclure plus d'un drapeau
+    et l'opérateur <literal>&amp;</literal> doit être utilisé
+    pour vérifier si un drapeau est défini.
+   </simpara>
+  </note>
+  <warning>
+   <simpara>
+    La valeur de <constant>PHP_OUTPUT_HANDLER_WRITE</constant> et son alias
+    <constant>PHP_OUTPUT_HANDLER_CONT</constant> est <literal>0</literal>
+    donc si elle est définie ne peut être déterminée
+    qu'en utilisant un
+    <link linkend="language.operators.comparison">opérateur d'égalité</link>
+    (<literal>==</literal> ou <literal>===</literal>).
+   </simpara>
+  </warning>
+  <para>
+   Les drapeaux suivants sont définis dans une phase spécifique du cycle de vie du gestionnaire :
+   <constant>PHP_OUTPUT_HANDLER_START</constant> est défini
+   lorsqu'un gestionnaire est invoqué pour la première fois.
+   <constant>PHP_OUTPUT_HANDLER_FINAL</constant>
+   ou son alias <constant>PHP_OUTPUT_HANDLER_END</constant>
+   est défini lorsqu'un gestionnaire est invoqué pour la dernière fois,
+   c'est-à-dire qu'il est désactivé. Ce drapeau est également défini
+   lorsque les tampons sont désactivés par le processus de terminaison de PHP.
+  </para>
+  <para>
+   Les drapeaux suivants sont définis par une invocation spécifique du gestionnaire :
+   <constant>PHP_OUTPUT_HANDLER_FLUSH</constant> est défini
+   lorsqu'un gestionnaire est invoqué en appelant <function>ob_flush</function>.
+   <constant>PHP_OUTPUT_HANDLER_WRITE</constant>
+   ou son alias <constant>PHP_OUTPUT_HANDLER_CONT</constant>
+   est défini lorsque la taille de son contenu est égale ou dépasse la taille du tampon
+   et que le gestionnaire est invoqué pendant que le tampon est automatiquement lavé.
+   <constant>PHP_OUTPUT_HANDLER_FLUSH</constant> est défini
+   lorsqu'un gestionnaire est invoqué en appelant <function>ob_clean</function>,
+   <function>ob_end_clean</function> ou <function>ob_get_clean</function>.
+   Lorsque <function>ob_end_clean</function> ou <function>ob_get_clean</function>
+   est appelé, <constant>PHP_OUTPUT_HANDLER_FINAL</constant> est également défini.
+  </para>
+  <note>
+   <simpara>
+    Lorsque <function>ob_end_flush</function> ou <function>ob_get_flush</function>
+    est appelé, <constant>PHP_OUTPUT_HANDLER_FINAL</constant> est défini
+    mais <constant>PHP_OUTPUT_HANDLER_FLUSH</constant> ne l'est pas.
+   </simpara>
+  </note>
+ </section>
+
+ <section xml:id="outcontrol.output-handler-return-values">
+  <title>Valeurs de retour des gestionnaires de sortie</title>
+  <para>
+   La valeur de retour du gestionnaire de sortie est internement coercée en une chaîne
+   suivant les sémantiques de type PHP standard, avec deux exceptions :
+   les <type>array</type>s et les <type>bool</type>éens.
+  </para>
+  <para>
+   Les tableaux sont convertis en la chaîne <literal>"Array"</literal>
+   mais le message d'avertissement <literal>"Conversion d'un tableau en chaîne"</literal>
+   n'est pas déclenché.
+  </para>
+  <para>
+   Si le gestionnaire de sortie retourne &false; le contenu du tampon est retourné.
+   Si le gestionnaire retourne &true; une chaîne vide est retournée.
+  </para>
+  <note>
+   <simpara>
+    Si un gestionnaire retourne &false; ou lance une exception
+    son drapeau <constant>PHP_OUTPUT_HANDLER_DISABLED</constant> est défini.
+   </simpara>
+  </note>
+ </section>
+
+ <section>
+  <title>Exceptions lancées dans les gestionnaires de sortie</title>
+  <para>
+   Si une exception non capturée est lancée dans un gestionnaire de sortie
+   le programme se termine et le gestionnaire est invoqué
+   par le processus de terminaison après quoi
+   le message d'erreur <literal>"Uncaught Exception"</literal> est retourné.
+  </para>
+  <para>
+   Si l'exception non capturée est lancée dans un gestionnaire
+   invoqué par <function>ob_flush</function>,
+   <function>ob_end_flush</function> ou <function>ob_get_flush</function>,
+   le contenu du tampon est lavé avant le message d'erreur.
+  </para>
+  <para>
+   Si une exception non capturée est lancée dans un gestionnaire de sortie pendant la terminaison,
+   le gestionnaire est terminé et ni le contenu du tampon ni
+   le message d'erreur ne sont lavés.
+  </para>
+  <note>
+   <simpara>
+    Si un gestionnaire lance une exception
+    son drapeau <constant>PHP_OUTPUT_HANDLER_DISABLED</constant> est défini.
+   </simpara>
+  </note>
+ </section>
+
+ <section>
+  <title>Erreurs levées dans les gestionnaires de sortie</title>
+  <para>
+   Si une erreur non fatale est levée dans un gestionnaire de sortie
+   le programme continue son exécution.
+  </para>
+  <para>
+   Si une erreur non fatale est levée dans un gestionnaire invoqué par
+   <function>ob_flush</function>, <function>ob_end_flush</function>
+   ou <function>ob_get_flush</function>,
+   le tampon vide certaines données en fonction de la valeur de retour du gestionnaire.
+   Si le gestionnaire retourne &false; le  tampon et le message d'erreur sont lavés.
+   Si le gestionnaire retourne autre chose, la valeur de retour du gestionnaire est lavée
+   mais pas le message d'erreur.
+  </para>
+  <note>
+   <simpara>
+    Si un gestionnaire retourne &false;
+    son drapeau <constant>PHP_OUTPUT_HANDLER_DISABLED</constant> est défini.
+   </simpara>
+  </note>
+  <para>
+   Si une erreur fatale est levée dans un gestionnaire de sortie
+   le programme se termine et le gestionnaire est invoqué
+   par le processus de terminaison après quoi le message d'erreur est lavé.
+  </para>
+  <para>
+   Si l'erreur fatale est levée dans un gestionnaire invoqué par
+   <function>ob_flush</function>, <function>ob_end_flush</function>
+   ou <function>ob_get_flush</function>,
+   le contenu du tampon est lavé avant le message d'erreur.
+  </para>
+  <para>
+   Si une erreur fatale est levée dans un gestionnaire de sortie pendant la terminaison
+   le programme se termine sans laver le contenu du tampon ou le message d'erreur.
+  </para>
+ </section>
+
+ <section>
+  <title>Sortie dans les gestionnaires de sortie</title>
+  <para>
+   Dans des circonstances spécifiques, la sortie produite dans le gestionnaire est lavée
+   avec le contenu du tampon.
+   Cette sortie n'est pas ajoutée au tampon et ne fait pas partie de la chaîne
+   retournée par <function>ob_get_flush</function>.
+  </para>
+  <para>
+   Durant les opérations de vidage de tampon (appel de <function>ob_flush</function>,
+   <function>ob_end_flush</function>, <function>ob_get_flush</function>
+   et pendant la terminaison)
+   si la valeur de retour d'un gestionnaire est &false;
+   le contenu du tampon est lavé suivi de la sortie.
+   Si le gestionnaire n'est pas invoqué pendant la terminaison
+   le gestionnaire lançant une exception ou l'appel de <function>exit</function>
+   résulte dans le même comportement.
+  </para>
+  <note>
+   <simpara>
+    Si un gestionnaire retourne &false;
+    son drapeau <constant>PHP_OUTPUT_HANDLER_DISABLED</constant> est défini.
+   </simpara>
+  </note>
+ </section>
+
+ <section>
+  <title>Drapeaux d'état des gestionnaires de sortie</title>
+  <para>
+   Les 
+   <link linkend="outcontrol.constants.flags-returned-by-handler">
+    drapeaux d'état des gestionnaires
+   </link> du masque de bits <literal>flags</literal> du tampon
+   sont définis à chaque invocation du gestionnaire de sortie
+   et font partie du masque de bits <literal>flags</literal> retourné par
+   <function>ob_get_status</function>. 
+   Si le gestionnaire exécute avec succès et ne retourne pas &false;,
+   <constant>PHP_OUTPUT_HANDLER_STARTED</constant> et
+   <constant>PHP_OUTPUT_HANDLER_PROCESSED</constant> sont définis.
+   Si le gestionnaire retourne &false; ou lance une exception pendant l'exécution,
+   <constant>PHP_OUTPUT_HANDLER_STARTED</constant> et
+   <constant>PHP_OUTPUT_HANDLER_DISABLED</constant> sont définis.
+  </para>
+  <note>
+   <simpara>
+    Si <constant>PHP_OUTPUT_HANDLER_DISABLED</constant> d'un gestionnaire est défini,
+    le gestionnaire ne sera pas invoqué en appelant
+    <function>ob_end_clean</function>, <function>ob_end_flush</function>,
+    <function>ob_get_clean</function>, <function>ob_get_flush</function>
+    ou pendant le processus de terminaison de PHP.
+    Ce drapeau n'a pas d'effet lors de l'appel de <function>ob_clean</function>
+    ou <function>ob_flush</function>.
+   </simpara>
+  </note>
+ </section>
+
+</chapter>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
