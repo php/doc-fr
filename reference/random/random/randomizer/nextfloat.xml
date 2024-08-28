@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 05579435b4bc64657f0b8313a71b34a504fcb3a4 Maintainer: Fan2Shrek Status: ready -->
+<!-- Reviewed: yes -->
+<refentry xml:id="random-randomizer.nextfloat" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <refnamediv>
+  <refname>Random\Randomizer::nextFloat</refname>
+  <refpurpose>Renvoie un flottant sélectionné de l'interval ouvert à droite [0.0, 1.0)</refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis role="Random\\Randomizer">
+   <modifier>public</modifier> <type>float</type><methodname>Random\Randomizer::nextFloat</methodname>
+   <void/>
+  </methodsynopsis>
+  <para>
+   Renvoie un flottant sélectionné de manière uniforme et équidistribué de l'interval ouvert à droite
+   de <literal>0.0</literal> jusqu'à, mais sans inclure, <literal>1.0</literal>.
+  </para>
+
+  <para>
+   La chance pour un flottant retourné d'être dans un sous-intervalle donné ouvert à droite
+   est proportionnelle à la taille du sous-intervalle.
+
+   Cela signifie que la chance pour un flottant d'être <emphasis>inférieur à</emphasis> <literal>0.5</literal>
+   est de 50 %, ce qui est égal à la chance pour un flottant d'être <emphasis>au moins</emphasis> <literal>0.5</literal>.
+
+   De même la chance pour un flottant d'être dans l'interval ouvert à droite de
+   <literal>0.2</literal> jusqu'à, mais sans inclure, <literal>0.25</literal>
+   est exactement de 5 %.
+  </para>
+
+  <para>
+   Cette propriété permet de facilement utiliser <methodname>Random\Randomizer::nextFloat</methodname>
+   pour générer un booléen aléatoire avec une chance donnée en vérifiant si le flottant retourné est
+   <emphasis>inférieur à</emphasis> une chance donnée.
+  </para>
+
+  <note>
+   <para>
+    Le domaine des flottants retournés par <methodname>Random\Randomizer::nextFloat</methodname>
+    est identique à celui de <code>Randomizer::getFloat(0.0, 1.0, IntervalBoundary::ClosedOpen)</code>.
+   </para>
+
+   <para>
+    L'implémentation interne de <methodname>Random\Randomizer::nextFloat</methodname> est plus
+    efficace.
+   </para>
+  </note>
+
+  <caution>
+   <para>
+    Mettre à l'échelle la valeur retournée à un intervalle différent en utilisant la multiplication
+    ou l'addition (une transformation affine) pourrait résulter en un biais
+    dans la valeur résultante car les flottants ne sont pas également denses à travers la ligne
+    des nombres. Comme toutes les valeurs ne peuvent pas être exactement représentées par un flottant, le
+    résultat de la transformation affine pourrait également résulter en des valeurs en dehors
+    de l'intervalle demandé en raison d'arrondis implicites.
+
+    Une <link linkend="random-randomizer.getfloat.affine-transformation">explication détaillée</link>
+    des problèmes avec la transformation affine est donnée dans la documentation
+    pour <methodname>Random\Randomizer::getFloat</methodname>.
+   </para>
+   <para>
+    Utiliser <methodname>Random\Randomizer::getFloat</methodname> pour générer un
+    flottant aléatoire dans un intervalle arbitraire. Utiliser <methodname>Random\Randomizer::getInt</methodname>
+    pour générer un entier aléatoire dans un intervalle arbitraire.
+   </para>
+  </caution>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  &no.function.parameters;
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Un flottant sélectionné de manière uniforme dans l'interval ouvert à droite
+   (<literal>IntervalBoundary::ClosedOpen</literal>) [0.0, 1.0).
+
+   <literal>0.0</literal> est une valeur de retour possible, <literal>1.0</literal> ne l'est pas.
+  </para>
+ </refsect1>
+
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <itemizedlist>
+   &random.engineErrors;
+  </itemizedlist>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple de <methodname>Random\Randomizer::nextFloat</methodname></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$r = new \Random\Randomizer();
+
+// Le résultat du booléen sera vrai avec la chance donnée.
+$chance = 0.5;
+
+$bool = $r->nextFloat() < $chance;
+
+echo ($bool ? "You won" : "You lost"), "\n";
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+You won
+]]>
+   </screen>
+  </example>
+
+  <example>
+   <title>Mise à l'échelle incorrecte en utilisant une transformation affine</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+final class MaxEngine implements Random\Engine {
+    public function generate(): string {
+        return "\xff";
+    }
+}
+
+$randomizer = new \Random\Randomizer(new MaxEngine);
+
+$min = 3.5;
+$max = 4.5;
+
+// NE PAS FAIRE CECI:
+//
+// Cela affichera 4.5, malgré le fait que nextFloat() échantillonne
+// à partir d'un intervalle ouvert à droite, qui ne retournera jamais 1.
+printf("Wrong scaling: %.17g", $randomizer->nextFloat() * ($max - $min) + $min);
+
+// Correct:
+// $randomizer->getFloat($min, $max, \Random\IntervalBoundary::ClosedOpen);
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Wrong scaling: 4.5
+]]>
+   </screen>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><methodname>Random\Randomizer::getFloat</methodname></member>
+  </simplelist>
+ </refsect1>
+
+</refentry>
+<!--Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
