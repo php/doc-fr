@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 4d17b7b4947e7819ff5036715dd706be87ae4def Maintainer: Fan2Shrek Status: ready -->
+<!-- Reviewed: yes -->
+<refentry xml:id="function.simdjson-is-valid" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <refnamediv>
+  <refname>simdjson_is_valid</refname>
+  <refpurpose>Vérifie si une chaîne JSON est valide</refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis>
+   <type>bool</type><methodname>simdjson_is_valid</methodname>
+   <methodparam><type>string</type><parameter>json</parameter><initializer>&false;</initializer></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>depth</parameter><initializer>512</initializer></methodparam>
+  </methodsynopsis>
+  <para>
+   Prend une chaîne encodée en JSON et retourne true si elle est valide.
+  </para>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <variablelist>
+   <varlistentry>
+    <term><parameter>json</parameter></term>
+    <listitem>
+      <para>
+       Le <type>string</type> <parameter>json</parameter> à valider.
+      </para>
+      <para>
+       Cette fonction ne fonctionne qu'avec des chaînes encodées en UTF-8.
+      </para>
+      <para>
+       Cette fonction valide les entrées que
+       <function>json_decode</function> peut décoder,
+       à condition qu'elles soient inférieures à 4 Go de longueur.
+      </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><parameter>depth</parameter></term>
+    <listitem>
+     <para>
+      La profondeur maximale de la structure à décoder.
+      La valeur doit être supérieure à <literal>0</literal>,
+      et inférieure ou égale à <literal>2147483647</literal>.
+
+      Ceux qui appellent cette fonction devraient utiliser des valeurs raisonnablement petites,
+      car des profondeurs plus importantes nécessitent plus d'espace tampon et augmenteront
+      la profondeur de récursion, contrairement à l'implémentation actuelle de <function>json_decode</function>.
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <para>
+   Renvoie &true; si <parameter>json</parameter> est une chaîne JSON
+   valide, sinon &false;.
+  </para>
+ </refsect1>
+
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <para>
+   Si <parameter>json</parameter> est invalide, une <classname>SimdJsonException</classname> est lancée à partir de PECL simdjson 2.1.0,
+   alors qu'auparavant, une <classname>RuntimeException</classname> était lancée.
+  </para>
+  <para>
+   Si <parameter>depth</parameter> est en dehors de la plage autorisée,
+   une <classname>SimdJsonValueError</classname> est lancée à partir de PECL simdjson 3.0.0,
+   alors qu'auparavant, une erreur de niveau <constant>E_WARNING</constant> était lancée.
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemples de <function>simdjson_decode</function></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$json = '{"a":1,"b":2,"c":3}';
+$invalidJson = '{"a":1,"b":2,"c":';
+
+var_dump(simdjson_is_valid($json));
+var_dump(simdjson_is_valid($invalidJson));
+
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+bool(false)
+]]>
+    </screen>
+   </example>
+   <example>
+    <title>Erreurs de <parameter>depth</parameter></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+// Encoder des données avec une profondeur maximale de 4
+// (array -> array -> array -> string)
+$json = json_encode(
+    [
+        1 => [
+            'English' => [
+                'One',
+                'January'
+            ],
+            'French' => [
+                'Une',
+                'Janvier'
+            ]
+        ]
+    ]
+);
+
+// Afficher les erreurs pour différentes profondeurs.
+var_dump(simdjson_is_valid($json, 4));
+var_dump(simdjson_is_valid($json, 3));
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+bool(false)
+]]>
+    </screen>
+   </example>
+  </para>
+ </refsect1>
+
+ <refsect1 role="notes">
+  &reftitle.notes;
+  <note>
+   <para>
+    La spécification JSON n'est pas JavaScript, mais un sous-ensemble de JavaScript.
+   </para>
+  </note>
+  <note>
+   <para>
+    Dans le cas où le décodage échoue,
+    une <classname>SimdJsonException</classname> est lancée
+    et <methodname>SimdJsonException::getCode</methodname> et
+    <methodname>SimdJsonException::getMessage</methodname> peuvent être utilisés
+    pour déterminer la nature exacte de l'erreur.
+   </para>
+  </note>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><function>json_encode</function></member>
+    <member><function>json_decode</function></member>
+   </simplelist>
+  </para>
+ </refsect1>
+</refentry>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
