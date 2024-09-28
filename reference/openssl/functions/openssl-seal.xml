@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 5bc68add3da3cd18c40f851e944b15095d3a26aa Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 110ac43250fdb3531fe26d4d29292e33df7855e8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <refentry xml:id="function.openssl-seal" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -20,17 +20,14 @@
    <methodparam choice="opt"><type>string</type><parameter role="reference">iv</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
   <para>
-   <function>openssl_seal</function> scelle (chiffre) les données
-   <parameter>data</parameter> en utilisant la <parameter>cipher_algo</parameter>
-   fournit avec une clé secrète générée aléatoirement. La clé
-   est chiffrée avec chaque clé publique associée à
-   <parameter>public_key</parameter> et chaque clé ainsi
-   chiffrée est retournée dans <parameter>encrypted_keys</parameter>.
-   Cela signifie que vous pouvez envoyer des données scellées
-   à plusieurs destinataires (en supposant que chacun ait reçu la
-   clé publique). Chaque destinataire doit recevoir les données
-   chiffrées et la clé d'enveloppe, qui a été
-   chiffrée avec la clé publique du destinataire.
+   La <function>openssl_seal</function> scelle (chiffre) <parameter>data</parameter> en utilisant le
+   <parameter>cipher_algo</parameter> spécifié avec une clé secrète générée aléatoirement. La clé est
+   ensuite chiffrée avec chacune des clés publiques dans le tableau <parameter>public_key</parameter>,
+   et chaque clé d'enveloppe chiffrée est retournée dans <parameter>encrypted_keys</parameter>. Cela permet
+   d'envoyer des données scellées à plusieurs destinataires (à condition que leurs clés publiques soient disponibles).
+   Chaque destinataire doit recevoir à la fois les données scellées et la clé d'enveloppe qui a été chiffrée avec
+   la clé publique du destinataire. Le VI (vecteur d'initialisation) est généré, et sa valeur est retournée dans
+   <parameter>iv</parameter>.
   </para>
  </refsect1>
 
@@ -78,9 +75,9 @@
        La méthode de chiffrement.
        <caution>
         <simpara>
-         La valeur par défaut (<literal>'RC4'</literal>) est considéré non-sécurisé.
-         Il est vivement recommandé de spécifier explicitement une méthode de
-         chiffrement sûr.
+         La valeur par défaut pour les versions de PHP antérieures à 8.0 est (<literal>'RC4'</literal>), qui est
+         considérée comme non sécurisée. Il est fortement recommandé de spécifier explicitement une méthode de chiffrement
+         sécurisée.
         </simpara>
        </caution>
       </para>
@@ -90,8 +87,16 @@
      <term><parameter>iv</parameter></term>
      <listitem>
       <para>
-       Le vecteur d'initialisation.
+       Le vecteur d'initialisation pour le déchiffrement de <parameter>data</parameter>. Il est requis si
+       la méthode de chiffrement nécessite un VI. Cela peut être déterminé en appelant
+       <function>openssl_cipher_iv_length</function> avec <parameter>cipher_algo</parameter>.
       </para>
+      <caution>
+       <simpara>
+        Le VI ne peut pas être défini explicitement. Toute valeur qui y est définie est écrasée par une valeur
+        générée aléatoirement.
+       </simpara>
+      </caution>
      </listitem>
     </varlistentry>
    </variablelist>
@@ -154,25 +159,22 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-// On suppose que $data contient les données à sceller
-// lecture de la clé publique pour chaque destinataire
-$fp = fopen("/src/openssl-0.9.6/demos/maurice/cert.pem", "r");
-$cert = fread($fp, 8192);
-fclose($fp);
-$pk1 = openssl_get_publickey($cert);
-// pour le deuxième destinataire
-$fp = fopen("/src/openssl-0.9.6/demos/sign/cert.pem", "r");
-$cert = fread($fp, 8192);
-fclose($fp);
-$pk2 = openssl_get_publickey($cert);
+
+$data = "test";
+
+// récupérer les clés publiques
+$pk1 = openssl_get_publickey("file://cert1.pem");
+$pk2 = openssl_get_publickey("file://cert2.pem");
+
 
 // scelle le message : seuls, les possesseurs de $pk1 et $pk2 peuvent déchiffrer
 // le message $sealed avec les clés $ekeys[0] et $ekeys[1] (respectivement).
 openssl_seal($data, $sealed, $ekeys, array($pk1, $pk2));
 
-// libère les clés de la mémoire
-openssl_free_key($pk1);
-openssl_free_key($pk2);
+if (openssl_seal($data, $sealed, $ekeys, array($pk1, $pk2), 'AES256', $iv) > 0) {
+    // éventuellement stocker les valeurs $sealed et $iv et les utiliser plus tard dans openssl_open
+    echo "succès\n";
+}
 ?>
 ]]>
     </programlisting>
