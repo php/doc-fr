@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 5bc68add3da3cd18c40f851e944b15095d3a26aa Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 110ac43250fdb3531fe26d4d29292e33df7855e8 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <refentry xml:id="function.openssl-open" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -20,14 +20,13 @@
    <methodparam choice="opt"><type class="union"><type>string</type><type>null</type></type><parameter>iv</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
   <para>
-   <function>openssl_open</function> ouvre (déchiffre) les données
-   <parameter>data</parameter> en utilisant la clé privée
-   <parameter>private_key</parameter> et la clé d'enveloppe
-   <parameter>encrypted_key</parameter> et remplit <parameter>output</parameter>
-   avec les données déchiffrées. La clé d'enveloppe est générée
-   lorsque les données sont scellées, et ne peut être utilisée
-   qu'avec la clé privée spécifique. Reportez-vous à
-   <function>openssl_seal</function> pour plus d'informations.
+   La <function>openssl_open</function> ouvre (décrypte) <parameter>data</parameter> en utilisant une clé d'enveloppe
+   qui est décryptée à partir de <parameter>encrypted_key</parameter> en utilisant
+   <parameter>private_key</parameter>. La décryption est effectuée à l'aide de
+   <parameter>cipher_algo</parameter> et <parameter>iv</parameter>. Le VI est requis uniquement si la
+   méthode de chiffrement l'exige. La fonction remplit <parameter>output</parameter> avec les données
+   décryptées. La clé d'enveloppe est généralement générée lorsque les données sont scellées à l'aide d'une clé publique
+   associée à la clé privée. Consultez <function>openssl_seal</function> pour plus d'informations.
   </para>
  </refsect1>
 
@@ -39,6 +38,7 @@
      <term><parameter>data</parameter></term>
      <listitem>
       <para>
+       Les données scellées.
       </para>
      </listitem>
     </varlistentry>
@@ -55,6 +55,7 @@
      <term><parameter>encrypted_key</parameter></term>
      <listitem>
       <para>
+       La clé symétrique chiffrée qui peut être décryptée à l'aide de <parameter>private_key</parameter>
       </para>
      </listitem>
     </varlistentry>
@@ -62,6 +63,7 @@
      <term><parameter>private_key</parameter></term>
      <listitem>
       <para>
+       La clé privée utilisée pour déchiffrer <parameter>encrypted_key</parameter>.
       </para>
      </listitem>
     </varlistentry>
@@ -69,12 +71,12 @@
      <term><parameter>cipher_algo</parameter></term>
      <listitem>
       <para>
-       La méthode de chiffrement.
+       La méthode de chiffrement utilisée pour le déchiffrement de <parameter>data</parameter>.
        <caution>
         <simpara>
-         La valeur par défaut (<literal>'RC4'</literal>) est considéré non-sécurisé.
-         Il est vivement recommandé de spécifier explicitement une méthode de
-         chiffrement sûr.
+         La valeur par défaut pour les versions de PHP antérieures à 8.0 est (<literal>'RC4'</literal>), qui est
+         considérée comme non sécurisée. Il est fortement recommandé de spécifier explicitement une méthode de chiffrement
+         sécurisée.
         </simpara>
        </caution>
       </para>
@@ -84,7 +86,9 @@
      <term><parameter>iv</parameter></term>
      <listitem>
       <para>
-       Vecteur d'initialisation.
+       Le vecteur d'initialisation utilisé pour le déchiffrement de <parameter>data</parameter>. Il est requis
+       si la méthode de chiffrement nécessite un VI. Cela peut être déterminé en appelant
+       <function>openssl_cipher_iv_length</function> avec <parameter>cipher_algo</parameter>.
       </para>
      </listitem>
     </varlistentry>
@@ -138,23 +142,18 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-// On suppose que $sealed et $env_key contiennent les données scellées
-// et la clé d'enveloppe, fournies par l'expéditeur
-// lecture de la clé privée dans un fichier
-$fp = fopen("/src/openssl-0.9.6/demos/sign/key.pem", "r");
-$priv_key = fread($fp, 8192);
-fclose($fp);
-$pkeyid = openssl_get_privatekey($priv_key);
+// On suppose que $sealed, $env_key et $iv contiennent les données scellées,
+// la clé d'enveloppe et IV. Toutes ournies par l'expéditeur.
+// récupérer la clé privée depuis le fichier situé dans private_key.pem
+$pkey = openssl_get_privatekey("file://private_key.pem");
 
 // déchiffrage des données : elles sont placées dans $open
-if (openssl_open($sealed, $open, $env_key, $pkeyid)) {
+if (openssl_open($sealed, $open, $env_key, $pkey, 'AES256', $iv)) {
     echo "Voici les données déchiffrées : ", $open;
 } else {
     echo "Impossible de déchiffrer les données";
 }
 
-// libération des ressources
-openssl_free_key($pkeyid);
 ?>
 ]]>
     </programlisting>
