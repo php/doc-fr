@@ -1,100 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 8e732e84a1425cf0ab3a5b0da8fe113c7a6da85e Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 2dbf3d9064d4cb07f0a2f7d06641c877a2e5ed24 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no Maintainer: yannick -->
 
 <sect1 xml:id="install.windows.manual" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
- <title>Installation manuelle de PHP sous Windows</title>
- <sect2>
-  <title>Choix du serveur Web</title>
-  <sect3>
-   <title>IIS</title>
-   <para>
-    IIS est fourni avec Windows.      
-    Sur un serveur Windows, utilisez Server Manager pour ajouter le rôle IIS.
-    Assurez-vous d'inclure la fonctionnalité CGI Role.    
-    Sur les bureaux Windows, utilisez le centre de contrôle d'ajout/suppression
-    de programmes pour ajouter IIS.
-    La documentaion de Microsoft a <link xlink:href="https://docs.microsoft.com/en-us/previous-versions/ms181052(v=vs.80)">des instructions détaillées</link>.
-    Pour les applications web bureau et web développement, vous pouvez aussi
-    utiliser IIS/Express ou PHP Bureau
-    <example>
-     <title>Ligne de commande pour configurer IIS et PHP</title>
-     <programlisting>
-<![CDATA[
+ <simplesect xml:id="install.windows.requirements" annotations="chunk:false">
+  <title>Installation manuelle des binaires pré-compilés</title>
+  <simpara>
+   PHP n'est disponible que pour les systèmes 32 bits x86 ou 64 bits x64, et ne fonctionne
+   actuellement pas sur Windows RT ou Windows sur ARM.
+   À partir de la version 8.3.0, PHP nécessite Windows 8 ou Windows Server 2012.
+   Les versions après 7.2.0 nécessitaient Windows 2008 R2 ou Windows 7.
+   Les versions avant 7.2.0 supportaient Windows 2008 et Vista.
+  </simpara>
 
-@echo off
+  <simpara>
+   PHP nécessite le runtime Visual C (CRT). De nombreuses autres applications
+   l'exigent également, donc il est probable qu'il soit déjà installé, mais s'il n'est
+   pas présent, le Microsoft Visual C++ Redistributable pour Visual Studio 2022
+   est adapté à toutes les versions de PHP et peut être
+   <link xlink:href="&url.microsoft.visualc.redistr;">téléchargé depuis Microsoft</link>.
+  </simpara>
 
-REM download .ZIP file of PHP build from http://windows.php.net/downloads/
+  <simpara>
+   Le CRT x86 doit être téléchargé pour être utilisé avec les builds PHP x86 et le
+   CRT x64 pour les builds PHP x64.
+   Si le CRT est déjà installé, l'installateur affichera un message
+   indiquant qu'il était déjà installé et ne fera aucun changement.
+   L'installateur CRT prend en charge les options de ligne de commande
+   <option>/quiet</option> et <option>/norestart</option>, donc l'installation
+   peut être scriptée.
+  </simpara>
+ </simplesect>
 
-REM path to directory you decompressed PHP .ZIP file into (no trailing \)
-set phppath=c:\php
+ <simplesect>
+  <title>Où télécharger les binaires PHP</title>
+  <simpara>
+   Les builds Windows peuvent être téléchargés depuis <link xlink:href="&url.php.win.downloads;">le
+   site Web PHP Windows</link>.
+   Tous les builds sont optimisés (<abbrev>PGO</abbrev>), et les versions QA et GA
+   sont soigneusement testées.
+  </simpara>
+ </simplesect>
 
-
-REM Clear current PHP handlers
-%windir%\system32\inetsrv\appcmd clear config /section:system.webServer/fastCGI
-REM The following command will generate an error message if PHP is not installed. This can be ignored.
-%windir%\system32\inetsrv\appcmd set config /section:system.webServer/handlers /-[name='PHP_via_FastCGI']
-
-REM Set up the PHP handler
-%windir%\system32\inetsrv\appcmd set config /section:system.webServer/fastCGI /+[fullPath='%phppath%\php-cgi.exe']
-%windir%\system32\inetsrv\appcmd set config /section:system.webServer/handlers /+[name='PHP_via_FastCGI',path='*.php',verb='*',modules='FastCgiModule',scriptProcessor='%phppath%\php-cgi.exe',resourceType='Unspecified']
-%windir%\system32\inetsrv\appcmd set config /section:system.webServer/handlers /accessPolicy:Read,Script
-
-REM Configure FastCGI Variables
-%windir%\system32\inetsrv\appcmd set config -section:system.webServer/fastCgi /[fullPath='%phppath%\php-cgi.exe'].instanceMaxRequests:10000
-%windir%\system32\inetsrv\appcmd.exe set config -section:system.webServer/fastCgi /+"[fullPath='%phppath%\php-cgi.exe'].environmentVariables.[name='PHP_FCGI_MAX_REQUESTS',value='10000']"
-%windir%\system32\inetsrv\appcmd.exe set config -section:system.webServer/fastCgi /+"[fullPath='%phppath%\php-cgi.exe'].environmentVariables.[name='PHPRC',value='%phppath%\php.ini']"
-]]>
-     </programlisting>
-    </example>
-   </para>
-  </sect3>
-  
-  <sect3>
-   <title>Apache</title>
-   <para>
-    Il y a plusieurs versions d'Apache2 pour Windows.    
-    Nous supportons ApacheLounge, mais d'autres options incluent XAMPP,
-    WampServer et BitNami, qui fournissent des outils d'installation automatique.    
-    Vous devriez utiliser mod_php ou mod_fastcgi pour charger PHP dans Apache.    
-    Si vous utilisez mod_php, vous DEVEZ utiliser une version TS de Apache,
-    compilé avec la même version de Visual C et le même CPU (x86 ou x64).
-   </para>
-  </sect3>
- </sect2>
- 
- <sect2>
-  <title>Choix de la version</title>
+ <simplesect xml:id="install.windows.pecl" annotations="chunk:false">
+  <title>Extensions PECL pré-compilées</title>
   <para>
-   Téléchargez la version de production de PHP pour Windows depuis
-   <link xlink:href="http://windows.php.net/download/">http://windows.php.net/download/</link>.
-   Toutes les versions sont optimisées (<abbrev>PGO</abbrev>), et les versions
-   QA et GA sont minutieusement testées.
+   Les extensions PECL pré-compilées pour Windows sont disponibles dans
+   <link xlink:href="&url.pecl.windows.releases;">la section de téléchargements PECL
+   du site Web PHP Windows</link>.
   </para>
   <para>
-   Il y a 4 types de versions de PHP :
+   Les binaires ne sont pas disponibles pour les extensions qui utilisent des fonctionnalités
+   spécifiques à d'autres systèmes, comme Unix, ou dépendent de bibliothèques qui ne sont pas
+   disponibles sur Windows.
+  </para>
+ </simplesect>
+
+ <simplesect>
+  <title>Types de build</title>
+  <para>
+   Il existe quatre types de builds PHP :
    <itemizedlist spacing="compact">
     <listitem>
-     <para>
-      Thread-Safe(TS) - utilisé pour des serveurs web n'ayant qu'un seul processus, comme Apache avec mod_php
-     </para>
+     <para>Thread-Safe (TS) - pour les serveurs web à processus unique, comme Apache avec mod_php</para>
     </listitem>
     <listitem>
-     <para>
-      Non-Thread-Safe(NTS) - utilisé pour IIS et les autres serveurs web FastCGI
-      (Apache avec mod_fastcgi) et c'est la version recommandée pour les scripts en ligne de commande
-     </para>
+     <para>Non-Thread-Safe (NTS) - pour IIS et d'autres serveurs web FastCGI (Apache avec mod_fastcgi) et recommandé pour les scripts en ligne de commande</para>
     </listitem>
     <listitem>
-     <para>x86 - pour système 32-bits.</para>
+     <para>x86 - pour les systèmes 32 bits.</para>
     </listitem>
     <listitem>
-     <para>x64 - pour système 64-bits.</para>
+     <para>x64 - pour les systèmes 64 bits.</para>
     </listitem>
    </itemizedlist>
   </para>
- </sect2>
+ </simplesect>
 </sect1>
 <!-- Keep this comment at the end of the file
 Local variables:
