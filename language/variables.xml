@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: a885fa2bce80474eb2632993905bb8b603650a3a Maintainer: yannick Status: ready -->
+<!-- EN-Revision: b7dbf6357d4c2d68ffb52158076f692ed532b546 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="language.variables" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -15,8 +15,9 @@
   </simpara>
   
   <para>
-   Les noms de variables suivent les mêmes règles de nommage que
-   les autres entités PHP. Un nom de variable valide doit commencer par
+   Un nom de variable valide commence par une lettre
+   (<literal>A-Z</literal>, <literal>a-z</literal>, ou les octets de 128 à 255)
+   ou par un tiret bas, suivi par
    une lettre ou un souligné (_), suivi de lettres, chiffres ou
    soulignés. Exprimé sous la forme d'une expression
    régulière, cela donne :
@@ -25,8 +26,10 @@
   
   <note>
    <simpara>
-    Dans nos propos, une lettre peut être a-z, A-Z, et les octets
-    de 128 à 255 (<literal>0x80-0xff</literal>).
+    PHP ne prend pas en charge les noms de variables Unicode, cependant, certains
+    encodages de caractères (comme UTF-8) encodent les caractères de manière
+    à ce que tous les octets d'un caractère multi-octet soient dans la plage
+    autorisée, ce qui en fait ainsi un nom de variable valide.
    </simpara>
   </note>
   
@@ -42,14 +45,8 @@
   
   &tip.userlandnaming;
   
-  <para>
-   Pour obtenir des informations sur une variable, voyez les fonctions
-   dédiées aux <link linkend="ref.var">variables</link>.
-  </para>
-  
-  <para>
-   <example>
-    <title>Validité des noms de variables</title>
+  <example>
+    <title>Noms de variables valides et invalides</title>
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -62,10 +59,36 @@ $_4site = 'pas encore';    // valide : commence par un souligné
 $täyte = 'mansikka';    // valide : 'ä' est ASCII (étendu) 228.
 ?>
 ]]>
-    </programlisting>
+  </programlisting>
    </example>
-  </para>
-  
+
+   <simpara>
+    PHP accepte une séquence de n'importe quels octets comme nom de variable. 
+    Les noms de variables qui ne respectent pas les règles de nommage mentionnées ci-dessus 
+    ne peuvent être accédés que dynamiquement à l'exécution. Voir 
+    <link linkend="language.variables.variable">variables variables</link> 
+    pour plus d'informations sur la façon d'y accéder.
+   </simpara>
+
+   <example>
+    <title>Accéder à des noms de variables inhabituels</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+${'nom-invalide'} = 'bar';
+$nom = 'nom-invalide';
+echo ${'nom-invalide'}, " ", $$nom;
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bar bar
+]]>
+    </screen>
+   </example>
+
   <para>
    Les variables sont toujours assignées par valeur.
    C'est-à-dire, lorsqu'une expression est affectée à une variable,
@@ -109,7 +132,7 @@ echo $bar;
   
   <para>
    Une chose importante à noter est que seules les variables
-   nommées peuvent être assignées par référence.
+   peuvent être assignées par référence.
    <example>
     <title>Assignation de référence et variables anonymes</title>
     <programlisting role="php">
@@ -121,7 +144,8 @@ $bar = &(24 * 7);  // assignation invalide : référence une expression sans nom
 function test() {
    return 25;
 }
-$bar = &test();    // assignation invalide.
+$bar = &test();    // invalide car <function>test()</function> ne retourne pas une variable par référence.
+.
 ?>
 ]]>
     </programlisting>
@@ -129,59 +153,62 @@ $bar = &test();    // assignation invalide.
   </para>
   
   <para>
-   Il n'est pas nécessaire d'initialiser les variables en PHP, cependant, cela reste
-   une excellente pratique. Les variables non initialisées ont une valeur par défaut
-   selon leur type - &false; pour les booléens, zéro pour les entiers et les réels, chaîne vide 
-   pour les chaînes de caractères (comme utilisée avec
-   <function>echo</function>) ou un tableau vide 
-   pour les tableaux.
+   Il n'est pas nécessaire de déclarer des variables en PHP, cependant, c'est une très
+   bonne pratique. Accéder à une variable non définie entraînera un
+   <constant>E_WARNING</constant> (avant PHP 8.0.0, <constant>E_NOTICE</constant>).
+   Une variable non définie a une valeur par défaut de &null;.
+   Le langage <function>isset</function> peut être utilisé
+   pour détecter si une variable a déjà été initialisée.
   </para>
   <para>
    <example>
-    <title>Valeurs par défaut des variables non initialisées</title>
+    <title>Valeur par défaut d'une variable non initialisée</title>
     <programlisting role="php">
 <![CDATA[
 <?php
-// Une variable non initialisée et non référencée (pas de contexte d'utilisation); retourne NULL
+// Une variable non initialisée et non référencée (pas de contexte d'utilisation).
 var_dump($unset_var);
-
-// L'utilisation d'un booléen ; retourne 'false' (Voir l'opérateur ternaire pour comprendre cette syntaxe)
-echo $unset_bool ? "true\n" : "false\n";
-
-// Utilisation d'une chaîne de caractères ; retourne 'string(3) "abc"'
-$unset_str .= 'abc';
-var_dump($unset_str);
-
-// Utilisation d'un entier; retourne 'int(25)'
-$unset_int += 25; // 0 + 25 => 25
-var_dump($unset_int);
-
-// Utilisation d'un float; retourne 'float(1.25)'
-$unset_float += 1.25;
-var_dump($unset_float);
-
-// Utilisation d'un tableau : retourne array(1) {  [3]=>  string(3) "def" }
-$unset_arr[3] = "def"; // array() + array(3 => "def") => array(3 => "def")
-var_dump($unset_arr);
-
-// Utilisation d'un objet ; crée un nouvel objet stdClass (voir http://www.php.net/manual/fr/reserved.classes.php)
-// Retourne : object(stdClass)#1 (1) {  ["foo"]=>  string(3) "bar" }
-$unset_obj->foo = 'bar';
-var_dump($unset_obj);
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+     <screen>
+<![CDATA[
+Warning: Undefined variable $unset_var in ...
+NULL
+]]>
+     </screen>
+   </example>
+  </para>
+  <simpara>
+    PHP permet l'autovivification de tableaux (création automatique de nouveaux tableaux)
+    à partir d'une variable non définie.
+    Ajouter un élément à une variable non définie créera un nouveau tableau et
+    ne générera pas d'avertissement.
+</simpara>
+<example>
+    <title>Autovivification d'un tableau à partir d'une variable non définie</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$unset_array[] = 'valeur'; // Ne génère pas d'avertissement.
 ?>
 ]]>
     </programlisting>
    </example>
-  </para>
-  <para>
-   Utiliser la valeur par défaut d'une variable non initialisée est problématique
-   lorsque vous incluez un fichier dans un autre qui utilise le même nom de variable.
-   Une erreur de niveau <constant>E_WARNING</constant> (antérieur à PHP 8.0.0, <constant>E_NOTICE</constant>) sera émise
-   lorsque vous travaillerez avec des variables non initialisées, cependant, aucune
-   erreur ne sera lancée lorsque vous tenterez d'insérer un élément dans un tableau
-   non initialisé. La structure de langage <function>isset</function>
-   peut être utilisée pour détecter si une variable a déjà été initialisée.
-  </para>
+
+   <warning>
+    <simpara>
+     Compter sur la valeur par défaut d'une variable non initialisée est problématique
+     lorsqu'un fichier inclus dans un autre utilise le même
+     nom de variable.
+    </simpara>
+   </warning>
+
+   <simpara>
+    Pour plus d'informations sur les fonctions liées aux variables, consultez la
+    <link linkend="ref.var">Référence des fonctions sur les variables</link>.
+   </simpara>
  </sect1>
  
  <sect1 xml:id="language.variables.predefined">
