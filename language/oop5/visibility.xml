@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: f5e5b54129045a7d02c5285a88cea0abff8ffb6f Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 7d7b378abd302430b8ce7cedb4b78c7033f5e88c Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
  <sect1 xml:id="language.oop5.visibility" xmlns="http://docbook.org/ns/docbook">
   <title>Visibilité</title>
@@ -21,7 +21,6 @@
     ou protégées. Les propriétés déclarées sans explicitement utiliser un
     mot-clef de visibilité seront automatiquement définies comme publiques.
    </para>
-   <para>
     <example>
      <title>Déclaration de propriétés</title>
      <programlisting role="php">
@@ -76,9 +75,128 @@ $obj2->printHello(); // Affiche Public2, Protected2 et Undefined (Indéfini)
 
 ?>
 ]]>
+      </programlisting>
+   </example>
+   <sect3 xml:id="language.oop5.visibility-members-aviz">
+    <title>Visibilité Asymétrique des Propriétés</title>
+    <simpara>
+     À partir de PHP 8.4, les propriétés peuvent également avoir leur
+     visibilité définie de manière asymétrique, avec un champ différent pour
+     la lecture (<literal>get</literal>) et l'écriture (<literal>set</literal>).
+     Plus précisément, la visibilité <literal>set</literal> peut être
+     spécifiée séparément, à condition qu'elle ne soit pas plus permissive que la
+     visibilité par défaut.
+    </simpara>
+    <example>
+     <title>Visibilité Asymétrique des Propriétés</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+class Book
+{
+    public function __construct(
+        public private(set) string $title,
+        public protected(set) string $author,
+        protected private(set) int $pubYear,
+    ) {}
+}
+
+class SpecialBook extends Book
+{
+    public function update(string $author, int $year): void
+    {
+        $this->author = $author; // OK
+        $this->pubYear = $year; // Erreur Fatale
+    }
+}
+
+$b = new Book('Comment utiliser PHP', 'Peter H. Peterson', 2024);
+
+echo $b->title; // Fonctionne
+echo $b->author; // Fonctionne
+echo $b->pubYear; // Erreur Fatale
+
+$b->title = 'Comment ne pas utiliser PHP'; // Erreur Fatale
+$b->author = 'Pedro H. Peterson'; // Erreur Fatale
+$b->pubYear = 2023; // Erreur Fatale
+?>
+]]>
      </programlisting>
     </example>
-   </para>
+    <para>Il y a quelques réserves concernant la visibilité asymétrique :</para>
+    <itemizedlist>
+     <listitem>
+      <simpara>
+       Seules les propriétés typées peuvent avoir une visibilité <literal>set</literal> séparée.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       La visibilité <literal>set</literal> doit être la même
+       que <literal>get</literal> ou plus restrictive. C'est-à-dire,
+       <code>public protected(set)</code> et <code>protected protected(set)</code>
+       sont autorisés, mais <code>protected public(set)</code> provoquera une erreur de syntaxe.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       Si une propriété est <literal>public</literal>, alors la visibilité principale peut être
+       omise. C'est-à-dire que <code>public private(set)</code> et <code>private(set)</code>
+       auront le même résultat.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       Une propriété avec une visibilité <literal>private(set)</literal>
+       est automatiquement <literal>final</literal>, et ne peut pas être redéfinie dans une classe enfant.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       Obtenir une référence à une propriété suit la visibilité <literal>set</literal>, pas <literal>get</literal>.
+       Cela est dû au fait qu'une référence peut être utilisée pour modifier la valeur de la propriété.
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       De même, essayer d'écrire dans une propriété de tableau implique à la fois une opération <literal>get</literal> et
+       une opération <literal>set</literal> en interne, et suivra donc la visibilité <literal>set</literal>,
+       car c'est toujours la plus restrictive.
+      </simpara>
+     </listitem>
+    </itemizedlist>
+    <simpara>
+     Lorsqu'une classe étend une autre, la classe enfant peut redéfinir
+     toute propriété qui n'est pas <literal>final</literal>. En le faisant,
+     elle peut élargir soit la visibilité principale, soit la visibilité <literal>set</literal>,
+     à condition que la nouvelle visibilité soit la même ou plus large
+     que celle de la classe parente. Cependant, soyez conscient que si une propriété <literal>private</literal>
+     est remplacée, cela ne change pas réellement la propriété de la classe parente,
+     mais crée une nouvelle propriété avec un nom interne différent.
+    </simpara>
+    <example>
+     <title>Héritage des Propriétés Asymétriques</title>
+     <programlisting role="php">
+<![CDATA[
+<?php
+class Book
+{
+    protected string $title;
+    public protected(set) string $author;
+    protected private(set) int $pubYear;
+}
+
+class SpecialBook extends Book
+{
+    public protected(set) $title; // OK, car la lecture est plus large et l'écriture est la même.
+    public string $author; // OK, car la lecture est la même et l'écriture est plus large.
+    public protected(set) int $pubYear; // Erreur Fatale. Les propriétés private(set) sont finales.
+}
+?>
+]]>
+     </programlisting>
+    </example>
+   </sect3>
   </sect2>
   
   <sect2 xml:id="language.oop5.visiblity-methods">
@@ -189,10 +307,9 @@ $myFoo->test(); // Bar::testPrivate
     comme public, privée ou protégée. Les constantes déclarées sans mot clé
     de visibilité explicite sont définies en tant que public.
    </para>
-   <para>
-    <example>
-     <title>Déclaration de constantes à partir de PHP 7.1.0</title>
-     <programlisting role="php">
+   <example>
+    <title>Déclaration de constantes à partir de PHP 7.1.0</title>
+    <programlisting role="php">
 <![CDATA[
 <?php
 /**
@@ -243,9 +360,8 @@ echo MyClass2::MY_PUBLIC; // Fonctionne
 $myclass2->foo2(); // Public et Protégée fonctionne, mais pas Privée
 ?>
 ]]>
-     </programlisting>
-    </example>
-   </para>
+    </programlisting>
+   </example>
   </sect2>
 
   <sect2 xml:id="language.oop5.visibility-other-objects">
