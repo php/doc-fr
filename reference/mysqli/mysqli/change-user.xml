@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 5bc68add3da3cd18c40f851e944b15095d3a26aa Maintainer: yannick Status: ready -->
+<!-- EN-Revision: ee14f82484f6289278255f798f1e8b93cdc2cab5 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 <refentry xml:id="mysqli.change-user" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>mysqli::change_user</refname>
   <refname>mysqli_change_user</refname>
-  <refpurpose>Change l'utilisateur de la connexion spécifiée</refpurpose>
+  <refpurpose>Change l'utilisateur de la connexion</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -26,9 +26,11 @@
    <methodparam><type class="union"><type>string</type><type>null</type></type><parameter>database</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Change l'utilisateur de la connexion spécifiée par le paramètre
-   <parameter>link</parameter> et change la base de données courante pour
-   celle spécifiée par le paramètre <parameter>database</parameter>.
+   Tente de se connecter à la base de données spécifiée en utilisant les identifiants fournis.
+  </para>
+  <para>
+   Contrairement à <methodname>mysqli::connect</methodname>, cette méthode
+   ne déconnectera pas la connexion actuelle si la nouvelle connexion ne peut pas être établie.
   </para>
   <para>
    Pour que cette fonction réussisse, les paramètres 
@@ -65,13 +67,8 @@
      <term><parameter>database</parameter></term>
      <listitem>
       <para>
-       La base de données à utiliser.
-      </para>
-      <para>
-       Vous pouvez passer la valeur &null; à ce paramètre pour ne
-       changer que l'utilisateur. Dans ce cas, vous pouvez utiliser la
-       fonction <function>mysqli_select_db</function> pour changer
-       de base de données.
+       Le nom de la base de données. Si &null; ou une chaîne vide est passée,
+       la connexion au serveur sera ouverte sans base de données par défaut.
       </para>
      </listitem>
     </varlistentry>
@@ -94,43 +91,29 @@
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>Exemple avec <methodname>mysqli::change_user</methodname></title>
+   <title>Réinitialisation de la session de connexion</title>
    <para>&style.oop;</para>
    <programlisting role="php">
 <![CDATA[
 <?php
 
-/* Connexion à la base de données test */
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $mysqli = new mysqli("localhost", "my_user", "my_password", "test");
 
-/* Vérification de la connexion */
-if (mysqli_connect_errno()) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
-
-/* Définition de la variable "a" */
 $mysqli->query("SET @a:=1");
 
-/* réinitialise tout et sélectionne une nouvelle base de données */
 $mysqli->change_user("my_user", "my_password", "world");
 
-if ($result = $mysqli->query("SELECT DATABASE()")) {
-    $row = $result->fetch_row();
-    printf("Base de données par défaut : %s\n", $row[0]);
-    $result->close();
+$result = $mysqli->query("SELECT DATABASE()");
+$row = $result->fetch_row();
+printf("Base de données par défaut : %s\n", $row[0]);
+
+$result = $mysqli->query("SELECT @a");
+$row = $result->fetch_row();
+if ($row[0] === NULL) {
+    printf("La valeur de la variable a est NULL\n");
 }
 
-if ($result = $mysqli->query("SELECT @a")) {
-    $row = $result->fetch_row();
-    if ($row[0] === NULL) {
-        printf("La valeur de la variable a est NULL\n");
-    }
-    $result->close();
-}
-
-/* Fermeture de la connexion */
-$mysqli->close();
 ?>
 ]]>
    </programlisting>
@@ -138,37 +121,21 @@ $mysqli->close();
    <programlisting role="php">
 <![CDATA[
 <?php
-/* Connexion à la base de données test */
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $link = mysqli_connect("localhost", "my_user", "my_password", "test");
-
-/* Vérification de la connexion */
-if (!$link) {
-    printf("Échec de la connexion : %s\n", mysqli_connect_error());
-    exit();
-}
-
-/* Définition de la variable "a" */
 mysqli_query($link, "SET @a:=1");
 
-/* réinitialise tout et sélectionne une nouvelle base de données */
-mysqli_change_user($link, "my_user", "my_password", "world");
+$result = mysqli_query($link, "SELECT DATABASE()");
+$row = mysqli_fetch_row($result);
+printf("Base de données par défaut : %s\n", $row[0]);
 
-if ($result = mysqli_query($link, "SELECT DATABASE()")) {
-    $row = mysqli_fetch_row($result);
-    printf("Base de données par défaut : %s\n", $row[0]);
-    mysqli_free_result($result);
+$result = $mysqli_query($link, "SELECT @a")) {
+$row = mysqli_fetch_row($result);
+if ($row[0] === NULL) {
+    printf("La valeur de la variable a est NULL\n");
 }
 
-if ($result = mysqli_query($link, "SELECT @a")) {
-    $row = mysqli_fetch_row($result);
-    if ($row[0] === NULL) {
-        printf("La valeur de la variable a est NULL\n");
-    }
-    mysqli_free_result($result);
-}
-
-/* Fermeture de la connexion */
-mysqli_close($link);
 ?>
 ]]>
    </programlisting>
@@ -177,6 +144,30 @@ mysqli_close($link);
 <![CDATA[
 Base de données par défaut : world
 La valeur de la variable a est NULL
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>Si <parameter>database</parameter> est &null; la connexion est ouverte sans sélectionner de base de données par défaut</title>
+   <para>&style.oop;</para>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+$mysqli = new mysqli("localhost", "my_user", "my_password", "test");
+
+$mysqli->change_user("my_user", "my_password", null);
+
+$result = $mysqli->query("SELECT DATABASE()");
+$row = $result->fetch_row();
+printf("Base de données par défaut : %s\n", $row[0]);
+]]>
+   </programlisting>
+   &examples.outputs;
+   <screen>
+<![CDATA[
+Base de données par défaut :
 ]]>
    </screen>
   </example>
