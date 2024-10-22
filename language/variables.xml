@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: b7dbf6357d4c2d68ffb52158076f692ed532b546 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: d6baeae3fa6e100b6b4b4ecd59fda030aa32f694 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="language.variables" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -206,6 +206,10 @@ $unset_array[] = 'valeur'; // Ne génère pas d'avertissement.
    </warning>
 
    <simpara>
+    Une variable peut être détruite en utilisant la construction de langage <function>unset</function>.
+   </simpara>
+
+   <simpara>
     Pour plus d'informations sur les fonctions liées aux variables, consultez la
     <link linkend="ref.var">Référence des fonctions sur les variables</link>.
    </simpara>
@@ -215,22 +219,11 @@ $unset_array[] = 'valeur'; // Ne génère pas d'avertissement.
   <title>Variables pré-définies</title>
   
   <para>
-   PHP fournit un grand nombre de variables pré-définies.
-   Cependant, beaucoup de ces variables ne peuvent pas être
-   présentées ici, car elles dépendent du serveur
-   sur lequel elles tournent, de la version et de la
-   configuration du serveur ou encore d'autres facteurs. Certaines
-   de ces variables ne seront pas accessibles lorsque PHP fonctionne
-   en <link linkend="features.commandline">ligne de commande</link>.
-   Pour plus de détails voir la
-   <link linkend="reserved.variables">liste des variables pré-définies</link>.
-  </para>
-  
-  <para>
+   PHP fournit un certain nombre de
+   <link linkend="reserved.variables">variables prédéfinies</link>.
    PHP fournit aussi un jeu de tableaux prédéfinis contenant les variables
    du serveur (si possible), les variables d'environnement et celles d'entrées.
-   Ces tableaux sont un peu particuliers, car ils sont automatiquement globaux,
-   c.à.d qu'ils sont automatiquement disponibles dans toutes les portées d'exécution.
+   Ces tableaux sont automatiquement disponibles dans chaque portée.
    Pour cette raison, ils sont dits 'superglobaux'. (il n'y a pas de mécanisme en
    PHP pour créer de telles variables.) Pour plus de détails voir la
    <link linkend="language.variables.superglobals">liste des superglobales</link>.
@@ -258,9 +251,10 @@ $unset_array[] = 'valeur'; // Ne génère pas d'avertissement.
   
   <simpara>
    La portée d'une variable est le contexte dans lequel elle est définie.
-   Pour la plupart, toutes les variables PHP n'ont qu'une seule portée.
-   Cette portée unique englobe les fichiers inclus avec les fonctions
-   <function>include</function> et <function>require</function>. Par exemple :
+   PHP possède une portée de fonction et une portée globale.
+   Toute variable définie en dehors d'une fonction est limitée à la portée globale.
+   Lorsqu'un fichier est inclus, le code qu'il contient hérite de la portée des variables
+   de la ligne où l'inclusion a lieu.
   </simpara>
   <example>
    <title>Les variables sont locales à la fonction</title>
@@ -268,44 +262,44 @@ $unset_array[] = 'valeur'; // Ne génère pas d'avertissement.
 <![CDATA[
 <?php
 $a = 1;
-include 'b.inc';
+include 'b.inc'; // La variable $a sera disponible dans b.inc.
+
 ?>
 ]]>
    </programlisting>
   </example>
   <simpara>
-   Ici, la variable <varname>$a</varname> sera accessible dans le script inclus
-   <filename>b.inc</filename>. Cependant, dans les fonctions
-   définies par l'utilisateur, une nouvelle définition
-   de cette variable sera donnée, limitée à la
-   fonction. Toute variable utilisée dans une fonction est,
-   par définition, locale. Par exemple :
+   Toute variable créée à l'intérieur d'une fonction nommée ou d'une
+   <link linkend="functions.anonymous">fonction anonyme</link>
+   est limitée à la portée du corps de la fonction.
+   Cependant, les <link linkend="functions.arrow">fonctions fléchées</link>
+   lient les variables de la portée parente pour les rendre disponibles dans le corps.
+   Si un fichier est inclus à l'intérieur d'une fonction dans
+   le fichier appelant, les variables contenues dans le fichier appelé seront
+   disponibles comme si elles avaient été définies à l'intérieur de la fonction appelante.
   </simpara>
   
-  <informalexample>
-   <programlisting role="php">
+  <example>
+    <title>Exemple de portée de variable locale</title>
+    <programlisting role="php">
 <![CDATA[
 <?php
-$a = 1; /* portée globale */
+$a = 1; // portée globale
 
 function test()
 { 
-    echo $a; /* portée locale */
+    echo $a; // La variable $a est indéfinie car elle fait référence à une version locale de $a
 }
 
 test();
 ?>
 ]]>
    </programlisting>
-  </informalexample>
+  </example>
   
   <simpara>
-
-   Ce génèrera un diagnostic <constant>E_WARNING</constant>
-   (ou <constant>E_NOTICE</constant> antérieur à PHP 8.0.0) de variable non définit.
-   Cependant, si le paramètre INI
-   <link linkend="ini.display-errors">display_errors</link>
-   est défini pour cacher ces diagnostics alors rien du tout sera affiché.
+   L'exemple ci-dessus générera un <constant>E_WARNING</constant> de variable indéfinie
+   (ou un <constant>E_NOTICE</constant> avant PHP 8.0.0).
    La raison pour cela est que
    l'instruction <function>echo</function> utilise la variable locale <varname>$a</varname>,
    et celle-ci n'a pas été assignée
@@ -324,7 +318,12 @@ test();
   <sect2 xml:id="language.variables.scope.global">
    <title>Le mot clé <literal>global</literal></title>
    <simpara>
-    Commençons par un exemple avec <literal>global</literal> :
+    Le mot-clé <literal>global</literal> est utilisé pour lier une variable
+    de la portée globale dans une portée locale. Le mot-clé peut être utilisé avec
+    une liste de variables ou une seule variable. Une variable locale sera créée
+    faisant référence à la variable globale du même nom. Si la variable globale
+    n'existe pas, la variable sera créée dans la portée globale et
+    assignée à &null;.
    </simpara>
    <para>
     <example>
@@ -342,11 +341,16 @@ somme();
 echo $b;
 ]]>
      </programlisting>
+     &example.outputs;
+      <screen>
+<![CDATA[
+3
+]]>
+      </screen>
     </example>
    </para>
    
    <simpara>
-    Le script ci-dessus va afficher la valeur <literal>3</literal>.
     En déclarant globales les variables <varname>$a</varname> et
     <varname>$b</varname> locales
     de la fonction somme(), toutes les références à
@@ -407,11 +411,11 @@ function test_superglobal()
     </example>
    </para>
    <note>
-    <para>
+    <simpara>
      L'utilisation du mot clé <literal>global</literal> à l'extérieur
      d'une fonction n'est pas une erreur. Il peut être utilisé si le fichier
      est inclus depuis l'intérieur d'une fonction.
-    </para>
+    </simpara>
    </note>
   </sect2>
   
@@ -476,12 +480,7 @@ function test()
    
    <simpara>
     Les variables statiques sont essentielles lorsque vous faites des
-    appels récursifs à une fonction. Une fonction
-    récursive est une fonction qui s'appelle elle-même.
-    Il faut faire attention lorsque de l'écriture une fonction
-    récursive, car il est facile de faire une boucle infinie.
-    Il faut vérifier qu'il y a une condition qui
-    permet de terminer la récursivité. La fonction
+    appels récursifs à une fonction. La fonction
     suivante compte récursivement jusqu'à 10, en utilisant la variable
     <varname>$count</varname> pour savoir quand il faut s'arrêter :
    </simpara>
