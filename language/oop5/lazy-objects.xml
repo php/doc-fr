@@ -1,0 +1,481 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 05bd66d110d5c119f9cc08ce68021b4a3518e53c Maintainer: Fan2Shrek Status: ready -->
+<!-- Reviewed: yes -->
+<sect1 xml:id="language.oop5.lazy-objects" xmlns="http://docbook.org/ns/docbook">
+ <title>Objets paresseux</title>
+
+ <simpara>
+  Un objet paresseux est un objet dont l'initialisation est différée jusqu'à
+  ce que son état soit observé ou modifié. Quelques exemples d'utilisation incluent des composants
+  d'injection de dépendances qui fournissent des services paresseux entièrement initialisés
+  uniquement si nécessaire, des <acronym>ORM</acronym>s fournissant des entités paresseuses qui s'hydratent
+  depuis la base de données uniquement lorsqu'elles sont accédées, ou un
+  analyseur JSON qui retarde l'analyse jusqu'à ce que les éléments soient accédés.
+ </simpara>
+
+ <simpara>
+  Deux stratégies d'objets paresseux sont prises en charge : les objets fantômes (Ghost) et les
+  proxys virtuels (Virtual Proxies), ci-après appelés &quot;fantômes paresseux&quot; et
+  &quot;proxys paresseux&quot;.
+  Dans les deux stratégies, l'objet paresseux est attaché à un initialiseur ou une usine
+  qui est appelé automatiquement lorsque son état est observé ou modifié pour
+  la première fois. D'un point de vue d'abstraction, les objets paresseux sont
+  indiscernables des non-paresseux : ils peuvent être utilisés sans savoir qu'ils
+  sont paresseux, ce qui permet de les passer et de les utiliser par du code qui n'est pas conscient
+  de la paresse. Les proxys paresseux sont également transparents, mais il faut faire attention lorsque
+  leur identité est utilisée, car le proxy et son instance réelle ont des identités
+  différentes.
+ </simpara>
+
+ <sect2 xml:id="language.oop5.lazy-objects.creation">
+  <title>Création d'objets paresseux</title>
+
+  <simpara>
+   Il est possible de créer une instance paresseuse de n'importe quelle classe définie par l'utilisateur ou de la
+   classe <classname>stdClass</classname> (d'autres classes internes ne sont pas
+   prises en charge), ou de réinitialiser une instance de ces classes pour la rendre paresseuse.
+   Les points d'entrée pour créer un objet paresseux sont les méthodes
+   <methodname>ReflectionClass::newLazyGhost</methodname> et
+   <methodname>ReflectionClass::newLazyProxy</methodname>.
+  </simpara>
+
+  <simpara>
+   Les deux méthodes acceptent une fonction qui est appelée lorsque l'objet nécessite
+   une initialisation. Le comportement attendu de la fonction varie en fonction de la
+   stratégie utilisée, comme décrit dans la documentation de référence de chaque méthode.
+  </simpara>
+
+  <example>
+   <title>Création d'un fantôme paresseux</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Example
+{
+    public function __construct(public int $prop)
+    {
+        echo __METHOD__, "\n";
+    }
+}
+
+$reflector = new ReflectionClass(Example::class);
+$lazyObject = $reflector->newLazyGhost(function (Example $object) {
+    // Initialise l'objet sur place
+    $object->__construct(1);
+});
+
+var_dump($lazyObject);
+var_dump(get_class($lazyObject));
+
+// Déclenche l'initialisation
+var_dump($lazyObject->prop);
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+lazy ghost object(Example)#3 (0) {
+["prop"]=>
+uninitialized(int)
+}
+string(7) "Example"
+Example::__construct
+int(1)
+]]>
+   </screen>
+  </example>
+
+  <example>
+   <title>Création d'un proxy paresseux</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Example
+{
+    public function __construct(public int $prop)
+    {
+        echo __METHOD__, "\n";
+    }
+}
+
+$reflector = new ReflectionClass(Example::class);
+$lazyObject = $reflector->newLazyProxy(function (Example $object) {
+    // Crée et retourne l'instance réelle
+    return new Example(1);
+});
+
+var_dump($lazyObject);
+var_dump(get_class($lazyObject));
+
+// Déclenche l'initialisation
+var_dump($lazyObject->prop);
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+lazy proxy object(Example)#3 (0) {
+  ["prop"]=>
+  uninitialized(int)
+}
+string(7) "Example"
+Example::__construct
+int(1)
+]]>
+   </screen>
+  </example>
+
+  <simpara>
+   N'importe quel accès à des propriétés d'un objet paresseux déclenche son initialisation
+   (y compris via <classname>ReflectionProperty</classname>).
+   Cependant, certaines propriétés peuvent être connues à l'avance et ne devraient pas déclencher
+   l'initialisation lorsqu'elles sont accédées :
+  </simpara>
+
+  <example>
+   <title>Initialisation des propriétés de manière impatiente</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class BlogPost
+{
+    public function __construct(
+        private int $id,
+        private string $title,
+        private string $content,
+    ) { }
+}
+
+$reflector = new ReflectionClass(BlogPost::class);
+
+$post = $reflector->newLazyGhost(function ($post) {
+    $data = fetch_from_store($post->id);
+    $post->__construct($data['id'], $data['title'], $data['content']);
+});
+
+// Sans cette ligne, l'appel suivant à ReflectionProperty::setValue() déclencherait
+// l'initialisation.
+$reflector->getProperty('id')->skipLazyInitialization($post);
+$reflector->getProperty('id')->setValue($post, 123);
+
+// Egalement, on peut utiliser ceci directement :
+$reflector->getProperty('id')->setRawValueWithoutLazyInitialization($post, 123);
+
+// L'identifiant peut être accédé sans déclencher l'initialisation
+var_dump($post->id);
+?>
+]]>
+   </programlisting>
+  </example>
+
+  <simpara>
+   Les méthodes <methodname>ReflectionProperty::skipLazyInitialization</methodname> et
+   <methodname>ReflectionProperty::setRawValueWithoutLazyInitialization</methodname>
+   offrent des moyens de contourner l'initialisation paresseuse lors de l'accès à une propriété.
+  </simpara>
+ </sect2>
+
+ <sect2 xml:id="language.oop5.lazy-objects.patterns">
+  <title>A propos des stratégies d'objets paresseux</title>
+
+  <simpara>
+   Les <emphasis>fantômes paresseux</emphasis> sont des objets qui s'initialisent sur place et,
+   une fois initialisés, sont indiscernables d'un objet qui n'était jamais paresseux.
+   Cette stratégie est adaptée lorsque nous contrôlons à la fois l'instanciation et
+   l'initialisation de l'objet et est inadaptée si l'une de ces opérations est
+   gérée par une autre partie.
+  </simpara>
+
+  <simpara>
+   Les <emphasis>proxys paresseux</emphasis>, une fois initialisés, agissent comme des proxys
+   vers une instance réelle : toute opération sur un proxy paresseux initialisé est
+   transmise à l'instance réelle. La création de l'instance réelle peut être déléguée
+   à une autre partie, ce qui rend cette stratégie utile dans les cas où les fantômes
+   paresseux sont inadaptés. Bien que les proxys paresseux soient presque aussi transparents
+   que les fantômes paresseux, il faut faire attention lorsque leur identité est utilisée,
+   car le proxy et son instance réelle ont des identités distinctes.
+  </simpara>
+ </sect2>
+
+ <sect2 xml:id="language.oop5.lazy-objects.lifecycle">
+  <title>Cycle de vie des objets paresseux</title>
+
+  <simpara>
+   Les objets peuvent être rendus paresseux lors de l'instanciation en utilisant
+   <methodname>ReflectionClass::newLazyGhost</methodname> ou
+   <methodname>ReflectionClass::newLazyProxy</methodname>, ou après
+   l'instanciation en utilisant
+   <methodname>ReflectionClass::resetAsLazyGhost</methodname> ou
+   <methodname>ReflectionClass::resetAsLazyProxy</methodname>. Ensuite, un
+   objet paresseux peut être initialisé par l'une des opérations suivantes :
+  </simpara>
+
+  <simplelist>
+   <member>
+    Interagir avec l'objet d'une manière qui déclenche l'initialisation automatique. Voir
+    <link linkend="language.oop5.lazy-objects.initialization-triggers">déclencheurs
+    d'initialisation</link>.
+   </member>
+   <member>
+    Marquer toutes ses propriétés comme non-paresseuses en utilisant
+    <methodname>ReflectionProperty::skipLazyInitialization</methodname> ou
+    <methodname>ReflectionProperty::setRawValueWithoutLazyInitialization</methodname>.
+   </member>
+   <member>
+    Appeler explicitement <methodname>ReflectionClass::initializeLazyObject</methodname>
+    ou <methodname>ReflectionClass::markLazyObjectAsInitialized</methodname>.
+   </member>
+  </simplelist>
+
+  <simpara>
+   Comme les objets paresseux sont initialisés lorsque toutes leurs propriétés sont marquées
+   non-paresseuses, les méthodes ci-dessus ne marqueront pas un objet comme paresseux si aucune propriété
+   ne peut être marquée comme paresseuse.
+  </simpara>
+ </sect2>
+
+ <sect2 xml:id="language.oop5.lazy-objects.initialization-triggers">
+  <title>Déclencheurs d'initialisation</title>
+
+  <simpara>
+   Les objets paresseux sont conçus pour être entièrement transparents pour leurs consommateurs,
+   de sorte que les opérations normales qui observent ou modifient l'état de l'objet déclencheront
+   automatiquement l'initialisation avant que l'opération ne soit effectuée. Cela
+   inclut, mais sans s'y limiter, les opérations suivantes :
+  </simpara>
+
+  <simplelist>
+   <member>
+    Lire ou écrire une propriété
+   </member>
+   <member>
+    Tester si une propriété est définie ou la définir.
+   </member>
+   <member>
+    Acceder ou modifier une propriété via
+    <methodname>ReflectionProperty::getValue</methodname>,
+    <methodname>ReflectionProperty::getRawValue</methodname>,
+    <methodname>ReflectionProperty::setValue</methodname>,
+    ou <methodname>ReflectionProperty::setRawValue</methodname>.
+   </member>
+   <member>
+    Lister les propriétés avec
+    <methodname>ReflectionObject::getProperties</methodname>,
+    <methodname>ReflectionObject::getProperty</methodname>,
+    <function>get_object_vars</function>.
+   </member>
+   <member>
+    Iterating over properties of an object that does not implement
+    <interfacename>Iterator</interfacename> ou
+    <interfacename>IteratorAggregate</interfacename> en utilisant
+    <link linkend="control-structures.foreach">foreach</link>.
+   </member>
+   <member>
+    Sérialiser l'objet avec <function>serialize</function>,
+    <function>json_encode</function>, etc.
+   </member>
+   <member>
+    <link linkend="language.oop5.lazy-objects.cloning">Cloner</link> l'objet. 
+   </member>
+  </simplelist>
+
+  <simpara>
+   Les appels de méthodes qui n'accèdent pas à l'état de l'objet ne déclencheront pas
+   l'initialisation. De même, les interactions avec l'objet qui invoquent des méthodes magiques
+   ou des fonctions de crochet ne déclencheront pas l'initialisation si ces méthodes
+   ou fonctions n'accèdent pas à l'état de l'objet.
+  </simpara>
+
+  <sect3>
+   <title>Opérations non déclenchantes</title>
+
+   <simpara>
+    Les méthodes ou opérations spécifiques suivantes permettent d'accéder ou de modifier
+    des objets paresseux sans déclencher l'initialisation :
+   </simpara>
+
+   <simplelist>
+    <member>
+     Marquer les propriétés comme non-paresseuses avec
+     <methodname>ReflectionProperty::skipLazyInitialization</methodname> ou
+     <methodname>ReflectionProperty::setRawValueWithoutLazyInitialization</methodname>.
+    </member>
+    <member>
+     Récupérer la représentation interne des propriétés en utilisant
+     <function>get_mangled_object_vars</function> ou en
+     <link linkend="language.types.array.casting">convertissant l'objet en
+     un tableau</link>.
+    </member>
+    <member>
+     Utilisant <function>serialize</function> lorsque
+     <constant>ReflectionClass::SKIP_INITIALIZATION_ON_SERIALIZE</constant>
+     est défini, sauf si
+     <link linkend="object.serialize">__serialize()</link> ou
+     <link linkend="object.sleep">__sleep()</link> déclenche l'initialisation.
+    </member>
+    <member>
+     Appeler <methodname>ReflectionObject::__toString</methodname>.
+    </member>
+    <member>
+     Utiliser <function>var_dump</function> ou
+     <function>debug_zval_dump</function>, sauf si
+     <link linkend="object.debuginfo">__debugInfo()</link> déclenche
+     l'initialisation
+    </member>
+   </simplelist>
+  </sect3>
+ </sect2>
+
+ <sect2 xml:id="language.oop5.lazy-objects.initialization-sequence">
+  <title>Séquence d'initialisation</title>
+
+  <simpara>
+   Cette section décrit la séquence d'opérations effectuées lorsqu'une
+   initialisation est déclenchée, en fonction de la stratégie utilisée.
+  </simpara>
+
+  <sect3>
+   <title>Objets fantômes</title>
+   <simplelist>
+    <member>
+     L'objet est marqué comme non-paresseux.
+    </member>
+    <member>
+     Les propriétés non initialisées avec
+     <methodname>ReflectionProperty::skipLazyInitialization</methodname> ou
+     <methodname>ReflectionProperty::setRawValueWithoutLazyInitialization</methodname>
+     sont définies sur leurs valeurs par défaut, le cas échéant. À ce stade, l'objet
+     ressemble à un objet créé avec
+     <methodname>ReflectionClass::newInstanceWithoutConstructor</methodname>,
+     sauf pour les propriétés déjà initialisées.
+    </member>
+    <member>
+     La fonction d'initialisation est ensuite appelée avec l'objet comme premier
+     paramètre. La fonction est censée, mais pas obligée, d'initialiser
+     l'état de l'objet, et doit retourner &null; ou aucune valeur. L'objet n'est plus
+     paresseux à ce stade, donc la fonction peut accéder directement à ses propriétés.
+    </member>
+   </simplelist>
+   <simpara>
+    Après l'initialisation, l'objet est indiscernable d'un objet qui n'a
+    jamais été paresseux.
+   </simpara>
+  </sect3>
+
+  <sect3>
+   <title>Objets proxys</title>
+   <simplelist>
+    <member>
+     L'objet est marqué comme non-paresseux.
+    </member>
+    <member>
+     Contrairement aux objets fantômes, les propriétés de l'objet ne sont pas modifiées à
+     cette étape.
+    </member>
+    <member>
+     La fonction usine est appelée avec l'objet comme premier paramètre et doit
+     retourner une instance non-paresseuse d'une classe compatible (voir
+     <methodname>ReflectionClass::newLazyProxy</methodname>).
+    </member>
+    <member>
+     L'instance retournée est appelée <emphasis>instance
+     réelle</emphasis> et est attachée au proxy.
+    </member>
+    <member>
+     Les valeurs des propriétés du proxy sont jetées comme si
+     <function>unset</function> est appelé.
+    </member>
+   </simplelist>
+   <simpara>
+    Après l'initialisation, l'accès à n'importe quelle propriété sur le proxy
+    donnera le même résultat que l'accès à la propriété correspondante sur
+    l'instance réelle ; tous les accès aux propriétés sur le proxy sont transmis à
+    l'instance réelle, y compris les propriétés déclarées, dynamiques, inexistantes,
+    ou les propriétés marquées avec
+    <methodname>ReflectionProperty::skipLazyInitialization</methodname> ou
+    <methodname>ReflectionProperty::setRawValueWithoutLazyInitialization</methodname>.
+   </simpara>
+   <simpara>
+    L'objet proxy lui-même n'est <emphasis>pas</emphasis> remplacé ou substitué
+    par l'instance réelle.
+   </simpara>
+   <simpara>
+    Tandis que l'usine reçoit le proxy comme premier paramètre, il n'est
+    pas attendu qu'elle le modifie (les modifications sont autorisées mais seront perdues
+    lors de l'étape finale d'initialisation). Cependant, le proxy peut être utilisé
+    pour des décisions basées sur les valeurs des propriétés initialisées, la classe,
+    l'objet lui-même, ou son identité. Par exemple, l'initialiseur pourrait
+    utiliser la valeur d'une propriété initialisée lors de la création de l'instance réelle.
+   </simpara>
+  </sect3>
+
+  <sect3>
+   <title>Comportement commun</title>
+
+   <simpara>
+    La portée et le contexte <varname>$this</varname> de la fonction d'initialisation ou de l'usine
+    restent inchangés, et les contraintes de visibilité habituelles s'appliquent.
+   </simpara>
+
+   <simpara>
+    Après une initialisation réussie, la fonction d'initialisation ou l'usine
+    n'est plus référencée par l'objet et peut être libérée si elle n'a pas d'autres
+    références.
+   </simpara>
+
+   <simpara>
+    Si l'initialisation lève une exception, l'état de l'objet est rétabli à son
+    état pré-initialisation et l'objet est à nouveau marqué comme paresseux. En d'autres
+    termes, tous les effets sur l'objet lui-même sont annulés. Les autres effets
+    secondaires, tels que les effets sur d'autres objets, ne sont pas annulés. Cela
+    empêche l'exposition d'une instance partiellement initialisée en cas d'échec.
+   </simpara>
+  </sect3>
+ </sect2>
+
+ <sect2 xml:id="language.oop5.lazy-objects.cloning">
+  <title>Clonage</title>
+
+  <simpara>
+   <link linkend="language.oop5.cloning">Cloner</link>
+   un objet paresseux déclenche son initialisation avant que le clone ne soit
+   créé, résultant en un objet initialisé.
+  </simpara>
+
+  <simpara>
+   Pour les objets proxis, le proxy et son instance réelle sont clonés, et
+   le clone du proxy est retourné.
+   La méthode <link linkend="object.clone"><literal>__clone</literal></link> est
+   appelée sur l'instance réelle, pas sur le proxy.
+   Le proxy cloné et l'instance réelle clonée sont liés comme ils le sont pendant
+   l'initialisation, donc les accès au clone du proxy sont transmis au clone de
+   l'instance réele.
+  </simpara>
+
+  <simpara>
+   Ce comportement garantit que le clone et l'objet original maintiennent
+   des états séparés. Les modifications apportées à l'objet original ou à l'état de son initialisateur
+   après le clonage n'affectent pas le clone. Cloner à la fois le proxy et son instance réelle,
+   plutôt que de retourner un clone de l'instance réelle seule, garantit que l'opération de clonage
+   retourne systématiquement un objet de la même classe.
+  </simpara>
+ </sect2>
+
+ <sect2 xml:id="language.oop5.lazy-objects.destructors">
+  <title>Destructeurs</title>
+
+  <simpara>
+   Pour les objets paresseux, le destructeur n'est appelé que si l'objet a été
+   initialisé. Pour les proxys, le destructeur n'est appelé que sur l'instance réelle,
+   si elle existe.
+  </simpara>
+
+  <simpara>
+   Les méthodes <methodname>ReflectionClass::resetAsLazyGhost</methodname> et
+   <methodname>ReflectionClass::resetAsLazyProxy</methodname> peuvent invoquer 
+   le destructeur de l'objet réinitialisé.
+  </simpara>
+ </sect2>
+</sect1>
