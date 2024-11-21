@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 3d522c890d98c563bb283cf89ec5da5f535cfb8f Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 2e7c00fd314a708ecbd495ef7cc9ae8c8462c33c Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
  <sect1 xml:id="language.oop5.interfaces" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
   <title>Interfaces</title>
   <para>
-   Les interfaces objet vous permettent de créer du code qui spécifie quelles
-   méthodes une classe doit implémenter, sans avoir à définir comment ces méthodes
-   fonctionneront. Les interfaces partagent l'espace de nom avec les classes
-   et les traits, donc elles ne peuvent pas utiliser le même nom.
+   Les interfaces d'objets permettent de créer du code qui spécifie quelles méthodes et propriétés une
+   classe doit implémenter, sans avoir à définir comment ces méthodes ou propriétés sont
+   implémentées. Les interfaces partagent un espace de noms avec les classes et les traits, de sorte qu'elles ne peuvent
+   pas utiliser le même nom.
   </para>
   <para>
    Les interfaces sont définies de la même façon que pour une classe, mais en 
@@ -102,6 +102,86 @@
     Antérieur à PHP 8.1.0, elles ne peuvent pas être redéfinies par une
     classe/interface qui les hérite.
    </para>
+  </sect2>
+  <sect2 xml:id="language.oop5.interfaces.properties">
+   <title>Propriétés</title>
+   <simpara>
+    À partir de PHP 8.4.0, les interfaces peuvent également déclarer des propriétés.
+    Si elles le font, la déclaration doit spécifier si la propriété est lisible,
+    modifiable, ou les deux.
+    La déclaration de l'interface s'applique uniquement à l'accès en lecture et en écriture publics.
+   </simpara>
+   <simpara>
+    Une classe peut satisfaire une propriété d'interface de plusieurs façons.
+    Elle peut définir une propriété publique.
+    Elle peut définir une propriété publique
+    <link linkend="language.oop5.property-hooks.virtual">virtuelle</link>
+    qui implémente uniquement le crochet correspondant.
+    Ou une propriété en lecture peut être satisfaite par une propriété <literal>readonly</literal>.
+    Cependant, une propriété d'interface qui est modifiable ne peut pas être <literal>readonly</literal>.
+   </simpara>
+   <example>
+    <title>Exemple de propriétés d'interface</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+interface I
+{
+    // Une classe implémentant cette interface DOIT avoir une propriété publiquement lisible,
+    // mais que celle-ci soit ou non modifiable publiquement n'est pas restreint.
+    public string $readable { get; }
+
+    // Une classe implémentant cette interface DOIT avoir une propriété publiquement modifiable,
+    // mais que celle-ci soit ou non lisible publiquement n'est pas restreint.
+    public string $writeable { set; }
+
+    // Une classe implémentant cette interface DOIT avoir une propriété qui est à la fois publiquement
+    // lisible et publiquement modifiable.
+    public string $both { get; set; }
+}
+
+// Cette classe implémente les trois propriétés comme des propriétés traditionnelles, sans crochets.
+// C'est tout à fait valide.
+class C1 implements I
+{
+    public string $readable;
+
+    public string $writeable;
+
+    public string $both;
+}
+
+// Cette classe implémente les trois propriétés en utilisant uniquement les crochets
+// demandés. Cela est également tout à fait valide.
+class C2 implements I
+{
+    private string $written = '';
+    private string $all = '';
+
+    // Utilise uniquement un crochet get pour créer une propriété virtuelle.
+    // Cela satisfait l'exigence "get public".
+    // Elle n'est pas modifiable, mais cela n'est pas exigé par l'interface.
+    public string $readable { get => strtoupper($this->writeable); }
+
+    // L'interface exige uniquement que la propriété soit modifiable,
+    // mais inclure des opérations get est également tout à fait valide.
+    // Cet exemple crée une propriété virtuelle, ce qui est acceptable.
+    public string $writeable {
+        get => $this->written;
+        set => $value;
+    }
+
+    // Cette propriété nécessite que la lecture et l'écriture soient possibles,
+    // nous devons donc soit implémenter les deux, soit permettre le comportement par défaut.
+    public string $both {
+        get => $this->all;
+        set => strtoupper($value);
+    }
+}
+?>
+]]>
+    </programlisting>
+   </example>
   </sect2>
   <sect2 xml:id="language.oop5.interfaces.examples">
    &reftitle.examples;
