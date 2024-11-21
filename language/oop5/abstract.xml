@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 9ee9eccf455188ab6eb352194eb6f9eb99e15606 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 2e7c00fd314a708ecbd495ef7cc9ae8c8462c33c Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <sect1 xml:id="language.oop5.abstract" xmlns="http://docbook.org/ns/docbook">
  <title>Abstraction de classes</title>
  
  <para>
-  PHP a des classes et méthodes abstraites.
+  PHP a des classes, méthodes et propriétés abstraites.
   Les classes définies comme abstraites ne peuvent pas être
   instanciées, et toute classe contenant au moins une
   méthode abstraite doit elle-aussi être abstraite.
-  Les méthodes définies comme abstraites déclarent simplement la signature
-  de la méthode ; elles ne peuvent définir son implémentation.
+  Les méthodes définies comme abstraites se contentent de déclarer la signature de la méthode et d'indiquer si elle est publique ou protégée ;  
+  elles ne peuvent pas définir l'implémentation. Les propriétés définies comme abstraites  
+  peuvent déclarer une exigence pour le comportement de <literal>get</literal> ou de <literal>set</literal>,  
+  et peuvent fournir une implémentation pour l'une de ces opérations, mais pas les deux.
  </para>
  
  <para>
@@ -21,9 +23,19 @@
   d'<link linkend="language.oop5.inheritance">héritage</link> et de
   <link linkend="language.oop.lsp">compatibilité de signature</link>.
  </para>
- 
+
+ <simpara>
+  À partir de PHP 8.4, une classe abstraite peut déclarer une propriété abstraite, publique ou protégée.
+  Une propriété abstraite protégée peut être satisfaite par une propriété accessible en lecture/écriture
+  depuis un contexte protégé ou public.
+ </simpara>
+ <simpara>
+  Une propriété abstraite peut être satisfaite soit par une propriété standard, soit par une propriété
+  avec des <link linkend="language.oop5.property-hooks">hooks</link> définis, correspondant à l'opération requise.
+ </simpara>
+
  <example>
-  <title>Exemple de classe abstraite</title>
+  <title>Exemple de méthode abstraite</title>
   <programlisting role="php">
 <![CDATA[
 <?php
@@ -83,7 +95,7 @@ FOO_ConcreteClass2
  </example>
 
   <example>
-   <title>Exemple avec une classe abstraite</title>
+   <title>Exemple de méthode abstraite</title>
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -123,6 +135,66 @@ Mr. Pacman
 Mrs. Pacwoman
 ]]>
    </screen>
+  </example>
+  <example>
+   <title>Exemple de propriété abstraite</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+abstract class A
+{
+    // Les classes dérivées doivent avoir une propriété publiquement accessible en lecture.
+    abstract public string $readable { get; }
+
+    // Les classes dérivées doivent avoir une propriété modifiable en écriture, protégée ou publique.
+    abstract protected string $writeable { set; }
+
+    // Les classes dérivées doivent avoir une propriété symétrique protégée ou publique.
+    abstract protected string $both { get; set; }
+}
+
+class C extends A
+{
+    // Cela satisfait l'exigence et rend également la propriété modifiable, ce qui est valide.
+    public string $readable;
+
+    // Cela NE satisferait PAS l'exigence, car la propriété n'est pas publiquement accessible en lecture.
+    protected string $readable;
+
+    // Cela satisfait exactement l'exigence, donc c'est suffisant.
+    // La propriété ne peut être modifiée qu'à partir d'un contexte protégé.
+    protected string $writeable {
+        set => $value;
+    }
+
+    // Cela élargit la visibilité de protégé à public, ce qui est acceptable.
+    public string $both;
+}
+?>
+]]>
+   </programlisting>
+  </example>
+  <simpara>
+   Une propriété abstraite dans une classe abstraite peut fournir des implémentations pour tout point d'ancrage,
+   mais doit avoir soit <literal>get</literal> soit <literal>set</literal> déclarés mais non définis (comme dans l'exemple ci-dessus).
+  </simpara>
+  <example>
+   <title>Exemple de propriété abstraite</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+abstract class A
+{
+    // Cela fournit une implémentation par défaut (mais substituable) pour set,
+    // et exige que les classes dérivées fournissent une implémentation pour get.
+    abstract public string $foo {
+        get;
+        set { $this->foo = $value };
+    }
+}
+?>
+]]>
+   </programlisting>
   </example>
 </sect1>
 <!-- Keep this comment at the end of the file
