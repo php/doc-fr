@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 3e5fb068effc097406413f30465b3d437fbb6ad0 Maintainer: Fan2Shrek Status: ready -->
+<!-- Reviewed: yes -->
+<sect1 xml:id="language.oop5.property-hooks" xmlns="http://docbook.org/ns/docbook">
+ <title>Hooks de propriété</title>
+
+ <simpara>
+  Les hooks de propriété, également connus sous le nom d'"accesseurs de propriété" dans d'autres langages,
+  sont une façon d'intercepter et de remplacer le comportement de lecture et d'écriture d'une propriété.
+  Cette fonctionnalité sert à deux fins :
+ </simpara>
+ <orderedlist>
+  <listitem>
+   <simpara>
+    Elle permet d'utiliser directement des propriétés, sans avoir besoin de méthodes get et set,
+    tout en laissant la possibilité d'ajouter un comportement supplémentaire à l'avenir.
+    Cela rend la plupart des méthodes get/set inutiles,
+    même sans utiliser de hooks.
+    </simpara>
+   </simpara>
+  </listitem>
+  <listitem>
+   <simpara>
+    Elle permet de définir des propriétés qui décrivent un objet sans stocker
+    directement de valeur.
+   </simpara>
+  </listitem>
+ </orderedlist>
+ <simpara>
+  Il existe deux hooks disponibles sur toutes les propriétés : <literal>get</literal> et <literal>set</literal>.
+  Ils permettent de remplacer le comportement de lecture et d'écriture d'une propriété, respectivement.
+ </simpara>
+ <simpara>
+  Un objet peut être "backed" ou "virtuel".
+  Une propriété "backed" est une propriété qui stocke effectivement une valeur.
+  Toute propriété qui n'a pas de hooks est "backed".
+  Une propriété virtuelle est une propriété qui a des hooks et ces hooks n'interagissent pas avec la propriété elle-même.
+  Dans ce cas, les hooks sont effectivement les mêmes que les méthodes,
+  et l'objet n'utilise pas d'espace pour stocker une valeur pour cette propriété.
+ </simpara>
+ <simpara>
+  Les hooks de propriété sont incompatibles avec les propriétés <literal>readonly</literal>.
+  S'il est nécessaire de restreindre l'accès à une opération <literal>get</literal> ou <literal>set</literal>
+  en plus de modifier son comportement, utilisez
+  <link linkend="language.oop5.visibility-members-aviz">la visibilité asymétrique de propriété</link>.
+ </simpara>
+ <sect2>
+  <title>Syntaxe de base des hooks</title>
+  <simpara>
+   La syntaxe générale pour déclarer un hook est la suivante.
+  </simpara>
+  <example>
+   <title>Hooks de propriété (version complète)</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Example
+{
+    private bool $modified = false;
+
+    public string $foo = 'default value' {
+        get {
+            if ($this->modified) {
+                return $this->foo . ' (modified)';
+            }
+            return $this->foo;
+        }
+        set(string $value) {
+            $this->foo = strtolower($value);
+            $this->modified = true;
+        }
+    }
+}
+
+$example = new Example();
+$example->foo = 'changed';
+print $example->foo;
+?>
+]]>
+   </programlisting>
+  </example>
+  <simpara>
+   La propriété <varname>$foo</varname> se termine par <literal>{}</literal>, plutôt qu'un point-virgule.
+   Cela indique la présence de hooks.
+   Un hook <literal>get</literal> et un hook <literal>set</literal> sont définis,
+   bien qu'il soit possible de n'en définir qu'un seul.
+   Les deux hooks ont un corps, indiqué par <literal>{}</literal>, qui peut contenir du code arbitraire.
+  </simpara>
+  <simpara>
+   Le hook <literal>set</literal> permet également de spécifier le type et le nom d'une valeur entrante,
+   en utilisant la même syntaxe qu'une méthode.
+   Le type doit être soit le même que le type de la propriété,
+   ou <link linkend="language.oop5.variance.contravariance">contravariant</link> (plus large) que celui-ci.
+   Par exemple, une propriété de type <type>string</type> pourrait avoir
+   un hook <literal>set</literal> qui accepte un <type class="union"><type>string</type><type>Stringable</type></type>,
+   mais pas un qui n'accepte que <type>array</type>.
+  </simpara>
+  <simpara>
+   Au moins un des hooks fait référence à <code>$this->foo</code>, la propriété elle-même.
+   Cela signifie que la propriété sera "backed".
+   Lorsque vous appelez <code>$example->foo = 'changed'</code>,
+   la chaîne fournie sera d'abord convertie en minuscules, puis enregistrée dans la valeur de sauvegarde.
+   Lors de la lecture de la propriété, la valeur précédemment enregistrée peut conditionnellement être complétée
+   avec du texte supplémentaire.
+  </simpara>
+  <simpara>
+   Il y a plusieurs variantes de syntaxe abrégée pour gérer les cas courants.
+  </simpara>
+  <simpara>
+   Si le hook <literal>get</literal> est une simple expression,
+   alors les <literal>{}</literal> peuvent être omis et remplacés par une expression fléchée.
+  </simpara>
+  <example>
+   <title>Expression de propriété get</title>
+   <simpara>
+    Cet exemple est équivalent à l'exemple précédent.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Example
+{
+    private bool $modified = false;
+
+    public string $foo = 'default value' {
+        get => $this->foo . ($this->modified ? ' (modified)' : '');
+
+        set(string $value) {
+            $this->foo = strtolower($value);
+            $this->modified = true;
+        }
+    }
+}
+?>
+]]>
+   </programlisting>
+  </example>
+  <simpara>
+   Si le type du paramètre du hook <literal>set</literal> est le même que le type de la propriété (ce qui est typique),
+   il peut être omis. Dans ce cas, la valeur à définir est automatiquement nommée <varname>$value</varname>.
+  </simpara>
+  <example>
+   <title>Paramètres par défaut de propriété</title>
+   <simpara>
+    Cet exemple est équivalent à l'exemple précédent.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Example
+{
+    private bool $modified = false;
+
+    public string $foo = 'default value' {
+        get => $this->foo . ($this->modified ? ' (modified)' : '');
+
+        set {
+            $this->foo = strtolower($value);
+            $this->modified = true;
+        }
+    }
+}
+?>
+]]>
+   </programlisting>
+  </example>
+  <simpara>
+   Si le hook <literal>set</literal> ne fait que définir une version modifiée de la valeur passée,
+   il peut également être simplifié en une expression fléchée.
+   La valeur à laquelle l'expression est évaluée sera définie sur la valeur de sauvegarde.
+  </simpara>
+  <example>
+   <title>Expression de propriété set</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Example
+{
+    public string $foo = 'default value' {
+        get => $this->foo . ($this->modified ? ' (modified)' : '');
+        set => strtolower($value);
+    }
+}
+?>
+]]>
+   </programlisting>
+  </example>
+  <simpara>
+   Cet exemple n'est pas tout à fait équivalent au précédent,
+   car il ne modifie pas non plus <code>$this->modified</code>.
+   Si plusieurs instructions sont nécessaires dans le corps du hook, utiliser la version avec des accolades.
+  </simpara>
+  <simpara>
+   Une propriété peut implémenter zéro, un ou les deux hooks selon la situation.
+   Toutes les versions abrégées sont mutuellement indépendantes.
+   C'est-à-dire qu'utiliser un raccourci pour obtenir une longue définition,
+   ou un raccourci pour définir un type explicite, etc., est valide.
+  </simpara>
+  <simpara>
+   Sur une propriété "backed", l'omission d'un hook <literal>get</literal> ou <literal>set</literal>
+   signifie que le comportement de lecture ou d'écriture par défaut sera utilisé.
+  </simpara>
+ </sect2>
+ <sect2 xml:id="language.oop5.property-hooks.virtual">
+  <title>Propriétés virtuelles</title>
+  <simpara>
+   Les propriétés virtuelles sont des propriétés qui n'ont pas de valeur de sauvegarde.
+   Une propriété est virtuelle si ni son hook <literal>get</literal> ni son hook <literal>set</literal>
+   ne fait référence à la propriété elle-même en utilisant une syntaxe exacte.
+   C'est-à-dire qu'une propriété nommée <code>$foo</code> dont le hook contient <code>$this->foo</code> sera sauvegardée.
+   Mais la propriété suivante n'est pas une propriété sauvegardée, et générera une erreur :
+  </simpara>
+  <example>
+   <title>Propriété virtuelle invalide</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Example
+{
+    public string $foo {
+        get {
+            $temp = __PROPERTY__;
+            return $this->$temp; // Doesn't refer to $this->foo, so it doesn't count.
+        }
+    }
+}
+?>
+]]>
+   </programlisting>
+  </example>
+  <simpara>
+   Pour les propriétés virtuelles, si un hook est omis, alors cette opération
+   n'existe pas et essayer de l'utiliser produira une erreur.
+   Les propriétés virtuelles n'occupent pas d'espace mémoire dans un objet.
+   Les propriétés virtuelles sont adaptées pour les propriétés "dérivées",
+   telles que celles qui sont la combinaison de deux autres propriétés.
+  </simpara>
+  <example>
+   <title>Propriété virtuelle</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+readonly class Rectangle
+{
+    // Une propriété virtuelle.
+    public int $area {
+        get => $this->h * $this->w;
+    }
+
+    public function __construct(public int $h, public int $w) {}
+}
+
+$s = new Rectangle(4, 5);
+print $s->area; // affiche 20
+$s->area = 30; // Erreur, car il n'y a pas d'opération de définition.
+?>
+]]>
+   </programlisting>
+  </example>
+  <simpara>
+   Définir à la fois un hook <literal>get</literal> et un hook <literal>set</literal> sur une propriété virtuelle est également autorisé.
+  </simpara>
+ </sect2>
+ <sect2>
+  <title>Portée</title>
+  <simpara>
+   Tous les hooks fonctionnent dans la portée de l'objet modifié.
+   Cela signifie qu'ils ont accès à toutes les méthodes publiques, privées ou protégées de l'objet,
+   ainsi qu'à toutes les propriétés publiques, privées ou protégées,
+   y compris les propriétés qui peuvent avoir leurs propres hooks de propriété.
+   Accéder à une autre propriété depuis un hook ne contourne pas les hooks définis sur cette propriété.
+  </simpara>
+  <simpara>
+   La conséquence la plus notable de cela est que les hooks non triviaux peuvent
+   appeler une méthode arbitrairement complexe s'ils le souhaitent.
+  </simpara>
+  <example>
+   <title>Appel d'une méthode depuis un hook</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Person {
+    public string $phone {
+        set => $this->sanitizePhone($value);
+    }
+
+    private function sanitizePhone(string $value): string {
+        $value = ltrim($value, '+');
+        $value = ltrim($value, '1');
+
+        if (!preg_match('/\d\d\d\-\d\d\d\-\d\d\d\d/', $value)) {
+            throw new \InvalidArgumentException();
+        }
+        return $value;
+    }
+}
+?>
+]]>
+   </programlisting>
+  </example>
+ </sect2>
+ <sect2>
+  <title>Références</title>
+  <simpara>
+   Parce que la présence de hooks intercepte le processus de lecture et d'écriture des propriétés,
+   ils posent des problèmes lors de l'acquisition d'une référence à une propriété ou avec une modification indirecte,
+   telle que <code>$this->arrayProp['key'] = 'value';</code>.
+   C'est parce que toute tentative de modification de la valeur par référence contournerait un hook de définition
+   s'il en existe un.
+  </simpara>
+  <simpara>
+   Dans le cas rare où il est nécessaire d'obtenir une référence à une propriété pour laquelle des hooks sont définis,
+   le hook <literal>get</literal> peut être préfixé par <literal>&amp;</literal>
+   pour qu'il retourne par référence.
+   Définir à la fois <literal>get</literal> et <literal>&amp;get</literal> sur la
+   même propriété est une erreur de syntaxe.
+  </simpara>
+  <simpara>
+   Définir à la fois les hooks <literal>&amp;get</literal> et <literal>set</literal> sur une propriété "backed" n'est pas autorisé.
+   Comme indiqué ci-dessus, écrire dans la valeur retournée par référence contournerait le hook <literal>set</literal>.
+   Sur les propriétés virtuelles, il n'y a pas de valeur commune nécessaire partagée entre les deux hooks, donc définir les deux est autorisé.
+  </simpara>
+  <simpara>
+   Ecrire dans un index d'une propriété de tableau implique également une référence implicite.
+   Pour cette raison, écrire dans une propriété de tableau "backed" avec des hooks définis est autorisé si et seulement si
+   il ne définit qu'un hook <literal>&amp;get</literal>.
+   Sur une propriété virtuelle, écrire dans le tableau retourné par
+   <literal>get</literal> ou <literal>&amp;get</literal> est légal,
+   mais si cela a un impact sur l'objet dépend de l'implémentation du hook.
+  </simpara>
+  <simpara>
+   Surcharger l'intégralité de la propriété de tableau est autorisé, et se comporte de la même manière que toute autre propriété.
+   Ne travailler qu'avec des éléments du tableau nécessite une attention particulière.
+  </simpara>
+ </sect2>
+ <sect2>
+  <title>Héritage</title>
+  <sect3>
+   <title>Hook finals</title>
+   <simpara>
+    Les hooks peuvent également être déclarés <link linkend="language.oop5.final">final</link>,
+    auquel cas ils ne peuvent pas être remplacés.
+   </simpara>
+   <example>
+   <title>Hook finals</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Utiliser
+{
+    public string $Utilisername {
+        final set => strtolower($value);
+    }
+}
+
+class Manager extends Utiliser
+{
+    public string $Utilisername {
+        // Ceci est autorisé
+        get => strtoupper($this->Utilisername);
+
+        // Ceci n'est PAS autorisé, car set est final dans le parent.
+        set => strtoupper($value);
+    }
+}
+?>
+]]>
+    </programlisting>
+   </example>
+   <simpara>
+    Une propriété peut également être déclarée <link linkend="language.oop5.final">final</link>.
+    Une propriété finale ne peut pas être redéclarée par une classe enfant de quelque manière que ce soit,
+    ce qui exclut la modification des hooks ou l'élargissement de son accès.
+   </simpara>
+   <simpara>
+    Déclarer des hooks finaux sur une propriété qui est déclarée finale est redondant,
+    et sera silencieUtilisement ignoré.
+    C'est le même comportement que pour les méthodes finales.
+   </simpara>
+   <simpara>
+    Une classe enfant peut déclarer ou changer des hooks individuels sur une propriété
+    en redéfinissant la propriété et uniquement les hooks qu'elle souhaite remplacer.
+    Une classe enfant peut également ajouter des hooks à une propriété qui n'en avait pas.
+    C'est essentiellement la même chose que si les hooks étaient des méthodes.
+   </simpara>
+   <example>
+    <title>Héritage de hook</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Point
+{
+    public int $x;
+    public int $y;
+}
+
+class PositivePoint extends Point
+{
+    public int $x {
+        set {
+            if ($value < 0) {
+                throw new \InvalidArgumentException('Too small');
+            }
+            $this->x = $value;
+        }
+    }
+}
+?>
+]]>
+    </programlisting>
+   </example>
+   <simpara>
+    Chaque hook remplace les implémentations parentes indépendamment les unes des autres.
+    Si une classe enfant ajoute des hooks, toute valeur par défaut définie sur la propriété est supprimée, et doit être redéclarée.
+    C'est la même cohérence avec le fonctionnement de l'héritage sur les propriétés sans hooks.
+   </simpara>
+  </sect3>
+  <sect3>
+   <title>Accès aux hooks parentaux</title>
+   <simpara>
+    Un hook dans une classe enfant peut accéder à la propriété de la classe parente en utilisant le mot-clé
+    <code>parent::$prop</code>, suivi du hook désiré.
+    Par exemple, <code>parent::$propName::get()</code>.
+    Cela peut être lu comme "accéder à la <varname>prop</varname> définie sur la classe parente,
+    puis exécuter son opération get" (ou set, selon le cas).
+   </simpara>
+   <simpara>
+    Si ce n'est pas accédé de cette manière, le hook de la classe parente est ignoré.
+    Ce comportement est cohérent avec le fonctionnement de toutes les méthodes.
+    Cela offre également un moyen d'accéder au stockage de la classe parente, le cas échéant.
+    S'il n'y a pas de hook sur la propriété parente,
+    son comportement par défaut get/set sera utilisé.
+    Les hooks ne peuvent pas accéder à un autre hook que leur propre parent sur leur propre propriété.
+   </simpara>
+   <simpara>
+    L'exemple ci-dessus pourrait être réécrit de manière plus efficace comme suit.
+   </simpara>
+   <example>
+    <title>Accès aux hooks parentaux (set)</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Point
+{
+    public int $x;
+    public int $y;
+}
+
+class PositivePoint extends Point
+{
+    public int $x {
+        set {
+            if ($value < 0) {
+                throw new \InvalidArgumentException('Too small');
+            }
+            $this->x = $value;
+        }
+    }
+}
+?>
+]]>
+    </programlisting>
+   </example>
+   <simpara>
+    Un exemple de remplacement uniquement d'un hook get pourrait être :
+   </simpara>
+   <example>
+    <title>Accès aux hooks parentaux (get)</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+class Strings
+{
+    public string $val;
+}
+
+class CaseFoldingStrings extends Strings
+{
+    public bool $uppercase = true;
+
+    public string $val {
+        get => $this->uppercase
+            ? strtoupper(parent::$val::get())
+            : strtolower(parent::$val::get());
+    }
+}
+?>
+]]>
+    </programlisting>
+   </example>
+  </sect3>
+ </sect2>
+ <sect2>
+  <title>Sérialisation</title>
+  <simpara>
+   PHP a plusieurs façons différentes de sérialiser un objet,
+   que ce soit pour la consommation publique ou à des fins de débogage.
+   Le comportement des hooks varie en fonction de l'utilisation.
+   Dans certains cas, la valeur de sauvegarde brute d'une propriété sera utilisée,
+   contournant tout hook.
+   Dans d'autres, la propriété sera lue ou écrite "à travers" le hook,
+   comme toute autre action de lecture/écriture normale.
+  </simpara>
+  <simplelist>
+   <member><function>var_dump</function>: Utilise la valeur brute</member>
+   <member><function>serialize</function>: Utilise la valeur brute</member>
+   <member><function>unserialize</function>: Utilise la valeur brute</member>
+   <member><link linkend="object.serialize">__serialize()</link>/<link linkend="object.unserialize">__unserialize()</link>: Logique propre, utilise les hooks récupération/définition</member>
+   <member>Array casting: Utilise la valeur brute</member>
+   <member><function>var_export</function>: Utilise le hook de récupération</member>
+   <member><function>json_encode</function>: Utilise le hook de récupération</member>
+   <member><interfacename>JsonSerializable</interfacename>: Logique propre, utilise le hook de récupération</member>
+   <member><function>get_object_vars</function>: Utilise le hook de récupération</member>
+   <member><function>get_mangled_object_vars</function>: Utilise la valeur brute</member>
+  </simplelist>
+ </sect2>
+</sect1>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
