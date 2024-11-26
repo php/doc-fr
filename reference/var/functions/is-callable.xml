@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 31b6ff768992a82022aade13880c595e19e054ba Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 4806183da465f81cd39158d03df4c4d8aa7df6aa Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 <refentry xml:id="function.is-callable" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -20,7 +20,9 @@
    <methodparam choice="opt"><type>string</type><parameter role="reference">callable_name</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
   <para>
-   Vérifie qu'une variable est un <type>callable</type>.
+   Vérifie que <parameter>value</parameter> est un <type>callable</type>,
+   ou qu'il peut être appelé à l'aide de la fonction
+   <function>call_user_func</function>.
   </para>
  </refsect1>
 
@@ -42,11 +44,11 @@
       <para>
        Si l'argument <parameter>syntax_only</parameter> vaut &true;, la
        fonction ne va vérifier que si <parameter>value</parameter> peut être
-       une fonction ou une méthode. Il va simplement rejeter les variables
-       qui ne sont pas des chaînes, ou des tableaux qui n'ont pas la bonne
-       structure pour être utilisés comme fonction de rappel. Les tableaux
-       valides sont supposés n'avoir que deux entrées, le premier étant un
-       objet ou une chaîne, et le second une chaîne.
+       une fonction ou une méthode. Il rejettera toutes les valeurs
+       qui ne sont ni des objets appelables, ni des chaînes, 
+       ni des tableaux ayant une structure valide pour être utilisés comme callback. 
+       Un tableau appelable valide doit comporter 2 entrées, dont la première est 
+       un objet ou une chaîne, et la seconde une chaîne.
       </para>
      </listitem>
     </varlistentry>
@@ -54,11 +56,10 @@
      <term><parameter>callable_name</parameter></term>
      <listitem>
       <para>
-       L'argument <parameter>callable_name</parameter> reçoit le nom
-       à utiliser. Dans l'exemple ci-dessous, il vaut
-       <literal>"someClass::someMethod"</literal>. Notez que, bien que
-       <literal>someClass::someMethod()</literal> puisse être appelée sous forme
-       statique, ce n'est pas le cas.
+       Reçoit le "nom de la fonction callable", par exemple
+       <literal>"SomeClass::someMethod"</literal>. Notez cependant que,
+       malgré l'implication selon laquelle <literal>SomeClass::someMethod()</literal>
+       est une méthode statique callable, ce n'est pas le cas.
       </para>
      </listitem>
     </varlistentry>
@@ -78,45 +79,59 @@
   &reftitle.examples;
   <para>
    <example>
-    <title>Exemple avec <function>is_callable</function></title>
+    <title>Vérification si une chaîne peut être appelée comme une fonction</title>
     <programlisting role="php">
 <![CDATA[
 <?php
-// Comment vérifier qu'une variable peut être appelée
-// comme fonction ?
-
-//
-// Variable simple contenant une fonction
-//
 
 function someFunction() {}
 
 $functionVariable = 'someFunction';
 
-var_dump(is_callable($functionVariable, false, $callable_name)); // bool(true)
+var_dump(is_callable($functionVariable, false, $callable_name));
 
-echo $callable_name, "\n"; // someFunction
+var_dump($callable_name);
 
-//
-// Tableau contenant une méthode
-//
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+string(12) "someFunction"
+]]>
+    </screen>
+   </example>
+   <example>
+    <title>Vérification si un tableau peut être appelé comme une fonction</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
 
 class someClass
 {
     public function someMethod() {}
 }
 
-$anObject = new someClass();
+$anObject = new SomeClass();
 
 $methodVariable = [$anObject, 'someMethod'];
 
-var_dump(is_callable($methodVariable, true, $callable_name)); // bool(true)
+var_dump(is_callable($methodVariable, true, $callable_name));
 
-echo $callable_name, "\n"; // someClass::someMethod
+var_dump($callable_name);
 
 ?>
 ]]>
     </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+string(21) "SomeClass::someMethod"
+]]>
+    </screen>
    </example>
    <example>
     <title><function>is_callable</function> et les constructeurs</title>
@@ -181,6 +196,7 @@ bool(false)
   &reftitle.seealso;
   <para>
    <simplelist>
+    <member><function>call_user_func</function></member>
     <member><function>function_exists</function></member>
     <member><function>method_exists</function></member>
    </simplelist>
