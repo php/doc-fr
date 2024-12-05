@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 51610360d58ed09bc9d1312f419057c0d1d1a998 Maintainer: Fan2Shrek Status: ready -->
+<!-- Reviewed: yes -->
+<refentry xml:id="pdo-sqlite.createaggregate" xmlns="http://docbook.org/ns/docbook">
+ <refnamediv>
+  <refname>Pdo\Sqlite::createAggregate</refname>
+  <refpurpose>
+   Enregistre une fonction utilisateur d'agrégation pour une utilisation dans les instructions SQL
+  </refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis role="Pdo\\Sqlite">
+   <modifier>public</modifier> <type>bool</type><methodname>Pdo\Sqlite::createAggregate</methodname>
+   <methodparam><type>string</type><parameter>name</parameter></methodparam>
+   <methodparam><type>callable</type><parameter>step</parameter></methodparam>
+   <methodparam><type>callable</type><parameter>finalize</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>numArgs</parameter><initializer>-1</initializer></methodparam>
+  </methodsynopsis>
+  <simpara>
+   Cette méthode est similaire à <methodname>Pdo\Sqlite::createFunction</methodname>
+   sauf qu'elle enregistre des fonctions qui peuvent être utilisées pour calculer un
+   résultat agrégé sur l'ensemble des lignes d'une requête.
+  </simpara>
+  <simpara>
+   La principale différence entre cette méthode et
+   <methodname>Pdo\Sqlite::createFunction</methodname>
+   est que deux fonctions sont nécessaires pour gérer l'agrégation.
+  </simpara>
+  <tip>
+   <simpara>
+    En utilisant cette méthode, il est possible de remplacer les fonctions SQL natives.
+   </simpara>
+  </tip>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <variablelist>
+   <varlistentry>
+    <term><parameter>name</parameter></term>
+    <listitem>
+     <simpara>
+      Le nom de la fonction utilisé dans les instructions SQL.
+     </simpara>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><parameter>step</parameter></term>
+    <listitem>
+     <simpara>
+      La fonction de rappel appelée pour chaque ligne de l'ensemble de résultats.
+      La fonction de rappel doit accumuler le résultat et le stocker dans le contexte d'agrégation.
+     </simpara>
+     <para>
+      Cette fonction doit être définie comme suit :
+      <methodsynopsis>
+       <type>mixed</type><methodname><replaceable>step</replaceable></methodname>
+       <methodparam><type>mixed</type><parameter>context</parameter></methodparam>
+       <methodparam><type>int</type><parameter>rownumber</parameter></methodparam>
+       <methodparam><type>mixed</type><parameter>value</parameter></methodparam>
+       <methodparam rep="repeat"><type>mixed</type><parameter>values</parameter></methodparam>
+      </methodsynopsis>
+      <variablelist>
+       <varlistentry>
+        <term><parameter>context</parameter></term>
+        <listitem>
+         <simpara>
+          &null; pour la première ligne ; sur les lignes suivantes, elle aura la valeur
+          qui a été précédemment retournée par la fonction de rappel ; vous devez utiliser
+          ceci pour maintenir l'état de l'agrégation.
+         </simpara>
+        </listitem>
+       </varlistentry>
+       <varlistentry>
+        <term><parameter>rownumber</parameter></term>
+        <listitem>
+         <simpara>
+          Le numéro de la ligne actuelle.
+         </simpara>
+        </listitem>
+       </varlistentry>
+       <varlistentry>
+        <term><parameter>value</parameter></term>
+        <listitem>
+         <simpara>
+          Le premier argument passé à l'agrégation.
+         </simpara>
+        </listitem>
+       </varlistentry>
+       <varlistentry>
+        <term><parameter>values</parameter></term>
+        <listitem>
+         <simpara>
+          Les arguments supplémentaires passés à l'agrégation.
+         </simpara>
+        </listitem>
+       </varlistentry>
+      </variablelist>
+      La valeur de retour de cette fonction sera utilisée comme argument
+      <parameter>context</parameter> dans l'appel suivant de la fonction de rappel ou
+      de finalisation.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><parameter>finalize</parameter></term>
+    <listitem>
+     <simpara>
+      La fonction de rappel pour agréger les données "étape" de chaque ligne.
+      Une fois que toutes les lignes ont été traitées, cette fonction sera appelée,
+      et elle devrait ensuite prendre les données du contexte d'agrégation et retourner le résultat.
+      Cette fonction de rappel doit retourner un type compris par SQLite
+      (c'est-à-dire un <link linkend="language.types.intro">type scalaire</link>).
+     </simpara>
+     <para>
+      Cette fonction doit être définie comme suit :
+      <methodsynopsis>
+       <type>mixed</type><methodname><replaceable>fini</replaceable></methodname>
+       <methodparam><type>mixed</type><parameter>context</parameter></methodparam>
+       <methodparam><type>int</type><parameter>rowcount</parameter></methodparam>
+      </methodsynopsis>
+      <variablelist>
+       <varlistentry>
+        <term><parameter>context</parameter></term>
+        <listitem>
+         <para>
+          Contient la valeur de retour du tout dernier appel à la fonction de rappel.
+         </para>
+        </listitem>
+       </varlistentry>
+       <varlistentry>
+        <term><parameter>rowcount</parameter></term>
+        <listitem>
+         <para>
+          Contient le nombre de lignes sur lesquelles l'agrégation a été effectuée.
+         </para>
+        </listitem>
+       </varlistentry>
+      </variablelist>
+      La valeur de retour de cette fonction sera utilisée comme valeur de retour pour
+      l'agrégation.
+     </para>
+    </listitem>
+   </varlistentry>
+   <varlistentry>
+    <term><parameter>numArgs</parameter></term>
+    <listitem>
+     <simpara>
+      Indication au parseur SQLite si la fonction de rappel accepte un
+      nombre prédéterminé d'arguments.
+     </simpara>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <simpara>
+   &return.success;
+  </simpara>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title><methodname>Pdo\Sqlite::createAggregate</methodname> example</title>
+   <simpara>
+    Dans cette exemple, nous allons créer une fonction d'agrégation personnalisée nommée
+    <literal>max_length</literal> qui peut être utilisée dans les requêtes SQL.
+   </simpara>
+   <simpara>
+    Dans cet exemple, nous allons créer une fonction d'agrégation nommée
+    <literal>max_length</literal> qui va calculer la longueur de la chaîne la plus longue
+    dans l'une des colonnes de la table.
+    Pour chaque ligne, la fonction <literal>max_len_step</literal> est appelée et
+    passe un paramètre <literal>$context</literal>.
+    Le paramètre de contexte est comme n'importe quelle autre variable PHP et peut être
+    défini pour contenir un <type>array</type> ou même un <type>object</type>.
+    Dans cet exemple, nous l'utilisons pour contenir la longueur maximale que nous avons vue jusqu'à présent ;
+    si la <varname>$string</varname> a une longueur plus longue que la longueur maximale actuelle,
+    nous mettons à jour le contexte pour contenir cette nouvelle longueur maximale.
+   </simpara>
+   <simpara>
+    Après que toutes les lignes ont été traitées,
+    SQLite appelle la fonction <literal>max_len_finalize</literal> pour déterminer
+    le résultat agrégé.
+    Il est possible d'effectuer un certain type de calcul basé sur les données dans <literal>$context</literal>.
+    Dans cet exemple de base, le résultat a été calculé au fur et à mesure que la requête progressait,
+    donc la valeur de contexte peut être directement retournée.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$data = [
+   'one',
+   'two',
+   'three',
+   'four',
+   'five',
+   'six',
+   'seven',
+   'eight',
+   'nine',
+   'ten',
+];
+$db = new Pdo\Sqlite('sqlite::memory:');
+$db->exec("CREATE TABLE strings(a)");
+$insert = $db->prepare('INSERT INTO strings VALUES (?)');
+foreach ($data as $str) {
+    $insert->execute(array($str));
+}
+$insert = null;
+
+function max_len_step($context, $row_number, $string)
+{
+    if (strlen($string) > $context) {
+        $context = strlen($string);
+    }
+    return $context;
+}
+
+function max_len_finalize($context, $row_count)
+{
+    return $context === null ? 0 : $context;
+}
+
+$db->createAggregate('max_len', 'max_len_step', 'max_len_finalize');
+
+var_dump($db->query('SELECT max_len(a) from strings')->fetchAll());
+
+?>
+]]>
+   </programlisting>
+   <!-- TODO
+   &example.outputs;
+   <screen>
+<![CDATA[
+Code example
+]]>
+   </screen>
+   -->
+   <tip>
+    <simpara>
+     Il n'est PAS recommandé de stocker une copie des valeurs dans le contexte
+     et de les traiter à la fin, car vous obligeriez SQLite à utiliser beaucoup de
+     mémoire pour traiter la requête - imaginez combien de mémoire vous auriez besoin
+     si un million de lignes étaient stockées en mémoire, chacune contenant une chaîne de 32 octets
+     de longueur.
+    </simpara>
+   </tip>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><methodname>Pdo\Sqlite::createFunction</methodname></member>
+   <member><methodname>Pdo\Sqlite::createCollation</methodname></member>
+   <member><function>sqlite_create_function</function></member>
+   <member><function>sqlite_create_aggregate</function></member>
+  </simplelist>
+ </refsect1>
+
+</refentry>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
