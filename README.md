@@ -182,7 +182,7 @@ Si des remarques sont faites sur votre pull request suivez-les.
 
 En cas de conflit avec votre branche et la branche ``master``, il est préférable de faire
 un ``git rebase`` de votre branche sur ``master`` au lieu de ``git merge`` la branche ``master``
-dans la votre.
+dans la vôtre.
 
 ### Utilisateur ayant un accès VCS (c.à.d un compte @php.net, avec du karma sur doc-fr)
 
