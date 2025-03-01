@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 8fee3ae9715ffa15922469eb7d98f4878917a6ee Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 285d4ca5804f106ed3e19d4b0270819b8d38a74b Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <refentry xml:id="generator.rewind" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Generator::rewind</refname>
-  <refpurpose>Ré-initialise l'itérateur</refpurpose>
+  <refpurpose>Ré-initialise l'itérateur au premier yield</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -14,9 +14,19 @@
    <void/>
   </methodsynopsis>
   <para>
-   Si l'itération a déjà commencé, cette méthode lancera une exception.
+   La méthode remet le générateur à l'endroit précédant le premier &yield;.
+   Si le générateur n'est pas au premier &yield; lorsqu'on appelle cette méthode,
+   il sera d'abord avancé jusqu'à la première expression &yield; avant de revenir en arrière.
+   Si le générateur est déjà au début du deuxième yield,
+   cela lancera une <classname>Exception</classname>.
   </para>
-
+  <note>
+   <para>
+    Il s'agit de la méthode <emphasis>première</emphasis> appelée lors du démarrage d'une
+    boucle &foreach;. Elle <emphasis>ne</emphasis> sera <emphasis>pas</emphasis>
+    exécutée <emphasis>après</emphasis> les boucles &foreach;.
+   </para>
+  </note>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -28,6 +38,79 @@
   &reftitle.returnvalues;
   <para>
    &return.void;
+  </para>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <para>
+   <example>
+    <title>Exemple de <methodname>Generator::rewind</methodname></title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+function generator(): Generator
+{
+    echo "Je suis un générateur !\n";
+
+    for ($i = 1; $i <= 3; $i++) {
+        yield $i;
+    }
+}
+
+// Initialiser le générateur
+$generator = generator();
+
+// Remettre le générateur au début de la première expression yield,
+// si ce n'est pas déjà le cas
+$generator->rewind(); // Je suis un générateur !
+
+// Rien ne se passe ici ; le générateur est déjà remis à zéro
+$generator->rewind(); // Pas de sortie (NULL)
+
+// Cela remet le générateur au début de la première expression yield,
+// si ce n'est pas déjà le cas, et itère sur le générateur
+foreach ($generator as $value) {
+    // Après avoir renvoyé la première valeur, le générateur reste à
+    // la première expression yield jusqu'à ce qu'il reprenne l'exécution et avance à la prochaine yield
+    echo $value, PHP_EOL; // 1
+
+    break;
+}
+
+// Reprendre et remettre à zéro à nouveau. Aucune erreur ne se produit car le générateur n'a pas avancé au-delà du premier yield
+$generator->rewind();
+
+echo $generator->current(), PHP_EOL; // 1
+
+// Aucune erreur ne se produit, le générateur est toujours à la première yield
+$generator->rewind();
+
+// Cela fait avancer le générateur à la deuxième expression yield
+$generator->next();
+
+try {
+    // Cela lancera une exception,
+    // car le générateur a déjà avancé à la deuxième yield
+    $generator->rewind(); // Erreur fatale : Exception non capturée : Impossible de remettre un générateur qui a déjà été exécuté
+} catch (Exception $e) {
+    echo $e->getMessage();
+}
+
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+Je suis un générateur !
+1
+1
+Impossible de remettre un générateur qui a déjà été exécuté
+]]>
+    </screen>
+   </example>
   </para>
  </refsect1>
 
