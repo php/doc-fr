@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: f5992156e664c34794804c282a95f6428a2687a7 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 802374deda550dfb866348d41a019315cb1f9840 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="xml.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -15,7 +15,7 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-$file = "data.xml";
+$file = "examples/book.xml";
 $depth = 0;
 
 function startElement($parser, $name, $attrs) 
@@ -72,7 +72,7 @@ xml_parser_free($xml_parser);
     <programlisting role="php">
 <![CDATA[
 <?php
-$file = "data.xml";
+$file = "examples/book.xml";
 $map_array = array(
     "BOLD"     => "B",
     "EMPHASIS" => "I",
@@ -142,7 +142,7 @@ xml_parser_free($xml_parser);
   <para>
    <example>
     <title>Entité externe</title>
-    <programlisting role="php">
+    <programlisting role="php" annotations="non-interactive">
 <![CDATA[
 <?php
 $file = "xmltest.xml";
@@ -325,6 +325,84 @@ xml_parser_free($xml_parser);
    &testEnt;
    <?php echo "Ceci est du code PHP qui est exécuté."; ?>
 </foo>
+]]>
+    </programlisting>
+   </example>
+  </para>
+ </section>
+ <section xml:id="example.xml-parsing-with-class">
+  <title>Analyse XML avec une classe</title>
+  <para>
+   Cet exemple montre comment utiliser une classe avec des gestionnaires.
+   <example>
+    <title>Afficher la structure des éléments XML</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$file = "examples/book.xml";
+
+class CustomXMLParser
+{
+    private $fp;
+    private $parser;
+    private $depth = 0;
+
+    function __construct(string $file)
+    {
+        if (!($this->fp = fopen($file, 'r'))) {
+            throw new RunTimeException("impossible d'ouvrir le fichier XML '{$file}'");
+        }
+
+        $this->parser = xml_parser_create();
+
+        xml_set_element_handler($this->parser, self::startElement(...), self::endElement(...));
+        xml_set_character_data_handler($this->parser, self::cdata(...));
+    }
+
+    private function startElement($parser, $name, $attrs)
+    {
+        for ($i = 0; $i < $this->depth; $i++) {
+            echo "  ";
+        }
+        echo "$name\n";
+        $this->depth++;
+    }
+
+    private function endElement($parser, $name)
+    {
+        $this->depth--;
+    }
+
+    private function cdata($parser, $cdata)
+    {
+        if (trim($cdata) === '') {
+            return;
+        }
+        for ($i = 0; $i < $this->depth; $i++) {
+            echo "  ";
+        }
+        echo trim($cdata), "\n";
+    }
+
+    public function parse()
+    {
+        while ($data = fread($this->fp, 4096)) {
+            if (!xml_parse($this->parser, $data, feof($this->fp))) {
+                throw new RunTimeException(
+                    sprintf(
+                        "Erreur XML : %s à la ligne %d",
+                        xml_error_string(xml_get_error_code($this->parser)),
+                        xml_get_current_line_number($this->parser)
+                    )
+                );
+            }
+        }
+    }
+}
+
+$xmlParser = new CustomXMLParser($file);
+$xmlParser->parse();
+?>
 ]]>
     </programlisting>
    </example>
