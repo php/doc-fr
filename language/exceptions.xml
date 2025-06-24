@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 402a72776804fbb74ec5c4cad72d4c7b6cdd5b2d Maintainer: yannick Status: ready -->
+<!-- EN-Revision: ed956d714e3fcf42b90c23777b0eb105c681b97c Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="language.exceptions">
@@ -62,7 +62,7 @@
    </para>
    <para>
     À partir de PHP 7.1, un block &catch; peut spécifier plusieurs exceptions à 
-    l'aide du caratère pipe (<literal>|</literal>). Ceci est utile lorsque 
+    l'aide du caractère pipe (<literal>|</literal>). Ceci est utile lorsque 
     différentes exceptions de hiérarchies de classes différentes sont traitées 
     de la même manière.
    </para>
@@ -91,6 +91,12 @@
     résultat sera retourné après que le bloc &finally; soit exécuté.
     Additionnellement, si le bloc &finally; contient aussi une déclaration
     &return; la valeur du bloc &finally; est retournée.
+   </para>
+   <para>
+    Une autre interaction notable est entre est une exception lancée dans un bloc &try;,
+    et une exception lancée dans un bloc &finally;. Si une exception est lancée dans les deux blocs,
+    alors, l'exception lancée dans le bloc &finally; sera celle qui sera propagée,
+    et l'exception lancée dans le bloc &try; sera utilisée comme exception précédente.
    </para>
   </sect1>
 
@@ -372,6 +378,38 @@ try {
     <screen>
 <![CDATA[
 It did not work
+]]>
+    </screen>
+   </example>
+   <example>
+    <title>Exception dans try et dans finally</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+try {
+    try {
+        throw new Exception(message: 'Third', previous: new Exception('Fourth'));
+    } finally {
+        throw new Exception(message: 'First', previous: new Exception('Second'));
+    }
+} catch (Exception $e) {
+    var_dump(
+        $e->getMessage(),
+        $e->getPrevious()->getMessage(),
+        $e->getPrevious()->getPrevious()->getMessage(),
+        $e->getPrevious()->getPrevious()->getPrevious()->getMessage(),
+    );
+}
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+string(5) "First"
+string(6) "Second"
+string(5) "Third"
+string(6) "Fourth"
 ]]>
     </screen>
    </example>
