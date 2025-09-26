@@ -3,11 +3,11 @@
 Ce document a pour but d'expliquer comment participer à la rédaction de la
 documentation française de PHP.
 
-Si vous voulez lire la documentation et non la rédiger aller voir le site PHP.net :
+Si vous voulez lire la documentation et non la rédiger, allez voir le site PHP.net :
 https://www.php.net/manual/fr/
 
-De plus, si une erreur est présente dans la documentation vérifiez qu'elle ne se
-trouve pas non plus dans la documentation anglaise, si oui corrigez celle-ci d'abord.
+De plus, si une erreur est présente dans la documentation, vérifiez qu'elle ne se
+trouve pas non plus dans la documentation anglaise, si oui, corrigez celle-ci d'abord.
 La traduction française suivra la modification faite dans la documentation anglaise.
 
 # Sommaire
@@ -39,7 +39,7 @@ Pour construire la documentation il faut posséder à minima les trois repositor
 Il est important de savoir construire la documentation pour s'assurer que les changements effectués
 ne cassent pas le build, ce qui empêchera la publication de la dernière version de celle-ci sur php.net.
 
-En s'imaginant qu'on se situe dans le dossier ``fr`` dans la structure de dossier suivante :
+En imaginant qu'on se situe dans le dossier ``fr`` dans la structure de dossier suivante :
 
 ```
 |
@@ -51,7 +51,7 @@ En s'imaginant qu'on se situe dans le dossier ``fr`` dans la structure de dossie
 
 Il suffit d'exécuter ``php ../base/configure.php --with-lang=fr``
 
-Si tout ce passe bien vous serez accueillis avec le message suivant :
+Si tout se passe bien vous serez accueillis avec le message suivant :
 
 ```
 All good. Saving .manual.xml... done.
@@ -86,7 +86,7 @@ Ceci ce manifeste par le commentaire suivant en haut de chaque fichier XML :
 ```
 
 Lors de la mise à jour d'un fichier pour répliquer les changements effectués sur la version
-anglaise il est primordial de mettre à jour la clé de hachage `git-hash` du commit anglais.
+anglaise, il est primordial de mettre à jour la clé de hachage `git-hash` du commit anglais.
 
 Le statut du rev-check peut actuellement être consulté sur le site des outils de la documentation
 de PHP : http://doc.php.net/revcheck.php?p=filesummary&lang=fr
@@ -117,6 +117,7 @@ _</para>
 De plus la soft-limit du nombre de caractères par ligne est de 80.
 
 ### Exemple PHP
+
 Officiellement le groupe de documentation PHP a choisi d'utiliser les coding standards de PEAR,
 vous les trouverez ici : http://pear.php.net/manual/en/standards.php
 
@@ -140,7 +141,7 @@ Afin d'avoir un manuel en bon français, la traduction de certains termes techni
 se trouve dans le document ``TRADUCTIONS.txt``.
 
 Il est aussi nécessaire de relire la traduction pour s'assurer que le texte
-traduit ait du sens et soit en accordance avec le texte anglais.
+traduit ait du sens et soit en accord avec le texte anglais.
 
 Après la relecture d'une traduction le tag/commentaire suivant
 ``<!-- Reviewed: no/yes -->`` doit avoir la valeur `yes`.
@@ -150,14 +151,14 @@ sauf lors de modifications mineures/changements purement XML (e.g. changement d'
 
 ### Traduire une nouvelle page
 
-La traduction d'une nouvelle page anglaise en français est relativement simple:
-1. Copier le fichier à traduire
-2. Coller-le au même emplacement, mais dans votre dossier ``fr``
-3. Ajouter le commentaire de revision tracking avec la clé de hachage `git-hash` de la
+La traduction d'une nouvelle page anglaise en français est relativement simple :
+1. Copiez le fichier à traduire
+2. Collez-le au même emplacement, mais dans votre dossier ``fr``
+3. Ajoutez le commentaire de revision tracking avec la clé de hachage `git-hash` de la
 version du fichier anglais que vous venez de copier
 
 La clé de hachage `git-hash` permet de s'assurer que le fichier soit bien à jour après
-que la traduction soit faite.
+que la traduction est faite.
 
 Il est à noter que le fichier doit être *entièrement* (modulo les exemples) traduit
 avant d'être ajouté au repo git officiel.
@@ -178,7 +179,7 @@ Pour proposer une modification vous devez passer par une pull request contre le 
 (feature branch), faire vos modifications, committer, puis `git push` la branche sur votre fork
 afin d'ouvrir une pull request.
 
-Si des remarques sont faites sur votre pull request suivez-les.
+Si des remarques sont faites sur votre pull request, suivez-les.
 
 En cas de conflit avec votre branche et la branche ``master``, il est préférable de faire
 un ``git rebase`` de votre branche sur ``master`` au lieu de ``git merge`` la branche ``master``
@@ -189,10 +190,9 @@ dans la vôtre.
 Il n'est pas nécessaire de passer par une pull request. Vous pouvez commit et
 push directement sur la branche ``master`` du repo doc-fr sur https://github.com.
 
-Éviter les "merge commit" et préférez un ``git rebase`` suivi d'un merge fast-forward.
+Évitez les "merge commit" et préférez un ``git rebase`` suivi d'un merge fast-forward.
 
-Ne créer et pusher pas des branches différentes de ``master`` sur le repo git officiel.
-
+Ne créez et pushez pas des branches différentes de ``master`` sur le repo git officiel.
 
 ## 7: Commandes utiles
 
