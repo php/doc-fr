@@ -94,9 +94,6 @@ de PHP : http://doc.php.net/revcheck.php?p=filesummary&lang=fr
 Pour voir les fichiers qui doivent être mise à jour, allez sur le lien "Outdated Files" qui
 amène à : http://doc.php.net/revcheck.php?p=files&lang=fr
 
-> Normalement le rev-check se trouve sur le site https://doc.php.net, mais à cause de la
-> migration récente de la documentation de SVN à git il se trouve là-bas actuellement.
-
 ## 4: Coding style
 ### Fichier XML
 
