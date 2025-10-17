@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 34f90a65914c900173f9a42331acc45bc53d8eee Maintainer: girgias Status: ready -->
+<!-- EN-Revision: 7c4b5fb40ac3149a5b931f1e31b1050ab5eaab7e Maintainer: girgias Status: ready -->
 <!-- Reviewed: no -->
 <refentry xml:id="function.mb-detect-encoding" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
@@ -18,7 +17,11 @@
   </methodsynopsis>
   <para>
    Détecte l'encodage le plus probable pour la &string;
-   <parameter>string</parameter> depuis une liste ordonnée de candidats.
+   <parameter>string</parameter> depuis une liste de candidats.
+  </para>
+  <para>
+   Depuis PHP 8.1, cette fonction utilise des heuristiques pour détecter lequel des encodages de texte valides dans la liste spécifiée
+   est le plus susceptible d'être correct et peut ne pas être dans l'ordre des <parameter>encodings</parameter> fournis.
   </para>
   <para>
    La détection automatique du jeu d'encodage prévu n'est jamais totalement
@@ -30,8 +33,8 @@
   <para>
    Cette fonction est le plus utilise avec les encodages multioctets, où
    pas toutes les séquences d'octets forment une chaîne valide. Si la chaîne
-   d'entrée contient un telle séquence, cet encodage sera rejeté, et le
-   prochain encodage sera vérifié.
+   d'entrée contient un telle séquence,
+   cet encodage sera rejeté.
   </para>
 
   <warning>
@@ -62,9 +65,8 @@
      <term><parameter>encodings</parameter></term>
      <listitem>
       <para>
-       Une liste d'encodage de caractères à essayer, dans l'ordre.
-       Cette liste peut être spécifier comme un &array; de &string;,
-       en tant qu'une &string; unique séparé par des virgules.
+       Une liste d'encodage de caractères à essayer. Cette liste peut être spécifié
+       comme un &array; de &string;, en tant qu'une &string; unique séparé par des virgules.
       </para>
       <para>
        Si <parameter>encodings</parameter> est omis ou &null;,
@@ -176,14 +178,14 @@ string(5) "ASCII"
     <programlisting role="php">
 <![CDATA[
 <?php
-// 'áéóú' encoded in ISO-8859-1
+// 'áéóú' encodées in ISO-8859-1
 $str = "\xE1\xE9\xF3\xFA";
 
-// The string is not valid ASCII or UTF-8, but UTF-8 is considered a closer match
+// La chaîne n'est pas valide en ASCII ou UTF-8, mais l'UTF-8 est considéré comme une correspondance plus proche
 var_dump(mb_detect_encoding($str, ['ASCII', 'UTF-8'], false));
 var_dump(mb_detect_encoding($str, ['ASCII', 'UTF-8'], true));
 
-// If a valid encoding is found, the strict parameter does not change the result
+// Si un encodage valide est trouvé, le paramètre strict ne change pas le résultat
 var_dump(mb_detect_encoding($str, ['ASCII', 'UTF-8', 'ISO-8859-1'], false));
 var_dump(mb_detect_encoding($str, ['ASCII', 'UTF-8', 'ISO-8859-1'], true));
 ?>
@@ -229,8 +231,9 @@ string(10) "ISO-8859-1"
 <?php
 $str = "\xC4\xA2";
 
-// The string is valid in all three encodings, so the first one listed will be returned
-var_dump(mb_detect_encoding($str, ['UTF-8', 'ISO-8859-1', 'ISO-8859-5']));
+// La chaîne est valide dans les trois encodages, mais le premier listé n'est pas toujours celui retourné
+var_dump(mb_detect_encoding($str, ['UTF-8']));
+var_dump(mb_detect_encoding($str, ['UTF-8', 'ISO-8859-1', 'ISO-8859-5'])); // as of php8.1 this returns ISO-8859-1 instead of UTF-8
 var_dump(mb_detect_encoding($str, ['ISO-8859-1', 'ISO-8859-5', 'UTF-8']));
 var_dump(mb_detect_encoding($str, ['ISO-8859-5', 'UTF-8', 'ISO-8859-1']));
 ?>
@@ -240,6 +243,7 @@ var_dump(mb_detect_encoding($str, ['ISO-8859-5', 'UTF-8', 'ISO-8859-1']));
     <screen>
 <![CDATA[
 string(5) "UTF-8"
+string(10) "ISO-8859-1"
 string(10) "ISO-8859-1"
 string(10) "ISO-8859-5"
 ]]>
