@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 0799f7789c50a11b746ad713cc8787e4b04dd926 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: e7e4ffe9a10a4dcd9903a7abf125a811d0eda023 Maintainer: yannick Status: ready -->
 <!-- Reviewed: yes -->
 
 <chapter xml:id="features.persistent-connections" xmlns="http://docbook.org/ns/docbook">
  <title>Connexions persistantes aux bases de données</title>
+
+<simplesect>
+ <title>Qu'est-ce que les connexions persistantes ?</title>
  <simpara>
   Les connexions persistantes aux bases de données SQL sont
   des connexions qui ne se referment pas à la fin du script.
@@ -18,25 +20,30 @@
   sont nécessaires).
  </simpara>
  <simpara>
-  Ceux qui ne sont pas rompus aux techniques des serveurs web et leur
-  distribution de la charge de travail se font parfois une fausse
-  idée de ces connexions persistantes. En particulier,
-  les connexions persistantes <emphasis>ne permettent pas</emphasis>
-  l'ouverture de plusieurs sessions avec le même lien ;
-  elles <emphasis>ne permettent pas</emphasis> la réalisation
-  de transactions efficaces et ne font pas le café. En fait,
-  pour être extrêmement clair sur le sujet, les
-  connexions persistantes <emphasis>ne vous donnent</emphasis>
-  aucune fonctionnalité
-  de plus que les connexions non persistantes.
+  Il n'y a pas de méthode pour demander une connexion spécifique, ou garantir
+  que vous obtenez une connexion existante ou une toute nouvelle (si toutes les
+  connexions sont utilisées, ou si la requête est servie par un autre processus,
+  qui a un ensemble de connexions séparé).
  </simpara>
  <simpara>
-  Alors pourquoi les connexions persistantes ?
+  Cela signifie que vous ne pouvez pas utiliser les connexions persistantes PHP pour, par exemple :
  </simpara>
+ <simplelist>
+  <member>assigner une session de base de données spécifique à un utilisateur web spécifique</member>
+  <member>créer une grande transaction à travers plusieurs requêtes</member>
+  <member>initier une requête sur une demande et collecter les résultats sur une autre</member>
+ </simplelist>
  <simpara>
-  Cela s'explique par la manière avec laquelle les serveurs web
-  fonctionnent. Il y a trois manières d'utiliser PHP pour
-  générer des pages.
+  Les connexions persistantes ne vous donnent <emphasis>aucune</emphasis>
+  fonctionnalité qui n'était pas possible avec des connexions non persistantes.
+ </simpara>
+</simplesect>
+
+<simplesect xml:id="persistent-connections.web">
+ <title>Requêtes Web</title>
+ <simpara>
+  Il existe deux façons pour votre serveur web d'utiliser PHP pour générer
+  des pages web :
  </simpara>
  <simpara>
   La première est d'utiliser PHP comme un CGI (Common Interface Gateway).
@@ -45,13 +52,14 @@
   pour chaque page demandée. Étant donné que cet interpréteur est
   détruit après chaque requête, toutes les
   ressources acquises (comme une connexion à une base SQL),
-  sont purement et simplement détruites.
+  sont purement et simplement détruites. Dans ce cas vous ne 
+  gagnez rien à utiliser des connexions persistantes - elles ne persistent tout simplement pas.
  </simpara>
  <simpara>
-  La deuxième méthode, de loin la plus prisée,
-  est d'exécuter PHP sous la forme d'un module sur un serveur
-  multiprocessus, ce qui revient à dire : Apache. Un tel serveur
-  a typiquement un processus parent qui coordonne un ensemble de processus fils,
+  La deuxième méthode, de loin la plus prisée, est d'exécuter PHP-FPM, ou PHP sous la forme d'un
+  module sur un serveur multiprocessus, ce qui revient à dire : Apache.
+  Ces configurations ont généralement un processus (le parent) qui
+  coordonne un ensemble de processus fils,
   qui servent les fichiers. Lorsque les requêtes parviennent depuis
   un client, elles sont transmises à un fils disponible. Cela signifie
   que si un client fait une deuxième requête, il peut
@@ -61,24 +69,38 @@
   ultérieures, les processus fils pourront réutiliser la
   connexion ouverte précédemment.
  </simpara>
+ <note>
+  <para>
+  Vous pouvez vérifier quelle méthode vos requêtes web utilisent en vérifiant la valeur de
+  "Server API" dans la sortie de <function>phpinfo</function> ou la valeur de
+  <constant>PHP_SAPI</constant>, exécutée depuis une requête web.
+  </para>
+  <para>
+   Si la valeur de Server API est "CGI" ou "CLI", alors les connexions
+   persistantes ne seront pas utilisées entre les requêtes. Pour toute autre
+   valeur, les connexions persistantes persisteront après chaque requête.
+  </para>
+ </note>
+</simplesect>
+
+<simplesect xml:id="persistent-connections.cli">
+ <title>Processus en ligne de commande</title>
  <simpara>
-  La dernière méthode est d'utiliser PHP sous la forme d'un
-  module de serveur multithread. Actuellement, PHP supporte
-  WSAPI, et NSAPI (sous Windows), qui permettent tous d'utiliser
-  PHP comme un module sur un serveur multithread tel que Netscape
-  FastTrack (iPlanet), Microsoft Internet Information Server (IIS), et
-  O'Reilly's WebSite Pro. Le comportement est essentiellement le même
-  que pour les serveurs multiprocessus décrits précédemment.
+  Comme PHP en ligne de commande utilise un nouveau processus pour chaque script,
+  les connexions persistantes ne sont pas partagées entre les scripts en ligne de commande, donc il n'y a aucun
+  intérêt à les utiliser dans des scripts transitoires tels que les crons ou les commandes.
+  Cependant, elles peuvent être utiles si, par exemple, vous écrivez un serveur d'applications
+  de longue durée qui sert de nombreuses requêtes ou tâches et que chacune peut
+  avoir besoin de sa propre connexion à la base de données.
  </simpara>
+ </simplesect>
+
+<simplesect xml:id="persistent-connections.why">
+ <title>Pourquoi les utiliser ?</title>
  <simpara>
-  Si les connexions persistantes n'ont aucune fonctionnalité de plus,
-  à quoi servent-elles ?
- </simpara>
- <simpara>
-  La réponse est extrêmement simple : efficacité. Les
-  connexions persistantes sont un bon moyen d'accélérer les
-  accès à une base SQL si le traitement de connexion à
-  la base est long. Ce temps dépend de nombreux facteurs : le type
+  Les connexions persistantes sont utiles si le coût de création d'une liaison
+  vers votre serveur SQL est élevé. Que ce coût soit réellement élevé ou pas ceci dépend
+  de nombreux facteurs : le type
   de base de données, cette base est-elle sur le même serveur
   ou pas, quelle est la charge du serveur de base de données, etc.
   Si le temps de connexion est long, les connexions persistantes seront
@@ -87,53 +109,107 @@
   processus fils, il suffit d'avoir 20 connexions persistantes ouvertes,
   une par fils.
  </simpara>
+</simplesect>
+
+<simplesect xml:id="persistent-connections.drawbacks.conn-limits">
+ <title>Inconvénients potentiels : limites de connexion</title>
  <simpara>
   Notez que les connexions persistantes ont quelques inconvénients
   si vous hébergez une base de données dont le nombre maximal de
   connexion risque d'être atteint par les connexions persistantes.
   Si votre base de données accepte jusqu'à 16 connexions
-  simultanées et que 17 processus essaient de se connecter,
-  le dernier restera sur la touche. S'il y a des erreurs dans les scripts qui ne permettent
-  pas de fermer la connexion (par exemple, une boucle infinie), votre
-  serveur sera rapidement engorgé. Vérifiez la documentation de votre
-  base de données pour savoir comment elle traite les connexions
-  inactives ou abandonnées.
+  peut être rapidement submergée.
  </simpara>
- <warning>
-  <simpara>
-   Il y a quelques autres limitations à bien garder en tête lorsque
-   vous utilisez les connexions persistantes. L'une est que lorsque
-   vous posez un verrou avec une connexion persistante, si le script ne
-   peut libérer le verrou pour une raison quelconque, alors les autres
-   scripts qui réutiliseront la connexion seront bloqués indéfiniment,
-   et vous imposeront le redémarrage du serveur ou de la base de données.
-   Une autre limitation est, lors de l'utilisation des transactions, un
-   bloc de transaction non fermé sera prolongé au script suivant, s'il
-   n'est pas fermé par le script initiateur. Dans les deux cas,
-   vous pouvez utiliser la fonction
-   <function>register_shutdown_function</function> pour enregistrer une
-   fonction simple de nettoyage, pour déverrouiller les tables,
-   et annuler les transactions en cours. Mieux encore, évitez le problème
-   entièrement en n'utilisant pas les connexions persistantes dans les
-   scripts qui ont besoin de verrous ou de transactions. Vous pourrez
-   toujours les utiliser ailleurs.
-  </simpara>
- </warning>
  <simpara>
-  Résumons-nous : les connexions persistantes ont été
-  définies pour avoir les mêmes fonctionnalités que
-  les connexions non persistantes. Les deux types de connexions
-  sont <emphasis>parfaitement interchangeables</emphasis>,
-  et <emphasis>n'affecteront pas</emphasis> le comportement de votre script
-  : uniquement son efficacité.
+  Les connexions persistantes augmenteront généralement le nombre de connexions ouvertes
+  à un moment donné parce que les travailleurs inactifs conserveront les connexions pour
+  les requêtes précédentes qu'ils ont servies. Si un grand nombre de travailleurs est lancé pour
+  gérer un afflux de requêtes, les connexions qu'ils ont ouvertes resteront jusqu'à
+  ce que le travailleur soit tué ou que le serveur de base de données ferme la connexion.
  </simpara>
- <para>
-  Voir aussi
-  <function>ibase_pconnect</function>,
-  <function>ociplogon</function>,
-  <function>pfsockopen</function>, et
-  <function>pg_pconnect</function>.
- </para>
+ <simpara>
+  Assurez-vous que le nombre maximal de connexions autorisées par le serveur de base de données
+  est supérieur au nombre maximal de travailleurs de requêtes web (plus toute autre
+  utilisation telle que les crons ou les connexions administratives).
+ </simpara>
+ <simpara>
+  Vérifiez votre documentation de base de données pour des informations sur la gestion des connexions abandonnées ou
+  inactives (timeouts). Des timeouts longs peuvent augmenter considérablement le
+  nombre de connexions persistantes ouvertes à un moment donné.
+ </simpara>
+</simplesect>
+
+ <simplesect xml:id="persistent-connections.drawbacks.state">
+  <title>Inconvénients potentiels : Maintien de l'état de connexion</title>
+  <simpara>
+   Certaines extensions de base de données effectuent un nettoyage automatique lorsque la connexion est
+   réutilisée ; d'autres laissent cette tâche à la discrétion du développeur d'application.
+   En fonction de l'extension de base de données choisie et de la conception de l'application, un
+   nettoyage manuel peut être nécessaire avant la fin du script. Les modifications qui peuvent laisser
+   les connexions dans un état inattendu incluent :
+  </simpara>
+  <simplelist>
+   <member>Base de données sélectionnée / par défaut</member>
+   <member>Verrous de table</member>
+   <member>Transactions non commises</member>
+   <member>Tables temporaires</member>
+   <member>Paramètres ou fonctionnalités spécifiques à la connexion telles que le profilage</member>
+  </simplelist>
+  <simpara>
+   Les verrous de table et les transactions qui ne sont pas nettoyés ou fermés peuvent
+   entraîner le blocage indéfini d'autres requêtes et/ou provoquer
+   des modifications inattendues lors de la réutilisation ultérieure de la connexion.
+  </simpara>
+  <simpara>
+   Avoir la mauvaise base de données sélectionnée entraînera la réutilisation de
+   la connexion incapable d'exécuter les requêtes suivantes comme prévu (ou de les exécuter sur
+   la mauvaise base de données si les schémas sont suffisamment similaires).
+  </simpara>
+  <simpara>
+   Si les tables temporaires ne sont pas nettoyées, les requêtes suivantes ne pourront pas
+   recréer la même table.
+  </simpara>
+  <simpara>
+   Vous pouvez implémenter le nettoyage en utilisant des destructeurs de classe ou
+   <function>register_shutdown_function</function>. Vous pouvez également envisager
+   des proxies de mise en pool de connexions dédiés qui incluent cela dans
+   leur fonctionnalité.
+  </simpara>
+ </simplesect>
+
+ <simplesect xml:id="persistent-connections.final-words">
+  <title>Derniers mots</title>
+  <simpara>
+   Étant donné leur comportement et les inconvénients potentiels décrits ci-dessus, vous ne devez pas
+   utiliser les connexions persistantes sans une réflexion approfondie. Elles ne doivent pas être
+   utilisées sans mettre en œuvre des modifications supplémentaires dans votre application et une configuration
+   soigneuse de votre serveur de base de données et de votre serveur web et/ou PHP-FPM.
+  </simpara>
+  <simpara>
+   Considérez des solutions alternatives telles que l'investigation et la correction des causes des
+   surcoûts de création de connexion (par exemple, la désactivation des recherches DNS inverses sur
+   le serveur de base de données), ou des proxies de mise en pool de connexions dédiés.
+  </simpara>
+  <simpara>
+   Pour les API web à fort volume, envisagez d'utiliser des runtimes alternatifs ou des serveurs
+   d'applications de longue durée.
+  </simpara>
+ </simplesect>
+
+ <simplesect role="seealso" xml:id="persistent-connections.seealso">
+   &reftitle.seealso;
+   <para>
+    <simplelist>
+     <member><function>ibase_pconnect</function></member>
+     <member><function>oci_pconnect</function></member>
+     <member><function>odbc_pconnect</function></member>
+     <member><function>pfsockopen</function></member>
+     <member><function>pg_connect</function></member>
+     <member><link linkend="mysqli.persistconns">MySQLi et les connexions persistantes</link></member>
+     <member><link linkend="pdo.connections">Gestion de connexions PDO</link></member>
+    </simplelist>
+   </para>
+  </simplesect>
 </chapter>
 
 <!-- Keep this comment at the end of the file
