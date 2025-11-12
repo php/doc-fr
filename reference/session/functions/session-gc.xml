@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: be8baf89c0016c1c39ab0b85cafca28c8364e95b Maintainer: jbnahan Status: ready -->
+<!-- EN-Revision: 372350f3bfad45ba01db850a1a3be40c803e196b Maintainer: jbnahan Status: ready -->
 <!-- Reviewed: no -->
 <refentry xml:id="function.session-gc" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
@@ -13,26 +12,34 @@
    <type class="union"><type>int</type><type>false</type></type><methodname>session_gc</methodname>
    <void/>
   </methodsynopsis>
-  <para>
-   <function>session_gc</function> est utilisé pour exécuter le
-   ramasse miette (Garbage Collection abrégée GC). PHP utilise une
-   méthode probabiliste pour exécuter le ramasse miette de session par défaut.
-  </para>
-  <para>
-   Le ramassage de miette (GC) basé sur une méthode probabiliste fonctionne
-   quelque peu mais a quelques problèmes. 1) Les données de session des sites à
-   faible traffic ne seront peut être pas supprimés durant la durée préféré.
-   2) Les sites à fort traffic exécuteront potentiellement le ramasse miette
-   à une trop grande fréquence. 3) Le ramasse miette est exécuté sur une requête
-   utilisateur et celui-ci ressentira une latence due au ramasse miette.
-  </para>
-  <para>
-   Par conséquent, il est recommandé d'exécuter le ramasse miette périodiquement sur
-   les systèmes de productions, par exemple, "cron" pour les systèmes de type UNIX.
-   Assurez-vous de désactiver le ramasse miette à méthode probabiliste en définissant
-   <link linkend="ini.session.gc-probability">session.gc_probability</link> 
-   à 0.
-  </para>
+  <simpara>
+   Par défaut, PHP utilise <link linkend="ini.session.gc-probability">session.gc_probability</link>
+   pour exécuter le ramasse miette des sessions de façon probabiliste à chaque
+   requête. Il y a certaines limitations avec cette approche :
+  </simpara>
+  <simplelist>
+   <member>Les sites à faible trafic peuvent ne pas avoir leurs données de session supprimées dans la durée préférée.</member>
+   <member>Les sites à fort trafic peuvent voir le ramasse-miette s'exécuter trop fréquemment, effectuant un travail supplémentaire inutile.</member>
+   <member>Le ramasse-miette est effectué lors de la requête de l'utilisateur, et l'utilisateur peut subir un délai.</member>
+  </simplelist>
+  <simpara>
+   Pour les systèmes de production, il est recommandé de désactiver
+   le ramasse-miette basé sur la probabilité en configurant
+   <link linkend="ini.session.gc-probability">session.gc_probability</link> à <literal>0</literal>
+   et explicitement exécuter le ramasse-miette périodiquement, par exemple en utilisant "cron"
+   sur les systèmes de type UNIX pour exécuter un script qui appelle <function>session_gc</function>.
+  </simpara>
+
+  <note>
+   <simpara>
+    Lors de l'appel de <function>session_gc</function> depuis un script PHP en ligne de commande,
+    le <link linkend="ini.session.save-path">session.save_path</link> doit être défini
+    à la même valeur que pour les requêtes web, et le script doit avoir les permissions d'accès et de suppression
+    pour les fichiers de session. Cela peut être affecté par l'utilisateur sous lequel le script s'exécute,
+    ainsi que par des fonctionnalités de conteneur ou de sandboxing telles que l'option <literal>PrivateTmp=</literal>
+    option.
+   </simpara>
+  </note>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -42,24 +49,24 @@
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>
-   <function>session_gc</function> retourne le nombre de données de session
-   effacé en tant que succès, &false; en cas d'échec.
-  </para>
-  <para>
-   Les anciens gestionnaire de sauvegarde ne retourne pas le nombre de données
-   de session effacé mais seulement le drapeau de succès/échec. Dans ce cas là,
-   le nombre de données de session effacé est 1 quelque soit le nombre actuel
-   de données effacé.
-  </para>
+  <simpara>
+   <function>session_gc</function> renvoie le nombre d'entrées de 
+   sessions supprimées en cas de succès, &return.falseforfailure;.
+  </simpara>
+  <note>
+   <simpara>
+    Les vieux gestionnaires de sauvegarde de session ne renvoient pas le nombre d'entrées de session supprimées, mais
+    plutôt seulement un indicateur de succès/échec. Si c'est le cas, <literal>1</literal> est renvoyé indépendamment
+    du nombre d'entrées de session réellement supprimées.
+   </simpara>
+  </note>
  </refsect1>
 
  <refsect1 role="examples">
   &reftitle.examples;
-  <para>
-   <example>
-    <title>Exemple de <function>session_gc</function> pour les planificateurs de tâches comme cron</title>
-    <programlisting role="php">
+  <example>
+   <title>Exemple de <function>session_gc</function> pour les planificateurs de tâches comme cron</title>
+   <programlisting role="php">
 <![CDATA[
 <?php
 // Note: Ce script devrait être exécuté par le même utilisateur que le processus du serveur web.
@@ -74,11 +81,11 @@ session_gc();
 session_destroy();
 ?>
 ]]>
-    </programlisting>
-   </example>
-   <example>
-    <title>Exemple de <function>session_gc</function> pour des scripts accessible par l'utilisateur</title>
-    <programlisting role="php">
+   </programlisting>
+  </example>
+  <example>
+   <title>Exemple de <function>session_gc</function> pour des scripts accessible par l'utilisateur</title>
+   <programlisting role="php">
 <![CDATA[
 <?php
 // Note: il est recommandé que session_gc() soit utilisé par un planificateur de tâches,
@@ -101,20 +108,17 @@ if (file_exists($gc_time)) {
 }
 ?>
 ]]>
-    </programlisting>
-   </example>
-  </para>
+   </programlisting>
+  </example>
  </refsect1>
 
  <refsect1 role="seealso">
   &reftitle.seealso;
-  <para>
-   <simplelist>
-    <member><function>session_start</function></member>
-    <member><function>session_destroy</function></member>
-    <member><link linkend="ini.session.gc-probability">session.gc_probability</link></member>
-   </simplelist>
-  </para>
+  <simplelist>
+   <member><function>session_start</function></member>
+   <member><function>session_destroy</function></member>
+   <member><link linkend="ini.session.gc-probability">session.gc_probability</link></member>
+  </simplelist>
  </refsect1>
 </refentry>
 <!-- Keep this comment at the end of the file

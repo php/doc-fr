@@ -1,0 +1,590 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: ec45af749649dc0d6a23eaedeed1b601f7460813 Maintainer: Fan2Shrek Status: ready -->
+<!-- Reviewed: yes -->
+<sect1 xml:id="migration85.incompatible" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Changements non rétrocompatibles</title>
+
+ <sect2 xml:id="migration85.incompatible.core">
+  <title>PHP Core</title>
+
+  <sect3 xml:id="migration85.incompatible.core.array-callable-alias">
+   <title>Les noms d'alias <literal>"array"</literal> et <literal>"callable"</literal></title>
+
+   <simpara>
+    Il n'est plus possible d'utiliser <literal>"array"</literal>
+    et <literal>"callable"</literal> comme noms d'alias de classe
+    dans <function>class_alias</function>
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration85.incompatible.core.loosely-comparing-object">
+   <title>Comparaison approximative d'objets non comparables</title>
+
+   <simpara>
+    Comparer approximativement des objets non comparables (par exemple des enums,
+    <classname>CurlHandle</classname> et d'autre classes internes) à des booléens
+    était auparavant incohérent. Si comparé à un littéral booléen
+    <code>$object == true</code>, il se comportait de la même manière que
+    <code>(bool)$object</code>. Si comparé à une valeur statiquement inconnue
+    <code>$object == $true</code>, il retournait toujours &false;.
+    Ce comportement a été consolidé pour toujours suivre le comportement de
+    <code>(bool)$object</code>.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration85.incompatible.core.gc-collect-cycles">
+   <title>Valeur de retour de gc_collect_cycles</title>
+
+   <simpara>
+    La valeur de retour de <function>gc_collect_cycles</function> n'inclut plus
+    les chaînes et ressources qui ont été collectées indirectement via des cycles.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration85.incompatible.core.substitute-final-subclasses">
+   <title>Substituer le mot-clé static dans une sous-classe finale</title>
+
+   <simpara>
+    Il est désormais permis de substituer <type>static</type> par <type>self</type> ou le nom concret de la classe
+    dans les sous-classes finales.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration85.incompatible.core.tick-handlers">
+   <title>Gestionnaires de tick</title>
+
+   <simpara>
+    Les gestionnaires de tick sont désormais désactivés après l'exécution de toutes les fonctions de fermeture,
+    la destruction des objets et le nettoyage des gestionnaires de sortie.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration85.incompatible.core.trait-binding">
+   <title>Liaison des traits</title>
+
+   <simpara>
+    Les traits sont désormais liés avant la classe parente. Il s'agit d'un changement comportemental subtil,
+    mais qui devrait mieux correspondre aux attentes des utilisateurs.
+    <!-- https://github.com/php/php-src/pull/15878 -->
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration85.incompatible.core.errors-compilation-and-linking">
+   <title>Erreurs lors de la compilation et du chaînage des classes</title>
+
+   <simpara>
+    Les erreurs émises lors de la compilation et du chaînage des classes sont désormais toujours différées
+    et traitées après la compilation ou le chaînage des classes. Les erreurs fatales émises
+    lors de la compilation ou du chaînage des classes provoquent le traitement immédiat
+    de toutes les erreurs différées, sans appeler les gestionnaires d'erreurs définis par l'utilisateur.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration85.incompatible.core.exception-by-userdefined-handler">
+   <title>Exceptions levées par les gestionnaires d'erreurs définis par l'utilisateur</title>
+
+   <simpara>
+    Les exceptions levées par les gestionnaires d'erreurs définis par l'utilisateur lors du traitement des erreurs
+    de chaînage des classes ne sont plus promues en erreurs fatales et n'empêchent plus le chaînage.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration85.incompatible.core.attribute-during-compilation">
+   <title>Erreur d'application d'attribut lors de la compilation</title>
+
+   <simpara>
+    Appliquer <code>#[\Attribute]</code> à une classe abstraite, un enum, une interface ou un trait
+    déclenche une erreur lors de la compilation. Auparavant, l'attribut pouvait être
+    ajouté, mais lorsqu'<methodname>ReflectionAttribute::newInstance</methodname>
+    était appelé, une erreur était levée.
+    L'erreur peut être différée de la compilation à l'exécution en utilisant le nouvel
+    attribut <code>#[\DelayedTargetValidation]</code>.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration85.incompatible.core.disable-ini-setting">
+   <title>Le paramètre INI disable_classes</title>
+
+   <simpara>
+    Le paramètre INI <link linkend="ini.disable-classes">disable_classes</link>
+    a été supprimé car il provoque la rupture de diverses hypothèses du moteur.
+    <!-- RFC: https://wiki.php.net/rfc/deprecations_php_8_5#remove_disable_classes_ini_setting -->
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration85.incompatible.core.destruct-non-array-values">
+   <title>Destruction de valeurs non-tableaux</title>
+
+   <simpara>
+    Destructurer des valeurs non-tableaux (autres que &null;) en utilisant <literal>[]</literal> ou <function>list</function>
+    émet désormais un avertissement.
+    <!-- RFC: https://wiki.php.net/rfc/warnings-php-8-5#destructuring_non-array_values -->
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration85.incompatible.core.warning-related-to-cast">
+   <title>Avertissements liés au cast</title>
+
+   <simpara>
+    Un avertissement est désormais émis lors du cast de flottants (ou de chaînes ressemblant
+    à des flottants) en entiers s'ils ne peuvent pas être représentés comme tels. Cela affecte
+    les casts explicites en int et les casts implicites en int.
+    <!-- RFC: https://wiki.php.net/rfc/warnings-php-8-5#casting_out_of_range_floats_to_int -->
+   </simpara>
+
+   <simpara>
+    Un avertissement est désormais émis lors du cast de NAN vers d'autres types.
+    <!-- RFC: https://wiki.php.net/rfc/warnings-php-8-5#coercing_nan_to_other_types -->
+   </simpara>
+
+  </sect3>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.bzip2">
+  <title>Bzip2</title>
+
+  <simpara>
+   <function>bzcompress</function> lève désormais une <classname>ValueError</classname>
+   lorsque <parameter>$block_size</parameter> n'est pas compris entre 1 et 9.
+  </simpara>
+
+  <simpara>
+   <function>bzcompress</function> lève désormais une <classname>ValueError</classname>
+   lorsque <parameter>$work_factor</parameter> n'est pas compris entre 0 et 250.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.dom">
+  <title>DOM</title>
+
+  <simpara>
+   Cloner un <classname>DOMNamedNodeMap</classname>,
+   <classname>DOMNodeList</classname>, <classname>Dom\NamedNodeMap</classname>,
+   <classname>Dom\NodeList</classname>, <classname>Dom\HTMLCollection</classname>,
+   et <classname>Dom\DtdNamedNodeMap</classname> échoue désormais.
+   Cela n'a jamais réellement abouti à un objet fonctionnel, donc aucun impact n'est attendu.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.fileinfo">
+  <title>FileInfo</title>
+
+  <simpara>
+   <function>finfo_file</function> et <methodname>finfo::file</methodname>
+   lèvent désormais une <exceptionname>ValueError</exceptionname> à la place de
+   <exceptionname>TypeError</exceptionname> lorsque <parameter>$filename</parameter>
+   contient des octets nuls.
+   Cela aligne le type d'erreur levée pour être cohérent avec le reste du
+   langage.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.intl">
+  <title>Intl</title>
+
+  <simpara>
+   L'extension nécessite désormais au moins ICU 57.1.
+  </simpara>
+
+  <simpara>
+   <methodname>IntlDateFormatter::setTimeZone</methodname>/<function>datefmt_set_timezone</function>
+   lèvent désormais une <exceptionname>IntlException</exceptionname> en cas de classes non initialisées
+   ou d'échecs de clonage.
+  </simpara>
+
+  <simpara>
+   Toutes les méthodes <classname>Locale</classname> lèvent désormais une
+   <exceptionname>ValueError</exceptionname> lorsque l'argument locale contient des octets nuls.
+  </simpara>
+
+  <simpara>
+   Le comportement de <constant>Collator::SORT_REGULAR</constant> en ce qui concerne
+   la gestion des chaînes numériques est désormais aligné sur le comportement de
+   <constant>SORT_REGULAR</constant> dans ext/standard.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.ldap">
+  <title>LDAP</title>
+
+  <simpara>
+   <function>ldap_get_option</function> et <function>ldap_set_option</function>
+   lèvent désormais une <exceptionname>ValueError</exceptionname> lorsqu'une option invalide est passée.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.mbstring">
+  <title>MBString</title>
+
+  <simpara>
+   Les tables de données Unicode ont été mises à jour vers Unicode 17.0
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.mysqli">
+  <title>MySQLi</title>
+
+  <simpara>
+   L'appel au constructeur mysqli sur un objet déjà construit
+   n'est désormais plus possible et génère une <exceptionname>Error</exceptionname>.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.odbc">
+  <title>ODBC</title>
+
+  <simpara>
+   ODBC suppose désormais qu'au moins la fonctionnalité ODBC 3.5 est disponible.
+   La définition ODBCVER et les indicateurs du système de construction pour la contrôler ont été supprimés.
+  </simpara>
+
+  <simpara>
+   ODBC ne dispose plus d'indicateurs de construction pour construire avec des pilotes spécifiques (sauf
+   pour DB2) et supprime les cas spéciaux pour ces pilotes. Il est fortement
+   recommandé d'utiliser un gestionnaire de pilotes comme iODBC ou unixODBC sur les systèmes non Windows.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.opcache">
+  <title>Opcache</title>
+
+  <simpara>
+   L'extension Opcache est désormais toujours intégrée dans le binaire PHP et toujours
+   chargée.
+   Les directives INI <link linkend="ini.opcache.enable">opcache.enable</link>
+   et <link linkend="ini.opcache.enable-cli">opcache.enable_cli</link> sont toujours
+   prises en compte.
+  </simpara>
+
+  <simpara>
+   Les options de configuration <option role="configure">--enable-opcache</option>/<option role="configure">--disable-opcache</option>
+   ont été supprimées, et la compilation ne produit plus les fichiers <filename>opcache.so</filename>
+   ou <filename>php_opcache.dll</filename>.
+  </simpara>
+
+  <simpara>
+   L'utilisation des directives INI <literal>zend_extension=opcache.so</literal> ou
+   <literal>zend_extension=php_opcache.dll</literal>
+   émettra un avertissement.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.pcntl">
+  <title>PCNTL</title>
+
+  <simpara>
+   <function>pcntl_exec</function> lève désormais une <exceptionname>ValueError</exceptionname>
+   lorsque les entrées du paramètre <parameter>$args</parameter> contiennent des octets nuls.
+  </simpara>
+
+  <simpara>
+   <function>pcntl_exec</function> lève désormais une <exceptionname>ValueError</exceptionname>
+   lorsque les entrées ou les clés du paramètre <parameter>$env_vars</parameter>
+   contiennent des octets nuls.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.pcre">
+  <title>PCRE</title>
+
+  <simpara>
+   L'extension est compilée sans l'option semi-dépréciée
+   PCRE2_EXTRA_ALLOW_LOOKAROUND_BSK.
+   <!-- https://github.com/PCRE2Project/pcre2/issues/736#issuecomment-2754024651 -->
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.pdo">
+  <title>PDO</title>
+
+  <simpara>
+   Les arguments du constructeur définis en conjonction avec
+   <constant>PDO::FETCH_CLASS</constant> suivent désormais la sémantique habituel de CUFA
+   (<function>call_user_func_array</function>).
+   Cela signifie que les clés de chaîne agiront comme des arguments nommés.
+   De plus, l'encapsulation automatique pour les arguments par valeur passés à un paramètre par référence
+   a été supprimée, et l'habituel <constant>E_WARNING</constant>
+   à ce sujet est désormais émis.
+   Pour passer une variable par référence à un argument de constructeur utilisez l'affectation
+   de référence de valeur de tableau générale : <code>$ctor_args = [&amp;$valByRef]</code>
+  </simpara>
+
+  <simpara>
+   Essayer d'appeler <methodname>PDOStatement::setFetchMode</methodname> pendant
+   un appel à <methodname>PDO::fetch</methodname>,
+   <methodname>PDO::fetchObject</methodname>,
+   <methodname>PDO::fetchAll</methodname>, par exemple en utilisant des astuces telles que
+   passer l'objet statement comme argument de constructeur lors de la récupération dans un
+   objet, lèvera désormais une <exceptionname>Error</exceptionname>.
+  </simpara>
+
+  <simpara>
+   La valeur des constantes <constant>PDO::FETCH_GROUP</constant>,
+   <constant>PDO::FETCH_UNIQUE</constant>,
+   <constant>PDO::FETCH_CLASSTYPE</constant>,
+   <constant>PDO::FETCH_PROPS_LATE</constant>, et
+   <constant>PDO::FETCH_SERIALIZE</constant> a changé.
+  </simpara>
+
+  <simpara>
+   Une <exceptionname>ValueError</exceptionname> est désormais levée si
+   <constant>PDO::FETCH_PROPS_LATE</constant> est utilisé avec un mode de récupération
+   différent de <constant>PDO::FETCH_CLASS</constant>, cohérent avec
+   les autres indicateurs de récupération.
+  </simpara>
+
+  <simpara>
+   Une <exceptionname>ValueError</exceptionname> est désormais levée si
+   <constant>PDO::FETCH_INTO</constant> est utilisé comme mode de récupération dans
+   <methodname>PDO::fetchAll</methodname>,
+   similaire à <constant>PDO::FETCH_LAZY</constant>.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.pdo-firebird">
+  <title>PDO_FIREBIRD</title>
+
+  <simpara>
+   Une <exceptionname>ValueError</exceptionname> est désormais levée lorsqu'on
+   essaie de définir un nom de curseur trop long sur un <classname>PDOStatement</classname>
+   résultant du pilote Firebird.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.pdo-sqlite">
+  <title>PDO_SQLITE</title>
+
+  <simpara>
+   SQLite <methodname>PDO::quote</methodname> lève désormais une exception
+   ou émet un avertissement, en fonction du mode d'erreur, si la chaîne contient
+   un octet nul.
+  </simpara>
+
+  <simpara>
+   <methodname>PDO::sqliteCreateCollation</methodname> lève désormais une exception
+   si le callback a un type de retour incorrect, ce qui le rend plus
+   conforme au comportement de <methodname>Pdo\Sqlite::createCollation</methodname>.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.posix">
+  <title>POSIX</title>
+
+  <simpara>
+   <function>posix_kill</function> lève désormais une
+   <exceptionname>ValueError</exceptionname> lorsque l'argument process_id est
+   inférieur ou supérieur à ce que la plateforme supporte (entier signé ou
+   plage longue), <function>posix_setpgid</function> lève désormais une
+   <exceptionname>ValueError</exceptionname> lorsque process_id ou
+   process_group_id est inférieur à zéro ou supérieur à ce que la plateforme
+   supporte.
+  </simpara>
+
+  <simpara>
+   <function>posix_setrlimit</function> lève désormais une
+   <exceptionname>ValueError</exceptionname> lorsque les arguments hard_limit ou
+   soft_limit sont inférieurs à -1 ou si soft_limit est supérieur à
+   hard_limit.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.reflection">
+  <title>Reflection</title>
+
+  <simpara>
+   <methodname>ReflectionAttribute::newInstance</methodname> peut désormais lever
+   des erreurs pour les attributs internes si l'attribut a été appliqué sur une cible
+   invalide et que l'erreur a été différée du temps de compilation au temps d'exécution
+   via l'attribut #[\DelayedTargetValidation].
+   <!-- RFC: https://wiki.php.net/rfc/delayedtargetvalidation_attribute -->
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.session">
+  <title>Session</title>
+
+  <simpara>
+   Tenter d'écrire des données de session lorsque <varname>$_SESSION</varname> a une clé
+   contenant le caractère pipe (<literal>|</literal>) émettra désormais un avertissement
+   au lieu d'échouer silencieusement.
+  </simpara>
+
+  <simpara>
+   <function>session_start</function> est désormais plus stricte concernant l'argument options.
+   Elle lève désormais une <exceptionname>ValueError</exceptionname> si
+   le tableau n'est pas une table de hachage, ou une <exceptionname>TypeError</exceptionname>
+   si la valeur read_and_close n'est pas d'un type valide compatible avec int.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.simplexml">
+  <title>SimpleXML</title>
+
+  <simpara>
+   Passer une expression XPath qui retourne autre chose qu'un ensemble de nœuds
+   à <methodname>SimpleXMLElement::xpath</methodname> émettra désormais un avertissement
+   et retournera &false;, au lieu d'échouer silencieusement et de retourner un tableau vide.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.snmp">
+  <title>SNMP</title>
+
+  <simpara>
+   <function>snmpget</function>,
+   <function>snmpset</function>,
+   <function>snmp2_get</function>,
+   <function>snmp2_set</function>,
+   <function>snmp3_get</function>,
+   <function>snmp3_set</function>
+   et <methodname>SNMP::__construct</methodname> lève désormais une
+   <exceptionname>ValueError</exceptionname> lorsque le nom d'hôte
+   est trop grand, contient un octet nul ou si le port est donné
+   lorsqu'il est négatif ou supérieur à 65535, les valeurs de délai d'attente et de tentatives
+   sont inférieures à -1 ou trop grandes.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.soap">
+  <title>SOAP</title>
+
+  <simpara>
+   <methodname>SoapClient::__doRequest</methodname> accepte désormais un nouveau
+   paramètre optionnel <parameter>$uriParserClass</parameter> acceptant
+   des arguments de type string ou &null;.
+   &null; représente la méthode originale basée sur (<function>parse_url</function>),
+   tandis que les nouveaux backends seront utilisés lorsqu'on passe soit
+   <classname>Uri\Rfc3986\Uri</classname> ou <classname>Uri\WhatWg\Url</classname>.
+   <!-- RFC: https://wiki.php.net/rfc/url_parsing_api#plugability -->
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.sockets">
+  <title>Sockets</title>
+
+  <simpara>
+   <function>socket_create_listen</function>,
+   <function>socket_bind</function> et <function>socket_sendto</function>
+   lèvent désormais une <exceptionname>ValueError</exceptionname> si le port est inférieur
+   à 0 ou supérieur à 65535, et également si l'une des entrées du tableau hints est
+   indexée numériquement.
+  </simpara>
+
+  <simpara>
+   <function>socket_addrinfo_lookup</function> lève désormais une
+   <exceptionname>TypeError</exceptionname> si l'une des valeurs de hints ne peut pas
+   être convertie en int et peut lever une <exceptionname>ValueError</exceptionname> si
+   l'une de ces valeurs dépasse la capacité.
+  </simpara>
+
+  <simpara>
+   <function>socket_set_option</function> avec les options
+   <constant>MCAST_LEAVE_GROUP</constant>/<constant>MCAST_LEAVE_SOURCE_GROUP</constant>
+   lève désormais une exception si la valeur n'est pas un objet ou un tableau valide.
+  </simpara>
+
+  <simpara>
+   <function>socket_set_option</function> avec le contexte multicast lève désormais une
+   <exceptionname>ValueError</exceptionname> lorsque le socket créé n'est pas de la famille
+   <constant>AF_INET</constant>/<constant>AF_INET6</constant>.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.spl">
+  <title>SPL</title>
+
+  <simpara>
+   <classname>ArrayObject</classname> n'accepte plus les enums, car la modification des
+   <property>$name</property> ou <property>$value</property> peut casser
+   les hypothèses du moteur.
+  </simpara>
+
+  <simpara>
+   Le paramètre <parameter>$length</parameter> de 
+   la fonction <methodname>SplFileObject::fwrite</methodname>
+   est désormais nullable.
+   La valeur par défaut est passée de <literal>0</literal> à &null;.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.standard">
+  <title>Standard</title>
+
+  <simpara>
+   L'utilisation d'une fonction de la famille printf avec un formatteur qui ne spécifiait pas la
+   précision réinitialisait incorrectement la précision au lieu de la traiter
+   comme une précision de 0.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration85.incompatible.tidy">
+  <title>Tidy</title>
+
+  <simpara>
+   <methodname>tidy::__construct</methodname>,
+   <methodname>tidy::parseFile</methodname>,
+   <methodname>tidy::parseString</methodname> lève désormais une
+   <exceptionname>ValueError</exceptionname> si la configuration contient une
+   valeur invalide ou tente de définir une entrée interne en lecture seule,
+   et une <exceptionname>TypeError</exceptionname> si une clé de configuration n'est pas une
+   chaîne.
+  </simpara>
+
+ </sect2>
+
+</sect1>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
