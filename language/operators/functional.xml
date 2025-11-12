@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: c999c7066ede7dc2df80e0bd3364bfa0ef1f9533 Maintainer: lacatoire Status: ready -->
+<!-- Reviewed: no -->
+<sect1 xml:id="language.operators.functional">
+ <title>Opérateurs fonctionnels</title>
+ <titleabbrev>Fonctionnels</titleabbrev>
+ <para>
+  PHP 8.5 et versions ultérieures prennent en charge un opérateur qui fonctionne directement
+  sur les fonctions callables. L'opérateur <literal>|&gt;</literal>, ou « pipe », accepte
+  une fonction callable à un seul paramètre à droite et lui transmet la valeur de gauche,
+  le résultat étant la valeur renvoyée par la fonction callable. La fonction callable de
+  droite peut être n'importe quelle fonction callable PHP valide : une <classname>Closure</classname>,
+  une <link linkend="functions.first_class_callable_syntax">fonction callable de première classe
+ </link>, un objet qui implémente <link linkend="object.invoke">__invoke()</link>, etc.
+ </para>
+ <para>
+  Cela signifie que les deux lignes suivantes sont logiquement équivalentes.
+  <example>
+   <title>En utilisant <literal>|&gt;</literal></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$result = "Hello World" |> strlen(...);
+echo $result, PHP_EOL;
+
+$result = strlen("Hello World");
+echo $result, PHP_EOL;
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+11
+11
+]]>
+   </screen>
+  </example>
+ </para>
+ <para>
+  Pour un seul appel, cette fonction n'est pas particulièrement utile. Cela devient utile lorsque plusieurs appels sont enchaînés.
+  Autrement dit, les deux fragments de code suivants sont logiquement équivalents :
+  <example>
+   <title>Enchaînement d'appels |&gt;</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$result = "PHP Rocks"
+    |> htmlentities(...)
+    |> str_split(...)
+    |> (fn($x) => array_map(strtoupper(...), $x))
+    |> (fn($x) => array_filter($x, fn($v) => $v != 'O'))
+;
+echo $result, PHP_EOL;
+
+$temp = "PHP Rocks";
+$temp = htmlentities($temp);
+$temp = str_split($temp);
+$temp = array_map(strtoupper(...), $temp);
+$temp = array_filter($temp, fn($v) => $v != 'O');
+$result = $temp;
+echo $result, PHP_EOL;
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Array
+(
+    [0] => P
+    [1] => H
+    [2] => P
+    [3] =>
+    [4] => R
+    [6] => C
+    [7] => K
+    [8] => S
+)
+Array
+(
+    [0] => P
+    [1] => H
+    [2] => P
+    [3] =>
+    [4] => R
+    [6] => C
+    [7] => K
+    [8] => S
+)
+]]>
+   </screen>
+  </example>
+ </para>
+ <para>
+  La partie gauche de l'opérateur de pipeline peut être n'importe quelle valeur ou expression. La partie droite
+  peut être n'importe quelle callable PHP valide acceptant un seul paramètre, ou toute expression
+  qui s'évalue à un tel callable. Les fonctions avec plus d'un paramètre obligatoire
+  ne sont pas autorisées et échoueront comme si la fonction était appelée normalement
+  avec des arguments insuffisants. Les fonctions qui prennent une variable par référence ne sont pas autorisées.
+  Si la partie droite ne s'évalue pas à une fonction valide, une erreur sera générée.
+ </para>
+ <note>
+  <para>
+   Sachez que, pour éviter toute ambiguïté syntaxique, les <link linkend="functions.arrow">fonctions fléchées<link>
+   DOIVENT être placées entre parenthèses lorsqu'elle sont utilisées avec un opérateur de pipeline, comme dans les exemples ci-dessus.
+   Ne pas le faire entraînera une erreur fatale.
+  </para>
+ </note>
+
+ <sect2 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><classname>Closure</classname></member>
+   </simplelist>
+  </para>
+ </sect2>
+</sect1>
