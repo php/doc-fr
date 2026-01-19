@@ -1,60 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: c7e29d3ab5328b52f83edb88bde973e211a37659 Maintainer: Fan2Shrek Status: ready -->
+<!-- EN-Revision: 57c7669a1f5336cb17413e0b46540c52c77ee84f Maintainer: Fan2Shrek Status: ready -->
 <!-- Reviewed: yes -->
-<chapter xml:id="philosophy.parallel" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+<chapter xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xml:id="philosophy.parallel">
  <title>Philosophie</title>
- <para>
+ <simpara>
   Cette section contient des philosophies importantes pour écrire du code parallèle et quelques détails sur l'implémentation interne de parallel.
- </para>
+ </simpara>
  <simplesect role="sharing">
    <title>Ne communiquez pas en partageant de la mémoire; partagez plutôt la mémoire en communiquant.</title>
-   <para>
+   <simpara>
     Cette philosophie, qui est adoptée par parallel, a ses origines dans Go, l'une des plateformes les plus largement admirées, si ce n'est utilisées, pour écrire du code parallèle pour le moment.
     Les développeurs Go doivent travailler dur pour être à la hauteur de cet idéal: PHP et parallel font tout le travail difficile pour le programmeur, et par défaut.
-   </para>
-   <para>
+   </simpara>
+   <simpara>
     Dans les modèles de threading conventionnels trouvés dans d'autres langages, généralement les threads communiquent les uns avec les autres par le simple fait
     qu'ils opèrent dans le même espace d'adressage.
     Le développeur doit déployer des exclusions mutuelles, des variables de condition et d'autres primitives de bas niveau de threading ou de synchronisation pour garantir
     une communication appropriée de l'état et de la cohérence.
-   </para>
-   <para>
+   </simpara>
+   <simpara>
     Lorsque le modèle conventionnel est inversé, cela signifie que les threads ne partagent de la mémoire que par la communication (une variable est passée sur un canal par exemple).
-   </para>
-   <para>
+   </simpara>
+   <simpara>
     Lorsque parallel passe une variable d'un thread à un autre par n'importe quel moyen - arguments de tâche, retour via Future et Channels - elle est passée par valeur.
     Dans tous les cas, sauf dans le cas des canaux non tamponnés, la variable est également mise en mémoire tampon de sorte qu'elle ne puisse pas changer (ou être détruite) avant d'être utilisée dans le thread
     à qui la variable est transmise. Une lecture non tamponnée sur un canal est le seul cas où un thread lit directement la mémoire allouée par un autre thread, il peut le faire en toute sécurité car
     le thread qui possède la mémoire attend que la lecture soit terminée avant de pouvoir continuer à la manipuler, et le thread qui ne possède pas la mémoire lit par valeur. Lorsque
     les deux threads continuent, ils ne partagent plus de mémoire.
-   </para>
-   <para>
+   </simpara>
+   <simpara>
     Cela rend l'écriture et le raisonnement sur le code parallèle beaucoup plus faciles que le modèle conventionnel de threading. Cela signifie que le programmeur n'a pas besoin de considérer que les threads
     peuvent manipuler des données simultanément, car cela n'est pas possible.
-   </para>
-   <para>
+   </simpara>
+   <simpara>
     Cela rend également PHP la plateforme parfaite pour implémenter une API de concurrence parallèle basée sur CSP (passage de messages sur des canaux), car PHP lui-même est partagé rien -
     les threads PHP fonctionnent dans leur propre espace d'adressage virtuel par défaut, et ne peuvent donc partager de mémoire qu'en communiquant.
-   </para>
+   </simpara>
  </simplesect>
  <simplesect role="owning">
   <title>Les données doivent avoir un propriétaire unique et définitif</title>
-  <para>
+  <simpara>
    Lorsque vous abordez le modèle CSP pour la première fois, un programmeur versé dans le modèle traditionnel de threading peut se retrouver à la recherche de structures de données concurrentes,
    car c'est ce à quoi il est habitué: il passe des objets partagés pour les manipuler.
-  </para>
-  <para>
+  </simpara>
+  <simpara>
    Lorsque vous abordez le modèle CSP, il n'est pas nécessaire que les structures de données soient partagées par de nombreuses tâches, et en fait, il est plus simple si elles ne le sont pas. Les données doivent être possédées
    par une seule tâche, les modifications (ou opérations) de cette structure de données doivent être communiquées via des canaux et effectuées par le propriétaire des données, le succès, l'échec,
    ou le résultat (état) du changement (ou de l'opération) étant communiqué en retour.
-  </para>
-  <para>
+  </simpara>
+  <simpara>
    Une fois encore la nature de PHP et la nature de copie par valeur de parallel aide le développeur à atteindre cet objectif, aucune donnée ne sera partagée par accident,
    seulement jamais comme résultat de la communication.
-  </para>
+  </simpara>
  </simplesect>
 </chapter>
-
 <!-- Keep this comment at the end of the file
 Local variables:
 mode: sgml
