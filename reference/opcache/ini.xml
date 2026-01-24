@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 87d6bb1bbd5f118f5b0cf0160438f06c0f91ea45 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 8ea24dc32374bf4f6b04005e317101e4c65a0214 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <sect1 xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xml:id="opcache.configuration">
  &reftitle.runtime;
@@ -590,10 +590,171 @@
    </term>
    <listitem>
     <simpara>
-     La valeur par défaut consiste à appliquer toutes les optimisations sûres.
-     Changer la valeur par défaut est surtout utile pour déboguer/développer l'optimiseur
-     (voir aussi <link linkend="ini.opcache.opt_debug_level">opcache.opt_debug_level</link>).
+     Un masque de bits qui contrôle quelles passes d'optimisation sont exécutées.
+     La valeur par défaut est <literal>0x7FFEBFFF</literal>, qui active toutes les
+     optimisations sûres. Désactiver des optimisations ou activer des optimisations
+     non sûres est surtout utile pour déboguer/développer l'optimiseur.
     </simpara>
+    <simpara>
+     Chaque bit dans le masque de bits active une passe d'optimisation spécifique :
+    </simpara>
+    <table>
+     <title>Masque de bits des passes d'optimisation</title>
+     <tgroup cols="4">
+      <thead>
+       <row>
+        <entry>Bit</entry>
+        <entry>Nom de la passe</entry>
+        <entry>&Description;</entry>
+        <entry>Défaut</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+        <entry>0</entry>
+        <entry>PASS_1</entry>
+        <entry>Optimisations peephole simples</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>1</entry>
+        <entry>PASS_2</entry>
+        <entry>Inutilisé (a été fusionné dans PASS_1)</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>2</entry>
+        <entry>PASS_3</entry>
+        <entry>Optimisation de saut simple</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>3</entry>
+        <entry>PASS_4</entry>
+        <entry>Optimisation des appels</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>4</entry>
+        <entry>PASS_5</entry>
+        <entry>Optimisation basée sur le graphe de flux de contrôle</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>5</entry>
+        <entry>PASS_6</entry>
+        <entry>Optimisation basée sur l'analyse de flux de données</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>6</entry>
+        <entry>PASS_7</entry>
+        <entry>Indique si le graphe d'appels doit être utilisé pour les optimisations SSA</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>7</entry>
+        <entry>PASS_8</entry>
+        <entry>Propagation conditionnelle de constantes creuses</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>8</entry>
+        <entry>PASS_9</entry>
+        <entry>Optimisation des variables temporaires</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>9</entry>
+        <entry>PASS_10</entry>
+        <entry>Suppression des opcodes NOP</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>10</entry>
+        <entry>PASS_11</entry>
+        <entry>Compactage des littéraux</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>11</entry>
+        <entry>PASS_12</entry>
+        <entry>Pré-calcul de la taille de la pile d'appels</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>12</entry>
+        <entry>PASS_13</entry>
+        <entry>Suppression des variables inutilisées</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>13</entry>
+        <entry>PASS_14</entry>
+        <entry>Élimination du code mort</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>14</entry>
+        <entry>PASS_15</entry>
+        <entry>Collecte et substitution des déclarations de constantes (non sûr)</entry>
+        <entry><emphasis>Désactivé</emphasis></entry>
+       </row>
+       <row>
+        <entry>15</entry>
+        <entry>PASS_16</entry>
+        <entry>Inlining de fonctions triviales (partie de l'optimisation des appels)</entry>
+        <entry>Activé</entry>
+       </row>
+       <row>
+        <entry>16</entry>
+        <entry>(Drapeau)</entry>
+        <entry>Ignorer la possibilité de surcharge d'opérateur (non sûr)</entry>
+        <entry><emphasis>Désactivé</emphasis></entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+    <note>
+     <title>Optimisations sûres vs non sûres</title>
+     <simpara>
+      Les <emphasis>optimisations sûres</emphasis> (activées par défaut) préservent le
+      comportement exact du code PHP tout en améliorant les performances. Elles incluent
+      l'élimination du code mort, le repliement de constantes et l'optimisation des sauts.
+     </simpara>
+     <simpara>
+      Les <emphasis>optimisations non sûres</emphasis> (désactivées par défaut) peuvent
+      altérer le comportement dans des cas particuliers :
+     </simpara>
+     <itemizedlist>
+      <listitem>
+       <simpara>
+        <emphasis>Bit 14</emphasis> : Collecte des constantes. Les constantes sont substituées
+        à la compilation, ignorant l'ordre de déclaration à l'exécution :
+       </simpara>
+       <informalexample>
+        <programlisting role="php">
+<![CDATA[
+<?php
+echo getA();         // Affiche : "hello" au lieu de lancer une Error
+const A = "hello";
+function getA() { return A; }
+]]>
+        </programlisting>
+       </informalexample>
+      </listitem>
+      <listitem>
+       <simpara>
+        <emphasis>Bit 16</emphasis> : Ignorer la surcharge d'opérateur.
+        Non sûr lors de l'utilisation de classes avec <literal>do_operation</literal>
+        (par exemple <link linkend="book.gmp">GMP</link>,
+        <link linkend="book.bc">BCMath</link>) dans des opérations arithmétiques.
+        Avec des déclarations de type, l'optimiseur peut appliquer les mêmes
+        optimisations en toute sécurité.
+       </simpara>
+      </listitem>
+     </itemizedlist>
+    </note>
    </listitem>
   </varlistentry>
   <varlistentry xml:id="ini.opcache.inherited-hack">
