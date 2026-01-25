@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: d9188340360dd1d160d3ddf24c532486214fce17 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 8ea24dc32374bf4f6b04005e317101e4c65a0214 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <refentry xml:id="soapclient.dorequest" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
@@ -16,6 +16,7 @@
    <methodparam><type>string</type><parameter>action</parameter></methodparam>
    <methodparam><type>int</type><parameter>version</parameter></methodparam>
    <methodparam choice="opt"><type>bool</type><parameter>oneWay</parameter><initializer>&false;</initializer></methodparam>
+   <methodparam choice="opt"><type class="union"><type>string</type><type>null</type></type><parameter>uriParserClass</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
   <para>
    Exécute une requête SOAP.
@@ -73,6 +74,16 @@
       </para>
      </listitem>
     </varlistentry>
+    <varlistentry>
+     <term><parameter>uriParserClass</parameter></term>
+     <listitem>
+      <simpara>
+       Le nom de la classe à utiliser pour analyser l'URI de redirection
+       lorsqu'un en-tête <literal>"Location"</literal> est reçu dans la réponse,
+       ou &null; pour utiliser l'analyse par défaut, basée sur <function>parse_url</function>.
+      </simpara>
+     </listitem>
+    </varlistentry>
    </variablelist>
   </para>
  </refsect1>
@@ -96,9 +107,16 @@
     </thead>
     <tbody>
      <row>
+      <entry>8.5.0</entry>
+      <entry>
+       Le paramètre optionnel <parameter>uriParserClass</parameter> a été ajouté.
+      </entry>
+     </row>
+     <row>
       <entry>8.0.0</entry>
       <entry>
-       The type of <parameter>oneWay</parameter> is &boolean; now; formerly it was &integer;.
+       Le type de <parameter>oneWay</parameter> est désormais &boolean; ;
+       auparavant, c'était &integer;.
       </entry>
      </row>
     </tbody>
@@ -122,31 +140,29 @@ function Add($x, $y)
 
 class LocalSoapClient extends SoapClient
 {
-     private $server;
+    private $server;
 
-     public function __construct($wsdl, $options)
-     {
-         parent::__construct($wsdl, $options);
-         $this->server = new SoapServer($wsdl, $options);
-         $this->server->addFunction('Add');
-     }
+    public function __construct($wsdl, $options)
+    {
+        parent::__construct($wsdl, $options);
+        $this->server = new SoapServer($wsdl, $options);
+        $this->server->addFunction('Add');
+    }
 
-     public function __doRequest(
+    public function __doRequest(
         $request,
         $location,
         $action,
         $version,
         $one_way = false,
-     ): ?string {
-     {
-         ob_start();
-         $this->server->handle($request);
-         $response = ob_get_contents();
-         ob_end_clean();
+    ): ?string {
+        ob_start();
+        $this->server->handle($request);
+        $response = ob_get_contents();
+        ob_end_clean();
 
-         return $response;
-     }
-
+        return $response;
+    }
 }
 
 $x = new LocalSoapClient(
