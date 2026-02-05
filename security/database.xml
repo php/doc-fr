@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 7204e2dbb9b484c8b67bb5ad4a93fa1369c5b317 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 7204e2dbb9b484c8b67bb5ad4a93fa1369c5b317 Maintainer: lacatoire Status: ready -->
 <!-- Reviewed: no -->
 
 <chapter xml:id="security.database" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -167,7 +167,7 @@ if ($row && password_verify($password, $row['pwd'])) {
    <example>
     <title>
      Séparation des résultats en pages, et créer des administrateurs
-     (PostgreSQL et MySQL)
+     (PostgreSQL)
     </title>
     <simpara>
      Dans l'exemple suivant, l'entrée de l'utilisateur est directement interpolée dans la
@@ -189,9 +189,8 @@ $result = pg_query($conn, $query);
     <varname>$offset</varname> soit alors un nombre. Cependant,
     il est possible de modifier l'<acronym>URL</acronym> en ajoutant une nouvelle valeur,
     au format <acronym>URL</acronym>, comme ceci :
-    <example>
-     <title>Exemple d'injection SQL</title>
-     <programlisting>
+    <informalexample>
+     <programlisting role="sql">
 <![CDATA[
 0;
 insert into pg_shadow(usename,usesysid,usesuper,usecatupd,passwd)
@@ -200,7 +199,7 @@ insert into pg_shadow(usename,usesysid,usesuper,usecatupd,passwd)
 --
 ]]>
      </programlisting>
-    </example>
+    </informalexample>
     Si cela arrive, le script donnerait un accès super utilisateur à l'attaquant.
     Notez que la valeur <literal>0;</literal> sert à terminer la requête
     originale et la terminer correctement.
@@ -241,18 +240,15 @@ $result = odbc_exec($conn, $query);
    </example>
    La partie statique de la requête, combinée avec une autre
    requête <literal>SELECT</literal>, va révéler les mots de passe :
-   <example>
-    <title>Révélation des mots de passe</title>
-    <programlisting>
+   <informalexample>
+    <programlisting role="sql">
 <![CDATA[
-<?php
 '
 union select '1', concat(uname||'-'||passwd) as name, '1971-01-01', '0' from usertable;
 --
-?>
 ]]>
     </programlisting>
-   </example>
+   </informalexample>
    </para>
    <para>
     Les instructions <literal>UPDATE</literal> et <literal>INSERT</literal> sont également
@@ -273,12 +269,12 @@ $query= "UPDATE usertable SET pwd='$pwd' WHERE uid='$uid';";
    variable <varname>$pwd</varname> avec la valeur
    <literal>hehehe', trusted=100, admin='yes</literal>
    pour obtenir des droits supplémentaires. La requête devient alors :
-   <example>
-    <title>Une requête et son injection</title>
+   <informalexample>
     <programlisting role="php">
 <![CDATA[
 <?php
-// $uid == ' or uid like '%admin%
+
+// $uid: ' or uid like '%admin%
 $query = "UPDATE usertable SET pwd='...' WHERE uid='' or uid like '%admin%';";
 
 // $pwd: hehehe', trusted=100, admin='yes
@@ -288,7 +284,7 @@ $query = "UPDATE usertable SET pwd='hehehe', trusted=100, admin='yes' WHERE
 ?>
 ]]>
     </programlisting>
-   </example>
+   </informalexample>
    </para>
    <simpara>
     Bien qu'il reste évident qu'un attaquant doit posséder au moins
@@ -321,19 +317,20 @@ $result = mssql_query($query);
    <literal>a%' exec master..xp_cmdshell 'net user test testpass /ADD'  --</literal>
    dans la variable <varname>$prod</varname>, alors la requête
    <varname>$query</varname> devient :
-   <example>
-    <title>Attaque d'un serveur de base de données (MSSQL Server) - 2</title>
+   <informalexample>
     <programlisting role="php">
 <![CDATA[
 <?php
+
 $query  = "SELECT * FROM products
            WHERE id LIKE '%a%'
            exec master..xp_cmdshell 'net user test testpass /ADD' --%'";
 $result = mssql_query($query);
+
 ?>
 ]]>
     </programlisting>
-   </example>
+   </informalexample>
    MSSQL Server exécute les requêtes SQL en lot, y compris la commande
    d'ajout d'un nouvel utilisateur à la base de données locale. Si cette
    application fonctionnait en tant que <literal>sa</literal> et que le
