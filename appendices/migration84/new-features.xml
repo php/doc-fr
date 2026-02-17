@@ -13,17 +13,47 @@
    <title>Propriété avec hooks</title>
 
    <simpara>
-    TODO
+    Les propriétés d'objet peuvent désormais avoir une logique supplémentaire
+    associée à leurs opérations <literal>get</literal> et <literal>set</literal>.
+    Selon l'utilisation, cela peut rendre la propriété virtuelle ou non,
+    c'est-à-dire qu'elle n'a aucune valeur de stockage sous-jacente.
    </simpara>
 
    <informalexample>
     <programlisting role="php">
 <![CDATA[
 <?php
-/*
-examples
-*/
+class Person
+{
+    // Une propriété "virtuelle". Elle ne peut pas être définie explicitement.
+    public string $fullName {
+        get => $this->firstName . ' ' . $this->lastName;
+    }
 
+    // Toutes les opérations d'écriture passent par ce hook, et le résultat est ce qui est écrit.
+    // L'accès en lecture se fait normalement.
+    public string $firstName {
+        set => ucfirst(strtolower($value));
+    }
+
+    // Toutes les opérations d'écriture passent par ce hook, qui doit écrire dans la valeur de stockage lui-même.
+    // L'accès en lecture se fait normalement.
+    public string $lastName {
+        set {
+            if (strlen($value) < 2) {
+                throw new \InvalidArgumentException('Too short');
+            }
+            $this->lastName = $value;
+        }
+    }
+}
+
+$p = new Person();
+
+$p->firstName = 'peter';
+print $p->firstName; // Affiche "Peter"
+$p->lastName = 'Peterson';
+print $p->fullName; // Affiche "Peter Peterson"
 ]]>
     </programlisting>
    </informalexample>
