@@ -99,7 +99,7 @@ while read -r PR; do
   fi
 
   # Build issue body
-  BODY="PR: https://github.com/php/doc-en/pull/$PR_NUMBER ($PR_MERGE_DATE)"$'\n'
+  BODY="PR: \`https://github.com/php/doc-en/pull/$PR_NUMBER\` ($PR_MERGE_DATE)"$'\n'
 
   if [ -n "$UPDATE_LIST" ]; then
     BODY+=$'\n'"**Fichiers FR à mettre à jour**"$'\n'
