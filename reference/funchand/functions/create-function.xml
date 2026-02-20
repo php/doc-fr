@@ -7,7 +7,7 @@
   <refname>create_function</refname>
   <refpurpose>Crée une fonction anonyme</refpurpose>
  </refnamediv>
- 
+
  <refsynopsisdiv>
   &warn.deprecated.function-7-2-0.removed-8-0-0;
  </refsynopsisdiv>
@@ -20,7 +20,7 @@
    <methodparam><type>string</type><parameter>code</parameter></methodparam>
   </methodsynopsis>
   <para>
-   <function>create_function</function> crée une fonction anonyme, 
+   <function>create_function</function> crée une fonction anonyme,
    à partir des paramètres passés, et retourne un nom de fonction unique.
   </para>
   <caution>
@@ -52,7 +52,7 @@
      <term><parameter>args</parameter></term>
      <listitem>
       <para>
-       Les arguments de la fonction.
+       Les arguments de la fonction, sous forme d'une seule chaîne séparée par des virgules.
       </para>
      </listitem>
     </varlistentry>
@@ -72,7 +72,10 @@
   &reftitle.returnvalues;
   <para>
    Retourne un nom de fonction unique, sous la forme d'une &string;,
-   ou &false; si une erreur survient.
+   ou &false; si une erreur survient. Il est à noter que le nom contient
+   un caractère non imprimable (<literal>"\0"</literal>), il faut donc
+   faire attention lors de l'affichage du nom ou de son incorporation dans
+   une autre chaîne.
   </para>
  </refsect1>
 
@@ -81,36 +84,53 @@
   <para>
    <example>
     <title>
-     Création d'une fonction anonyme avec <function>create_function</function>
+     Création d'une fonction dynamique avec <function>create_function</function>
+     ou les fonctions anonymes
     </title>
     <para>
-     Vous pouvez utiliser cette fonction pour (par exemple) créer
-     une fonction à partir d'informations récoltées
-     durant l'exécution :
+     Il est possible d'utiliser une fonction créée dynamiquement pour (par exemple)
+     créer une fonction à partir d'informations récoltées durant l'exécution.
+     D'abord, en utilisant <function>create_function</function> :
     </para>
     <programlisting role="php">
 <![CDATA[
 <?php
 $newfunc = create_function('$a,$b', 'return "ln($a) + ln($b) = " . log($a * $b);');
-echo "Nouvelle fonction anonyme  : $newfunc\n";
 echo $newfunc(2, M_E) . "\n";
-// affichera :
-// Nouvelle fonction anonyme : lambda_1
-// ln(2) + ln(2.718281828459) = 1.6931471805599
 ?>
 ]]>
     </programlisting>
+    <para>
+     Maintenant le même code, en utilisant une
+     <link linkend="functions.anonymous">fonction anonyme</link> ;
+     il est à noter que le code et les arguments ne sont plus contenus dans des chaînes :
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$newfunc = function($a,$b) { return "ln($a) + ln($b) = " . log($a * $b); };
+echo $newfunc(2, M_E) . "\n";
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+ln(2) + ln(2.718281828459) = 1.6931471805599
+]]>
+    </screen>
    </example>
-  </para>
-  <para>
-   Ou, pour pouvoir appliquer une fonction générique
-   à une liste d'arguments.
   </para>
   <para>
    <example>
     <title>
      Traitement générique par fonction avec <function>create_function</function>
+     ou les fonctions anonymes
     </title>
+    <para>
+     Une autre utilisation pourrait être d'avoir une fonction de traitement générique
+     qui peut appliquer un ensemble d'opérations à une liste de paramètres :
+    </para>
     <programlisting role="php">
 <![CDATA[
 <?php
@@ -122,16 +142,13 @@ function process($var1, $var2, $farr)
 }
 
 // Création d'une série de fonctions mathématiques
-$f1 = 'if ($a >=0) {return "b*a^2 = ".$b*sqrt($a);} else {return false;}';
-$f2 = "return \"min(b^2+a, a^2,b) = \".min(\$a*\$a+\$b,\$b*\$b+\$a);";
-$f3 = 'if ($a > 0 && $b != 0) {return "ln(a)/b = ".log($a)/$b; } else { return false; }';
 $farr = array(
     create_function('$x,$y', 'return "un peu de trigo : ".(sin($x) + $x*cos($y));'),
     create_function('$x,$y', 'return "une hypoténuse : ".sqrt($x*$x + $y*$y);'),
-    create_function('$a,$b', $f1),
-    create_function('$a,$b', $f2),
-    create_function('$a,$b', $f3)
-    );
+    create_function('$a,$b', 'if ($a >=0) {return "b*a^2 = ".$b*sqrt($a);} else {return false;}'),
+    create_function('$a,$b', "return \"min(b^2+a, a^2,b) = \".min(\$a*\$a+\$b,\$b*\$b+\$a);"),
+    create_function('$a,$b', 'if ($a > 0 && $b != 0) {return "ln(a)/b = ".log($a)/$b; } else { return false; }')
+);
 
 echo "\nUtilisation de la première liste de fonctions anonymes\n";
 echo "paramètres : 2.3445, M_PI\n";
@@ -140,10 +157,51 @@ process(2.3445, M_PI, $farr);
 // Maintenant une liste de fonctions sur chaîne de caractères
 $garr = array(
     create_function('$b,$a', 'if (strncmp($a, $b, 3) == 0) return "** \"$a\" '.
-    'and \"$b\"\n** Look the same to me! (looking at the first 3 chars)";'),
-    create_function('$a,$b', '; return "CRCs : " . crc32($a) . ", ".crc32($b);'),
-    create_function('$a,$b', '; return "similarité (a,b) = " . similar_text($a, $b, &$p) . "($p%)";')
-    );
+        'and \"$b\"\n** Look the same to me! (looking at the first 3 chars)";'),
+    create_function('$a,$b', 'return "CRCs: " . crc32($a) . ", ".crc32($b);'),
+    create_function('$a,$b', 'return "similar(a,b) = " . similar_text($a, $b, $p) . "($p%)";')
+);
+echo "\nUtilisation de la seconde liste de fonctions anonymes\n";
+process("Twas brilling and the slithy toves", "Twas the night", $garr);
+?>
+]]>
+    </programlisting>
+    <para>
+     Encore une fois, voici le même code en utilisant les
+     <link linkend="functions.anonymous">fonctions anonymes</link>.
+     Il est à noter que les noms de variables dans le code n'ont plus besoin d'être échappés,
+     car ils ne sont plus inclus dans une chaîne.
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+function process($var1, $var2, $farr)
+{
+    foreach ($farr as $f) {
+        echo $f($var1, $var2) . "\n";
+    }
+}
+
+// Création d'une série de fonctions mathématiques
+$farr = array(
+    function($x,$y) { return "un peu de trigo : ".(sin($x) + $x*cos($y)); },
+    function($x,$y) { return "une hypoténuse : ".sqrt($x*$x + $y*$y); },
+    function($a,$b) { if ($a >=0) {return "b*a^2 = ".$b*sqrt($a);} else {return false;} },
+    function($a,$b) { return "min(b^2+a, a^2,b) = " . min($a*$a+$b, $b*$b+$a); },
+    function($a,$b) { if ($a > 0 && $b != 0) {return "ln(a)/b = ".log($a)/$b; } else { return false; } }
+);
+
+echo "\nUtilisation de la première liste de fonctions anonymes\n";
+echo "paramètres : 2.3445, M_PI\n";
+process(2.3445, M_PI, $farr);
+
+// Maintenant une liste de fonctions sur chaîne de caractères
+$garr = array(
+    function($b,$a) { if (strncmp($a, $b, 3) == 0) return "** \"$a\" " .
+        "and \"$b\"\n** Look the same to me! (looking at the first 3 chars)"; },
+    function($a,$b) { return "CRCs: " . crc32($a) . ", ".crc32($b); },
+    function($a,$b) { return "similar(a,b) = " . similar_text($a, $b, $p) . "($p%)"; }
+);
 echo "\nUtilisation de la seconde liste de fonctions anonymes\n";
 process("Twas brilling and the slithy toves", "Twas the night", $garr);
 ?>
@@ -162,26 +220,38 @@ ln(a)/b = 0.27122299212594
 
 Utilisation de la seconde liste de fonctions anonymes
 ** "Twas the night" and "Twas brilling and the slithy toves"
-** Ces chaînes se ressemblent ! (regardez les trois premiers caractères)
-CRCs: -725381282, 342550513
-similarité (a,b) = 11(45.833333333333%)
+** Look the same to me! (looking at the first 3 chars)
+CRCs: 3569586014, 342550513
+similar(a,b) = 11(45.833333333333%)
 ]]>
     </screen>
    </example>
   </para>
   <para>
-   Mais l'utilisation la plus courante des fonctions lambda est la
-   fonction de rappel, par exemple, lors de l'utilisation de
-   <function>array_walk</function> ou <function>usort</function>
-  </para>
-  <para>
    <example>
-    <title>Utilisation de fonctions anonymes comme fonction de rappel</title>
+    <title>Utilisation de fonctions dynamiques comme fonction de rappel</title>
+    <para>
+     L'utilisation la plus courante des fonctions dynamiques est probablement
+     de les passer comme fonctions de rappel, par exemple lors de l'utilisation de
+     <function>array_walk</function> ou <function>usort</function>.
+    </para>
     <programlisting role="php">
 <![CDATA[
 <?php
 $av = array("la ", "une ", "cette ", "une certaine ");
 array_walk($av, create_function('&$v,$k', '$v = $v . "maison";'));
+print_r($av);
+?>
+]]>
+    </programlisting>
+    <para>
+     Converti en <link linkend="functions.anonymous">fonction anonyme</link> :
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$av = array("la ", "une ", "cette ", "une certaine ");
+array_walk($av, function(&$v,$k) { $v = $v . "maison"; });
 print_r($av);
 ?>
 ]]>
@@ -199,50 +269,51 @@ Array
 ]]>
     </screen>
     <para>
-     un tableau de chaînes de caractères ordonnées de la plus courte à la plus longue
+     Tri de chaînes de la plus longue à la plus courte avec <function>create_function</function> :
     </para>
     <programlisting role="php">
 <![CDATA[
 <?php
-
-$sv = array("petite", "longue", "une très longue chaîne", "une phrase toute entière");
+$sv = array("petite", "une longue chaîne", "longue", "une phrase toute entière");
+echo "Original :\n";
 print_r($sv);
-
+echo "Trié :\n";
+usort($sv, create_function('$a,$b','return strlen($b) - strlen($a);'));
+print_r($sv);
+?>
+]]>
+    </programlisting>
+    <para>
+     Converti en <link linkend="functions.anonymous">fonction anonyme</link> :
+    </para>
+    <programlisting role="php">
+<![CDATA[
+<?php
+$sv = array("petite", "une longue chaîne", "longue", "une phrase toute entière");
+echo "Original :\n";
+print_r($sv);
+echo "Trié :\n";
+usort($sv, function($a,$b) { return strlen($b) - strlen($a); });
+print_r($sv);
 ?>
 ]]>
     </programlisting>
     &example.outputs;
     <screen>
 <![CDATA[
+Original :
 Array
 (
   [0] => petite
-  [1] => longue
-  [2] => une très longue chaîne
+  [1] => une longue chaîne
+  [2] => longue
   [3] => une phrase toute entière
 )
-]]>
-    </screen>
-    <para>
-     ordonnées de la plus longue à la plus courte
-    </para>
-    <programlisting role="php">
-<![CDATA[
-<?php
-
-usort($sv, create_function('$a,$b','return strlen($b) - strlen($a);'));
-print_r($sv);
-
-?>
-]]>
-    </programlisting>
-    &example.outputs;
-    <screen>
-<![CDATA[
+Trié :
 Array
 (
   [0] => une phrase toute entière
-  [1] => une très longue chaîne
+  [1] => une longue chaîne
   [2] => longue
   [3] => petite
 )
@@ -260,7 +331,7 @@ Array
    </simplelist>
   </para>
  </refsect1>
-  
+
 </refentry>
 
 <!-- Keep this comment at the end of the file
