@@ -55,6 +55,13 @@ while read -r PR; do
   echo ""
   echo "PR #$PR_NUMBER: $PR_TITLE"
 
+  # Skip PRs marked with [skip-revcheck] (no translation update needed)
+  if echo "$PR_TITLE" | grep -qi '\[skip-revcheck\]'; then
+    echo "  -> [skip-revcheck], skipping."
+    SKIPPED=$((SKIPPED + 1))
+    continue
+  fi
+
   # Deduplication: search for the doc-en PR URL in existing issues
   EXISTING=$(gh issue list --repo "$GH_REPO" --search "\"doc-en/pull/$PR_NUMBER\"" \
     --state all --json number --jq 'length')
