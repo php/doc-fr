@@ -22,55 +22,55 @@ const rules = [
     id: 'style/vous-pouvez',
     pattern: /\bVous pouvez\b/gi,
     message: 'Utilisez "Il est possible de" au lieu de "Vous pouvez" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
   {
     id: 'style/vous-devez',
     pattern: /\bVous devez\b/gi,
     message: 'Utilisez "Il faut" au lieu de "Vous devez" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
   {
     id: 'style/vous-devriez',
     pattern: /\bVous devriez\b/gi,
     message: 'Utilisez "Il est recommandé de" au lieu de "Vous devriez" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
   {
     id: 'style/notez-que',
     pattern: /\bNotez que\b/g,
     message: 'Utilisez "Il est à noter que" au lieu de "Notez que" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
   {
     id: 'style/votre',
     pattern: /\b[Vv]otre\b/g,
     message: 'Évitez "votre" — préférez "le/la/du/de la" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
   {
     id: 'style/vos',
     pattern: /\b[Vv]os\b/g,
     message: 'Évitez "vos" — préférez "les/des" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
   {
     id: 'style/reportez-vous',
     pattern: /\b[Rr]eportez-vous\b/g,
     message: 'Utilisez "se reporter" au lieu de "reportez-vous" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
   {
     id: 'style/referez-vous',
     pattern: /\b[Rr]éférez-vous\b/g,
     message: 'Utilisez "se référer" au lieu de "référez-vous" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
   {
     id: 'style/assurez-vous',
     pattern: /\b[Aa]ssurez-vous\b/g,
     message: 'Utilisez "il faut s\'assurer" au lieu de "assurez-vous" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
 
   // === Points de français (TRADUCTIONS.txt) ===
@@ -116,19 +116,19 @@ const rules = [
     id: 'term/library',
     pattern: /\blibrairie\b/gi,
     message: 'Traduire "library" par "bibliothèque", pas "librairie" (faux ami)',
-    severity: 'warning',
+    severity: 'error',
   },
   {
     id: 'term/encryption',
     pattern: /\bencryption\b/gi,
     message: 'Traduire "encryption" par "cryptographie" ou "chiffrement" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
   {
     id: 'term/decrypt',
     pattern: /\bdecrypt(?:er|é|ée|ées|és)\b/gi,
     message: 'Utiliser "déchiffrer" au lieu de "decrypter" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
 
   // === Style "should" (TRADUCTIONS.txt) ===
@@ -136,7 +136,7 @@ const rules = [
     id: 'style/depuis-version',
     pattern: /\bdepuis PHP [0-9]/g,
     message: 'Préférer "à partir de PHP x.y" au lieu de "depuis PHP x.y" (TRADUCTIONS.txt)',
-    severity: 'warning',
+    severity: 'error',
   },
 ];
 
@@ -222,8 +222,8 @@ function extractDocText(xml) {
       }
     }
 
-    // Supprime les balises XML restantes mais garde le texte
-    const text = line.replace(/<[^>]+>/g, ' ');
+    // Supprime les entity references XML (&foo.bar;) et les balises
+    const text = line.replace(/&[a-zA-Z0-9._-]+;/g, ' ').replace(/<[^>]+>/g, ' ');
     result.push({ lineNo: i + 1, text });
   }
 
@@ -305,5 +305,5 @@ if (totalIssues > 0) {
   console.log(`\n${totalIssues} problème(s) trouvé(s) dont ${totalErrors} erreur(s).`);
 }
 
-// Ne fait échouer la CI que sur les erreurs (pas les warnings)
+// Fait échouer la CI dès qu'un problème est trouvé
 process.exit(totalErrors > 0 ? 1 : 0);
