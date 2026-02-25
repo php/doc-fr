@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /**
- * Vérifie les règles de style TRADUCTIONS.txt sur les fichiers XML modifiés.
+ * Vérifie les règles de style définies dans TRADUCTIONS.txt.
  *
- * Les règles sont lues dynamiquement depuis TRADUCTIONS.txt — rien n'est en dur.
+ * Toutes les règles sont lues dynamiquement depuis les lignes
+ *   INTERDIT : "X" → "Y"
+ * de TRADUCTIONS.txt. Aucune règle n'est codée en dur dans ce script.
  *
  * Usage : node check-style-fr.mjs [fichier1.xml fichier2.xml ...]
  *   Sans arguments : vérifie tous les .xml récursivement.
@@ -18,148 +20,63 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..', '..');
 
-// ─── Lecture et parsing de TRADUCTIONS.txt ──────────────────────────────────
+// ─── Lecture des règles depuis TRADUCTIONS.txt ──────────────────────────────
+//
+// Format attendu :
+//   INTERDIT : "texte interdit" → "remplacement suggéré"
+//
+// Le texte interdit devient un pattern regex (\b...\b, case-insensitive).
+// Le remplacement devient le message d'erreur.
 
-function parseTraductions() {
+function parseRules() {
   const txt = readFileSync(join(rootDir, 'TRADUCTIONS.txt'), 'utf-8');
   const rules = [];
+  const lineRegex = /INTERDIT\s*:\s*"([^"]+)"\s*→\s*"([^"]+)"(.*)/g;
+  let match;
 
-  // --- Style général (détection de patterns interdits) ---
+  while ((match = lineRegex.exec(txt)) !== null) {
+    const forbidden = match[1];
+    const replacement = match[2];
+    const extra = match[3].trim();
 
-  // "Évitez de parler directement" → on interdit les formes directes
-  if (/Évitez de .parler. directement/i.test(txt) || /Il est possible de.*au lieu de.*Vous pouvez/i.test(txt)) {
-    rules.push(
-      { id: 'style/vous-pouvez', pattern: /\bVous pouvez\b/gi, message: 'Éviter de parler directement : « Il est possible de » au lieu de « Vous pouvez »' },
-      { id: 'style/vous-devez', pattern: /\bVous devez\b/gi, message: 'Éviter de parler directement : « Il faut » au lieu de « Vous devez »' },
-      { id: 'style/vous-devriez', pattern: /\bVous devriez\b/gi, message: 'Éviter de parler directement : « Il est recommandé de » au lieu de « Vous devriez »' },
-      { id: 'style/votre', pattern: /\b[Vv]otre\b/g, message: 'Éviter de parler directement : préférer « le/la/du » à « votre »' },
-      { id: 'style/vos', pattern: /\b[Vv]os\b/g, message: 'Éviter de parler directement : préférer « les/des » à « vos »' },
-      { id: 'style/assurez-vous', pattern: /\b[Aa]ssurez-vous\b/g, message: 'Éviter de parler directement : « il faut s\'assurer » au lieu de « assurez-vous »' },
-      { id: 'style/reportez-vous', pattern: /\b[Rr]eportez-vous\b/g, message: 'Éviter de parler directement : « se reporter » au lieu de « reportez-vous »' },
-      { id: 'style/referez-vous', pattern: /\b[Rr]éférez-vous\b/g, message: 'Éviter de parler directement : « se référer » au lieu de « référez-vous »' },
-    );
-  }
+    // Construire le message
+    let message;
+    if (extra.startsWith('ou "')) {
+      // Ex: INTERDIT : "X" → "Y" ou "Z"
+      message = `« ${forbidden} » → « ${replacement} » ${extra}`;
+    } else {
+      message = `« ${forbidden} » → « ${replacement} »`;
+    }
 
-  // "Please note" → "Il est à noter que" au lieu de "Notez"
-  if (/Il est à noter que[\s\S]*?au lieu de[\s\S]*?Notez/i.test(txt)) {
-    rules.push(
-      { id: 'style/notez-que', pattern: /\bNotez que\b/g, message: '« Il est à noter que » au lieu de « Notez que »' },
-    );
-  }
+    // Construire le pattern regex
+    const escaped = escapeRegex(forbidden);
+    // "depuis PHP" → match "depuis PHP" suivi d'un chiffre
+    const patternStr = forbidden.toLowerCase() === 'depuis php'
+      ? `\\b${escaped} [0-9]`
+      : `\\b${escaped}\\b`;
 
-  // "à partir de" au lieu de "depuis"
-  if (/à partir de.*au lieu de.*depuis/i.test(txt)) {
-    rules.push(
-      { id: 'style/depuis-version', pattern: /\bdepuis PHP [0-9]/g, message: '« à partir de PHP x.y » au lieu de « depuis PHP x.y »' },
-    );
-  }
-
-  // --- Points de français ---
-
-  // etc...
-  if (/On n.écrit pas .etc\.\.\.?/i.test(txt)) {
-    rules.push(
-      { id: 'fr/etc-points', pattern: /\betc\.\.\./g, message: '« etc... » est un pléonasme — écrire « etc. »' },
-    );
-  }
-
-  // comme par exemple
-  if (/On n.écrit pas .comme par exemple/i.test(txt)) {
-    rules.push(
-      { id: 'fr/comme-par-exemple', pattern: /\bcomme par exemple\b/gi, message: '« comme par exemple » est un pléonasme — utiliser « comme » ou « par exemple »' },
-    );
-  }
-
-  // si il → s'il
-  if (/On n.écrit pas .si il/i.test(txt)) {
-    rules.push(
-      { id: 'fr/si-il', pattern: /\bsi il\b/gi, message: 'Écrire « s\'il » au lieu de « si il »' },
-    );
-  }
-
-  // optionnel (deux N)
-  if (/optioNNel.*optioNel/i.test(txt)) {
-    rules.push(
-      { id: 'fr/optionel', pattern: /\boptionel\b/gi, message: 'Écrire « optionnel » (deux N)' },
-    );
-  }
-
-  // abréger
-  if (/abréger.*abrévier/i.test(txt)) {
-    rules.push(
-      { id: 'fr/abrevier', pattern: /\babrévier\b/gi, message: 'Écrire « abréger » et non « abrévier »' },
-    );
-  }
-
-  // chiffrement vs chiffrage
-  if (/chiffrement et pas chiffrage/i.test(txt)) {
-    rules.push(
-      { id: 'fr/chiffrage', pattern: /\bchiffrage\b/gi, message: 'Utiliser « chiffrement » et non « chiffrage »' },
-    );
-  }
-
-  // --- Dictionnaire TRADUCTIONS.txt ---
-  // On parse les tableaux | terme | traduction | pour vérifier la présence des termes.
-  // Seuls les termes qui sont des erreurs évidentes en prose FR sont vérifiés ici.
-  // Des mots comme "callback", "stream", "output" sont souvent utilisés tels quels
-  // dans le texte technique FR et ne constituent pas des erreurs.
-
-  const dictEntries = parseDictionary(txt);
-
-  // "encryption" non traduit dans la prose
-  if (dictEntries.has('encryption')) {
     rules.push({
-      id: 'term/encryption',
-      pattern: /\bencryption\b/gi,
-      message: 'Traduire « encryption » par « cryptographie » ou « chiffrement » (dictionnaire TRADUCTIONS.txt)',
+      id: slugify(forbidden),
+      pattern: new RegExp(patternStr, 'gi'),
+      message,
     });
   }
 
-  // Faux ami "librairie" (library → bibliothèque)
-  if (dictEntries.has('library')) {
-    rules.push({
-      id: 'term/library',
-      pattern: /\blibrairie\b/gi,
-      message: 'Traduire « library » par « bibliothèque », pas « librairie » (faux ami, TRADUCTIONS.txt)',
-    });
-  }
-
-  // "decrypter" au lieu de "déchiffrer"
-  if (dictEntries.has('decrypt')) {
-    rules.push({
-      id: 'term/decrypt',
-      pattern: /\bdecrypt(?:er|é|ée|ées|és)\b/gi,
-      message: 'Utiliser « déchiffrer » au lieu de « decrypter » (TRADUCTIONS.txt)',
-    });
+  if (rules.length === 0) {
+    console.error('::error::Aucune règle INTERDIT trouvée dans TRADUCTIONS.txt');
+    process.exit(2);
   }
 
   return rules;
 }
 
-/**
- * Parse les tableaux du dictionnaire de TRADUCTIONS.txt.
- * Retourne un Set des termes anglais (en minuscules).
- */
-function parseDictionary(txt) {
-  const terms = new Set();
-  const lines = txt.split('\n');
-
-  for (const line of lines) {
-    // Lignes de type : | terme anglais | traduction |
-    const match = line.match(/^\|\s*([a-zA-Z][a-zA-Z ()-]*?)\s*\|\s*(.+?)\s*\|$/);
-    if (match) {
-      const term = match[1].trim().toLowerCase();
-      // Ignore les en-têtes du tableau
-      if (term === 'terme anglais' || term.startsWith('_')) continue;
-      terms.add(term);
-    }
-  }
-
-  return terms;
-}
-
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function slugify(str) {
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
 // ─── Extraction du texte documentaire ──────────────────────────────────────
@@ -298,7 +215,7 @@ function findXmlFiles(dir) {
 
 // ─── Main ──────────────────────────────────────────────────────────────────
 
-const rules = parseTraductions();
+const rules = parseRules();
 
 const args = process.argv.slice(2);
 const files = args.length > 0
