@@ -1,0 +1,28 @@
+name: "Check style"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  check-style:
+    name: "TRADUCTIONS.txt"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: "Get changed XML files"
+        id: changed
+        run: |
+          files=$(git diff --name-only --diff-filter=ACMR ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} -- '*.xml' | tr '\n' ' ')
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+
+      - name: "Check style rules"
+        if: steps.changed.outputs.files != ''
+        run: node .github/scripts/check-style-fr.mjs ${{ steps.changed.outputs.files }}
