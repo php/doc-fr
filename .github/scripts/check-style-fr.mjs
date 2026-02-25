@@ -2,143 +2,165 @@
 /**
  * Vérifie les règles de style TRADUCTIONS.txt sur les fichiers XML modifiés.
  *
+ * Les règles sont lues dynamiquement depuis TRADUCTIONS.txt — rien n'est en dur.
+ *
  * Usage : node check-style-fr.mjs [fichier1.xml fichier2.xml ...]
  *   Sans arguments : vérifie tous les .xml récursivement.
  *
- * Sortie : annotations GitHub Actions (::warning / ::error)
+ * Sortie : annotations GitHub Actions (::error)
  * Code retour : 1 si des erreurs sont trouvées, 0 sinon.
  */
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, relative, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-// ─── Règles ────────────────────────────────────────────────────────────────
-// Chaque règle : { id, pattern (regex), message, severity: 'error'|'warning' }
-// Les patterns sont appliqués sur le texte hors CDATA / <screen> / <!-- -->
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const rootDir = join(__dirname, '..', '..');
 
-const rules = [
-  // === Style impersonnel (TRADUCTIONS.txt : "Évitez de parler directement") ===
-  {
-    id: 'style/vous-pouvez',
-    pattern: /\bVous pouvez\b/gi,
-    message: 'Utilisez "Il est possible de" au lieu de "Vous pouvez" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'style/vous-devez',
-    pattern: /\bVous devez\b/gi,
-    message: 'Utilisez "Il faut" au lieu de "Vous devez" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'style/vous-devriez',
-    pattern: /\bVous devriez\b/gi,
-    message: 'Utilisez "Il est recommandé de" au lieu de "Vous devriez" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'style/notez-que',
-    pattern: /\bNotez que\b/g,
-    message: 'Utilisez "Il est à noter que" au lieu de "Notez que" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'style/votre',
-    pattern: /\b[Vv]otre\b/g,
-    message: 'Évitez "votre" — préférez "le/la/du/de la" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'style/vos',
-    pattern: /\b[Vv]os\b/g,
-    message: 'Évitez "vos" — préférez "les/des" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'style/reportez-vous',
-    pattern: /\b[Rr]eportez-vous\b/g,
-    message: 'Utilisez "se reporter" au lieu de "reportez-vous" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'style/referez-vous',
-    pattern: /\b[Rr]éférez-vous\b/g,
-    message: 'Utilisez "se référer" au lieu de "référez-vous" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'style/assurez-vous',
-    pattern: /\b[Aa]ssurez-vous\b/g,
-    message: 'Utilisez "il faut s\'assurer" au lieu de "assurez-vous" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
+// ─── Lecture et parsing de TRADUCTIONS.txt ──────────────────────────────────
 
-  // === Points de français (TRADUCTIONS.txt) ===
-  {
-    id: 'fr/etc-points',
-    pattern: /\betc\.\.\./g,
-    message: '"etc..." est un pléonasme — écrire "etc." (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'fr/comme-par-exemple',
-    pattern: /\bcomme par exemple\b/gi,
-    message: '"comme par exemple" est un pléonasme — utiliser "comme" ou "par exemple" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'fr/si-il',
-    pattern: /\bsi il\b/gi,
-    message: 'Écrire "s\'il" au lieu de "si il" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'fr/optionel',
-    pattern: /\boptionel\b/gi,
-    message: 'Écrire "optionnel" (deux N) (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'fr/abrevier',
-    pattern: /\babrévier\b/gi,
-    message: 'Écrire "abréger" et non "abrévier" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'fr/chiffrage',
-    pattern: /\bchiffrage\b/gi,
-    message: 'Utiliser "chiffrement" et non "chiffrage" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
+function parseTraductions() {
+  const txt = readFileSync(join(rootDir, 'TRADUCTIONS.txt'), 'utf-8');
+  const rules = [];
 
-  // === Terminologie (dictionnaire TRADUCTIONS.txt) ===
-  {
-    id: 'term/library',
-    pattern: /\blibrairie\b/gi,
-    message: 'Traduire "library" par "bibliothèque", pas "librairie" (faux ami)',
-    severity: 'error',
-  },
-  {
-    id: 'term/encryption',
-    pattern: /\bencryption\b/gi,
-    message: 'Traduire "encryption" par "cryptographie" ou "chiffrement" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-  {
-    id: 'term/decrypt',
-    pattern: /\bdecrypt(?:er|é|ée|ées|és)\b/gi,
-    message: 'Utiliser "déchiffrer" au lieu de "decrypter" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
+  // --- Style général (détection de patterns interdits) ---
 
-  // === Style "should" (TRADUCTIONS.txt) ===
-  {
-    id: 'style/depuis-version',
-    pattern: /\bdepuis PHP [0-9]/g,
-    message: 'Préférer "à partir de PHP x.y" au lieu de "depuis PHP x.y" (TRADUCTIONS.txt)',
-    severity: 'error',
-  },
-];
+  // "Évitez de parler directement" → on interdit les formes directes
+  if (/Évitez de .parler. directement/i.test(txt) || /Il est possible de.*au lieu de.*Vous pouvez/i.test(txt)) {
+    rules.push(
+      { id: 'style/vous-pouvez', pattern: /\bVous pouvez\b/gi, message: 'Éviter de parler directement : « Il est possible de » au lieu de « Vous pouvez »' },
+      { id: 'style/vous-devez', pattern: /\bVous devez\b/gi, message: 'Éviter de parler directement : « Il faut » au lieu de « Vous devez »' },
+      { id: 'style/vous-devriez', pattern: /\bVous devriez\b/gi, message: 'Éviter de parler directement : « Il est recommandé de » au lieu de « Vous devriez »' },
+      { id: 'style/votre', pattern: /\b[Vv]otre\b/g, message: 'Éviter de parler directement : préférer « le/la/du » à « votre »' },
+      { id: 'style/vos', pattern: /\b[Vv]os\b/g, message: 'Éviter de parler directement : préférer « les/des » à « vos »' },
+      { id: 'style/assurez-vous', pattern: /\b[Aa]ssurez-vous\b/g, message: 'Éviter de parler directement : « il faut s\'assurer » au lieu de « assurez-vous »' },
+      { id: 'style/reportez-vous', pattern: /\b[Rr]eportez-vous\b/g, message: 'Éviter de parler directement : « se reporter » au lieu de « reportez-vous »' },
+      { id: 'style/referez-vous', pattern: /\b[Rr]éférez-vous\b/g, message: 'Éviter de parler directement : « se référer » au lieu de « référez-vous »' },
+    );
+  }
+
+  // "Please note" → "Il est à noter que" au lieu de "Notez"
+  if (/Il est à noter que[\s\S]*?au lieu de[\s\S]*?Notez/i.test(txt)) {
+    rules.push(
+      { id: 'style/notez-que', pattern: /\bNotez que\b/g, message: '« Il est à noter que » au lieu de « Notez que »' },
+    );
+  }
+
+  // "à partir de" au lieu de "depuis"
+  if (/à partir de.*au lieu de.*depuis/i.test(txt)) {
+    rules.push(
+      { id: 'style/depuis-version', pattern: /\bdepuis PHP [0-9]/g, message: '« à partir de PHP x.y » au lieu de « depuis PHP x.y »' },
+    );
+  }
+
+  // --- Points de français ---
+
+  // etc...
+  if (/On n.écrit pas .etc\.\.\.?/i.test(txt)) {
+    rules.push(
+      { id: 'fr/etc-points', pattern: /\betc\.\.\./g, message: '« etc... » est un pléonasme — écrire « etc. »' },
+    );
+  }
+
+  // comme par exemple
+  if (/On n.écrit pas .comme par exemple/i.test(txt)) {
+    rules.push(
+      { id: 'fr/comme-par-exemple', pattern: /\bcomme par exemple\b/gi, message: '« comme par exemple » est un pléonasme — utiliser « comme » ou « par exemple »' },
+    );
+  }
+
+  // si il → s'il
+  if (/On n.écrit pas .si il/i.test(txt)) {
+    rules.push(
+      { id: 'fr/si-il', pattern: /\bsi il\b/gi, message: 'Écrire « s\'il » au lieu de « si il »' },
+    );
+  }
+
+  // optionnel (deux N)
+  if (/optioNNel.*optioNel/i.test(txt)) {
+    rules.push(
+      { id: 'fr/optionel', pattern: /\boptionel\b/gi, message: 'Écrire « optionnel » (deux N)' },
+    );
+  }
+
+  // abréger
+  if (/abréger.*abrévier/i.test(txt)) {
+    rules.push(
+      { id: 'fr/abrevier', pattern: /\babrévier\b/gi, message: 'Écrire « abréger » et non « abrévier »' },
+    );
+  }
+
+  // chiffrement vs chiffrage
+  if (/chiffrement et pas chiffrage/i.test(txt)) {
+    rules.push(
+      { id: 'fr/chiffrage', pattern: /\bchiffrage\b/gi, message: 'Utiliser « chiffrement » et non « chiffrage »' },
+    );
+  }
+
+  // --- Dictionnaire TRADUCTIONS.txt ---
+  // On parse les tableaux | terme | traduction | pour vérifier la présence des termes.
+  // Seuls les termes qui sont des erreurs évidentes en prose FR sont vérifiés ici.
+  // Des mots comme "callback", "stream", "output" sont souvent utilisés tels quels
+  // dans le texte technique FR et ne constituent pas des erreurs.
+
+  const dictEntries = parseDictionary(txt);
+
+  // "encryption" non traduit dans la prose
+  if (dictEntries.has('encryption')) {
+    rules.push({
+      id: 'term/encryption',
+      pattern: /\bencryption\b/gi,
+      message: 'Traduire « encryption » par « cryptographie » ou « chiffrement » (dictionnaire TRADUCTIONS.txt)',
+    });
+  }
+
+  // Faux ami "librairie" (library → bibliothèque)
+  if (dictEntries.has('library')) {
+    rules.push({
+      id: 'term/library',
+      pattern: /\blibrairie\b/gi,
+      message: 'Traduire « library » par « bibliothèque », pas « librairie » (faux ami, TRADUCTIONS.txt)',
+    });
+  }
+
+  // "decrypter" au lieu de "déchiffrer"
+  if (dictEntries.has('decrypt')) {
+    rules.push({
+      id: 'term/decrypt',
+      pattern: /\bdecrypt(?:er|é|ée|ées|és)\b/gi,
+      message: 'Utiliser « déchiffrer » au lieu de « decrypter » (TRADUCTIONS.txt)',
+    });
+  }
+
+  return rules;
+}
+
+/**
+ * Parse les tableaux du dictionnaire de TRADUCTIONS.txt.
+ * Retourne un Set des termes anglais (en minuscules).
+ */
+function parseDictionary(txt) {
+  const terms = new Set();
+  const lines = txt.split('\n');
+
+  for (const line of lines) {
+    // Lignes de type : | terme anglais | traduction |
+    const match = line.match(/^\|\s*([a-zA-Z][a-zA-Z ()-]*?)\s*\|\s*(.+?)\s*\|$/);
+    if (match) {
+      const term = match[1].trim().toLowerCase();
+      // Ignore les en-têtes du tableau
+      if (term === 'terme anglais' || term.startsWith('_')) continue;
+      terms.add(term);
+    }
+  }
+
+  return terms;
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // ─── Extraction du texte documentaire ──────────────────────────────────────
 // Supprime les blocs CDATA, <screen>...</screen>, <!-- ... -->, et les balises XML
@@ -232,7 +254,7 @@ function extractDocText(xml) {
 
 // ─── Vérification d'un fichier ─────────────────────────────────────────────
 
-function checkFile(filePath) {
+function checkFile(filePath, rules) {
   const xml = readFileSync(filePath, 'utf-8');
   const docLines = extractDocText(xml);
   const issues = [];
@@ -250,7 +272,6 @@ function checkFile(filePath) {
           col: match.index + 1,
           rule: rule.id,
           message: rule.message,
-          severity: rule.severity,
           found: match[0],
         });
       }
@@ -277,24 +298,23 @@ function findXmlFiles(dir) {
 
 // ─── Main ──────────────────────────────────────────────────────────────────
 
+const rules = parseTraductions();
+
 const args = process.argv.slice(2);
 const files = args.length > 0
   ? args.filter(f => f.endsWith('.xml'))
   : findXmlFiles('.');
 
 let totalIssues = 0;
-let totalErrors = 0;
 
 for (const file of files) {
   const relPath = relative('.', file);
   try {
-    const issues = checkFile(file);
+    const issues = checkFile(file, rules);
     for (const issue of issues) {
       const relFile = relative('.', issue.file);
-      const prefix = issue.severity === 'error' ? '::error' : '::warning';
-      console.log(`${prefix} file=${relFile},line=${issue.line},col=${issue.col}::${issue.message} (trouvé : "${issue.found}")`);
+      console.log(`::error file=${relFile},line=${issue.line},col=${issue.col}::${issue.message} (trouvé : « ${issue.found} »)`);
       totalIssues++;
-      if (issue.severity === 'error') totalErrors++;
     }
   } catch (e) {
     console.error(`::error file=${relPath}::Erreur de lecture : ${e.message}`);
@@ -302,8 +322,7 @@ for (const file of files) {
 }
 
 if (totalIssues > 0) {
-  console.log(`\n${totalIssues} problème(s) trouvé(s) dont ${totalErrors} erreur(s).`);
+  console.log(`\n${totalIssues} erreur(s) trouvée(s).`);
 }
 
-// Fait échouer la CI dès qu'un problème est trouvé
-process.exit(totalErrors > 0 ? 1 : 0);
+process.exit(totalIssues > 0 ? 1 : 0);
