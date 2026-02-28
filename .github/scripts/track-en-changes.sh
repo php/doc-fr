@@ -85,6 +85,10 @@ while read -r PR; do
   NEW_LIST=""
 
   while IFS= read -r FILE; do
+    # Skip files that should not be translated (e.g. versions.xml)
+    if [[ "$FILE" == */versions.xml ]]; then
+      continue
+    fi
     if [ -f "$FILE" ]; then
       UPDATE_LIST="${UPDATE_LIST}- \`${FILE}\`"$'\n'
     elif [[ "$FILE" == *.xml ]]; then
