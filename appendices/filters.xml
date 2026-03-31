@@ -2,7 +2,7 @@
 <!-- EN-Revision: 3f1dbc451b313fb1ec8058f24c1beccf55fce316 Maintainer: yannick Status: ready -->
 <!-- Reviewed: no -->
 <appendix xml:id="filters" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
- <title>Liste des filtres standards</title>
+ <title>Liste des filtres disponibles</title>
  <para>
   Cette section contient la liste des filtres de flux, à utiliser
   avec <function>stream_filter_append</function>.
@@ -568,13 +568,13 @@ AES_CBC::decryptFile($password, "encrypted.enc", "decrypted.txt");
 class AES_CBC
 {
    protected static $KEY_SIZES = array('AES-128'=>16,'AES-192'=>24,'AES-256'=>32);
-   protected static function key_size() { return self::$KEY_SIZES['AES-128']; } //default AES-128
+   protected static function key_size() { return self::$KEY_SIZES['AES-128']; } //AES-128 par défaut
    public static function encryptFile($password, $input_stream, $aes_filename){
       $iv_size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_128, MCRYPT_MODE_CBC);
       $fin = fopen($input_stream, "rb");
       $fc = fopen($aes_filename, "wb+");
       if (!empty($fin) && !empty($fc)) {
-         fwrite($fc, str_repeat("_", 32) );//placeholder, SHA256 HMAC will go here later
+         fwrite($fc, str_repeat("_", 32) );//espace réservé, le SHA256 HMAC sera placé ici plus tard
          fwrite($fc, $hmac_salt = mcrypt_create_iv($iv_size, MCRYPT_DEV_URANDOM));
          fwrite($fc, $esalt = mcrypt_create_iv($iv_size, MCRYPT_DEV_URANDOM));
          fwrite($fc, $iv = mcrypt_create_iv($iv_size, MCRYPT_DEV_URANDOM));
@@ -588,13 +588,13 @@ class AES_CBC
             fwrite($fc, $block);
          }
          $block_size = mcrypt_get_block_size(MCRYPT_RIJNDAEL_128, MCRYPT_MODE_CBC);
-         $padding = $block_size - ($infilesize % $block_size);//$padding is a number from 1-16
-         fwrite($fc, str_repeat(chr($padding), $padding) );//perform PKCS7 padding
+         $padding = $block_size - ($infilesize % $block_size);//$padding est un nombre de 1 à 16
+         fwrite($fc, str_repeat(chr($padding), $padding) );//applique le remplissage PKCS7
          fclose($fin);
          fclose($fc);
          $hmac_raw = self::calculate_hmac_after_32bytes($password, $hmac_salt, $aes_filename);
          $fc = fopen($aes_filename, "rb+");
-         fwrite($fc, $hmac_raw);//overwrite placeholder
+         fwrite($fc, $hmac_raw);//écrase l'espace réservé
          fclose($fc);
       }
    }
@@ -606,7 +606,7 @@ class AES_CBC
       $fc = fopen($aes_filename, "rb");
       $fout = fopen($out_stream, 'wb');
       if (!empty($fout) && !empty($fc) && self::hash_equals($hmac_raw,$hmac_calc)) {
-         fread($fc, 32+$iv_size);//skip sha256 hmac and salt
+         fread($fc, 32+$iv_size);//saute le sha256 hmac et le sel
          $esalt = fread($fc, $iv_size);
          $iv    = fread($fc, $iv_size);
          $ekey = hash_pbkdf2("sha256", $password, $esalt, $it=1000, self::key_size(), $raw=true);
@@ -615,7 +615,7 @@ class AES_CBC
          while (!feof($fc)) {
             $block = fread($fc, 8192);
             if (feof($fc)) {
-               $padding = ord($block[strlen($block) - 1]);//assume PKCS7 padding
+               $padding = ord($block[strlen($block) - 1]);//suppose un remplissage PKCS7
                $block = substr($block, 0, 0-$padding);
             }
             fwrite($fout, $block);
