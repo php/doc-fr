@@ -1,39 +1,43 @@
 #!/usr/bin/env bash
 #
-# Track merged PRs in php/doc-en and create issues in doc-fr
+# Track changes in php/doc-en and create issues in doc-fr
 # for files that need translation updates.
 #
 # How it works:
-#   - Fetches PRs merged in doc-en during the last 7 days
-#   - For each PR, checks if a matching issue already exists in doc-fr
+#   - Fetches all commits on doc-en master from the last 7 days
+#   - For each commit, checks if a matching issue already exists in doc-fr
 #   - If not, creates one listing the FR files to update
 #
 # Why 7 days: the action runs daily, so 7 days gives us 6 days of margin.
 # Even if the action fails for a whole week, nothing is missed.
-# Duplicates are prevented by searching for the PR number in existing issue titles.
+# Duplicates are prevented by searching for the commit SHA (or associated PR
+# number for backward compat) in existing issue titles.
 #
 set -euo pipefail
 
 SINCE=$(date -u -d '7 days ago' '+%Y-%m-%dT%H:%M:%SZ')
-echo "Checking doc-en PRs merged since $SINCE"
+echo "Checking doc-en commits on master since $SINCE"
 
-# Fetch merged PRs from the last 7 days (max 100 per page, paginate if needed)
+# Fetch all commits on master from the last 7 days (paginate if needed)
 PAGE=1
-ALL_PRS="[]"
+ALL_SHAS=""
 while :; do
-  BATCH=$(gh api "repos/php/doc-en/pulls?state=closed&sort=updated&direction=desc&per_page=100&page=$PAGE" \
-    --jq "[.[] | select(.merged_at != null and .merged_at >= \"$SINCE\")]")
-  COUNT=$(echo "$BATCH" | jq 'length')
-  ALL_PRS=$(echo "$ALL_PRS $BATCH" | jq -s 'add')
-  echo "  Page $PAGE: $COUNT merged PR(s)"
+  BATCH=$(gh api "repos/php/doc-en/commits?sha=master&since=$SINCE&per_page=100&page=$PAGE" \
+    --jq '.[].sha' 2>/dev/null || true)
+  COUNT=$(echo "$BATCH" | grep -c . 2>/dev/null || echo "0")
+  if [ -n "$BATCH" ]; then
+    ALL_SHAS="$ALL_SHAS"$'\n'"$BATCH"
+  fi
+  echo "  Page $PAGE: $COUNT commit(s)"
   if [ "$COUNT" -lt 100 ]; then
     break
   fi
   PAGE=$((PAGE + 1))
 done
 
-TOTAL=$(echo "$ALL_PRS" | jq 'length')
-echo "Total: $TOTAL merged PR(s) in the last 7 days"
+echo "$ALL_SHAS" | sed '/^$/d' > /tmp/commits.txt
+TOTAL=$(wc -l < /tmp/commits.txt)
+echo "Total: $TOTAL commit(s) on master in the last 7 days"
 
 if [ "$TOTAL" -eq 0 ]; then
   echo "Nothing to do."
@@ -43,37 +47,52 @@ fi
 CREATED=0
 SKIPPED=0
 
-# Process each PR (write to temp file to avoid broken pipe with while loop)
-echo "$ALL_PRS" | jq -c '.[]' > /tmp/prs.jsonl
+while read -r SHA; do
+  [ -z "$SHA" ] && continue
 
-while read -r PR; do
-  PR_NUMBER=$(echo "$PR" | jq -r '.number')
-  PR_TITLE=$(echo "$PR" | jq -r '.title')
-  PR_MERGED_AT=$(echo "$PR" | jq -r '.merged_at')
-  PR_MERGE_DATE=$(echo "$PR_MERGED_AT" | cut -dT -f1)
+  SHORT_SHA=${SHA:0:7}
+
+  # Get commit info (single API call)
+  COMMIT_DATA=$(gh api "repos/php/doc-en/commits/$SHA" \
+    --jq '{msg: (.commit.message | split("\n")[0]), date: .commit.author.date, author: (.author.login // .commit.author.name), files: [.files[].filename]}' 2>/dev/null)
+  COMMIT_MSG=$(echo "$COMMIT_DATA" | jq -r '.msg')
+  COMMIT_DATE=$(echo "$COMMIT_DATA" | jq -r '.date' | cut -dT -f1)
+  COMMIT_AUTHOR=$(echo "$COMMIT_DATA" | jq -r '.author')
 
   echo ""
-  echo "PR #$PR_NUMBER: $PR_TITLE"
+  echo "Commit $SHORT_SHA by $COMMIT_AUTHOR: $COMMIT_MSG"
 
-  # Skip PRs marked with [skip-revcheck] (no translation update needed)
-  if echo "$PR_TITLE" | grep -qi '\[skip-revcheck\]'; then
+  # Skip commits marked with [skip-revcheck]
+  if echo "$COMMIT_MSG" | grep -qi '\[skip-revcheck\]'; then
     echo "  -> [skip-revcheck], skipping."
     SKIPPED=$((SKIPPED + 1))
     continue
   fi
 
-  # Deduplication: search for the doc-en PR URL in existing issues
-  EXISTING=$(gh issue list --repo "$GH_REPO" --search "\"doc-en/pull/$PR_NUMBER\"" \
+  # Deduplication: search for the full commit SHA in existing issues
+  EXISTING=$(gh issue list --repo "$GH_REPO" --search "\"$SHA\"" \
     --state all --json number --jq 'length')
   if [ "$EXISTING" -gt 0 ]; then
-    echo "  -> Issue already exists, skipping."
+    echo "  -> Issue already exists (by SHA), skipping."
     SKIPPED=$((SKIPPED + 1))
     continue
   fi
 
-  # Get files changed in this PR
-  FILES=$(gh api "repos/php/doc-en/pulls/$PR_NUMBER/files?per_page=100" \
-    --jq '.[].filename' 2>/dev/null || true)
+  # Backward compat: if commit is associated with a PR, also check by PR number
+  PR_NUMBER=$(gh api "repos/php/doc-en/commits/$SHA/pulls" \
+    --jq '.[0].number // empty' 2>/dev/null || true)
+  if [ -n "$PR_NUMBER" ]; then
+    EXISTING=$(gh issue list --repo "$GH_REPO" --search "\"doc-en/pull/$PR_NUMBER\"" \
+      --state all --json number --jq 'length')
+    if [ "$EXISTING" -gt 0 ]; then
+      echo "  -> Issue already exists (by PR #$PR_NUMBER), skipping."
+      SKIPPED=$((SKIPPED + 1))
+      continue
+    fi
+  fi
+
+  # Get files changed in this commit
+  FILES=$(echo "$COMMIT_DATA" | jq -r '.files[]')
 
   if [ -z "$FILES" ]; then
     echo "  -> No files found, skipping."
@@ -85,7 +104,6 @@ while read -r PR; do
   NEW_LIST=""
 
   while IFS= read -r FILE; do
-    # Skip files that should not be translated (e.g. versions.xml)
     if [[ "$FILE" == */versions.xml ]]; then
       continue
     fi
@@ -102,8 +120,11 @@ while read -r PR; do
     continue
   fi
 
-  # Build issue body
-  BODY="PR: \`https://github.com/php/doc-en/pull/$PR_NUMBER\` ($PR_MERGE_DATE)"$'\n'
+  # Build issue body (URLs in backticks to avoid crosslinks)
+  BODY="Commit: \`https://github.com/php/doc-en/commit/$SHA\`"$'\n'
+  if [ -n "$PR_NUMBER" ]; then
+    BODY+="PR: \`https://github.com/php/doc-en/pull/$PR_NUMBER\`"$'\n'
+  fi
 
   if [ -n "$UPDATE_LIST" ]; then
     BODY+=$'\n'"**Fichiers FR à mettre à jour**"$'\n'
@@ -116,7 +137,7 @@ while read -r PR; do
   fi
 
   # Create the issue
-  ISSUE_TITLE="[Sync EN] $PR_TITLE"
+  ISSUE_TITLE="[Sync EN] $COMMIT_MSG"
   echo "$BODY" | gh issue create \
     --repo "$GH_REPO" \
     --title "$ISSUE_TITLE" \
@@ -125,7 +146,7 @@ while read -r PR; do
 
   echo "  -> Issue created."
   CREATED=$((CREATED + 1))
-done < /tmp/prs.jsonl
+done < /tmp/commits.txt
 
 echo ""
-echo "Done. Created: $CREATED, Skipped (already exist): $SKIPPED"
+echo "Done. Created: $CREATED, Skipped: $SKIPPED"
