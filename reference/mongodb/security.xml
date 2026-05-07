@@ -1,55 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 3e871fe7eab38f9b0398569c57a1dd0c21e69652 Maintainer: Fan2Shrek Status: ready -->
+<!-- EN-Revision: 9f4cb232d01a06077a2324e38f767d63f87f2e5f Maintainer: lacatoire Status: ready -->
 <!-- Reviewed: yes -->
 <chapter xml:id="mongodb.security" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Sécurité</title>
 
  <section xml:id="mongodb.security.request_injection">
   <title>Attaques par injection de requêtes</title>
-  <para>
+  <simpara>
    Si on passe des paramètres <literal>$_GET</literal> (ou <literal>$_POST</literal>)
    aux requêtes, il faut s'assurer de convertir en chaînes de caractères avant.
    Les utilisateurs peuvent insérer des tableaux associatifs dans les requêtes
    GET et POST, qui pourraient alors devenir des requêtes $ indésirables.
-  </para>
+  </simpara>
 
-  <para>
+  <simpara>
    Un exemple assez anodin : supposez qu'on cherche les informations d'un
    utilisateur avec la requête <emphasis>http://www.example.com?username=bob</emphasis>.
    L'application crée la requête
    <literal>$q = new \MongoDB\Driver\Query( [ 'username' => $_GET['username'] ])</literal>.
-  </para>
+  </simpara>
 
-  <para>
+  <simpara>
    Cela fonctionne bien, mais quelqu'un pourrait subvertir cela en passant
    <emphasis>http://www.example.com?username[$ne]=foo</emphasis>, que PHP
    transformera magiquement en un tableau associatif, transformant le requête en
    <literal>$q = new \MongoDB\Driver\Query( [ 'username' => [ '$ne' => 'foo' ] ] )</literal>,
    qui renverra tous les utilisateurs dont le nom n'est pas "foo" (tous les utilisateurs, probablement).
-  </para>
+  </simpara>
 
-  <para>
+  <simpara>
    C'est une attaque assez facile à contrer : il faut s'assurer que les paramètres
    <literal>$_GET</literal> et <literal>$_POST</literal> sont du type attendu
    avant d'envoyer à la base de données. PHP dispose de la fonction
    <function>filter_var</function> pour aider.
-  </para>
+  </simpara>
 
-  <para>
+  <simpara>
    À noter que ce type d'attaque peut être utilisé avec n'importe quelle interaction
    avec la base de données qui localise un document, y compris les mises à jour,
    les upserts, les suppressions et les commandes findAndModify.
-  </para>
+  </simpara>
 
-  <para>
+  <simpara>
    Voir <link xlink:href="&url.mongodb.dochub.security;">la documentation principale</link>
    pour plus d'informations sur les problèmes de type injection SQL avec MongoDB.
-  </para>
+  </simpara>
  </section>
 
  <section xml:id="mongodb.security.script_injection">
   <title>Attaque par injection de scripts</title>
-  <para>
+  <simpara>
    Lors de l'utilisation de JavaScript, il faut s'assurer que toutes les variables qui
    traversent la frontière PHP-JavaScript sont passées dans le champ
    <literal>scope</literal> de <classname>MongoDB\BSON\Javascript</classname>,
@@ -57,11 +57,11 @@
    on utilise des clauses <literal>$where</literal> dans les requêtes, les
    commandes mapReduce et group, et à tout autre moment où il est possible de passer
    du JavaScript à la base de données.
-  </para>
-  <para>
+  </simpara>
+  <simpara>
    Par exemple, supposons que nous avons un JavaScript pour saluer un utilisateur
    dans les logs de la base de données. Nous pourrions faire :
-  </para>
+  </simpara>
   <programlisting role="php">
 <![CDATA[
 <?php
@@ -78,9 +78,9 @@ $r = $m->executeCommand( 'dramio', $cmd );
 ?>
 ]]>
   </programlisting>
-  <para>
+  <simpara>
    Cependant, que se passe-t-il si un utilisateur malveillant passe du JavaScript ?
-  </para>
+  </simpara>
   <programlisting role="php">
 <![CDATA[
 <?php
@@ -98,12 +98,12 @@ $r = $m->executeCommand( 'dramio', $cmd );
 ?>
 ]]>
   </programlisting>
-  <para>
+  <simpara>
    Maintenant MongoDB exécute la chaîne JavaScript
    <literal>"print('Hello, '); db.users.drop(); print('!');"</literal>.
    Cette attaque est facile à éviter : utiliser <literal>args</literal> pour passer
    des variables de PHP à JavaScript :
-  </para>
+  </simpara>
   <programlisting role="php">
 <![CDATA[
 <?php
@@ -121,31 +121,31 @@ $r = $m->executeCommand( 'dramio', $cmd );
 ?>
 ]]>
   </programlisting>
-  <para>
+  <simpara>
    Cela ajoute un argument à la portée JavaScript, qui est utilisé comme argument
    pour la fonction <literal>greet</literal>. Maintenant si
    quelqu'un essaie d'envoyer du code malveillant, MongoDB imprimera inoffensivement
    <literal>Hello, '); db.dropDatabase(); print('!</literal>.
-  </para>
+  </simpara>
 
-  <para>
+  <simpara>
    Utiliser des arguments aide à empêcher l'exécution d'entrées malveillantes par
    la base de données. Cependant, il faut s'assurer que le code ne
    retourne pas et n'exécute pas l'entrée de toute façon ! Il est préférable
    d'éviter d'exécuter <emphasis>quelconque</emphasis> JavaScript sur le serveur
    en premier lieu.
-  </para>
+  </simpara>
 
-  <para>
+  <simpara>
    Il est recommandé de rester à l'écart de la clause <link
    xlink:href="&url.mongodb.docs;reference/operator/query/where/#considerations">$where</link>
    dans les requêtes, car elle impacte significativement les performances. Dans
    la mesure du possible, utiliser soit des opérateurs de requête normaux, soit
    le <link xlink:href="&url.mongodb.docs;core/aggregation-pipeline">Framework
    d'agrégation</link>.
-  </para>
+  </simpara>
 
-  <para>
+  <simpara>
    Une alternative à <link
    xlink:href="&url.mongodb.dochub.mapreduce;">MapReduce</link>, qui utilise
    JavaScript, est le <link
@@ -153,13 +153,13 @@ $r = $m->executeCommand( 'dramio', $cmd );
    d'agrégation</link>. Contrairement à Map/Reduce, il utilise un langage
    idiomatique pour construire des requêtes, sans avoir à écrire et utiliser
    l'approche JavaScript plus lente que Map/Reduce nécessite.
-  </para>
+  </simpara>
 
-  <para>
+  <simpara>
    La <link
     xlink:href="&url.mongodb.docs;reference/command/eval/">commande eval</link>
     a été dépréciée depuis MongoDB 3.0, et devrait également être évitée.
-  </para>
+  </simpara>
  </section>
 </chapter>
 
