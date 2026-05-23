@@ -46,15 +46,24 @@ fi
 
 CREATED=0
 SKIPPED=0
+FAILED=0
 
 while read -r SHA; do
   [ -z "$SHA" ] && continue
 
   SHORT_SHA=${SHA:0:7}
 
-  # Get commit info (single API call)
+  # Get commit info (single API call). A transient failure here must skip this
+  # commit, not abort the whole run (set -e would otherwise exit on the failing
+  # command substitution): the commit is picked up on the next run.
   COMMIT_DATA=$(gh api "repos/php/doc-en/commits/$SHA" \
-    --jq '{msg: (.commit.message | split("\n")[0]), date: .commit.author.date, author: (.author.login // .commit.author.name), files: [.files[].filename]}' 2>/dev/null)
+    --jq '{msg: (.commit.message | split("\n")[0]), date: .commit.author.date, author: (.author.login // .commit.author.name), files: [.files[].filename]}' 2>/dev/null || true)
+  if [ -z "$COMMIT_DATA" ]; then
+    echo ""
+    echo "Commit $SHORT_SHA: metadata fetch failed, will retry on the next run."
+    FAILED=$((FAILED + 1))
+    continue
+  fi
   COMMIT_MSG=$(echo "$COMMIT_DATA" | jq -r '.msg')
   COMMIT_DATE=$(echo "$COMMIT_DATA" | jq -r '.date' | cut -dT -f1)
   COMMIT_AUTHOR=$(echo "$COMMIT_DATA" | jq -r '.author')
@@ -69,9 +78,16 @@ while read -r SHA; do
     continue
   fi
 
-  # Deduplication: search for the full commit SHA in existing issues
+  # Deduplication: search for the full commit SHA in existing issues.
+  # If the lookup itself fails, skip this commit rather than create a possible
+  # duplicate on unknown state (and rather than abort the whole run).
   EXISTING=$(gh issue list --repo "$GH_REPO" --search "\"$SHA\"" \
-    --state all --json number --jq 'length')
+    --state all --json number --jq 'length' 2>/dev/null || true)
+  if ! [[ "$EXISTING" =~ ^[0-9]+$ ]]; then
+    echo "  -> dedup lookup failed for $SHORT_SHA, will retry on the next run."
+    FAILED=$((FAILED + 1))
+    continue
+  fi
   if [ "$EXISTING" -gt 0 ]; then
     echo "  -> Issue already exists (by SHA), skipping."
     SKIPPED=$((SKIPPED + 1))
@@ -83,7 +99,12 @@ while read -r SHA; do
     --jq '.[0].number // empty' 2>/dev/null || true)
   if [ -n "$PR_NUMBER" ]; then
     EXISTING=$(gh issue list --repo "$GH_REPO" --search "\"doc-en/pull/$PR_NUMBER\"" \
-      --state all --json number --jq 'length')
+      --state all --json number --jq 'length' 2>/dev/null || true)
+    if ! [[ "$EXISTING" =~ ^[0-9]+$ ]]; then
+      echo "  -> dedup lookup failed for $SHORT_SHA, will retry on the next run."
+      FAILED=$((FAILED + 1))
+      continue
+    fi
     if [ "$EXISTING" -gt 0 ]; then
       echo "  -> Issue already exists (by PR #$PR_NUMBER), skipping."
       SKIPPED=$((SKIPPED + 1))
@@ -136,17 +157,33 @@ while read -r SHA; do
     BODY+="$NEW_LIST"
   fi
 
-  # Create the issue
+  # Create the issue with a single REST POST. Using the API directly avoids the
+  # label-name pre-fetch that "gh issue create --label" performs before posting;
+  # that pre-fetch is the call that failed with a transient 401. The write is not
+  # retried in-process (a retry could create a duplicate if a POST succeeded
+  # server-side but reported an error): a single failure does not abort the run,
+  # and the commit is picked up on the next daily run thanks to the 7-day window
+  # and the SHA-based dedup.
   ISSUE_TITLE="[Sync EN] $COMMIT_MSG"
-  echo "$BODY" | gh issue create \
-    --repo "$GH_REPO" \
-    --title "$ISSUE_TITLE" \
-    --label "sync-en" \
-    --body-file -
-
-  echo "  -> Issue created."
-  CREATED=$((CREATED + 1))
+  if gh api "repos/$GH_REPO/issues" \
+      --method POST \
+      -f "title=$ISSUE_TITLE" \
+      -f "body=$BODY" \
+      -f "labels[]=sync-en" \
+      --jq '.html_url'; then
+    echo "  -> Issue created."
+    CREATED=$((CREATED + 1))
+  else
+    echo "  -> Issue creation failed for $SHORT_SHA, will retry on the next run."
+    FAILED=$((FAILED + 1))
+  fi
 done < /tmp/commits.txt
 
 echo ""
-echo "Done. Created: $CREATED, Skipped: $SKIPPED"
+echo "Done. Created: $CREATED, Skipped: $SKIPPED, Failed: $FAILED"
+
+# Surface failures so the run is visibly red, while still having processed
+# every commit (the failed ones are recreated on the next run).
+if [ "$FAILED" -gt 0 ]; then
+  exit 1
+fi
