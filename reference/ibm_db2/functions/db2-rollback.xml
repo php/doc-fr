@@ -17,11 +17,11 @@
   </methodsynopsis>
 
   <simpara>
-   Annule une transaction en cours sur la connexion spécifiée et commence une
-   nouvelle transaction. Les applications PHP ont normalement
-   pour valeur par défaut AUTOCOMMIT d'activé, alors
-   <function>db2_commit</function> n'est pas nécessaire tant que AUTOCOMMIT
-   n'est pas désactivée pour la ressource de connexion.
+   Annule une transaction en cours sur la ressource de connexion spécifiée et
+   commence une nouvelle transaction. Les applications PHP utilisent normalement
+   le mode AUTOCOMMIT par défaut, donc <function>db2_rollback</function>
+   n'a normalement aucun effet tant que AUTOCOMMIT n'a pas été désactivé pour
+   la ressource de connexion.
   </simpara>
 
  </refsect1>
@@ -29,17 +29,16 @@
   &reftitle.parameters;
   <variablelist>
    <varlistentry>
-   <term><parameter>connection</parameter></term>
+    <term><parameter>connection</parameter></term>
     <listitem>
      <simpara>
-      Une variable ressource de connexion valide retournée par
+      Une variable ressource de connexion à la base de données valide retournée par
       <function>db2_connect</function> ou <function>db2_pconnect</function>.
      </simpara>
     </listitem>
    </varlistentry>
   </variablelist>
  </refsect1>
-
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <simpara>
@@ -50,17 +49,17 @@
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>Annulation d'une requête DELETE</title>
+   <title>Annulation d'une instruction DELETE</title>
    <simpara>
-    Dans l'exemple suivant, nous comptons le nombre de ligne dans la table,
-    désactivons le mode AUTOCOMMIT sur la connexion de la base de données,
-    supprimons toutes les lignes dans la table et retournons le nombre
-    &zero; pour prouver que les lignes ont bien été supprimées.
-    Ensuite nous utilisons la fonction <function>db2_rollback</function> et
-    retournons la nouvelle valeur du nombre de ligne dans la table pour
-    montrer que le nombre est le même que celui que nous avions avant d'effectuer la
-    requête DELETE. Le retour à l'état original de la table démontre que
-    l'annulation de la transaction a réussi.
+    Dans l'exemple suivant, le nombre de lignes dans une table est compté,
+    le mode AUTOCOMMIT est désactivé sur une connexion de base de données,
+    toutes les lignes de la table sont supprimées et le compteur retourne
+    <literal>0</literal> pour prouver que les lignes ont bien été supprimées.
+    Ensuite, <function>db2_rollback</function> est invoquée, et le nombre
+    de lignes mis à jour dans la table est retourné pour montrer que le nombre
+    est le même qu'avant l'exécution de l'instruction DELETE. Le retour à
+    l'état original de la table démontre que l'annulation de la transaction
+    a réussi.
    </simpara>
    <programlisting role="php">
 <![CDATA[
@@ -68,24 +67,24 @@
 $conn = db2_connect($database, $user, $password);
 
 if ($conn) {
-    $stmt = db2_exec($conn, "SELECT count(*) FROM animaux");
+    $stmt = db2_exec($conn, "SELECT count(*) FROM animals");
     $res = db2_fetch_array( $stmt );
     echo $res[0] . "\n";
 
     // Désactive AUTOCOMMIT
     db2_autocommit($conn, DB2_AUTOCOMMIT_OFF);
 
-    // Suppression de toutes les lignes de ANIMAUX
+    // Supprime toutes les lignes de ANIMALS
     db2_exec($conn, "DELETE FROM animals");
 
-    $stmt = db2_exec($conn, "SELECT count(*) FROM animaux");
+    $stmt = db2_exec($conn, "SELECT count(*) FROM animals");
     $res = db2_fetch_array( $stmt );
     echo $res[0] . "\n";
 
-    // Annule la requête DELETE
+    // Annule l'instruction DELETE
     db2_rollback( $conn );
 
-    $stmt = db2_exec( $conn, "SELECT count(*) FROM animaux" );
+    $stmt = db2_exec( $conn, "SELECT count(*) FROM animals" );
     $res = db2_fetch_array( $stmt );
     echo $res[0] . "\n";
     db2_close($conn);

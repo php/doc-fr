@@ -23,11 +23,11 @@
   </methodsynopsis>
 
   <simpara>
-   Associe une variable PHP à un paramètre dans la requête SQL
-   retournée par <function>db2_prepare</function>. Cette fonction donne
-   plus de contrôle sur les types des paramètres, les types des données, la
-   précision, et l'échelle pour le paramètre qu'en lui passant simplement une
-   variable à l'intérieur du tableau d'entrée optionnel de la fonction
+   Associe une variable PHP à un paramètre d'une requête SQL dans une
+   ressource de requête retournée par <function>db2_prepare</function>. Cette
+   fonction donne plus de contrôle sur le type de paramètre, le type de
+   données, la précision et l'échelle du paramètre que le simple fait de
+   passer la variable comme élément du tableau d'entrée optionnel de
    <function>db2_execute</function>.
   </simpara>
 
@@ -81,9 +81,8 @@
     <term><parameter>data_type</parameter></term>
     <listitem>
      <simpara>
-      Une constante spécifiant le type de données SQL que la variable PHP
-      devrait être associée. Le paramètre doit prendre une des valeurs
-      suivantes : <constant>DB2_BINARY</constant>,
+      Une constante spécifiant le type de données SQL auquel la variable PHP
+      devrait être associée : l'une des valeurs <constant>DB2_BINARY</constant>,
       <constant>DB2_CHAR</constant>, <constant>DB2_DOUBLE</constant> ou
       <constant>DB2_LONG</constant>.
      </simpara>
@@ -96,7 +95,7 @@
       Spécifie la précision à laquelle la variable devrait être associée à
       la base de données. Ce paramètre peut également être utilisé pour
       récupérer des valeurs de sortie XML pour les procédures stockées.
-      Une valeur non-négative spécifie la taille maximale des données XML
+      Une valeur non négative spécifie la taille maximale des données XML
       qui seront récupérées depuis la base de données. Si ce paramètre n'est
       pas utilisé, une taille par défaut de 1 Mo sera définie pour récupérer
       les valeurs de sortie XML depuis la procédure stockée.
@@ -128,22 +127,23 @@
     <title>Association de variables PHP à une requête préparée</title>
     <simpara>
      La requête SQL dans l'exemple suivant utilise deux paramètres d'entrée
-     dans la section WHERE. Nous appelons <function>db2_bind_param</function>
-     pour associer deux variables qui n'ont pas été déclarées ou assignées
-     avant l'appel de <function>db2_bind_param</function>; dans cet exemple,
-     <literal>$lower_limit</literal> est assignée avant d'être appelée à
+     dans la clause WHERE. Nous appelons <function>db2_bind_param</function>
+     pour associer deux variables PHP aux paramètres SQL correspondants. Il
+     est à noter que les variables PHP n'ont pas besoin d'être déclarées ou
+     assignées avant l'appel à <function>db2_bind_param</function> ; dans cet
+     exemple, <literal>$lower_limit</literal> est assignée avant l'appel à
      <function>db2_bind_param</function>, mais <literal>$upper_limit</literal>
-     est assignée après l'appel de <function>db2_bind_param</function>. Les
-     variables doivent être associées et, pour les paramètres qui acceptent les
-     entrées, nous devons leur assigner une valeur avant d'appeler
+     est assignée après l'appel à <function>db2_bind_param</function>. Les
+     variables doivent être associées et, pour les paramètres qui acceptent
+     une entrée, une valeur doit leur être assignée, avant d'appeler
      <function>db2_execute</function>.
     </simpara>
     <programlisting role="php">
 <![CDATA[
 <?php
 
-$sql = 'SELECT nom, race, poids FROM animaux
-    WHERE poids > ? AND poids < ?';
+$sql = 'SELECT name, breed, weight FROM animals
+    WHERE weight > ? AND weight < ?';
 $conn = db2_connect($database, $user, $password);
 $stmt = db2_prepare($conn, $sql);
 
@@ -167,17 +167,17 @@ if (db2_execute($stmt)) {
     &example.outputs;
     <screen>
 <![CDATA[
-Pook, chat, 3.2
-Rickety Ride, chèvre, 9.7
-Peaches, chien, 12.3
+Pook, cat, 3.2
+Rickety Ride, goat, 9.7
+Peaches, dog, 12.3
 ]]>
     </screen>
    </example>
    <example>
-    <title>Appel de procédures d'enregistrement avec les paramètres IN et OUT</title>
+    <title>Appel de procédures stockées avec des paramètres IN et OUT</title>
     <para>
-     La procédure d'enregistrement concorde_animal dans l'exemple suivant
-     accepte trois différents paramètres :
+     La procédure stockée match_animal dans l'exemple suivant accepte trois
+     paramètres différents :
      <orderedlist>
       <listitem>
        <simpara>
@@ -188,8 +188,8 @@ Peaches, chien, 12.3
       <listitem>
        <simpara>
         un paramètre d'entrée-sortie (INOUT) qui accepte le nom du second
-        animal en entrée et retourne une &string; &true; si un
-        animal dans la base de données correspond à ce nom
+        animal en entrée et retourne la chaîne <literal>TRUE</literal> si un
+        animal de la base de données correspond à ce nom
        </simpara>
       </listitem>
       <listitem>
@@ -199,34 +199,33 @@ Peaches, chien, 12.3
        </simpara>
       </listitem>
      </orderedlist>
-     De plus, la procédure d'enregistrement retourne un jeu de résultats
-     contenant les animaux listés en ordre alphabétique en commençant avec
-     l'animal correspondant à la valeur d'entrée du premier paramètre et en
-     terminant avec l'animal correspondant à la valeur d'entrée du deuxième
-     paramètre.
+     De plus, la procédure stockée retourne un jeu de résultats contenant les
+     animaux listés par ordre alphabétique, en commençant par l'animal
+     correspondant à la valeur d'entrée du premier paramètre et en terminant
+     par l'animal correspondant à la valeur d'entrée du second paramètre.
     </para>
     <programlisting role="php">
 <![CDATA[
 <?php
 
-$sql = 'CALL concorde_animal(?, ?, ?)';
+$sql = 'CALL match_animal(?, ?, ?)';
 $conn = db2_connect($database, $user, $password);
 $stmt = db2_prepare($conn, $sql);
 
-$nom = "Peaches";
-$second_nom = "Rickety Ride";
-$poids = 0;
+$name = "Peaches";
+$second_name = "Rickety Ride";
+$weight = 0;
 
-db2_bind_param($stmt, 1, "nom", DB2_PARAM_IN);
-db2_bind_param($stmt, 2, "second_nom", DB2_PARAM_INOUT);
-db2_bind_param($stmt, 3, "poids", DB2_PARAM_OUT);
+db2_bind_param($stmt, 1, "name", DB2_PARAM_IN);
+db2_bind_param($stmt, 2, "second_name", DB2_PARAM_INOUT);
+db2_bind_param($stmt, 3, "weight", DB2_PARAM_OUT);
 
-print "Valeurs des paramètres _avant_ CALL :\n";
-print "  1: {$nom} 2: {$second_nom} 3: {$poids}\n\n";
+print "Valeurs des paramètres associés _avant_ CALL :\n";
+print "  1: {$name} 2: {$second_name} 3: {$weight}\n\n";
 
 if (db2_execute($stmt)) {
-    print "Valeurs des paramètres _après_ CALL :\n";
-    print "  1: {$nom} 2: {$second_nom} 3: {$poids}\n\n";
+    print "Valeurs des paramètres associés _après_ CALL :\n";
+    print "  1: {$name} 2: {$second_name} 3: {$weight}\n\n";
 
     print "Résultats :\n";
     while ($row = db2_fetch_array($stmt)) {
@@ -239,16 +238,16 @@ if (db2_execute($stmt)) {
     &example.outputs;
     <screen>
 <![CDATA[
-Valeurs des paramètres _avant_ CALL :
+Valeurs des paramètres associés _avant_ CALL :
   1: Peaches 2: Rickety Ride 3: 0
 
-Valeurs des paramètres _après_ CALL :
+Valeurs des paramètres associés _après_ CALL :
   1: Peaches 2: TRUE 3: 22
 
 Résultats :
-  Peaches, chien, 12.3
-  Pook, chat, 3.2
-  Rickety Ride, chèvre, 9.7
+  Peaches, dog, 12.3
+  Pook, cat, 3.2
+  Rickety Ride, goat, 9.7
 ]]>
     </screen>
    </example>
@@ -266,7 +265,7 @@ Résultats :
     <programlisting role="php">
 <![CDATA[
 <?php
-$stmt = db2_prepare($conn, "INSERT INTO animal_pictures(photo) VALUES (?)");
+$stmt = db2_prepare($conn, "INSERT INTO animal_pictures(picture) VALUES (?)");
 
 $picture = "/opt/albums/spook/grooming.jpg";
 $rc = db2_bind_param($stmt, 1, "picture", DB2_PARAM_FILE);
