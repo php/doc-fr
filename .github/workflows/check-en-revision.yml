@@ -1,0 +1,47 @@
+# https://docs.github.com/en/actions
+# Vérifie que le commentaire EN-Revision des fichiers .xml touchés par une PR
+# pointe le dernier commit doc-en du fichier. Émet une annotation ::error et
+# échoue si le hash est absent, faux, d'un autre fichier, ou en retard.
+
+name: "Structure"
+
+on:
+  pull_request:
+    branches: ["master"]
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  revision:
+    name: "Check EN-Revision"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout php/doc-fr"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Checkout php/doc-en"
+        uses: actions/checkout@v4
+        with:
+          path: en
+          repository: php/doc-en
+          fetch-depth: 0
+
+      - name: "Check EN-Revision"
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          git fetch --no-tags --depth=1 origin "$BASE"
+          fail=0
+          while IFS= read -r f; do
+            [ -f "$f" ] && [ -f "en/$f" ] || continue
+            declared=$(grep -oiP 'EN-Revision:\s*\K[0-9a-f]+' "$f" | head -1 || true)
+            latest=$(git -C en log -1 --format=%H -- "$f")
+            if [ "$declared" != "$latest" ]; then
+              echo "::error file=$f::EN-Revision ${declared:-absent} != dernier commit doc-en $latest"
+              fail=1
+            fi
+          done < <(git diff --name-only "$BASE"...HEAD -- '*.xml')
+          exit $fail
