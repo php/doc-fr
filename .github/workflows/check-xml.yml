@@ -1,0 +1,39 @@
+# https://docs.github.com/en/actions
+# Vérifie que l'ossature des blocs des fichiers .xml touchés par une PR reste un
+# miroir de doc-en. Chaque fichier est comparé au doc-en à la révision qu'il dit
+# mirrorer (EN-Revision), donc un fichier en retard ne produit pas de faux
+# positif. Le script émet ses annotations ::error lui-même.
+
+name: "Structure"
+
+on:
+  pull_request:
+    branches: ["master"]
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  structure:
+    name: "Check XML"
+    runs-on: ubuntu-22.04
+    steps:
+      - name: "Checkout php/doc-fr"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: "Checkout php/doc-en"
+        uses: actions/checkout@v4
+        with:
+          path: en
+          repository: php/doc-en
+          fetch-depth: 0
+
+      - name: "Check structure"
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          git fetch --no-tags --depth=1 origin "$BASE"
+          git diff --name-only "$BASE"...HEAD -- '*.xml' \
+            | php8.1 .github/scripts/check-structure.php
