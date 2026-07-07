@@ -1,22 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: acb474ea92ab6226eaf419a85de05f68c6715a9f Maintainer: lacatoire Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 28192e830f2c204570cc140c24341d07807df8bc Maintainer: lacatoire Status: ready -->
 <refentry xml:id="function.pcntl-setqos-class" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>pcntl_setqos_class</refname>
-  <refpurpose>Définit la classe de qualité de service du processus</refpurpose>
+  <refpurpose>Définit la classe de QoS du thread courant</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
    <type>void</type><methodname>pcntl_setqos_class</methodname>
-   <methodparam choice="opt"><type>Pcntl\QosClass</type><parameter>qos_class</parameter><initializer>Pcntl\QosClass::Default</initializer></methodparam>
+   <methodparam choice="opt"><type>Pcntl\QosClass</type><parameter>qos_class</parameter><initializer><constant>Pcntl\QosClass::Default</constant></initializer></methodparam>
   </methodsynopsis>
   <simpara>
-   Définit la classe de qualité de service (<acronym>QoS</acronym>) du processus appelant.
-   Cette fonction n'est disponible que sur macOS, qui utilise les classes <acronym>QoS</acronym> pour
-   gérer l'efficacité énergétique et les performances.
+   Définit la classe de qualité de service (<acronym>QoS</acronym>) du thread
+   courant.
   </simpara>
  </refsect1>
 
@@ -27,19 +25,75 @@
     <term><parameter>qos_class</parameter></term>
     <listitem>
      <simpara>
-      La classe <acronym>QoS</acronym> à définir. Doit être l'une des
-      valeurs de l'énumération <classname>Pcntl\QosClass</classname> :
+      La classe de qualité de service à assigner au thread courant. Le système
+      d'exploitation l'utilise comme une indication pour planifier le temps
+      <acronym>CPU</acronym>, la priorité d'<acronym>E/S</acronym> et la
+      consommation d'énergie, les classes supérieures étant prioritaires sur
+      les inférieures. Voir <enumname>Pcntl\QosClass</enumname> pour les cas
+      disponibles.
      </simpara>
-     <simplelist>
-      <member><literal>Pcntl\QosClass::UserInteractive</literal></member>
-      <member><literal>Pcntl\QosClass::UserInitiated</literal></member>
-      <member><literal>Pcntl\QosClass::Default</literal></member>
-      <member><literal>Pcntl\QosClass::Utility</literal></member>
-      <member><literal>Pcntl\QosClass::Background</literal></member>
-     </simplelist>
+     <variablelist>
+      <varlistentry>
+       <term><constant>Pcntl\QosClass::UserInteractive</constant></term>
+       <listitem>
+        <simpara>
+         Priorité la plus élevée. Destinée au travail qui pilote directement une
+         interface utilisateur et qui doit s'achever quasiment instantanément
+         pour éviter tout délai perçu, comme la gestion d'événements ou le
+         dessin.
+        </simpara>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term><constant>Pcntl\QosClass::UserInitiated</constant></term>
+       <listitem>
+        <simpara>
+         Priorité élevée, juste en dessous de
+         <constant>UserInteractive</constant>. Destinée au travail que
+         l'utilisateur a explicitement initié et qu'il attend activement, censé
+         s'achever en quelques secondes.
+        </simpara>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term><constant>Pcntl\QosClass::Default</constant></term>
+       <listitem>
+        <simpara>
+         Priorité standard, utilisée lorsqu'aucune classe plus spécifique ne
+         s'applique. S'exécute après le travail de priorité supérieure mais
+         avant <constant>Utility</constant> et <constant>Background</constant>.
+        </simpara>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term><constant>Pcntl\QosClass::Utility</constant></term>
+       <listitem>
+        <simpara>
+         Priorité inférieure, destinée au travail de longue durée dont
+         l'utilisateur a conscience mais qu'il n'attend pas activement, comme
+         les téléchargements, les imports ou les calculs en masse. Planifiée de
+         manière économe en énergie.
+        </simpara>
+       </listitem>
+      </varlistentry>
+      <varlistentry>
+       <term><constant>Pcntl\QosClass::Background</constant></term>
+       <listitem>
+        <simpara>
+         Priorité la plus basse, destinée au travail dont l'utilisateur n'a pas
+         conscience, comme le préchargement, l'indexation ou la maintenance.
+         Fortement optimisée pour l'efficacité énergétique et pouvant être
+         différée lorsque le système est sous charge.
+        </simpara>
+       </listitem>
+      </varlistentry>
+     </variablelist>
     </listitem>
    </varlistentry>
   </variablelist>
+  <note>
+   <simpara>Cette fonction n'est disponible que sur les plateformes Apple.</simpara>
+  </note>
  </refsect1>
 
  <refsect1 role="returnvalues">
@@ -49,10 +103,19 @@
   </simpara>
  </refsect1>
 
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <simpara>
+   Une <exceptionname>Error</exceptionname> est levée si l'appel sous-jacent à
+   <literal>pthread_set_qos_class_self_np()</literal> échoue.
+  </simpara>
+ </refsect1>
+
  <refsect1 role="seealso">
   &reftitle.seealso;
   <simplelist>
    <member><function>pcntl_getqos_class</function></member>
+   <member><enumname>Pcntl\QosClass</enumname></member>
   </simplelist>
  </refsect1>
 
