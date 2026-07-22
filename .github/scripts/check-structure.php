@@ -27,7 +27,9 @@
 
 // Attributs qui font partie de la « structure » : on les inclut dans la
 // signature d'un élément (un role= ou un xml:id qui change = dérive).
-const STRUCTURAL_ATTRIBUTES = ['role', 'choice', 'class', 'xml:id', 'rep'];
+// href et xpointer viennent de XInclude : une cible traduite ne sélectionne
+// plus rien et casse le build, ils doivent donc être identiques à doc-en.
+const STRUCTURAL_ATTRIBUTES = ['role', 'choice', 'class', 'xml:id', 'rep', 'href', 'xpointer'];
 
 // Éléments dont le contenu est du texte (inline). On enregistre l'élément
 // lui-même mais on NE descend PAS dedans : sa prose est l'affaire du traducteur.
