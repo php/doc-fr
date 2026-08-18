@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: a0434e05111acabf2b9b2c7847e7e733f8dab0dc Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: c083c88c8e7ed7eb0d14662c0471693dcac42daf Maintainer: yannick Status: ready -->
 
 <chapter xml:id="reference.pcre.pattern.syntax" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Syntaxe des masques</title>
@@ -1684,7 +1683,12 @@
    <literal>(?&lt;name&gt;pattern)</literal> et
    <literal>(?'name'pattern)</literal>.
   </para>
-  
+  <simpara>
+   À partir de PHP 8.4.0, qui intègre PCRE2 10.44, la longueur maximale
+   d'un nom de sous-masque est de 128 caractères ; auparavant, elle était
+   de 32 caractères.
+  </simpara>
+
   <para>
    Quelques fois, il est nécessaire d'avoir plusieurs correspondances en alternant
    les sous groupes dans une expression régulière. Normalement, chacun recevra son
@@ -2071,41 +2075,28 @@
    "<literal>bar</literal>". Une assertion arrière est ici
    nécessaire.
   </para>
-  <para>
+  <simpara>
    Les <emphasis>assertions</emphasis> arrières commencent par <literal>(?&lt;=</literal>
    pour les assertions positives, et <literal>(?&lt;!</literal> pour les
    assertions négatives. Par exemple :
-   
+
    <literal>(?&lt;!foo)bar</literal>
-   
+
    trouve les occurrences de "<literal>bar</literal>" qui ne sont pas
-   précédées par "<literal>foo</literal>". Le contenu d'une référence
-   arrière est limité de telle façon que les chaînes qu'il utilise
-   soient toujours de la même taille. Cependant, lorsqu'il
-   y a plusieurs alternatives, elles n'ont pas besoin d'être
-   de la même taille. Par exemple,
-   
-   <literal>(?&lt;=bullock|donkey)</literal>
-   
-   est autorisé, tandis que
-   
+   précédées par "<literal>foo</literal>". Une assertion arrière peut
+   correspondre à des chaînes de longueur variable, jusqu'à une longueur
+   maximale définie par l'implémentation. Les alternatives de longueurs
+   différentes, telles que
+
    <literal>(?&lt;!dogs?|cats?)</literal>
-   
-   provoque une erreur de compilation. Les alternatives qui ont des
-   longueurs différentes ne sont autorisées qu'au niveau
-   supérieur des assertions arrière. C'est une
-   amélioration du fonctionnement de Perl 5.005, qui impose
-   aux alternatives d'avoir toute la même taille. Une
-   assertion telle que
-   
+
+   et les alternatives au niveau supérieur pouvant correspondre à plus d'une
+   longueur, telles que
+
    <literal>(?&lt;=ab(c|de))</literal>
-   
-   n'est pas autorisée, car l'assertion de bas niveau (la deuxième,
-   ici) a deux possibilités de longueurs différentes. Pour
-   la rendre acceptable, il faut écrire
-   
-   <literal>(?&lt;=abc|abde)</literal>
-   
+
+   sont autorisées.
+
    L'implémentation des assertions arrière déplace
    temporairement le pointeur de position vers l'arrière, et cherche
    à vérifier l'assertion. Si le nombre de caractères
@@ -2114,7 +2105,34 @@
    sous-masques peut être particulièrement pratique à
    fin des chaînes. Un exemple est donné à la fin de
    cette section.
-  </para>
+  </simpara>
+  <simpara>
+   Avant PHP 8.4.0, qui intègre PCRE2 10.44, le contenu d'une assertion
+   arrière était limité de telle façon que les chaînes correspondantes
+   devaient toujours avoir une longueur fixe. Si plusieurs alternatives
+   étaient présentes, elles n'avaient pas besoin d'être de la même taille.
+   Ainsi,
+
+   <literal>(?&lt;=bullock|donkey)</literal>
+
+   était autorisé, mais
+
+   <literal>(?&lt;!dogs?|cats?)</literal>
+
+   provoquait une erreur de compilation. Les alternatives de longueurs
+   différentes n'étaient autorisées qu'au niveau supérieur des assertions
+   arrière. C'était une amélioration par rapport à Perl 5.005, qui imposait
+   à toutes les alternatives d'avoir la même taille. Une assertion telle que
+
+   <literal>(?&lt;=ab(c|de))</literal>
+
+   n'était pas autorisée, car son unique alternative au niveau supérieur
+   pouvait correspondre à deux longueurs différentes. Pour la rendre
+   acceptable, il fallait l'écrire avec deux alternatives au niveau
+   supérieur :
+
+   <literal>(?&lt;=abc|abde)</literal>
+  </simpara>
   <para>
    Plusieurs assertions peuvent intervenir successivement. Par exemple,
    le masque
