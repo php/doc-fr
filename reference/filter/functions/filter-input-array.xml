@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 53054bf8decc8648cf2e90a493692a161e2371af Maintainer: lacatoire Status: ready -->
-<!-- Reviewed: no -->
-<!-- CREDITS: DavidA -->
+<!-- EN-Revision: 85264ba268a398c4b90c1948839d54ce688dd5cd Maintainer: lacatoire Status: ready -->
 <refentry xml:id="function.filter-input-array" xmlns="http://docbook.org/ns/docbook" xmlns:xi="http://www.w3.org/2001/XInclude">
  <refnamediv>
   <refname>filter_input_array</refname>
@@ -41,12 +39,8 @@
      </warning>
     </listitem>
    </varlistentry>
-   <xi:include xpointer="xmlns(db=http://docbook.org/ns/docbook) xpointer(id('function.filter-var-array')/db:refsect1[@role='parameters']//db:varlistentry[db:term[db:parameter[text()='options']]]/.)">
-    <xi:fallback/>
-   </xi:include>
-   <xi:include xpointer="xmlns(db=http://docbook.org/ns/docbook) xpointer(id('function.filter-var-array')/db:refsect1[@role='parameters']//db:varlistentry[db:term[db:parameter[text()='add_empty']]]/.)">
-    <xi:fallback/>
-   </xi:include>
+   <xi:include xpointer="xmlns(db=http://docbook.org/ns/docbook) xpointer(id('function.filter-var-array')/db:refsect1[@role='parameters']//db:varlistentry[db:term[db:parameter[text()='options']]]/.)"/>
+   <xi:include xpointer="xmlns(db=http://docbook.org/ns/docbook) xpointer(id('function.filter-var-array')/db:refsect1[@role='parameters']//db:varlistentry[db:term[db:parameter[text()='add_empty']]]/.)"/>
   </variablelist>
  </refsect1>
 
@@ -57,22 +51,134 @@
   </simpara>
   <simpara>
    En cas d'échec, &false; est retourné.
-   Sauf si l'échec est que le tableau d'entrée désigné par
-   <parameter>type</parameter> n'est pas alimenté, auquel cas &null; est retourné
-   si le drapeau <constant>FILTER_NULL_ON_FAILURE</constant> est utilisé.
+   Si le tableau d'entrée désigné par <parameter>type</parameter> n'est pas
+   alimenté, &null; est retourné à la place.
   </simpara>
   <simpara>
-   Les entrées manquantes du tableau d'entrée seront alimentées dans le &array;
-   retourné si <parameter>add_empty</parameter> est &true;.
-   Auquel cas, les entrées manquantes seront définies à &null;,
-   sauf si le drapeau <constant>FILTER_NULL_ON_FAILURE</constant> est utilisé,
-   auquel cas ce sera &false;.
+   Les entrées manquantes du tableau d'entrée sont ajoutées au &array; retourné
+   avec la valeur &null; si <parameter>add_empty</parameter> vaut &true;,
+   et sont entièrement omises s'il vaut &false;.
+   Contrairement à <function>filter_input</function>,
+   le drapeau <constant>FILTER_NULL_ON_FAILURE</constant> ne change rien à cela :
+   une entrée manquante est toujours &null;.
   </simpara>
   <simpara>
    Une entrée dans le &array; retourné sera &false; si le filtre échoue,
    sauf si le drapeau <constant>FILTER_NULL_ON_FAILURE</constant> est utilisé,
    auquel cas il sera &null;.
+   Avec le drapeau <constant>FILTER_FORCE_ARRAY</constant>,
+   cette valeur d'échec est enveloppée dans un &array; d'un seul élément,
+   comme n'importe quel autre résultat.
   </simpara>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <function>filter_input_array</function></title>
+   <simpara>
+    Cet exemple suppose une requête GET vers
+    <literal>?email=user@example.com&amp;age=twenty&amp;url=https://example.com</literal>.
+    L'entrée <literal>age</literal> échoue car <literal>twenty</literal> n'est
+    pas un entier ; une valeur en dehors de la plage
+    <literal>1</literal> à <literal>120</literal> échouerait de la même façon.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$filters = [
+    'email' => FILTER_VALIDATE_EMAIL,
+    'age'   => [
+        'filter'  => FILTER_VALIDATE_INT,
+        'options' => ['min_range' => 1, 'max_range' => 120],
+    ],
+    'url'   => FILTER_VALIDATE_URL,
+];
+
+$result = filter_input_array(INPUT_GET, $filters);
+
+var_dump($result);
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+array(3) {
+  ["email"]=>
+  string(16) "user@example.com"
+  ["age"]=>
+  bool(false)
+  ["url"]=>
+  string(19) "https://example.com"
+}
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>Filtrage de données POST avec <function>filter_input_array</function></title>
+   <simpara>
+    Cet exemple suppose une requête POST avec les champs
+    <literal>username=&lt;script&gt;alert&lt;/script&gt;</literal> et
+    <literal>comment=Hello World</literal>.
+    Aucun champ <literal>missing</literal> n'est soumis : comme
+    <parameter>add_empty</parameter> vaut &true; par défaut, il est tout de même
+    présent dans le résultat, défini à &null;.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$filters = [
+    'username' => FILTER_SANITIZE_SPECIAL_CHARS,
+    'comment'  => FILTER_SANITIZE_SPECIAL_CHARS,
+    'missing'  => FILTER_VALIDATE_INT,
+];
+
+$result = filter_input_array(INPUT_POST, $filters);
+
+var_dump($result);
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+array(3) {
+  ["username"]=>
+  string(38) "&#60;script&#62;alert&#60;/script&#62;"
+  ["comment"]=>
+  string(11) "Hello World"
+  ["missing"]=>
+  NULL
+}
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>Demande d'un type d'entrée non alimenté</title>
+   <simpara>
+    Cet exemple suppose une requête GET.
+    Comme la requête ne portait aucun champ POST,
+    le tableau d'entrée désigné par <constant>INPUT_POST</constant> n'est pas
+    alimenté et &null; est retourné au lieu d'un &array;.
+    Cela s'applique à tous les types d'entrée :
+    une requête sans chaîne de requête donne également &null; pour
+    <constant>INPUT_GET</constant>.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+var_dump(filter_input_array(INPUT_POST, ['a' => FILTER_VALIDATE_INT]));
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+NULL
+]]>
+   </screen>
+  </example>
  </refsect1>
 
  <refsect1 role="notes">
