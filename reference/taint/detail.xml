@@ -1,320 +1,280 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- $Revision$ -->
-<!-- EN-Revision: 4de6d12569dcee7ac2012400c439eee8a971b813 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: befe2b9fbe37b0925498f336632742651386b151 Maintainer: lacatoire Status: ready -->
 
 <chapter xml:id="taint.detail" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
- <title>Plus de détails</title>
+ <title>Propagation et vérifications</title>
 
  <section xml:id="taint.detail.basic">
-  <title>Fonctions et requêtes qui seront marquées comme chaînes non propres</title>
+  <title>Comment la marque de corruption se propage</title>
+  <simpara>
+   La marque de corruption est un bit unique stocké sur la chaîne elle-même,
+   pas sur la variable qui la contient. Assigner, passer ou partager une
+   chaîne corrompue conserve la marque. La concaténation et l'interpolation
+   de chaînes la propagent également :
+  </simpara>
   <para>
    <table>
-    <title></title>
-    <tgroup cols="2">
-      <colspec colname="name"/>
-      <colspec colname="version"/>
-     <thead>
-      <row>
-       <entry>Fonction/Requête</entry>
-       <entry>Depuis</entry>
-      </row>
-     </thead>
+    <title>Opérateurs qui propagent la marque de corruption</title>
+    <tgroup cols="1">
      <tbody>
       <row>
-       <entry>= (assignement)</entry>
-       <entry>0.1.0</entry>
+       <entry><literal>=</literal> (assignement, y compris <literal>list()</literal>/<literal>déstructuration de tableau</literal>)</entry>
       </row>
       <row>
-       <entry>. (concat)</entry>
-       <entry>0.1.0</entry>
+       <entry><literal>.</literal> (concaténation)</entry>
       </row>
       <row>
-       <entry>"{$var}" (substitution de variable)</entry>
-       <entry>0.1.0</entry>
+       <entry><literal>.=</literal> (assignement de concaténation)</entry>
       </row>
       <row>
-       <entry>.= (assignement de concaténation)</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>strval</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <row>
-       <entry>explode/split</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <row>
-       <entry>implode/join</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <row>
-       <entry>sprintf</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <row>
-       <entry>vsprintf</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <row>
-       <entry>trim</entry>
-       <entry>0.4.0</entry>
-      </row>
-      <row>
-       <entry>rtrim</entry>
-       <entry>0.4.0</entry>
-      </row>
-      <row>
-       <entry>ltrim</entry>
-       <entry>0.4.0</entry>
-      </row>
-      <row>
-       <entry>strstr</entry>
-       <entry>0.5.0</entry>
-      </row>
-      <row>
-       <entry>str_pad</entry>
-       <entry>0.5.0</entry>
-      </row>
-      <row>
-       <entry>str_replace</entry>
-       <entry>0.5.0</entry>
-      </row>
-      <row>
-       <entry>substr</entry>
-       <entry>0.5.0</entry>
-      </row>
-      <row>
-       <entry>strtolower</entry>
-       <entry>0.5.0</entry>
-      </row>
-      <row>
-       <entry>strtoupper</entry>
-       <entry>0.5.0</entry>
+       <entry><literal>"{$var}"</literal> (interpolation de chaîne, y compris le chemin rapide <literal>ROPE</literal>)</entry>
       </row>
      </tbody>
     </tgroup>
    </table>
   </para>
- </section>
-
- <section xml:id="taint.detail.taint">
-  <title>Fonctions et requêtes qui vérifieront si la chaîne est propre</title>
+  <simpara>
+   De plus, taint comprend un ensemble fixe de fonctions de chaînes : lorsque
+   l'un des arguments de chaîne concernés est corrompu, la chaîne retournée
+   est également marquée comme corrompue. L'appel normal et, sur PHP 8.4+,
+   l'appel rapide sans cadre (frameless) sont tous deux couverts.
+  </simpara>
   <para>
    <table>
-    <title></title>
-    <tgroup cols="2">
-      <colspec colname="name"/>
-      <colspec colname="version"/>
-     <thead>
-      <row>
-       <entry>Fonction/Requêtes</entry>
-       <entry>Depuis</entry>
-      </row>
-     </thead>
+    <title>Fonctions qui propagent la marque de corruption</title>
+    <tgroup cols="1">
      <tbody>
       <row>
-       <entry namest="name" nameend="version">Requêtes basiques</entry>
+       <entry><function>trim</function>, <function>rtrim</function>, <function>ltrim</function></entry>
       </row>
       <row>
-       <entry>eval</entry>
-       <entry>0.1.0</entry>
+       <entry><function>substr</function>, <function>strstr</function></entry>
       </row>
       <row>
-       <entry>include/include_once</entry>
-       <entry>0.1.0</entry>
+       <entry><function>str_replace</function>, <function>str_ireplace</function></entry>
       </row>
       <row>
-       <entry>require/require_once</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <!--end basic -->
-
-      <row>
-       <entry namest="name" nameend="version">Fonctions d'affichage</entry>
+       <entry><function>str_pad</function>, <function>strtolower</function>, <function>strtoupper</function>, <function>strval</function></entry>
       </row>
       <row>
-       <entry>echo</entry>
-       <entry>0.1.0</entry>
+       <entry><function>explode</function> (chaque élément du tableau résultant)</entry>
       </row>
       <row>
-       <entry>print</entry>
-       <entry>0.1.0</entry>
+       <entry><function>implode</function>/<function>join</function> (un séparateur corrompu corrompt également le résultat)</entry>
       </row>
       <row>
-       <entry>printf</entry>
-       <entry>0.1.0</entry>
+       <entry><function>sprintf</function>, <function>vsprintf</function> (seul le spécificateur <literal>%s</literal> transporte la marque ; <literal>sprintf("%d", $t)</literal> retourne une chaîne propre)</entry>
       </row>
       <row>
-       <entry>file_put_contents</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <!-- end outputing -->
-      <row>
-       <entry namest="name" nameend="version">Fonctions du système de fichiers</entry>
-      </row>
-      <row>
-       <entry>fopen</entry>
-       <entry>0.2.0</entry>
-      </row>
-      <row>
-       <entry>opendir</entry>
-       <entry>0.2.0</entry>
-      </row>
-      <row>
-       <entry>basename</entry>
-       <entry>0.2.0</entry>
-      </row>
-      <row>
-       <entry>dirname</entry>
-       <entry>0.2.0</entry>
-      </row>
-      <row>
-       <entry>file</entry>
-       <entry>0.2.0</entry>
-      </row>
-      <row>
-       <entry>pathinfo</entry>
-       <entry>0.2.0</entry>
-      </row>
-      <!-- end file system -->
-      <row>
-       <entry namest="name" nameend="version">Fonctions de base de données</entry>
-      </row>
-      <row>
-       <entry>mysql_query</entry>
-       <entry>0.2.0</entry>
-      </row>
-      <row>
-       <entry>mysqli_query/MySQLi::query</entry>
-       <entry>0.2.0</entry>
-      </row>
-      <row>
-       <entry>sqlite_query/SqliteDataBase::query</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <row>
-       <entry>sqlite_single_query/SqliteDataBase::singleQuery</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <row>
-       <entry>oci_parse</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <row>
-       <entry>PDO::query</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <row>
-       <entry>PDO::prepare</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <row>
-       <entry>SQLite3::query</entry>
-       <entry>2.0.1</entry>
-      </row>
-      <row>
-       <entry>SQLite3::prepare</entry>
-       <entry>2.0.1</entry>
-      </row>
-      <!-- end database -->
-      <row>
-       <entry namest="name" nameend="version">Fonctions de ligne de commande</entry>
-      </row>
-      <row>
-       <entry>system</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>exec</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>proc_open</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>passthru</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>shell_exec</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <!-- end command line -->
-
-     </tbody>
-    </tgroup>
-   </table>
-  </para>
- </section>
-
- <section xml:id="taint.detail.untaint">
-  <title>Fonctions qui ne nettoieront pas une chaîne non propre</title>
-  <para>
-   <table>
-    <title></title>
-    <tgroup cols="2">
-      <colspec colname="name"/>
-      <colspec colname="version"/>
-     <thead>
-      <row>
-       <entry>Fonction</entry>
-       <entry>Depuis</entry>
-      </row>
-     </thead>
-     <tbody>
-      <row>
-       <entry>addslashes</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>addcslashes</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>htmlspecialchars</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>htmlentities</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>escapeshellcmd</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>mysql_escape_string</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>mysql_real_escape_string</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>mysqli_escape_string/MySQLi::escape_string</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>mysqli_real_escape_string/MySQLi::real_escape_string</entry>
-       <entry>0.1.0</entry>
-      </row>
-      <row>
-       <entry>sqlite_escape_string/SqliteDataBase::escapeString</entry>
-       <entry>0.3.0</entry>
-      </row>
-      <row>
-       <entry>PDO::quote</entry>
-       <entry>0.3.0</entry>
+       <entry><function>dirname</function>, <function>basename</function>, <function>pathinfo</function></entry>
       </row>
      </tbody>
     </tgroup>
    </table>
   </para>
-
+  <simpara>
+   Toute fonction que taint ne comprend pas explicitement retourne une
+   chaîne neuve et non marquée -- y compris les fonctions d'échappement
+   telles que <function>htmlspecialchars</function>,
+   <function>htmlentities</function> ou
+   <function>mysqli_real_escape_string</function>. C'est délibéré : taint
+   sur-rapporte plutôt que d'essayer de décider si une valeur est
+   <quote>sûre</quote> pour un contexte de sortie particulier. Utiliser
+   <function>untaint</function> pour effacer la marque sur des valeurs que
+   l'on a validées soi-même.
+  </simpara>
  </section>
+
+ <section xml:id="taint.detail.sinks">
+  <title>Où taint déclenche des avertissements</title>
+  <simpara>
+   Lorsqu'une chaîne corrompue atteint l'un des points de sortie ci-dessous,
+   taint émet un avertissement (par défaut un
+   <constant>E_USER_WARNING</constant> ; le niveau est configurable via
+   <link linkend="ini.taint.error-level">taint.error_level</link>). Seuls
+   les arguments de chaîne de premier niveau sont inspectés ; vider un
+   tableau qui contient simplement des valeurs corrompues n'émet pas
+   d'avertissement.
+  </simpara>
+  <para>
+   <table>
+    <title>Points de sortie d'affichage</title>
+    <tgroup cols="2">
+     <thead>
+      <row><entry>Point de sortie</entry><entry>Vérifié</entry></row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><literal>echo</literal>, <literal>print</literal></entry>
+       <entry>l'expression affichée</entry>
+      </row>
+      <row>
+       <entry><function>printf</function>, <function>vprintf</function></entry>
+       <entry>la chaîne de format et les valeurs substituées</entry>
+      </row>
+      <row>
+       <entry><function>print_r</function>, <function>var_dump</function>, <function>var_export</function></entry>
+       <entry>la valeur vidée, quand c'est une chaîne</entry>
+      </row>
+      <row>
+       <entry><literal>exit</literal>/<literal>die</literal> avec un message</entry>
+       <entry>le message</entry>
+      </row>
+      <row>
+       <entry><function>file_put_contents</function>, <function>fwrite</function>, <function>fputs</function> vers <literal>php://output</literal></entry>
+       <entry>les données écrites</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+  <para>
+   <table>
+    <title>Points de sortie du système de fichiers</title>
+    <tgroup cols="2">
+     <thead>
+      <row><entry>Point de sortie</entry><entry>Vérifié</entry></row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><function>fopen</function>, <function>opendir</function>, <function>unlink</function></entry>
+       <entry>le chemin</entry>
+      </row>
+      <row>
+       <entry><function>file</function>, <function>readfile</function>, <function>file_get_contents</function>, <function>highlight_file</function>/<function>show_source</function></entry>
+       <entry>le chemin</entry>
+      </row>
+      <row>
+       <entry><function>copy</function>, <function>rename</function>, <function>move_uploaded_file</function></entry>
+       <entry>les chemins source et destination</entry>
+      </row>
+      <row>
+       <entry><function>mkdir</function>, <function>rmdir</function>, <function>touch</function></entry>
+       <entry>le chemin</entry>
+      </row>
+      <row>
+       <entry><literal>include</literal>, <literal>include_once</literal>, <literal>require</literal>, <literal>require_once</literal></entry>
+       <entry>le chemin du fichier</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+  <para>
+   <table>
+    <title>Points de sortie SQL</title>
+    <tgroup cols="2">
+     <thead>
+      <row><entry>Point de sortie</entry><entry>Vérifié</entry></row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><function>mysqli_query</function>, <function>mysqli_prepare</function>, <function>mysqli_real_query</function>, <function>mysqli_multi_query</function></entry>
+       <entry>la chaîne de requête</entry>
+      </row>
+      <row>
+       <entry><function>mysql_query</function>, <function>sqlite_query</function>, <function>sqlite_single_query</function>, <function>oci_parse</function>, <function>pg_query</function>, <function>pg_send_query</function></entry>
+       <entry>la chaîne de requête</entry>
+      </row>
+      <row>
+       <entry><methodname>mysqli::query</methodname>, <methodname>mysqli::prepare</methodname>, <methodname>mysqli::real_query</methodname>, <methodname>mysqli::multi_query</methodname></entry>
+       <entry>la chaîne de requête</entry>
+      </row>
+      <row>
+       <entry><methodname>PDO::query</methodname>, <methodname>PDO::prepare</methodname>, <methodname>PDO::exec</methodname></entry>
+       <entry>la chaîne de requête</entry>
+      </row>
+      <row>
+       <entry><methodname>SQLite3::query</methodname>, <methodname>SQLite3::prepare</methodname>, <methodname>SQLite3::exec</methodname>, <methodname>SQLiteDatabase::query</methodname>, <methodname>SQLiteDatabase::singleQuery</methodname></entry>
+       <entry>la chaîne de requête</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+  <para>
+   <table>
+    <title>Points de sortie d'exécution de commandes</title>
+    <tgroup cols="2">
+     <thead>
+      <row><entry>Point de sortie</entry><entry>Vérifié</entry></row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><function>exec</function>, <function>system</function>, <function>passthru</function>, <function>shell_exec</function> (y compris l'opérateur backtick)</entry>
+       <entry>la chaîne de commande</entry>
+      </row>
+      <row>
+       <entry><function>proc_open</function>, <function>popen</function></entry>
+       <entry>la chaîne de commande</entry>
+      </row>
+      <row>
+       <entry><literal>eval</literal></entry>
+       <entry>le code évalué</entry>
+      </row>
+      <row>
+       <entry>les appels dynamiques tels que <literal>$func()</literal>, <literal>$obj-&gt;$method()</literal>, <function>call_user_func</function>, les callables tableaux</entry>
+       <entry>le nom de fonction/méthode/classe en cours de résolution</entry>
+      </row>
+      <row>
+       <entry><function>preg_match</function>, <function>preg_match_all</function>, <function>preg_replace</function>, <function>preg_split</function>, <function>preg_grep</function>, <function>preg_replace_callback</function></entry>
+       <entry>le motif (et le nom du callback pour <function>preg_replace_callback</function>)</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+  <para>
+   <table>
+    <title>Points de sortie d'en-têtes et cookies</title>
+    <tgroup cols="2">
+     <thead>
+      <row><entry>Point de sortie</entry><entry>Vérifié</entry></row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><function>header</function></entry>
+       <entry>la chaîne d'en-tête</entry>
+      </row>
+      <row>
+       <entry><function>setcookie</function>, <function>setrawcookie</function></entry>
+       <entry>le nom et la valeur du cookie</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+  <para>
+   <table>
+    <title>Autres points de sortie</title>
+    <tgroup cols="2">
+     <thead>
+      <row><entry>Point de sortie</entry><entry>Vérifié</entry></row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><function>unserialize</function></entry>
+       <entry>la chaîne sérialisée</entry>
+      </row>
+      <row>
+       <entry><function>mail</function></entry>
+       <entry>le destinataire, le sujet, les paramètres supplémentaires et les en-têtes supplémentaires (le corps du message est du contenu et n'est pas vérifié)</entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+  <simpara>
+   Les avertissements suivent le format
+   <literal>function_name() [sink]: message</literal>, où
+   <literal>sink</literal> identifie l'opération vérifiée (par exemple
+   <literal>echo</literal>, <literal>include</literal> ou le nom de la
+   fonction) et le message décrit ce qui a été trouvé comme potentiellement
+   corrompu.
+  </simpara>
+ </section>
+
 </chapter>
 
 <!-- Keep this comment at the end of the file
