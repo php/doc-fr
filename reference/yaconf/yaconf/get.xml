@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: a464df4c7d82ef16d94fff2582eeb8dd7579b894 Maintainer: girgias Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 3b052562d228be18fa6dce221df7e375469fb7ad Maintainer: girgias Status: ready -->
 
 <refentry xml:id="yaconf.get" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Yaconf::get</refname>
-  <refpurpose>Récupère une entrée</refpurpose>
+  <refpurpose>Récupère une valeur de configuration par son nom</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -14,11 +12,18 @@
   <methodsynopsis>
    <modifier>public</modifier> <modifier>static</modifier> <type>mixed</type><methodname>Yaconf::get</methodname>
    <methodparam><type>string</type><parameter>name</parameter></methodparam>
-   <methodparam choice="opt"><type>mixed</type><parameter>default_value</parameter><initializer>NULL</initializer></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>default</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
-  <para>
-
-  </para>
+  <simpara>
+   Récupère la valeur de configuration stockée sous <parameter>name</parameter>.
+   Les noms utilisent la notation pointée pour traverser les clés imbriquées :
+   <literal>"app"</literal> adresse le fichier <filename>app.ini</filename>
+   entier, <literal>"app.name"</literal> une clé à l'intérieur, et depuis
+   Yaconf 1.2.0 <literal>"users.database.master"</literal> une clé dans le
+   fichier <filename>database.ini</filename> placé dans le sous-répertoire
+   <filename>users/</filename>. La notation pointée supporte jusqu'à 64
+   niveaux d'imbrication.
+  </simpara>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -27,18 +32,22 @@
    <varlistentry>
     <term><parameter>name</parameter></term>
     <listitem>
-     <para>
-      Clé de configuration, la clé ressemble à "filename.key",
-      ou "filename.sectionName,key".
-     </para>
+     <simpara>
+      Le nom de configuration à rechercher, en utilisant la notation pointée
+      pour traverser les clés imbriquées, par exemple
+      <literal>"app.name"</literal>, <literal>"app.features.1"</literal>
+      ou, depuis Yaconf 1.2.0, <literal>"users.database.master"</literal>
+      pour les fichiers dans des sous-répertoires.
+     </simpara>
     </listitem>
    </varlistentry>
    <varlistentry>
-    <term><parameter>default_value</parameter></term>
+    <term><parameter>default</parameter></term>
     <listitem>
-     <para>
-      Si la clé n'existe pas, Yaconf::get retourne ceci comme résultat.
-     </para>
+     <simpara>
+      La valeur à retourner lorsque <parameter>name</parameter> n'est pas
+      trouvé. Lorsqu'omis, &null; est retourné.
+     </simpara>
     </listitem>
    </varlistentry>
   </variablelist>
@@ -46,50 +55,69 @@
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>
-   Retourne la valeur de configuration (&string; ou &array;) si la clé existe,
-   retourne <parameter>default_value</parameter> sinon.
-  </para>
+  <simpara>
+   La valeur de configuration stockée, une &string; ou un &array;, lorsque
+   <parameter>name</parameter> existe ; sinon la valeur
+   <parameter>default</parameter> (ou &null; lorsqu'aucun défaut n'a été
+   fourni).
+  </simpara>
  </refsect1>
 
  <refsect1 role="examples">
   &reftitle.examples;
-  <example>
-   <title>Exemple <function>INI</function></title>
-   <programlisting role="ini">
+  <simpara>
+   Les exemples ci-dessous supposent les deux fichiers suivants placés dans
+   le répertoire configuré avec <literal>yaconf.directory</literal>.
+  </simpara>
+  <programlisting role="ini">
 <![CDATA[
-;filenmame foo.ini, placed in directory which is yaconf.directoy
-[SectionA]
-;key value pair
-key=val
-;hash[a]=val
-hash.a=val
-;arr[0]=val
-arr.0=val
-;or
-arr[]=val
+; app.ini
+name="shop"                     ; valeur scalaire
+debug=0                         ; nombre
+features[]="checkout"           ; entrées de tableau, les deux notations
+features.1="wishlist"
+]]>
+  </programlisting>
+  <programlisting role="ini">
+<![CDATA[
+; users/database.ini, dans un sous-répertoire (Yaconf 1.2.0+)
+master="192.168.0.10"
+replica="192.168.0.20"
+]]>
+  </programlisting>
+  <example>
+   <title>Exemple avec <methodname>Yaconf::get</methodname></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+// récupérer un fichier analysé entier sous forme de tableau
+var_dump(Yaconf::get("app"));
 
-;SectionB inherits SectionA
-[SectionB:SectionA]
-;override configuration key in SectionA
-key=new_val
+// la notation pointée traverse les clés imbriquées
+var_dump(Yaconf::get("app.name"));           // string(4) "shop"
+var_dump(Yaconf::get("app.features.1"));     // string(8) "wishlist"
+
+// depuis 1.2.0 : les fichiers dans les sous-répertoires sont nommés
+// par le nom du répertoire
+var_dump(Yaconf::get("users.database.master")); // string(12) "192.168.0.10"
+
+// lorsque la clé est absente, la valeur par défaut est retournée
+var_dump(Yaconf::get("app.missing"));             // NULL
+var_dump(Yaconf::get("app.missing", "fallback")); // string(8) "fallback"
+?>
 ]]>
    </programlisting>
-   &example.outputs.similar;
-   <screen>
-<![CDATA[
-php7 -r 'var_dump(Yaconf::get("foo.SectionA.key"));'
-//string(3) "val"
-
-php7 -r 'var_dump(Yaconf::get("foo.SectionB.key"));'
-//string(7) "new_val"
-
-php7 -r 'var_dump(Yaconf::get("foo")["SectionA"]["hash"]);'
-//array(1)
-
-]]>
-   </screen>
   </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><methodname>Yaconf::has</methodname></member>
+    <member><methodname>Yaconf::__debug_info</methodname></member>
+   </simplelist>
+  </para>
  </refsect1>
 
 </refentry>

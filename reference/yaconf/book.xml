@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 4a87d61dbfcaddeafeebe5fd9546c5d9c6bc9ea2 Maintainer: girgias Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 3b052562d228be18fa6dce221df7e375469fb7ad Maintainer: girgias Status: ready -->
 
 <book xml:id="book.yaconf" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <?phpdoc extension-membership="pecl" ?>
@@ -10,67 +8,57 @@
 
  <preface xml:id="intro.yaconf">
   &reftitle.intro;
-  <para>
+  <simpara>
    <literal>Yet Another Configurations Container</literal>
-   (<acronym>Yaconf</acronym>) est un conteneur de configuration,
-   il analyse les fichiers <literal>INI</literal>, enregistre le résultat en
-   PHP quand PHP est démarré, le résultat vit tout
-   le long du cycle de vie de PHP.
-  </para>
-  <para>
-   Yaconf enregistre toutes les configurations en tant que
-   chaîne internée ou un tableau immuable, ce qui signifie qu'ils ne sont pas
-   comptabilisés dans les références, ainsi lors de la récupération des
-   configurations depuis <acronym>Yaconf</acronym>, ceci peut être considéré sans copie,
-   très rapide.
-  </para>
-  <para>
-   Yaconf supporte les sections et l'héritage des sections
-   dans les fichiers <literal>INI</literal>. Si PHP est compilé en tant que non-ZTS,
-   Yaconf supporte aussi le rechargement automatique après que les
-   fichiers <literal>INI</literal> sont modifiés.
-  </para>
-  <para>
+   (<acronym>Yaconf</acronym>) est un conteneur de configuration. Il analyse
+   les fichiers <literal>INI</literal> au démarrage de PHP et conserve le
+   résultat en mémoire persistante pour toute la durée du cycle de vie de PHP,
+   de sorte que chaque accès est une simple recherche dans une table de hachage,
+   sans aucune E/S disque ni analyse par requête.
+  </simpara>
+  <simpara>
+   Yaconf enregistre toutes les configurations sous forme de chaînes internées
+   ou de tableaux immuables. Ils ne sont pas comptabilisés dans les références,
+   donc la récupération d'une configuration depuis Yaconf est effectivement
+   sans copie. Depuis Yaconf 1.2.0, l'arbre de configuration analysé est en
+   outre compacté dans un bloc contigu unique, ce qui réduit l'empreinte
+   mémoire et améliore la localité du cache.
+  </simpara>
+  <simpara>
+   La configuration analysée réside en mémoire persistante partagée par tous
+   les workers PHP-FPM via la copie sur écriture : tant qu'un fichier de
+   configuration ne change pas, les workers partagent les mêmes pages mémoire
+   physiques, quel que soit leur nombre.
+  </simpara>
+  <simpara>
+   Yaconf supporte les sections et l'héritage de sections dans les fichiers
+   INI. Sur les compilations non-ZTS, il recharge aussi les fichiers
+   automatiquement lorsqu'ils changent ; sur les compilations ZTS
+   (thread-safe), les configurations sont chargées au démarrage et un
+   redémarrage est nécessaire pour prendre en compte les modifications.
+  </simpara>
+  <simpara>
+   Depuis Yaconf 1.2.0, les sous-répertoires du répertoire configuré sont
+   chargés récursivement (jusqu'à 16 niveaux de profondeur) et adressés avec
+   le nom du répertoire comme niveau de clé : par exemple,
+   <literal>Yaconf::get("users.database.master")</literal> lit la clé
+   <literal>master</literal> depuis le fichier
+   <filename>database.ini</filename> placé dans le sous-répertoire
+   <filename>users/</filename>.
+  </simpara>
+  <simpara>
+   Stocker des configurations sensibles en dehors de l'arborescence web réduit
+   aussi la surface d'attaque. Avec Yaconf, les fichiers
+   <filename>.ini</filename> peuvent être placés dans un répertoire accessible
+   uniquement par root, comme <filename>/etc/yaconf</filename> : le master
+   PHP-FPM charge les configurations au démarrage du service, tandis que les
+   workers forqués — qui s'exécutent sous un utilisateur non privilégié et
+   traitent les requêtes web — n'ont pas besoin, et ne reçoivent pas, l'accès
+   à ce répertoire.
+  </simpara>
+  <simpara>
    Yaconf nécessite PHP 7.0 ou supérieur.
-  </para>
-  <example>
-   <title>Exemple INI</title>
-   <programlisting role="ini">
-<![CDATA[
-;Simple key val
-key=val
-
-;Hash
-hash.a=val
-
-;Array
-arr.0=val
-
-;or
-arr[]=val
-
-;PHP constants
-version=PHP_VERSION
-
-;Environment variable
-env=${PATH}
-]]>
-   </programlisting>
-  </example>
-  <example>
-   <title>Exemple avec les sections INI</title>
-   <programlisting role="ini">
-<![CDATA[
-[SectionA]
-key=val
-hash.a=val
-
-;SectionB inherits SectionA
-[SectionB:SectionA]
-key=new_val                 ;override configuration key in SectionA
-]]>
-   </programlisting>
-  </example>
+  </simpara>
  </preface>
 
  &reference.yaconf.setup;
