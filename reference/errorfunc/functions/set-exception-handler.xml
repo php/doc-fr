@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 4a6671fe697ead5b27603b56face01a2c4e7ebe5 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 1cc803aaa07ac94ce8e3bfdf56f4b9ddd23326d3 Maintainer: yannick Status: ready -->
 <refentry xml:id="function.set-exception-handler" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>set_exception_handler</refname>
@@ -21,6 +20,36 @@
    try/catch. L'exécution sera stoppée après l'appel à la
    fonction <parameter>callback</parameter>.
   </para>
+
+  <note>
+   <simpara>
+    Pendant l'exécution d'un gestionnaire d'exceptions, aucun gestionnaire
+    d'exceptions n'est actif : à partir de PHP 8.3.0, le moteur le désactive
+    avant de l'invoquer, afin qu'une exception levée par le gestionnaire ne lui
+    soit pas repassée. Appelé depuis un gestionnaire,
+    <function>set_exception_handler</function> ne signale donc aucun
+    gestionnaire précédemment défini.
+   </simpara>
+   <simpara>
+    À partir de PHP 8.3.5, le moteur empile également sur la pile des
+    gestionnaires celui qu'il s'apprête à invoquer, si bien que
+    <function>restore_exception_handler</function> appelé depuis un gestionnaire
+    réinstalle le gestionnaire en cours d'exécution plutôt que celui qui était
+    actif avant lui.
+   </simpara>
+   <simpara>
+    Le gestionnaire en cours d'exécution est réinstallé automatiquement lorsqu'il
+    retourne, mais uniquement si aucun gestionnaire d'exceptions n'est actif à ce
+    moment-là. Dès que le gestionnaire appelle
+    <function>set_exception_handler</function> ou
+    <function>restore_exception_handler</function>, cette restauration
+    automatique est ignorée et le gestionnaire actif est celui que le
+    gestionnaire a lui-même laissé en place.
+   </simpara>
+   <simpara>
+    Modifier le gestionnaire d'exceptions depuis lui-même est donc déconseillé.
+   </simpara>
+  </note>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -63,6 +92,41 @@
   </para>
  </refsect1>
 
+ <refsect1 role="changelog">
+  &reftitle.changelog;
+  <para>
+   <informaltable>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>&Version;</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>8.3.5</entry>
+       <entry>
+        Le gestionnaire d'exceptions invoqué est désormais empilé sur la pile
+        des gestionnaires et réinstallé lorsqu'il retourne, sauf si le
+        gestionnaire a lui-même modifié la pile.
+       </entry>
+      </row>
+      <row>
+       <entry>8.3.0</entry>
+       <entry>
+        Le gestionnaire d'exceptions actif est désormais désactivé pendant son
+        exécution, si bien que <function>set_exception_handler</function> appelé
+        depuis un gestionnaire ne signale aucun gestionnaire précédemment
+        défini.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </informaltable>
+  </para>
+ </refsect1>
+
  <refsect1 role="examples">
   &reftitle.examples;
   <para>
@@ -88,15 +152,13 @@ echo "Non exécuté\n";
 
  <refsect1 role="seealso"><!-- {{{ -->
   &reftitle.seealso;
-  <para>
-   <simplelist>
-    <member><function>get_exception_handler</function></member>
-    <member><function>restore_exception_handler</function></member>
-    <member><function>restore_error_handler</function></member>
-    <member><function>error_reporting</function></member>
-    <member>Les <link linkend="language.exceptions">exceptions</link></member>
-   </simplelist>
-  </para>
+  <simplelist>
+   <member><function>get_exception_handler</function></member>
+   <member><function>restore_exception_handler</function></member>
+   <member><function>restore_error_handler</function></member>
+   <member><function>error_reporting</function></member>
+   <member>Les <link linkend="language.exceptions">exceptions</link></member>
+  </simplelist>
  </refsect1><!-- }}} -->
 
 </refentry>
