@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: df78bd1d232f2cd8df673accf5ba0e280695639b Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: 75d48299ef85693f10eee31af1be88488fb84c6f Maintainer: lacatoire Status: ready -->
 
 <chapter xml:id="yar.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  &reftitle.examples;
@@ -9,12 +9,12 @@
 <![CDATA[
 <?php
 
-/* supposons que cette page est accessible via l'URL http://example.com/operator.php */
+/* supposons que cette page soit accessible via http://example.com/operator.php */
 
 class Operator {
 
     /**
-     * Ajout de deux opérandes
+     * Additionne deux opérandes
      * @param integer
      * @return integer
      */
@@ -23,14 +23,14 @@ class Operator {
     }
 
     /**
-     * Sub 
+     * Soustraction
      */
     public function sub($a, $b) {
         return $a - $b;
     }
 
     /**
-     * Mul
+     * Multiplication
      */
     public function mul($a, $b) {
         return $a * $b;
@@ -55,6 +55,13 @@ $server->handle();
 
  <example>
   <title>Accès au serveur depuis un navigateur (requête GET)</title>
+  <simpara>
+   Lorsqu'une requête GET est émise vers l'URI du service, Yar affiche
+   une page d'information listant chaque méthode publique de l'objet
+   exécuteur ainsi que son commentaire de documentation. Ce
+   comportement est contrôlé par la directive
+   <link linkend="ini.yar.expose-info">yar.expose_info</link>.
+  </simpara>
   &example.outputs.similar;
   <mediaobject>
    <alt>Information du serveur Yar</alt>
@@ -69,28 +76,27 @@ $server->handle();
   <programlisting role="php">
 <![CDATA[
 <?php
-$client = new yar_client("http://example.com/operator.php");
+$client = new Yar_Client("http://example.com/operator.php");
 
-/* Appel direct */
+/* appel direct */
 var_dump($client->add(1, 2));
 
-/* Appel via un appel */
+/* appel via call() */
 var_dump($client->call("add", array(3, 2)));
 
-
-/* la méthode _add ne peut être appelée */
+/* _add ne peut pas être appelée : elle n'est pas publique */
 var_dump($client->_add(1, 2));
 ?>
 ]]>
   </programlisting>
   &example.outputs.similar;
-   <screen>
+  <screen>
 <![CDATA[
 int(3)
 int(5)
-PHP Fatal error:  Uncaught exception 'Yar_Server_Exception' with message 'call to api Operator::_add() failed' in *
+PHP Fatal error:  Uncaught Yar_Server_Request_Exception: call to undefined api Operator::_add() in *
 ]]>
-   </screen>
+  </screen>
  </example>
 
  <example>
@@ -99,27 +105,50 @@ PHP Fatal error:  Uncaught exception 'Yar_Server_Exception' with message 'call t
 <![CDATA[
 <?php
 function callback($ret, $callinfo) {
-    echo $callinfo['method'] , " result: ", $ret , "\n";
+    echo $callinfo['method'], " résultat : ", $ret, "\n";
 }
 
-/* enregistre l'appel async aux services distants */
+function error_callback($type, $error, $callinfo) {
+    error_log("[$type] $error");
+}
+
+/* enregistre les appels asynchrones aux services distants */
 Yar_Concurrent_Client::call("http://example.com/operator.php", "add", array(1, 2), "callback");
 Yar_Concurrent_Client::call("http://example.com/operator.php", "sub", array(2, 1), "callback");
 Yar_Concurrent_Client::call("http://example.com/operator.php", "mul", array(2, 2), "callback");
 
 /* envoie toutes les requêtes et attend les réponses */
-Yar_Concurrent_Client::loop();
+Yar_Concurrent_Client::loop("callback", "error_callback");
 ?>
 ]]>
   </programlisting>
   &example.outputs.similar;
   <screen>
 <![CDATA[
-mul result: 4
-sub result: 1
-add result: 3
+mul résultat : 4
+sub résultat : 1
+add résultat : 3
 ]]>
-   </screen>
+  </screen>
+ </example>
+
+ <example>
+  <title>Exemple de client Yar TCP</title>
+  <simpara>
+   Outre HTTP, <classname>Yar_Client</classname> peut dialoguer avec
+   des serveurs compatibles Yar via TCP ou des sockets Unix, par
+   exemple un service implémenté avec le framework Yar en C. Le serveur
+   distant doit implémenter le même protocole binaire Yar.
+  </simpara>
+  <programlisting role="php">
+<![CDATA[
+<?php
+$client = new Yar_Client("tcp://127.0.0.1:8600");
+
+var_dump($client->add(1, 2));
+?>
+]]>
+  </programlisting>
  </example>
 
 </chapter>

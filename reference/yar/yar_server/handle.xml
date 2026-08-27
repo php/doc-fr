@@ -1,30 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 331fbfeac522d4ad00de1e043cc11610d66b88f9 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 07275f5d03cf34c5a2218e0c103978f8024da153 Maintainer: yannick Status: ready -->
 
 <refentry xml:id="yar-server.handle" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Yar_Server::handle</refname>
-  <refpurpose>Démarre un serveur RPC</refpurpose>
+  <refpurpose>Démarre le serveur RPC</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
-  <methodsynopsis>
-   <modifier>public</modifier> <type>bool</type> <methodname>Yar_Server::handle</methodname>
-   <void/>
+  <methodsynopsis role="Yar_Server">
+   <modifier>public</modifier> <type>bool</type><methodname>Yar_Server::handle</methodname>
+   <void />
   </methodsynopsis>
-  <para>
-   Démarre un serveur RPC HTTP, et le rend prêt à accepter des requêtes RPC.
-   <note>
-    <para>
-     Les appels RPC sont envoyés par des requêtes HTTP POST.
-     Si une requête HTTP GET est envoyée à l'URI, les informations du service
-     (commenté dans la section ci-dessous) seront affichées sur la page.
-    </para>
-   </note>
-  </para>
+  <simpara>
+   Démarre le traitement de la requête RPC entrante.
+  </simpara>
+  <note>
+   <simpara>
+    Les appels RPC habituels sont émis sous forme de requêtes HTTP POST.
+    Si une requête HTTP GET est émise à la place, la page d'informations du
+    service, générée à partir des méthodes publiques de l'objet exécuteur et
+    de leurs commentaires de documentation, est affichée. Ce comportement peut
+    être désactivé avec la directive
+    <link linkend="ini.yar.expose-info">yar.expose_info</link>,
+    auquel cas une requête GET lève une
+    <exceptionname>Yar_Server_Exception</exceptionname>.
+   </simpara>
+  </note>
+  <note>
+   <simpara>
+    À partir de Yar 2.3.0, la page d'informations du service peut être
+    personnalisée en définissant une méthode <literal>protected</literal>
+    nommée <literal>__info</literal> sur l'objet exécuteur. Lorsqu'une requête
+    GET arrive, Yar appelle cette méthode en lui passant le balisage de la page
+    qu'il aurait sinon produite ; si la méthode retourne une &string;, cette
+    chaîne est envoyée au client à la place de la page par défaut.
+   </simpara>
+  </note>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -34,25 +47,97 @@
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
+  <simpara>
+   Retourne &true;.
+  </simpara>
+ </refsect1>
+
+ <refsect1 role="errors">
+  &reftitle.errors;
   <para>
-   Un booléen.
+   <table>
+    <title>Erreurs de <methodname>Yar_Server::handle</methodname></title>
+    <tgroup cols="2">
+     <thead>
+      <row>
+       <entry>Condition</entry>
+       <entry>Exception</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry>
+        La méthode distante a levé une exception.
+       </entry>
+       <entry>
+        <exceptionname>Yar_Server_Exception</exceptionname> (avec le nom de
+        classe d'origine dans sa propriété <literal>_type</literal>).
+       </entry>
+      </row>
+      <row>
+       <entry>
+        La méthode distante est introuvable ou n'est pas publique.
+       </entry>
+       <entry>
+        <exceptionname>Yar_Server_Request_Exception</exceptionname>.
+       </entry>
+      </row>
+      <row>
+       <entry>
+        Le corps de la requête n'a pas pu être décodé.
+       </entry>
+       <entry>
+        <exceptionname>Yar_Server_Packager_Exception</exceptionname>.
+       </entry>
+      </row>
+      <row>
+       <entry>
+        La requête est mal formée au niveau du protocole.
+       </entry>
+       <entry>
+        <exceptionname>Yar_Server_Protocol_Exception</exceptionname>.
+       </entry>
+      </row>
+      <row>
+       <entry>
+        Les données de sortie du serveur n'ont pas pu être capturées.
+       </entry>
+       <entry>
+        <exceptionname>Yar_Server_Output_Exception</exceptionname>.
+       </entry>
+      </row>
+      <row>
+       <entry>
+        L'authentification a échoué, ou la page d'informations a été demandée
+        alors que <link linkend="ini.yar.expose-info">yar.expose_info</link>
+        est désactivée.
+       </entry>
+       <entry>
+        <exceptionname>Yar_Server_Exception</exceptionname> avec le code
+        <constant>YAR_ERR_FORBIDDEN</constant>.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
   </para>
  </refsect1>
 
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>Exemple avec <function>Yar_Server::handle</function></title>
+   <title>Exemple avec <methodname>Yar_Server::handle</methodname></title>
    <programlisting role="php">
 <![CDATA[
 <?php
 class API {
     /**
-     * les informations seront générées automatiquement sur la page d'informations du service.
-     * @params 
-     * @return
+     * Le bloc de documentation est affiché sur la page d'informations du service.
+     * @param string $parameter
+     * @return string
      */
     public function some_method($parameter, $option = "foo") {
+        return "some_method";
     }
 
     protected function client_can_not_see() {
@@ -64,20 +149,43 @@ $service->handle();
 ?>
 ]]>
    </programlisting>
-   &example.outputs.similar;
-   <screen>
+  </example>
+  <example>
+   <title>Personnalisation de la page d'informations du service avec
+   <literal>__info</literal> (à partir de Yar 2.3.0)</title>
+   <programlisting role="php">
 <![CDATA[
+<?php
+class API {
+    public function some_method($parameter, $option = "foo") {
+        return "some_method";
+    }
+
+    /*
+     * Doit être protégée. Elle est appelée sur les requêtes GET avec le balisage
+     * de la page que Yar aurait sinon produite, et la chaîne qu'elle retourne est
+     * envoyée au client à la place.
+     */
+    protected function __info($markup) {
+        return "Bonjour le monde";
+    }
+}
+
+$service = new Yar_Server(new API());
+$service->handle();
+?>
 ]]>
-   </screen>
+   </programlisting>
   </example>
  </refsect1>
 
-
  <refsect1 role="seealso">
   &reftitle.seealso;
-  <simplelist>
-   <member><methodname>Yar_Server::__construct</methodname></member>
-  </simplelist>
+  <para>
+   <simplelist>
+    <member><methodname>Yar_Server::__construct</methodname></member>
+   </simplelist>
+  </para>
  </refsect1>
 
 </refentry>
