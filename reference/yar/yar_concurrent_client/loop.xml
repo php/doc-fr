@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 75d48299ef85693f10eee31af1be88488fb84c6f Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: 60ce1c5c7cc6d340191828de21f1d6b48cd83807 Maintainer: lacatoire Status: ready -->
 
 <refentry xml:id="yar-concurrent-client.loop" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
@@ -21,6 +21,19 @@
    que chaque réponse soit arrivée et ait été traitée. La liste des appels
    est vidée lorsque cette méthode retourne.
   </simpara>
+  <simpara>
+   Comme les appels s'exécutent simultanément, la boucle ne dure que le
+   temps du seul appel le plus lent, plutôt que la somme de tous les appels.
+   Les callbacks, cependant, ne sont pas invoqués dans l'ordre où les appels
+   ont été enregistrés : un callback se déclenche dès que sa réponse arrive.
+   Pour savoir à quel appel appartient une réponse, comparer l'entrée
+   <literal>sequence</literal> de l'argument <literal>callinfo</literal> avec
+   le numéro de séquence retourné par
+   <methodname>Yar_Concurrent_Client::call</methodname>. Le &array;
+   <literal>callinfo</literal> contient la <literal>sequence</literal>,
+   l'<literal>uri</literal> et la <literal>method</literal> de l'appel ; voir
+   <methodname>Yar_Concurrent_Client::call</methodname>.
+  </simpara>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -35,6 +48,10 @@
       après l'envoi de toutes les requêtes, il est de plus appelé une fois
       avec deux arguments &null;, avant l'arrivée de toute réponse.
      </simpara>
+     <simpara>
+      Si ce paramètre est omis, la valeur de retour d'un appel réussi est
+      simplement affichée lorsque sa réponse arrive.
+     </simpara>
     </listitem>
    </varlistentry>
    <varlistentry>
@@ -46,6 +63,11 @@
       Il reçoit trois arguments : le type d'erreur (l'un des codes
       <literal>YAR_ERR_*</literal>), le message d'erreur et le &array;
       <literal>callinfo</literal>.
+     </simpara>
+     <simpara>
+      Si ce paramètre est omis, un appel échoué émet un avertissement PHP ;
+      contrairement au <classname>Yar_Client</classname> synchrone, aucune
+      exception n'est levée.
      </simpara>
     </listitem>
    </varlistentry>
@@ -93,10 +115,10 @@ function error_callback($type, $error, $callinfo) {
     error_log($error);
 }
 
-Yar_Concurrent_Client::call("http://host/api/", "some_method", array("parameters"), "callback");
+Yar_Concurrent_Client::call("http://api.example.com/operator.php", "some_method", array("parameters"), "callback");
 
 /* si la fonction de rappel n'est pas spécifiée, celle de loop() sera utilisée */
-Yar_Concurrent_Client::call("http://host/api/", "some_method", array("parameters"));
+Yar_Concurrent_Client::call("http://api.example.com/operator.php", "some_method", array("parameters"));
 
 Yar_Concurrent_Client::loop("callback", "error_callback");
 ?>
