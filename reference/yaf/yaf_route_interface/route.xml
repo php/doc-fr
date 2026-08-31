@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 7418592d82d6cde8d052effd3607e5761d6c4e67 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes Maintainer: yannick -->
+<!-- EN-Revision: ddcf673c59d1708557680946fbffeee361d7fca6 Maintainer: yannick Status: ready -->
 
 <refentry xml:id="yaf-route-interface.route" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Yaf_Route_Interface::route</refname>
   <refpurpose>Route une requête</refpurpose>
  </refnamediv>
- 
+
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
@@ -16,37 +14,37 @@
    <methodparam><type>Yaf_Request_Abstract</type><parameter>request</parameter></methodparam>
   </methodsynopsis>
   <para>
-   <methodname>Yaf_Route_Interface::route</methodname> est la seule
-   méthode qu'une route personnalisée doit implémenter.
-   <note>
-    <para>
-     Depuis 2.3.0, il y a une autre méthode à implémenter :
-     <methodname>Yaf_Route_Interface::assemble</methodname>.
-    </para>
-   </note>
+    <methodname>Yaf_Route_Interface::route</methodname> est la seule méthode
+    qu'une route personnalisée devrait implémenter.
+    <note>
+     <simpara>
+      À partir de la version 2.3.0, une autre méthode devrait également être
+      implémentée, voir <methodname>Yaf_Route_Interface::assemble</methodname>.
+     </simpara>
+    </note>
   </para>
   <para>
-   Si cette méthode retourne &true;, alors le processus route se terminera.
-   Sinon, <classname>Yaf_Router</classname> appellera la prochaine route de la
-   pile des routes.
+    Si cette méthode retourne &true;, alors le processus de routage se
+    terminera. Sinon, <classname>Yaf_Router</classname> appellera la route
+    suivante dans la pile des routes pour router la requête.
   </para>
-  
+
   <para>
-   Cette méthode définira le résultat de la route au paramètre de la
-   requête, en appelant les méthodes 
-   <methodname>Yaf_Request_Abstract::setControllerName</methodname>,
-   <methodname>Yaf_Request_Abstract::setActionName</methodname> et
-   <methodname>Yaf_Request_Abstract::setModuleName</methodname>.
-  </para>
-  
-  <para>
-   Cette méthode doit également appeler la méthode
-   <methodname>Yaf_Request_Abstract::setRouted</methodname> en dernier
-   pour router la requête.
-  </para>
-  
+    Cette méthode devrait affecter le résultat du routage au paramètre
+    request, en appelant
+    <methodname>Yaf_Request_Abstract::setControllerName</methodname>,
+    <methodname>Yaf_Request_Abstract::setActionName</methodname> et
+    <methodname>Yaf_Request_Abstract::setModuleName</methodname>.
+   </para>
+
+   <para>
+    Cette méthode devrait également appeler
+    <methodname>Yaf_Request_Abstract::setRouted</methodname> pour marquer
+    la requête comme routée en dernier lieu.
+   </para>
+
  </refsect1>
- 
+
  <refsect1 role="parameters">
   &reftitle.parameters;
   <variablelist>
@@ -54,21 +52,106 @@
     <term><parameter>request</parameter></term>
     <listitem>
      <para>
-      Une instance de la classe <classname>Yaf_Request_Abstract</classname>.
+       Une instance de <classname>Yaf_Request_Abstract</classname>.
      </para>
     </listitem>
    </varlistentry>
   </variablelist>
  </refsect1>
- 
+
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <para>
-   
+
   </para>
  </refsect1>
- 
- 
+
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <methodname>Yaf_Route_Interface::route</methodname></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class ApiRoute implements Yaf_Route_Interface {
+
+    private $_prefix;
+
+    public function __construct(string $prefix) {
+        $this->_prefix = $prefix;
+    }
+
+    public function route(Yaf_Request_Abstract $request): bool {
+        $uri = $request->getRequestUri();
+        if (0 !== strpos($uri, $this->_prefix)) {
+            /* cela ne nous concerne pas, le routeur essaiera la route suivante */
+            return false;
+        }
+
+        /* analyse l'URI "/api/user/list" en contrôleur/action */
+        $segments = explode("/", ltrim(substr($uri, strlen($this->_prefix)), "/"));
+        $controller = isset($segments[0]) ? ucfirst($segments[0]) : NULL;
+        $action = isset($segments[1]) ? $segments[1] : NULL;
+
+        if (empty($controller)) {
+            return false;
+        }
+
+        $request->setModuleName("index");
+        $request->setControllerName($controller);
+        $request->setActionName($action);
+        $request->setRouted(); /* le processus de routage se termine ici */
+
+        return true;
+    }
+
+    public function assemble(array $info, ?array $query = null): string {
+        $uri = $this->_prefix . "/" . strtolower($info[':c']);
+        if (isset($info[':a'])) {
+            $uri .= "/" . $info[':a'];
+        }
+
+        if (!empty($query)) {
+            $uri .= "?" . http_build_query($query);
+        }
+
+        return $uri;
+    }
+}
+
+/**
+ * enregistre la route personnalisée
+ */
+Yaf_Dispatcher::getInstance()->getRouter()->addRoute("api", new ApiRoute("/api"));
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+/* http://yourdomain.com/api/user/list
+ * est routée vers les valeurs suivantes :
+ */
+array(
+  "module"     => "index",
+  "controller" => "User",
+  "action"     => "list",
+)
+]]>
+   </screen>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><methodname>Yaf_Route_Interface::assemble</methodname></member>
+   <member><methodname>Yaf_Router::addRoute</methodname></member>
+   <member><methodname>Yaf_Request_Abstract::setRouted</methodname></member>
+  </simplelist>
+ </refsect1>
+
 </refentry>
 
 <!-- Keep this comment at the end of the file
