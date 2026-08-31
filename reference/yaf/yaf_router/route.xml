@@ -1,41 +1,94 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 2d04efd3203278143d16de23df2df37758a49368 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes Maintainer: yannick -->
+<!-- EN-Revision: ddcf673c59d1708557680946fbffeee361d7fca6 Maintainer: yannick Status: ready -->
 
 <refentry xml:id="yaf-router.route" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
-  <refname>Yaf_Router::route</refname>
-  <refpurpose>Le but de route</refpurpose>
+<refname>Yaf_Router::route</refname>
+<refpurpose>Route une requête</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
-   <modifier>public</modifier> <type>bool</type><methodname>Yaf_Router::route</methodname>
+   <modifier>public</modifier> <type class="union"><type>bool</type><type>null</type></type><methodname>Yaf_Router::route</methodname>
    <methodparam><type>Yaf_Request_Abstract</type><parameter>request</parameter></methodparam>
   </methodsynopsis>
-  <para>
-
-  </para>
-
-  &warn.undocumented.func;
-
+  <simpara>Route la requête avec les routes enregistrées.</simpara>
+  <simpara>Les routes sont essayées dans l'ordre inverse de leur enregistrement. La première route qui revendique la requête l'emporte ; la requête est alors marquée comme routée (voir <methodname>Yaf_Request_Abstract::setRouted</methodname>) et le nom de la route gagnante est enregistré, ce qui permet de le récupérer via <methodname>Yaf_Router::getCurrentRoute</methodname>.</simpara>
+  <simpara>La route par défaut, enregistrée sous le nom <literal>_default</literal>, est <classname>Yaf_Route_Static</classname>, sauf si une route par défaut personnalisée est configurée.</simpara>
  </refsect1>
 
  <refsect1 role="parameters">
   &reftitle.parameters;
-  &no.function.parameters;
+  <variablelist>
+   <varlistentry>
+    <term><parameter>request</parameter></term>
+    <listitem>
+<simpara>L'instance de <classname>Yaf_Request_Abstract</classname> à router.</simpara>
+    </listitem>
+   </varlistentry>
+  </variablelist>
  </refsect1>
-
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>
-
-  </para>
+<simpara>Retourne &true; si la requête a été routée, ou &false; si aucune route ne correspond (par exemple, une URI mal formée), ce qui arrête le distributeur.</simpara>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <methodname>Yaf_Router::route</methodname></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Bootstrap extends Yaf_Bootstrap_Abstract
+{
+    public function _initRoute(Yaf_Dispatcher $dispatcher)
+    {
+        $router = $dispatcher->getRouter();
 
+        $router->addRoute("rewrite", new Yaf_Route_Rewrite(
+            "/product/:id",
+            ["controller" => "product", "action" => "detail"]
+        ));
+
+        /* route une requête construite à la main, par exemple dans un test unitaire */
+        $request = new Yaf_Request_Simple("CLI", null, "index.php",
+            "/product/123", null);
+
+        if ($router->route($request)) {
+            var_dump($router->getCurrentRoute());
+            var_dump($request->getControllerName());
+            var_dump($request->getActionName());
+            var_dump($request->getParam("id"));
+        } else {
+            /* aucune route ne correspond */
+        }
+    }
+}
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+string(7) "rewrite"
+string(7) "product"
+string(6) "detail"
+string(3) "123"
+]]>
+   </screen>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><methodname>Yaf_Router::addRoute</methodname></member>
+   <member><methodname>Yaf_Router::getCurrentRoute</methodname></member>
+   <member><methodname>Yaf_Dispatcher::dispatch</methodname></member>
+  </simplelist>
+ </refsect1>
 </refentry>
 
 <!-- Keep this comment at the end of the file

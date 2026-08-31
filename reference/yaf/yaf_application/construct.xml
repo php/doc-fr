@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 330a38c4d45556b49e06ebe6d39e0e311534cd8c Maintainer: lacatoire Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: ddcf673c59d1708557680946fbffeee361d7fca6 Maintainer: lacatoire Status: ready -->
+
 <refentry xml:id="yaf-application.construct" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Yaf_Application::__construct</refname>
@@ -9,14 +9,18 @@
 
  <refsect1 role="description">
   &reftitle.description;
-   <constructorsynopsis>
+  <constructorsynopsis>
    <modifier>public</modifier> <methodname>Yaf_Application::__construct</methodname>
-   <methodparam><type>mixed</type><parameter>config</parameter></methodparam>
-   <methodparam choice="opt"><type>string</type><parameter>environ</parameter></methodparam>
-   </constructorsynopsis>
-  <para>
-   Instancie un objet <classname>Yaf_Application</classname>.
-  </para>
+   <methodparam><type class="union"><type>string</type><type>array</type></type><parameter>config</parameter></methodparam>
+   <methodparam choice="opt"><type class="union"><type>string</type><type>null</type></type><parameter>environ</parameter><initializer>null</initializer></methodparam>
+  </constructorsynopsis>
+  <simpara>
+   Instancie un objet <classname>Yaf_Application</classname>. Le constructeur
+   initialise également l'application singleton, le
+   <classname>Yaf_Loader</classname> et le
+   <classname>Yaf_Dispatcher</classname> ; il doit donc être appelé avant
+   toute utilisation de ces derniers.
+  </simpara>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -25,52 +29,49 @@
    <varlistentry>
     <term><parameter>config</parameter></term>
     <listitem>
+     <simpara>
+      Un chemin vers un fichier de configuration INI, ou un tableau de
+      configuration.
+     </simpara>
+     <simpara>
+      S'il s'agit d'un fichier de configuration INI, il devrait contenir une
+      section nommée d'après celle définie par
+      <link linkend="ini.yaf.environ">yaf.environ</link>, qui vaut
+      <literal>"product"</literal> par défaut.
+     </simpara>
+     <simpara>
+      Les entrées de configuration de l'application (et leurs valeurs par
+      défaut) sont documentées dans
+      <link linkend="yaf.appconfig">Configuration de l'application</link> :
+     </simpara>
      <para>
-      Un chemin vers le fichier de configuration ini, ou un tableau de configuration.
-     </para>
-     <para>
-      Si un fichier de configuration est fourni, il doit contenir une section
-      nommée telle que spécifiée par le paramètre
-      <link linkend="ini.yaf.environ">yaf.environ</link>, qui est "product" par défaut.
-      <note>
-       <para>
-        Lors de l'utilisation d'un fichier de configuration au format ini pour
-        la configuration de l'application, il est recommandé d'utiliser
-        la méthode <link linkend="ini.yaf.cache-config">yaf.cache_config</link>
-        à la place pour améliorer les performances.
-       </para>
-      </note>
-     </para>
-     <para>
-      Et l'entrée de configuration (et sa valeur par défaut) listée
-      ci-dessous :
       <example>
-       <title>Un exemple de fichier de configuration au format ini</title>
+       <title>Exemple de fichier de configuration ini</title>
        <programlisting role="ini" xml:id="yaf.application.ini">
 <![CDATA[
 [product]
-;Doit toujours être défini ; aucune valeur par défaut
+;celle-ci devrait toujours être définie, et n'a pas de valeur par défaut
 application.directory=APPLICATION_PATH
 
-;Les configurations suivantes ont une valeur par défaut, vous n'avez pas besoin de les définir
+;les configurations suivantes ont des valeurs par défaut, il n'est pas forcément nécessaire de les définir
 application.library = APPLICATION_PATH . "/library"
 application.dispatcher.throwException=1
 application.dispatcher.catchException=1
 
 application.baseUri=""
 
-;Le nom du script PHP
-ap.ext=php
+;l'extension des scripts php
+application.ext=php
 
-;Le nom du template de visualisation
-ap.view.ext=phtml
+;l'extension des templates de vue
+application.view.ext=phtml
 
-ap.dispatcher.defaultModule=Index
-ap.dispatcher.defaultController=Index
-ap.dispatcher.defaultAction=index
+application.dispatcher.defaultModule=Index
+application.dispatcher.defaultController=Index
+application.dispatcher.defaultAction=index
 
-;Les modules définis
-ap.modules=Index
+;les modules définis
+application.modules=Index
 ]]>
        </programlisting>
       </example>
@@ -80,19 +81,25 @@ ap.modules=Index
    <varlistentry>
     <term><parameter>environ</parameter></term>
     <listitem>
-     <para>
-      La section à charger comme configuration finale.
-     </para>
+     <simpara>
+      La section qui sera chargée comme configuration finale. Si elle n'est
+      pas fournie, la valeur de la directive
+      <link linkend="ini.yaf.environ">yaf.environ</link> est utilisée.
+     </simpara>
     </listitem>
    </varlistentry>
   </variablelist>
  </refsect1>
 
- <refsect1 role="returnvalues">
-  &reftitle.returnvalues;
-  <para>
-
-  </para>
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <simpara>
+   Lève une exception <exceptionname>Yaf_Exception_StartupError</exceptionname>
+   (ou déclenche une erreur <constant>YAF_ERR_STARTUP_FAILED</constant>,
+   lorsque <methodname>Yaf_Dispatcher::throwException</methodname> est
+   désactivé) si un objet <classname>Yaf_Application</classname> a déjà été
+   instancié, ou si la configuration est invalide.
+  </simpara>
  </refsect1>
 
  <refsect1 role="examples">
@@ -110,11 +117,6 @@ $application->bootstrap()->run();
 ?>
 ]]>
    </programlisting>
-   &example.outputs.similar;
-   <screen>
-<![CDATA[
-]]>
-   </screen>
   </example>
   <example>
    <title>Exemple avec <function>Yaf_Application::__construct</function></title>
@@ -127,25 +129,23 @@ $config = array(
     ),
 );
 
-/** YAf_Application */
+/** Yaf_Application */
 $application = new Yaf_Application($config);
 $application->bootstrap()->run();
 ?>
 ]]>
    </programlisting>
-   &example.outputs.similar;
-   <screen>
-<![CDATA[
-]]>
-   </screen>
   </example>
  </refsect1>
 
  <refsect1 role="seealso">
   &reftitle.seealso;
-  <simplelist>
-   <member><classname>Yaf_Config_Ini</classname></member>
-  </simplelist>
+  <para>
+   <simplelist>
+    <member><classname>Yaf_Config_Ini</classname></member>
+    <member><link linkend="yaf.appconfig">Configuration de l'application</link></member>
+   </simplelist>
+  </para>
  </refsect1>
 
 </refentry>
