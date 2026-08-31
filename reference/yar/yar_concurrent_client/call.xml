@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 75d48299ef85693f10eee31af1be88488fb84c6f Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: 60ce1c5c7cc6d340191828de21f1d6b48cd83807 Maintainer: lacatoire Status: ready -->
 
 <refentry xml:id="yar-concurrent-client.call" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
@@ -26,8 +26,9 @@
   </simpara>
   <note>
    <simpara>
-    Seules les URI HTTP et HTTPS sont supportées. Les transports TCP et
-    socket Unix ne sont pas disponibles pour les appels concurrents.
+    Seules les URI HTTP et HTTPS sont supportées. Les appels concurrents
+    sont envoyés simultanément via l'interface multi-handle de curl, que
+    le transport TCP/socket Unix n'implémente pas.
    </simpara>
   </note>
  </refsect1>
@@ -66,11 +67,20 @@
      <simpara>
       Un <type>callable</type> invoqué lorsque la réponse à cet appel
       arrive, avec deux arguments : la valeur de la réponse, et un
-      &array; <literal>callinfo</literal> avec les clés
-      <literal>sequence</literal>, <literal>uri</literal> et
-      <literal>method</literal>. S'il est omis, la fonction de rappel
+      &array; <literal>callinfo</literal> décrivant l'appel :
+     </simpara>
+     <simplelist>
+      <member><literal>sequence</literal> — le numéro de séquence retourné
+       lors de l'enregistrement de l'appel</member>
+      <member><literal>uri</literal> — l'adresse du service</member>
+      <member><literal>method</literal> — le nom de la méthode distante</member>
+     </simplelist>
+     <simpara>
+      S'il est omis, la fonction de rappel
       <literal>callback</literal> de
-      <methodname>Yar_Concurrent_Client::loop</methodname> est utilisée.
+      <methodname>Yar_Concurrent_Client::loop</methodname> est utilisée ;
+      voir cette méthode pour ce qui se passe quand ni l'un ni l'autre n'est
+      fourni.
      </simpara>
     </listitem>
    </varlistentry>
@@ -81,9 +91,11 @@
       Un <type>callable</type> invoqué lorsque cet appel échoue, avec trois
       arguments : le type d'erreur (l'un des codes
       <literal>YAR_ERR_*</literal>), le message d'erreur, et l'&array;
-      <literal>callinfo</literal>. S'il est omis, la fonction de rappel
-      <literal>error_callback</literal> de
-      <methodname>Yar_Concurrent_Client::loop</methodname> est utilisée.
+      <literal>callinfo</literal> décrit ci-dessus. S'il est omis, la
+      fonction de rappel <literal>error_callback</literal> de
+      <methodname>Yar_Concurrent_Client::loop</methodname> est utilisée ;
+      voir cette méthode pour ce qui se passe quand ni l'un ni l'autre n'est
+      fourni.
      </simpara>
     </listitem>
    </varlistentry>
@@ -132,16 +144,16 @@ function error_callback($type, $error, $callinfo)
     error_log($error);
 }
 
-Yar_Concurrent_Client::call("http://host/api/", "some_method", array("parameters"), "callback");
+Yar_Concurrent_Client::call("http://api.example.com/operator.php", "some_method", array("parameters"), "callback");
 
 /* Si la fonction de rappel n'est pas spécifiée, celle de loop() sera utilisée */
-Yar_Concurrent_Client::call("http://host/api/", "some_method", array("parameters"));
+Yar_Concurrent_Client::call("http://api.example.com/operator.php", "some_method", array("parameters"));
 
 /* Ce serveur accepte le packager JSON */
-Yar_Concurrent_Client::call("http://host/api/", "some_method", array("parameters"), "callback", NULL, array(YAR_OPT_PACKAGER => "json"));
+Yar_Concurrent_Client::call("http://api.example.com/operator.php", "some_method", array("parameters"), "callback", NULL, array(YAR_OPT_PACKAGER => "json"));
 
 /* Délai d'attente maximal personnalisé */
-Yar_Concurrent_Client::call("http://host/api/", "some_method", array("parameters"), "callback", NULL, array(YAR_OPT_TIMEOUT => 1000));
+Yar_Concurrent_Client::call("http://api.example.com/operator.php", "some_method", array("parameters"), "callback", NULL, array(YAR_OPT_TIMEOUT => 1000));
 
 /* Les requêtes ne sont pas encore envoyées */
 ]]>

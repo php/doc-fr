@@ -1,15 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 75d48299ef85693f10eee31af1be88488fb84c6f Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: 60ce1c5c7cc6d340191828de21f1d6b48cd83807 Maintainer: lacatoire Status: ready -->
 
 <chapter xml:id="yar.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  &reftitle.examples;
+ <simpara>
+  Les exemples ci-dessous décrivent un service complet : un serveur qui
+  expose quelques méthodes arithmétiques, un client synchrone qui les
+  appelle, un client qui parallélise plusieurs appels, et un client qui
+  dialogue avec un serveur via TCP.
+ </simpara>
+
  <example>
   <title>Exemple de serveur Yar</title>
+  <simpara>
+   Un service Yar est simplement une classe PHP ordinaire enveloppée par
+   <classname>Yar_Server</classname>. Chaque méthode publique de l'objet
+   devient un point d'entrée RPC ; les méthodes protégées et privées, ainsi
+   que celles dont le nom commence par un tiret bas, restent cachées aux
+   clients. Les commentaires de documentation des méthodes publiques sont
+   collectés et affichés sur la page d'information du service.
+  </simpara>
+  <simpara>
+   Les requêtes RPC arrivent comme des requêtes HTTP POST portant un payload
+   binaire au format du protocole Yar, donc le script est habituellement
+   mappé à un URI sur un serveur web classique.
+  </simpara>
   <programlisting role="php">
 <![CDATA[
 <?php
 
-/* supposons que cette page soit accessible via http://example.com/operator.php */
+/* supposons que cette page soit accessible via http://api.example.com/operator.php */
 
 class Operator {
 
@@ -56,11 +76,13 @@ $server->handle();
  <example>
   <title>Accès au serveur depuis un navigateur (requête GET)</title>
   <simpara>
-   Lorsqu'une requête GET est envoyée à l'URI du service, Yar affiche une
-   page d'information listant chaque méthode publique de l'objet exécuteur
-   accompagnée de son commentaire de documentation. Ceci est contrôlé par
-   la directive
-   <link linkend="ini.yar.expose-info">yar.expose_info</link>.
+   Lorsqu'une requête GET est envoyée à l'URI du service — par exemple en
+   l'ouvrant dans un navigateur — Yar n'effectue pas d'appel RPC mais
+   affiche une page d'information listant chaque méthode publique de l'objet
+   exécuteur accompagnée de son commentaire de documentation. Ceci est
+   contrôlé par la directive
+   <link linkend="ini.yar.expose-info">yar.expose_info</link> ; quand elle
+   est désactivée, une requête GET échoue à la place.
   </simpara>
   &example.outputs.similar;
   <mediaobject>
@@ -73,10 +95,23 @@ $server->handle();
 
  <example>
   <title>Exemple de client Yar</title>
+  <simpara>
+   Un <classname>Yar_Client</classname> est lié à une seule adresse de
+   service. Appeler n'importe quelle méthode non définie dessus est
+   transparentement transformé en appel RPC synchrone, les méthodes distantes
+   se comportant donc comme des méthodes locales ;
+   <methodname>Yar_Client::call</methodname> fait la même chose explicitement
+   par nom.
+  </simpara>
+  <simpara>
+   Les méthodes protégées ne sont pas exposées : les appeler échoue avec une
+   <exceptionname>Yar_Client_Exception</exceptionname> dont le code est
+   <constant>YAR_ERR_REQUEST</constant>.
+  </simpara>
   <programlisting role="php">
 <![CDATA[
 <?php
-$client = new Yar_Client("http://example.com/operator.php");
+$client = new Yar_Client("http://api.example.com/operator.php");
 
 /* appel direct */
 var_dump($client->add(1, 2));
@@ -94,17 +129,35 @@ var_dump($client->_add(1, 2));
 <![CDATA[
 int(3)
 int(5)
-PHP Fatal error:  Uncaught Yar_Server_Request_Exception: call to undefined api Operator::_add() in *
+PHP Fatal error:  Uncaught Yar_Client_Exception: call to undefined api Operator::_add() in *
 ]]>
   </screen>
  </example>
 
  <example>
   <title>Exemple de client Yar concurrent</title>
+  <simpara>
+   Au lieu d'appeler les services l'un après l'autre,
+   <classname>Yar_Concurrent_Client</classname> enregistre d'abord plusieurs
+   appels, puis les dispatch tous en même temps avec
+   <methodname>Yar_Concurrent_Client::loop</methodname>. Les réponses sont
+   passées au callback dans l'ordre où elles arrivent, pas dans l'ordre où
+   les appels ont été enregistrés.
+  </simpara>
+  <simpara>
+   Juste après que toutes les requêtes ont été envoyées, le callback est
+   invoqué une fois avec des arguments &null; pour signaler à l'appelant
+   qu'aucune requête n'est plus en attente ; l'exemple ci-dessous vérifie
+   cette notification.
+  </simpara>
   <programlisting role="php">
 <![CDATA[
 <?php
 function callback($ret, $callinfo) {
+    if ($callinfo == NULL) {
+        /* toutes les requêtes ont été envoyées, en attente des réponses */
+        return;
+    }
     echo $callinfo['method'], " résultat : ", $ret, "\n";
 }
 
@@ -113,9 +166,9 @@ function error_callback($type, $error, $callinfo) {
 }
 
 /* enregistre les appels asynchrones vers les services distants */
-Yar_Concurrent_Client::call("http://example.com/operator.php", "add", array(1, 2), "callback");
-Yar_Concurrent_Client::call("http://example.com/operator.php", "sub", array(2, 1), "callback");
-Yar_Concurrent_Client::call("http://example.com/operator.php", "mul", array(2, 2), "callback");
+Yar_Concurrent_Client::call("http://api.example.com/operator.php", "add", array(1, 2), "callback");
+Yar_Concurrent_Client::call("http://api.example.com/operator.php", "sub", array(2, 1), "callback");
+Yar_Concurrent_Client::call("http://api.example.com/operator.php", "mul", array(2, 2), "callback");
 
 /* envoie toutes les requêtes et attend les réponses */
 Yar_Concurrent_Client::loop("callback", "error_callback");
@@ -137,8 +190,9 @@ add résultat : 3
   <simpara>
    Outre HTTP, <classname>Yar_Client</classname> peut dialoguer avec des
    serveurs compatibles Yar via TCP ou des sockets Unix, par exemple un
-   service implémenté avec le framework Yar en C. Le serveur distant doit
-   implémenter le même protocole binaire Yar.
+   service implémenté avec le
+   <link xlink:href="&url.git.hub;laruence/yar-c">framework Yar en C</link>,
+   qui utilise le même protocole binaire Yar que le serveur PHP.
   </simpara>
   <programlisting role="php">
 <![CDATA[
