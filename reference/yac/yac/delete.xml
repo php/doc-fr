@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 1a42637cd40d0f75af1435ff051c7caa9b1c83e0 Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: d3a03f8f542cd083d793bbd8ef3d7756aae7711f Maintainer: lacatoire Status: ready -->
 
 <refentry xml:id="yac.delete" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
@@ -17,6 +17,21 @@
   <simpara>
    Supprime un ou plusieurs éléments du cache.
   </simpara>
+  <note>
+   <simpara>
+    La suppression est implémentée en marquant l'entrée comme expirée
+    plutôt qu'en vidant son slot : l'entrée cesse immédiatement d'être
+    lisible, mais le slot reste occupé jusqu'à ce que la même clé soit
+    stockée à nouveau ou qu'une écriture ultérieure le récupère. En
+    conséquence, le nombre de slots utilisés rapporté par
+    <methodname>Yac::info</methodname> ne diminue pas après une
+    suppression, et <methodname>Yac::dump</methodname> liste toujours
+    l'entrée supprimée jusqu'à ce que son slot soit recyclé ; un
+    <literal>ttl</literal> non nul dans le passé indique une entrée
+    supprimée ou expirée, il appartient donc à l'appelant de les
+    filtrer dans la sortie de <methodname>Yac::dump</methodname>.
+   </simpara>
+  </note>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -49,7 +64,15 @@
   &reftitle.returnvalues;
   <simpara>
    Retourne &true; en cas de succès, ou &false; si la clé n'était pas
-   présente dans le cache.
+   présente dans le cache. Comme une suppression ne fait que marquer
+   l'entrée comme expirée, une clé supprimée mais pas encore écrasée est
+   toujours considérée comme présente : supprimer la même clé à nouveau
+   retourne &true;.
+  </simpara>
+  <simpara>
+   Quand un <type>array</type> de clés est fourni, &true; est retourné
+   uniquement si toutes les clés étaient présentes ; si une clé est
+   absente, &false; est retourné.
   </simpara>
  </refsect1>
 
@@ -63,16 +86,25 @@
 $yac = new Yac();
 $yac->set("foo", "bar");
 
-var_dump($yac->delete("foo"));            // bool(true)
-var_dump($yac->delete("foo"));            // bool(false): déjà supprimé
+var_dump($yac->delete("foo"));      // bool(true) : marquée expirée
+var_dump($yac->get("foo"));         // bool(false) : manquant désormais
+var_dump($yac->delete("foo"));      // bool(true) à nouveau : le slot n'a pas
+                                     // encore été écrasé
+var_dump($yac->delete("jamais"));   // bool(false) : jamais stockée
 
-// suppression différée : garder l'entrée lisible encore 60 secondes,
-// elle disparaît seulement après ce délai
+// une suppression ne libère pas le slot : slots_used ne diminue pas, et
+// l'entrée expirée apparaît toujours dans le dump
+var_dump($yac->info()["slots_used"]); // int(1)
+print_r($yac->dump());                // "foo" est toujours listée ; son ttl
+                                       // est dans le passé
+
+// suppression différée : garder l'entrée lisible encore 60 secondes
 $yac->set("tmp", "value");
-var_dump($yac->delete("tmp", 60));        // bool(true)
+var_dump($yac->delete("tmp", 60));    // bool(true)
 
-// supprimer plusieurs clés à la fois
-var_dump($yac->delete(array("a", "b")));
+// supprimer plusieurs clés à la fois retourne true uniquement si toutes
+// les clés étaient présentes
+var_dump($yac->delete(array("tmp", "non"))); // bool(false) : "non" absente
 ?>
 ]]>
    </programlisting>
@@ -85,6 +117,8 @@ var_dump($yac->delete(array("a", "b")));
    <simplelist>
     <member><methodname>Yac::set</methodname></member>
     <member><methodname>Yac::flush</methodname></member>
+    <member><methodname>Yac::info</methodname></member>
+    <member><methodname>Yac::dump</methodname></member>
    </simplelist>
   </para>
  </refsect1>
