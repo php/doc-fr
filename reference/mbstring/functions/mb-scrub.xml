@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 77a60306bc47d2151ebca7e6983897a0371a9671 Maintainer: girgias Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: eb10503592351cf78c25be21c60a9049784d57bb Maintainer: girgias Status: ready -->
 <refentry xml:id="function.mb-scrub" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>mb_scrub</refname>
@@ -71,6 +69,84 @@
     </tbody>
    </tgroup>
   </informaltable>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Remplacement au niveau des octets effectué par <function>mb_scrub</function></title>
+   <simpara>
+    <function>bin2hex</function> est utilisé ici car les terminaux, navigateurs et
+    polices de caractères peuvent afficher une séquence d'octets mal formée avec leur
+    propre caractère de remplacement, ce qui masque le contenu réel de la chaîne.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+// L'octet 0xFF ne peut pas apparaître dans une chaîne UTF-8 valide.
+$input = "A\xFFB";
+echo bin2hex($input), "\n";
+
+// Le caractère de substitution par défaut est "?" (0x3F).
+echo bin2hex(mb_scrub($input, 'UTF-8')), "\n";
+
+// U+FFFD REPLACEMENT CHARACTER est encodé en EF BF BD en UTF-8.
+mb_substitute_character(0xFFFD);
+echo bin2hex(mb_scrub($input, 'UTF-8')), "\n";
+
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+41ff42
+413f42
+41efbfbd42
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>Utiliser <function>mb_scrub</function> avant un traitement tenant compte de l'UTF-8</title>
+   <simpara>
+    Les motifs PCRE utilisant le modificateur <literal>u</literal> rejettent les sujets
+    qui ne sont pas en UTF-8 bien formé. Nettoyer l'entrée en premier la rend acceptable.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+$input = "A\xFFB";
+
+var_dump(preg_match_all('/./us', $input));
+echo preg_last_error_msg(), "\n";
+
+$clean = mb_scrub($input, 'UTF-8');
+
+var_dump(preg_match_all('/./us', $clean));
+
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+bool(false)
+Malformed UTF-8 characters, possibly incorrectly encoded
+int(3)
+]]>
+   </screen>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><function>mb_substitute_character</function></member>
+   <member><function>mb_check_encoding</function></member>
+   <member><function>mb_convert_encoding</function></member>
+  </simplelist>
  </refsect1>
 
 </refentry>
