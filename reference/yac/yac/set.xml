@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 338bf692d6d24357c4a3b36b098131bc30372378 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 1a42637cd40d0f75af1435ff051c7caa9b1c83e0 Maintainer: lacatoire Status: ready -->
 
 <refentry xml:id="yac.set" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
@@ -13,17 +11,19 @@
   &reftitle.description;
   <methodsynopsis>
    <modifier>public</modifier> <type>bool</type><methodname>Yac::set</methodname>
-   <methodparam><type>string</type><parameter>keys</parameter></methodparam>
+   <methodparam><type class="union"><type>string</type><type>array</type></type><parameter>keys</parameter></methodparam>
    <methodparam><type>mixed</type><parameter>value</parameter></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>ttl</parameter><initializer>0</initializer></methodparam>
   </methodsynopsis>
   <methodsynopsis>
-   <modifier>public</modifier> <type>bool</type><methodname>Yac::add</methodname>
-   <methodparam><type>array</type><parameter>key_vals</parameter></methodparam>
+   <modifier>public</modifier> <type>bool</type><methodname>Yac::set</methodname>
+   <methodparam><type>array</type><parameter>values</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>ttl</parameter><initializer>0</initializer></methodparam>
   </methodsynopsis>
-  <para>
-   Ajoute un élément dans le cache ; si la clé existe déjà, elle sera écrasée.
-  </para>
+  <simpara>
+   Stocke une valeur dans le cache. Si la clé existe déjà, l'entrée
+   existante est écrasée, qu'elle ait expiré ou non.
+  </simpara>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -32,25 +32,30 @@
    <varlistentry>
     <term><parameter>keys</parameter></term>
     <listitem>
-     <para>
-       &string; ; la clé
-     </para>
+     <simpara>
+      Une clé <type>string</type>, ou un <type>array</type> de paires
+      <literal>clé =&gt; valeur</literal> à stocker en un seul appel.
+     </simpara>
     </listitem>
    </varlistentry>
    <varlistentry>
     <term><parameter>value</parameter></term>
     <listitem>
-     <para>
-      Tout type de valeur que PHP peut stocker, à l'exception d'une &resource;.
-     </para>
+     <simpara>
+      La valeur à stocker. Tout type PHP sauf <type>resource</type> peut
+      être stocké. Utilisé uniquement dans la forme à clé unique ; quand
+      <parameter>keys</parameter> est un tableau, cet argument est le
+      <parameter>ttl</parameter> optionnel.
+     </simpara>
     </listitem>
    </varlistentry>
    <varlistentry>
     <term><parameter>ttl</parameter></term>
     <listitem>
-     <para>
-      Durée d'expiration
-     </para>
+     <simpara>
+      Durée de vie en secondes. <literal>0</literal> signifie que l'entrée
+      n'expire jamais dans le temps.
+     </simpara>
     </listitem>
    </varlistentry>
   </variablelist>
@@ -58,8 +63,44 @@
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
+  <simpara>
+   Retourne &true; en cas de succès, &false; en cas d'échec.
+  </simpara>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <methodname>Yac::set</methodname></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$yac = new Yac();
+
+$yac->set("foo", "bar");                    // stocker une valeur unique
+$yac->set("foo", "baz");                    // écraser l'entrée existante
+
+// ttl en secondes : l'entrée expire après 5 secondes
+$yac->set("short-lived", "value", 5);
+sleep(6);
+var_dump($yac->get("short-lived"));        // bool(false): expiré
+
+// stocker plusieurs paires clé => valeur en un appel
+$yac->set(array("a" => 1, "b" => 2));
+?>
+]]>
+   </programlisting>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
   <para>
-   La valeur stockée
+   <simplelist>
+    <member><methodname>Yac::add</methodname></member>
+    <member><methodname>Yac::get</methodname></member>
+    <member><methodname>Yac::__set</methodname></member>
+   </simplelist>
   </para>
  </refsect1>
 

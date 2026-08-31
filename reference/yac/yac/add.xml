@@ -1,29 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 8e2cfbdce0cd028a6521c6e073f148e0f7efac7c Maintainer: lacatoire Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 1a42637cd40d0f75af1435ff051c7caa9b1c83e0 Maintainer: lacatoire Status: ready -->
 
 <refentry xml:id="yac.add" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Yac::add</refname>
-  <refpurpose>Stocke un élément dans le cache</refpurpose>
+  <refpurpose>Stocke une valeur sans écraser une valeur existante</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
    <modifier>public</modifier> <type>bool</type><methodname>Yac::add</methodname>
-   <methodparam><type>string</type><parameter>keys</parameter></methodparam>
+   <methodparam><type class="union"><type>string</type><type>array</type></type><parameter>keys</parameter></methodparam>
    <methodparam><type>mixed</type><parameter>value</parameter></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>ttl</parameter><initializer>0</initializer></methodparam>
   </methodsynopsis>
   <methodsynopsis>
    <modifier>public</modifier> <type>bool</type><methodname>Yac::add</methodname>
-   <methodparam><type>array</type><parameter>key_vals</parameter></methodparam>
+   <methodparam><type>array</type><parameter>values</parameter></methodparam>
+   <methodparam choice="opt"><type>int</type><parameter>ttl</parameter><initializer>0</initializer></methodparam>
   </methodsynopsis>
-  <para>
-   Ajoute un élément dans le cache.
-  </para>
+  <simpara>
+   Stocke une valeur dans le cache. Contrairement à
+   <methodname>Yac::set</methodname>, cette méthode n'écrase pas une entrée
+   existante encore valide ; le stockage est rejeté dans ce cas.
+  </simpara>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -32,25 +33,30 @@
    <varlistentry>
     <term><parameter>keys</parameter></term>
     <listitem>
-     <para>
-       &string; ; la clé
-     </para>
+     <simpara>
+      Une clé <type>string</type>, ou un <type>array</type> de paires
+      <literal>clé =&gt; valeur</literal> à stocker en un seul appel.
+     </simpara>
     </listitem>
    </varlistentry>
    <varlistentry>
     <term><parameter>value</parameter></term>
     <listitem>
-     <para>
-      Tout type de valeur PHP peut être stocké, à l'exception d'une &resource;.
-     </para>
+     <simpara>
+      La valeur à stocker. Tout type PHP sauf <type>resource</type> peut
+      être stocké. Utilisé uniquement dans la forme à clé unique ; quand
+      <parameter>keys</parameter> est un tableau, cet argument est le
+      <parameter>ttl</parameter> optionnel.
+     </simpara>
     </listitem>
    </varlistentry>
    <varlistentry>
     <term><parameter>ttl</parameter></term>
     <listitem>
-     <para>
-      Délai d'expiration.
-     </para>
+     <simpara>
+      Durée de vie en secondes. <literal>0</literal> signifie que l'entrée
+      n'expire jamais dans le temps.
+     </simpara>
     </listitem>
    </varlistentry>
   </variablelist>
@@ -58,26 +64,64 @@
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>
-   &boolean;, &true; en cas de succès, &false; si une erreur survient.
-   <note>
-    <para>
-     La méthode <methodname>Yac::add</methodname> peut échouer si le verrou
-     ne peut être obtenu, aussi, pour que l'élément soit stocké
-     proprement, il est recommandé d'écrire le code comme ceci :
-     <example>
-      <title>Permet de s'assurer que l'élément est stocké</title>
-      <programlisting role="php">
-       <![CDATA[
-       while(!$yac->set("key", "value"));
-       ]]>
-      </programlisting> 
-     </example>
-    </para>
-   </note>
-  </para>
+  <simpara>
+   Retourne &true; en cas de succès, &false; en cas d'échec. Un stockage
+   est également rejeté (retournant &false;) quand la clé existe déjà et
+   n'a pas expiré.
+  </simpara>
+  <note>
+   <para>
+    Yac stocke les entrées sans verrou. Sous forte contention, un stockage
+    peut échouer de façon transitoire ; si la valeur doit finalement être
+    stockée, réessayer :
+    <programlisting role="php">
+<![CDATA[
+<?php
+while (!$yac->add("key", "value")) {
+    // réessayer en cas d'échec transitoire
+}
+?>
+]]>
+    </programlisting>
+   </para>
+  </note>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <methodname>Yac::add</methodname></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$yac = new Yac();
+
+var_dump($yac->add("foo", "bar"));          // bool(true)
+var_dump($yac->add("foo", "baz"));          // bool(false): "foo" existe déjà
+
+// ttl en secondes ; 0 (la valeur par défaut) signifie que l'entrée n'expire jamais
+$yac->add("short-lived", "value", 5);
+sleep(6);
+var_dump($yac->get("short-lived"));        // bool(false): expiré
+
+// stocker plusieurs paires clé => valeur en un appel, avec un ttl
+$yac->add(array("a" => 1, "b" => 2), 60);
+?>
+]]>
+   </programlisting>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><methodname>Yac::set</methodname></member>
+    <member><methodname>Yac::get</methodname></member>
+    <member><methodname>Yac::delete</methodname></member>
+   </simplelist>
+  </para>
+ </refsect1>
 
 </refentry>
 

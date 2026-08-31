@@ -1,43 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 53242ee6628dc1ae6989fe002231fddfd8f005c6 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 1a42637cd40d0f75af1435ff051c7caa9b1c83e0 Maintainer: lacatoire Status: ready -->
 
 <refentry xml:id="yac.get" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>Yac::get</refname>
-  <refpurpose>Récupère un élément du cache</refpurpose>
+  <refpurpose>Récupère des valeurs du cache</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
   <methodsynopsis>
    <modifier>public</modifier> <type>mixed</type><methodname>Yac::get</methodname>
-   <methodparam><type class="union"><type>string</type><type>array</type></type><parameter>key</parameter></methodparam>
-   <methodparam choice="opt"><type>int</type><parameter role="reference">cas</parameter><initializer>&null;</initializer></methodparam>
+   <methodparam><type class="union"><type>string</type><type>array</type></type><parameter>keys</parameter></methodparam>
+   <methodparam choice="opt"><type>mixed</type><parameter>default</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
-  <para>
-    Récupère un élément du cache.
-  </para>
+  <simpara>
+   Récupère des valeurs du cache.
+  </simpara>
  </refsect1>
 
  <refsect1 role="parameters">
   &reftitle.parameters;
   <variablelist>
    <varlistentry>
-    <term><parameter>key</parameter></term>
+    <term><parameter>keys</parameter></term>
     <listitem>
-     <para>
-      &string; ; la clé, ou un &array; de plusieurs clés.
-     </para>
+     <simpara>
+      Une clé <type>string</type>, ou un <type>array</type> de clés.
+     </simpara>
     </listitem>
    </varlistentry>
    <varlistentry>
-    <term><parameter>cas</parameter></term>
+    <term><parameter>default</parameter></term>
     <listitem>
-     <para>
-      Si différent de &null;, ce devra être le cas de l'élément récupéré.
-     </para>
+     <simpara>
+      La valeur à retourner quand la clé (ou les clés) demandée n'est pas
+      présente dans le cache, disponible à partir de yac 2.4.0. Quand
+      omis, un défaut de cache retourne &false;.
+     </simpara>
+     <note>
+      <simpara>
+       Avant yac 2.4.0, cet emplacement d'argument contenait un jeton
+       <literal>$cas</literal> par référence plutôt qu'une valeur par
+       défaut. Le code qui passait ou se reposait sur ce jeton doit être
+       mis à jour lors d'une montée en version vers 2.4.0.
+      </simpara>
+     </note>
     </listitem>
    </varlistentry>
   </variablelist>
@@ -45,11 +53,60 @@
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>
-   Le ou les éléments, &false; si une erreur survient.
-  </para>
+  <simpara>
+   Pour une clé <type>string</type>, retourne la valeur mise en cache en
+   cas de succès, sinon la <parameter>default</parameter> (ou &false; si
+   aucune valeur par défaut n'a été donnée).
+  </simpara>
+  <simpara>
+   Pour un <type>array</type> de clés, retourne un tableau contenant les
+   valeurs trouvées indexées par leurs clés. Les clés absentes du cache
+   sont omises du résultat à partir de yac 2.4.0, ou remplies avec la
+   <parameter>default</parameter> quand une a été fournie ; avant 2.4.0,
+   un placeholder &false; était inséré pour chaque clé manquante.
+  </simpara>
  </refsect1>
 
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <methodname>Yac::get</methodname></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$yac = new Yac();
+
+$yac->set("foo", "bar");
+var_dump($yac->get("foo"));                 // string(3) "bar"
+var_dump($yac->get("missing"));             // bool(false): défaut de cache
+
+// un défaut de cache et un false stocké sont indiscernables sans valeur par défaut ;
+// une valeur sentinelle (disponible à partir de yac 2.4.0) les distingue
+$yac->set("flag", false);
+var_dump($yac->get("flag"));                // bool(false): la valeur stockée
+var_dump($yac->get("missing", false));      // bool(false): un défaut de cache, même forme
+var_dump($yac->get("flag", "__NONE__"));    // bool(false): la valeur stockée
+var_dump($yac->get("missing", "__NONE__")); // string(8) "__NONE__": un défaut de cache
+
+// avec un tableau de clés, seules les clés trouvées sont présentes dans le résultat
+$yac->set("foo2", "bar2");
+var_dump($yac->get(array("foo", "foo2", "missing")));
+// array(2) { ["foo"]=> string(3) "bar" ["foo2"]=> string(4) "bar2" }
+?>
+]]>
+   </programlisting>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <para>
+   <simplelist>
+    <member><methodname>Yac::set</methodname></member>
+    <member><methodname>Yac::__get</methodname></member>
+   </simplelist>
+  </para>
+ </refsect1>
 
 </refentry>
 
