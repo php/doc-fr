@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 14dc7c47365f2b71f6c907a5ba5bccf42534d5a9 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 30b010f003975adc755ebbf6097d3462bb1875db Maintainer: yannick Status: ready -->
 <refentry xml:id="function.socket-sendmsg" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>socket_sendmsg</refname>
@@ -15,9 +13,11 @@
    <methodparam><type>array</type><parameter>message</parameter></methodparam>
    <methodparam choice="opt"><type>int</type><parameter>flags</parameter><initializer>0</initializer></methodparam>
   </methodsynopsis>
-  <para>
-  </para>
-  &warn.undocumented.func;
+  <simpara>
+   La fonction <function>socket_sendmsg</function> envoie le message décrit par
+   <parameter>message</parameter> via le socket <parameter>socket</parameter>,
+   en utilisant l'appel système <literal>sendmsg()</literal>.
+  </simpara>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -27,21 +27,158 @@
     <varlistentry>
      <term><parameter>socket</parameter></term>
      <listitem>
-      <para>
-      </para>
+      <simpara>
+       Une instance de <classname>Socket</classname> créée avec <function>socket_create</function>,
+       <function>socket_accept</function> ou <function>socket_create_pair</function>.
+      </simpara>
      </listitem>
     </varlistentry>
     <varlistentry>
      <term><parameter>message</parameter></term>
      <listitem>
-      <para>
-      </para>
+      <simpara>
+       Un tableau associatif qui peut contenir les éléments suivants. Tous sont
+       optionnels, et les clés non reconnues sont ignorées silencieusement. En
+       particulier, il n'y a pas d'élément <varname>flags</varname> lors de
+       l'envoi ; cette clé n'apparaît que dans le tableau rempli par
+       <function>socket_recvmsg</function>.
+      </simpara>
+      <variablelist>
+       <varlistentry>
+        <term><varname>name</varname></term>
+        <listitem>
+         <simpara>
+          L'adresse de l'hôte distant, sous forme de tableau. Ses clés sont
+          <varname>addr</varname> et <varname>port</varname> pour
+          <constant>AF_INET</constant> ; <varname>addr</varname>,
+          <varname>port</varname>, <varname>flowinfo</varname> et
+          <varname>scope_id</varname> pour <constant>AF_INET6</constant> ; et
+          <varname>path</varname> pour <constant>AF_UNIX</constant>.
+          <varname>addr</varname> accepte une adresse IP ou un nom d'hôte, qui
+          est alors résolu. Une clé optionnelle <varname>family</varname>
+          sélectionne explicitement la famille d'adresses ; si elle est omise,
+          la famille de <parameter>socket</parameter> est utilisée. Une famille
+          que le socket ne prend pas en charge fait échouer l'appel.
+         </simpara>
+        </listitem>
+       </varlistentry>
+       <varlistentry>
+        <term><varname>iov</varname></term>
+        <listitem>
+         <simpara>
+          Une liste de tampons contenant les données à envoyer, qui sont
+          envoyées dans l'ordre sous la forme d'un message unique. Les clés du
+          tableau sont ignorées et les valeurs sont converties en chaîne de
+          caractères. Lorsque cette clé est absente ou vide, aucune donnée
+          n'est envoyée et la fonction retourne <literal>0</literal>.
+         </simpara>
+        </listitem>
+       </varlistentry>
+       <varlistentry>
+        <term><varname>control</varname></term>
+        <listitem>
+         <simpara>
+          Une liste de messages de données auxiliaires. Chacun est un tableau
+          avec les clés <varname>level</varname>, <varname>type</varname> et
+          <varname>data</varname>. Seuls les couples ci-dessous sont pris en
+          charge, et leur disponibilité dépend de la plateforme.
+         </simpara>
+         <table>
+          <title>Données auxiliaires prises en charge</title>
+          <tgroup cols="3">
+           <thead>
+            <row>
+             <entry><varname>level</varname></entry>
+             <entry><varname>type</varname></entry>
+             <entry><varname>data</varname></entry>
+            </row>
+           </thead>
+           <tbody>
+            <row>
+             <entry><constant>SOL_SOCKET</constant></entry>
+             <entry><constant>SCM_RIGHTS</constant></entry>
+             <entry>
+              Une liste non vide d'instances de <classname>Socket</classname> ou
+              de ressources de flux, dont les descripteurs de fichier sont
+              envoyés au processus destinataire.
+             </entry>
+            </row>
+            <row>
+             <entry><constant>SOL_SOCKET</constant></entry>
+             <entry><constant>SCM_CREDENTIALS</constant></entry>
+             <entry>
+              Un tableau avec les clés <varname>pid</varname>,
+              <varname>uid</varname> et <varname>gid</varname>. Nommé
+              <constant>SCM_CREDS</constant> ou <constant>SCM_CREDS2</constant>
+              sur certains systèmes.
+             </entry>
+            </row>
+            <row>
+             <entry><constant>IPPROTO_IPV6</constant></entry>
+             <entry><constant>IPV6_PKTINFO</constant></entry>
+             <entry>
+              Un tableau avec les clés <varname>addr</varname> et
+              <varname>ifindex</varname>.
+             </entry>
+            </row>
+            <row>
+             <entry><constant>IPPROTO_IPV6</constant></entry>
+             <entry><constant>IPV6_HOPLIMIT</constant></entry>
+             <entry>Un <type>int</type>.</entry>
+            </row>
+            <row>
+             <entry><constant>IPPROTO_IPV6</constant></entry>
+             <entry><constant>IPV6_TCLASS</constant></entry>
+             <entry>Un <type>int</type>.</entry>
+            </row>
+           </tbody>
+          </tgroup>
+         </table>
+        </listitem>
+       </varlistentry>
+      </variablelist>
      </listitem>
     </varlistentry>
     <varlistentry>
      <term><parameter>flags</parameter></term>
      <listitem>
       <para>
+       La valeur de <parameter>flags</parameter> peut être n'importe quelle
+       combinaison des drapeaux suivants, réunis par l'opérateur binaire OU
+       (<literal>|</literal>).
+       <table>
+        <title>Valeurs possibles pour <parameter>flags</parameter></title>
+        <tgroup cols="2">
+         <tbody>
+          <row>
+           <entry><constant>MSG_OOB</constant></entry>
+           <entry>
+            Envoie les données OOB (out-of-band).
+           </entry>
+          </row>
+          <row>
+           <entry><constant>MSG_EOR</constant></entry>
+           <entry>
+            Indique un marqueur d'enregistrement. Les données envoyées
+            complètent l'enregistrement.
+           </entry>
+          </row>
+          <row>
+           <entry><constant>MSG_DONTWAIT</constant></entry>
+           <entry>
+            Lorsque ce drapeau est défini, la fonction retourne même si elle
+            devrait rester bloquée.
+           </entry>
+          </row>
+          <row>
+           <entry><constant>MSG_DONTROUTE</constant></entry>
+           <entry>
+            Ignore le routage, utilise une interface directe.
+           </entry>
+          </row>
+         </tbody>
+        </tgroup>
+       </table>
       </para>
      </listitem>
     </varlistentry>
@@ -71,6 +208,81 @@
     </tbody>
    </tgroup>
   </informaltable>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Envoi d'un message avec <function>socket_sendmsg</function></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$server = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
+socket_bind($server, '127.0.0.1', 1053);
+
+$client = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
+$sent = socket_sendmsg($client, [
+    'name' => ['addr' => '127.0.0.1', 'port' => 1053],
+    'iov'  => ['Hello ', 'world'],
+], 0);
+
+echo "envoyé : $sent\n";
+
+socket_recvfrom($server, $buffer, 64, 0, $from, $port);
+echo "reçu : $buffer\n";
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+envoyé : 11
+reçu : Hello world
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>Transmission d'un descripteur de fichier via un socket UNIX</title>
+   <simpara>
+    La clé <varname>control</varname> transporte les données auxiliaires. Avec
+    <constant>SCM_RIGHTS</constant>, elle transfère des descripteurs de fichier
+    ouverts au processus situé à l'autre extrémité d'un socket UNIX. Ceci n'est
+    pas disponible sous Windows.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $pair);
+[$sender, $receiver] = $pair;
+
+$file = fopen(__FILE__, 'r');
+
+socket_sendmsg($sender, [
+    // Au moins un octet de données normales doit accompagner les données auxiliaires.
+    'iov'     => ['fd'],
+    'control' => [
+        ['level' => SOL_SOCKET, 'type' => SCM_RIGHTS, 'data' => [$file]],
+    ],
+], 0);
+
+$message = [
+    'buffer_size' => 16,
+    'controllen'  => socket_cmsg_space(SOL_SOCKET, SCM_RIGHTS, 1),
+];
+socket_recvmsg($receiver, $message, 0);
+
+$received = $message['control'][0]['data'][0];
+echo "première ligne : ", fgets($received);
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+première ligne : <?php
+]]>
+   </screen>
+  </example>
  </refsect1>
 
  <refsect1 role="seealso">
