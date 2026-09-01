@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 8bf3587d8f70239a65d9aa44d42ced8a696a3e86 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
-<!-- CREDITS: DavidA. -->
+<!-- EN-Revision: b91033ba3d6831cfa2ef6745150cd5d6b4af65c9 Maintainer: yannick Status: ready -->
 <refentry xml:id="function.array-column" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>array_column</refname>
@@ -17,12 +14,22 @@
    <methodparam choice="opt"><type class="union"><type>int</type><type>string</type><type>null</type></type><parameter>index_key</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
   <para>
-   <function>array_column</function> retourne les valeurs d'une colonne de <parameter>array</parameter>, identifiée par la clé
+   <function>array_column</function> retourne les valeurs d'une colonne de
+   <parameter>array</parameter>, identifiée par
    <parameter>column_key</parameter>. Optionnellement, il est possible de fournir
-   un paramètre <parameter>index_key</parameter> pour indexer les valeurs 
-   dans le tableau retourné par les valeurs de la colonne 
+   un paramètre <parameter>index_key</parameter> pour indexer les valeurs
+   dans le tableau retourné par les valeurs de la colonne
    <parameter>index_key</parameter> du tableau d'entrée.
   </para>
+  <simpara>
+   <parameter>array</parameter> est traité comme une liste de lignes, chacune
+   étant elle-même un tableau ou un objet ; une colonne est l'entrée ou la
+   propriété que <parameter>column_key</parameter> désigne dans chaque ligne.
+   Les lignes qui ne sont ni un tableau ni un objet, ainsi que celles dans
+   lesquelles cette entrée ou cette propriété est absente, sont ignorées sans
+   aucun diagnostic.
+   Les clés de <parameter>array</parameter> ne sont jamais préservées.
+  </simpara>
  </refsect1>
  <refsect1 role="parameters">
   &reftitle.parameters;
@@ -31,27 +38,32 @@
     <varlistentry>
      <term><parameter>array</parameter></term>
      <listitem>
-      <para>
-       Un tableau multidimensionnel ou un tableau d'objets à partir duquel
-       on extrait une colonne de valeur. Si un tableau d'objets est fourni, 
-       alors les propriétés publiques peuvent être directement extraites. 
-       Pour que les propriétés protected ou private soient extraites, 
-       la classe doit implémenter les deux méthodes magiques 
-       <function>__get</function> et <function>__isset</function>.
-      </para>
+      <simpara>
+       Une liste dont les lignes sont des tableaux ou des objets, à partir de
+       laquelle une colonne de valeurs est extraite. Si une ligne est un objet,
+       les propriétés publiques sont lues directement.
+       Pour qu'une propriété qui n'est pas accessible publiquement soit lue,
+       la classe doit implémenter les deux méthodes magiques
+       <link linkend="object.get">__get()</link> et
+       <link linkend="object.isset">__isset()</link> : sans
+       <link linkend="object.isset">__isset()</link>, la ligne est ignorée, et
+       avec <link linkend="object.isset">__isset()</link> mais sans
+       <link linkend="object.get">__get()</link>, une
+       <exceptionname>Error</exceptionname> est lancée.
+      </simpara>
      </listitem>
     </varlistentry>
     <varlistentry>
      <term><parameter>column_key</parameter></term>
      <listitem>
-      <para>
+      <simpara>
        La colonne de valeurs à retourner. Cette valeur peut être la clé
-       entière de la colonne que l'on souhaite récupérer, ou bien le 
-       nom de la clé pour un tableau associatif ou le nom de la propriété.
-       Il peut aussi valoir &null; pour retourner le tableau complet ou 
-       des objets (ceci peut être utile en conjonction du paramètre
+       entière de la colonne à récupérer, ou bien le nom de la clé, sous forme
+       de chaîne de caractères, pour un tableau associatif ou le nom de la
+       propriété. Elle peut aussi valoir &null; pour retourner les lignes
+       complètes (ceci est utile en conjonction du paramètre
        <parameter>index_key</parameter> pour réindexer le tableau).
-      </para>
+      </simpara>
      </listitem>
     </varlistentry>
     <varlistentry>
@@ -71,10 +83,11 @@
  </refsect1>
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>
+  <simpara>
    Retourne un tableau de valeurs représentant une seule colonne depuis le
-   tableau d'entrée.
-  </para>
+   tableau d'entrée. Si <parameter>column_key</parameter> vaut &null;, ce sont
+   les lignes elles-mêmes qui sont retournées.
+  </simpara>
  </refsect1>
  <refsect1 role="changelog">
   &reftitle.changelog;
@@ -94,6 +107,20 @@
         Les objets dans les colonnes indiquées par le paramètre <parameter>index_key</parameter>
         ne seront plus convertis en chaîne de caractères et lanceront désormais
         une <classname>TypeError</classname> à la place.
+       </entry>
+      </row>
+      <row>
+       <entry>7.1.0</entry>
+       <entry>
+        La visibilité des propriétés est désormais respectée. Antérieur à cette
+        version, les propriétés protected et private étaient lues directement.
+       </entry>
+      </row>
+      <row>
+       <entry>7.0.0</entry>
+       <entry>
+        Les lignes de <parameter>array</parameter> peuvent désormais être des
+        objets aussi bien que des tableaux.
        </entry>
       </row>
      </tbody>
@@ -207,10 +234,10 @@ Array
     </screen>
    </example>
   </para>
-    <para>
+  <para>
    <example>
     <title>
-     Récupère la colonne des username depuis la propriété publique 
+     Récupère la colonne des username depuis la propriété publique
      "username" d'un objet
     </title>
     <programlisting role="php">
@@ -254,9 +281,8 @@ Array
   <para>
    <example>
     <title>
-     Récupère la colonne nom depuis la propriété privée "name" d'un 
-     objet en utilisant les méthodes magiques <function>__isset</function> et
-     <function>__get</function>
+     Récupère la colonne nom depuis la propriété privée "name" d'un
+     objet en utilisant les méthodes magiques <link linkend="object.isset">__isset()</link> et <link linkend="object.get">__get()</link>
     </title>
     <programlisting role="php">
 <![CDATA[
@@ -304,8 +330,8 @@ Array
 ]]>
     </screen>
    </example>
-   Si <function>__isset</function> est non défini, alors un tableau 
-   vide sera retourné.
+   Si <link linkend="object.isset">__isset()</link> n'est pas fourni, l'objet
+   ne contribue à aucune entrée dans le tableau retourné.
   </para>
  </refsect1>
 
