@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: eff8e0d4dd463ae6bd387f304effeaf3d5ce44d5 Maintainer: lacatoire Status: ready -->
+<refentry xml:id="pdo-sqlite.setauthorizer" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <refnamediv>
+  <refname>Pdo\Sqlite::setAuthorizer</refname>
+  <refpurpose>Configure une fonction de rappel à utiliser comme autorisateur pour limiter ce qu'une instruction peut faire</refpurpose>
+ </refnamediv>
+
+ <refsect1 role="description">
+  &reftitle.description;
+  <methodsynopsis role="Pdo\\Sqlite">
+   <modifier>public</modifier> <type>void</type><methodname>Pdo\Sqlite::setAuthorizer</methodname>
+   <methodparam><type class="union"><type>callable</type><type>null</type></type><parameter>callback</parameter></methodparam>
+  </methodsynopsis>
+  <simpara>
+   Définit une fonction de rappel qui sera appelée par SQLite chaque fois qu'une action
+   est effectuée (lecture, suppression, mise à jour, etc.). Cela est utilisé lors de la
+   préparation d'une instruction SQL provenant d'une source non fiable, afin de s'assurer
+   que l'instruction n'accède pas à des données qu'elle n'est pas autorisée à voir et
+   n'exécute pas d'instructions malveillantes qui endommageraient la base de données.
+  </simpara>
+  <simpara>
+   L'autorisateur n'est utilisé que pendant la phase de préparation de l'instruction.
+   Il peut être appelé plusieurs fois pour une seule instruction : une requête
+   <literal>SELECT</literal> ou <literal>UPDATE</literal> l'appelle pour chaque colonne
+   qui serait lue ou mise à jour. Il est appelé de nouveau chaque fois que SQLite
+   prépare à nouveau une instruction, ce qui peut se produire pendant que l'instruction
+   est en cours d'exécution, par exemple après une modification du schéma.
+  </simpara>
+  <simpara>
+   L'autorisateur est appelé avec jusqu'à cinq arguments. Les arguments reçus sont
+   décrits sur la page <methodname>SQLite3::setAuthorizer</methodname>.
+  </simpara>
+  <simpara>
+   Un seul autorisateur peut être en place à la fois sur une connexion à une base de
+   données. Chaque appel à cette méthode remplace le précédent. L'autorisateur est
+   désactivé par défaut, et peut être désactivé de nouveau en définissant une fonction
+   de rappel &null;.
+  </simpara>
+  <simpara>
+   La fonction de rappel ne doit pas modifier la connexion à la base de données qui
+   l'a invoquée.
+  </simpara>
+  <simpara>
+   Plus de détails sont disponibles dans la
+   <link xlink:href="&url.sqlite;c3ref/set_authorizer.html">documentation de SQLite</link>.
+  </simpara>
+  <note>
+   <simpara>
+    Cette méthode est l'équivalent de <methodname>SQLite3::setAuthorizer</methodname>,
+    à ceci près qu'elle retourne <type>void</type> au lieu de <type>bool</type>.
+   </simpara>
+  </note>
+ </refsect1>
+
+ <refsect1 role="parameters">
+  &reftitle.parameters;
+  <variablelist>
+   <varlistentry>
+    <term><parameter>callback</parameter></term>
+    <listitem>
+     <simpara>
+      Le <type>callable</type> à invoquer, ou &null; pour désactiver la fonction de
+      rappel d'autorisation courante.
+     </simpara>
+     <simpara>
+      Il doit retourner l'une des valeurs <constant>Pdo\Sqlite::OK</constant>,
+      <constant>Pdo\Sqlite::DENY</constant> ou
+      <constant>Pdo\Sqlite::IGNORE</constant>.
+      Lorsque <constant>Pdo\Sqlite::DENY</constant> est retourné, l'instruction qui a
+      déclenché l'autorisateur échoue avec une erreur indiquant que l'accès est refusé.
+      Lorsque <constant>Pdo\Sqlite::IGNORE</constant> est retourné pour une action de
+      lecture, l'instruction est préparée de sorte qu'une valeur &null; soit substituée
+      à la colonne qui aurait été lue.
+     </simpara>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+ </refsect1>
+
+ <refsect1 role="returnvalues">
+  &reftitle.returnvalues;
+  <simpara>
+   &return.void;
+  </simpara>
+ </refsect1>
+
+ <refsect1 role="errors">
+  &reftitle.errors;
+  <simpara>
+   Cette méthode elle-même ne lance pas d'exception, mais si la fonction de rappel
+   d'autorisation ne retourne pas un <type>int</type>, ou retourne un <type>int</type>
+   qui n'est pas l'une des valeurs <constant>Pdo\Sqlite::OK</constant>,
+   <constant>Pdo\Sqlite::DENY</constant> ou <constant>Pdo\Sqlite::IGNORE</constant>,
+   la préparation de l'instruction lance respectivement une
+   <exceptionname>TypeError</exceptionname> ou une
+   <exceptionname>ValueError</exceptionname>.
+  </simpara>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Exemple avec <methodname>Pdo\Sqlite::setAuthorizer</methodname></title>
+   <simpara>
+    Seules les actions de lecture sont autorisées sur la connexion. Les codes d'action
+    sont exposés en tant que constantes de la classe <classname>SQLite3</classname>, ce
+    qui nécessite que l'extension <link linkend="book.sqlite3">SQLite3</link> soit
+    disponible ; leurs valeurs entières peuvent être utilisées directement dans le cas
+    contraire.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$db = new Pdo\Sqlite('sqlite::memory:');
+$db->exec('CREATE TABLE users (id, name)');
+
+$db->setAuthorizer(function (int $action, ...$args) {
+    return match ($action) {
+        SQLite3::SELECT, SQLite3::READ => Pdo\Sqlite::OK,
+        default => Pdo\Sqlite::DENY,
+    };
+});
+
+var_dump($db->query('SELECT name FROM users') instanceof PDOStatement);
+
+try {
+    $db->exec('DROP TABLE users');
+} catch (PDOException $e) {
+    echo $e->getMessage(), "\n";
+}
+?>
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+bool(true)
+SQLSTATE[HY000]: General error: 23 not authorized
+]]>
+   </screen>
+  </example>
+ </refsect1>
+
+ <refsect1 role="seealso">
+  &reftitle.seealso;
+  <simplelist>
+   <member><methodname>SQLite3::setAuthorizer</methodname></member>
+  </simplelist>
+ </refsect1>
+
+</refentry>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
