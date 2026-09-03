@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 1a42637cd40d0f75af1435ff051c7caa9b1c83e0 Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: c05fbe7250c43b75034ac776ed78f4e67163e4d3 Maintainer: lacatoire Status: ready -->
 
 <section xml:id="yac.configuration" xmlns="http://docbook.org/ns/docbook">
  &reftitle.runtime;
@@ -19,7 +19,7 @@
     <tbody>
      <row>
       <entry><link linkend="ini.yac.compress-threshold">yac.compress_threshold</link></entry>
-      <entry>-1</entry>
+      <entry>4K</entry>
       <entry><constant>INI_SYSTEM</constant></entry>
       <entry><!-- leave empty, this will be filled by an automatic script --></entry>
      </row>
@@ -43,7 +43,7 @@
      </row>
      <row>
       <entry><link linkend="ini.yac.keys-memory-size">yac.keys_memory_size</link></entry>
-      <entry>4M</entry>
+      <entry>8M</entry>
       <entry><constant>INI_SYSTEM</constant></entry>
       <entry><!-- leave empty, this will be filled by an automatic script --></entry>
      </row>
@@ -76,11 +76,17 @@
      <listitem>
       <simpara>
        Les valeurs sérialisées plus grandes que ce nombre d'octets sont
-       compressées avant d'être stockées (actuellement avec LZ4). Mettre à
-       <literal>-1</literal> (la valeur par défaut) pour désactiver
-       entièrement la compression. Compresser les grandes valeurs économise
-       de la mémoire partagée au coût de quelques cycles CPU lors du
-       stockage et de la récupération.
+       compressées (avec LZ4, depuis Yac 2.4.0) avant d'être stockées.
+       Les valeurs au delà de la limite de <literal>1M</literal> par entrée
+       stockée (<constant>YAC_MAX_RAW_COMPRESSED_LEN</constant>) sont
+       toujours compressées, quel que soit ce réglage, car elles ne peuvent
+       pas être stockées non compressées. La valeur par défaut de
+       <literal>4K</literal> active la compression ; <literal>-1</literal>
+       la désactive pour les valeurs en deçà de la limite par entrée
+       stockée, et les autres valeurs positives sont ramenées dans
+       l'intervalle <literal>1024</literal>..<literal>1M</literal>.
+       Compresser les grandes valeurs économise de la mémoire partagée au
+       coût de quelques cycles CPU lors du stockage et de la récupération.
       </simpara>
      </listitem>
     </varlistentry>
@@ -129,13 +135,34 @@
      </term>
      <listitem>
       <simpara>
-       Quantité de mémoire partagée utilisée pour la table de hachage qui
-       contient les clés et les informations de gestion. Chaque slot est une
-       structure de taille fixe, donc cette valeur détermine combien
-       d'éléments peuvent être suivis simultanément. La valeur par défaut
-       est <literal>4M</literal>. Yac divise cette zone en segments ; la
-       taille de segment est de 4M, donc cette valeur doit être un multiple
-       de <literal>4M</literal>.
+       Quantité de mémoire partagée pour la table des clés. Elle plafonne le
+       nombre d'entrées pouvant exister simultanément : la valeur par défaut
+       de <literal>8M</literal> autorise environ 65 536 entrées. L'augmenter
+       lorsque le taux de succès baisse et que <literal>kicks</literal>
+       grimpe ; voir <xref linkend="yac.memory-management"/> pour le
+       comportement d'une table pleine et les cas où cela importe vraiment.
+      </simpara>
+     </listitem>
+    </varlistentry>
+    <varlistentry xml:id="ini.yac.values-memory-size">
+     <term>
+      <parameter>yac.values_memory_size</parameter>
+      <type>string</type>
+     </term>
+     <listitem>
+      <simpara>
+       Quantité de mémoire partagée pour le stockage des valeurs. Les valeurs
+       sont allouées par un allocateur linéaire sur des segments de 4M
+       chacun ; lorsqu'aucun segment n'a de place pour une nouvelle valeur,
+       le curseur d'allocation repart au début et les valeurs les plus
+       anciennes sont silencieusement écrasées (« recyclées »). Leurs
+       lectures se dégradent alors en défauts de cache, détectés par un
+       contrôle d'intégrité. Augmenter cette valeur si
+       <literal>recycles</literal> grimpe alors que les slots ont encore de
+       la place, ou activer
+       <link linkend="ini.yac.compress-threshold">yac.compress_threshold</link>
+       pour réduire les grandes charges utiles. Voir
+       <xref linkend="yac.memory-management"/>.
       </simpara>
      </listitem>
     </varlistentry>
@@ -155,22 +182,6 @@
        sérialisateurs binaires tels que <literal>igbinary</literal> et
        <literal>msgpack</literal> sont généralement plus rapides et
        produisent des données plus compactes que <literal>php</literal>.
-      </simpara>
-     </listitem>
-    </varlistentry>
-    <varlistentry xml:id="ini.yac.values-memory-size">
-     <term>
-      <parameter>yac.values_memory_size</parameter>
-      <type>string</type>
-     </term>
-     <listitem>
-      <simpara>
-       Quantité de mémoire partagée utilisée pour stocker les valeurs
-       réelles. La valeur par défaut est <literal>64M</literal>. Yac alloue
-       cette zone en segments de 4M chacun, donc cette valeur doit être un
-       multiple de <literal>4M</literal>. Lorsque la zone est pleine, les
-       entrées les moins récemment utilisées sont expulsées pour faire de la
-       place aux nouvelles.
       </simpara>
      </listitem>
     </varlistentry>
