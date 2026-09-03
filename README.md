@@ -1,4 +1,9 @@
+<img src="https://www.php.net/images/logos/new-php-logo.svg" alt="PHP" width="120" align="right">
+
 # Documentation française de PHP
+
+[![Structure](https://github.com/php/doc-fr/actions/workflows/build.yml/badge.svg)](https://github.com/php/doc-fr/actions/workflows/build.yml)
+[![Style](https://github.com/php/doc-fr/actions/workflows/check-style.yml/badge.svg)](https://github.com/php/doc-fr/actions/workflows/check-style.yml)
 
 Ce dépôt contient la traduction française du manuel de PHP.
 
