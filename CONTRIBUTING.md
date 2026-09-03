@@ -18,7 +18,8 @@ La traduction française suivra la modification faite dans la documentation angl
  4. Coding Standard
  5. Traduction, relectures et orthographe
  6. Workflow git
- 7. Commandes utiles
+ 7. Vérifier ses changements avant de pousser
+ 8. Commandes utiles
 
 
 ## 1: Installation
@@ -191,7 +192,60 @@ push directement sur la branche ``master`` du repo doc-fr sur https://github.com
 
 Ne créez et pushez pas des branches différentes de ``master`` sur le repo git officiel.
 
-## 7: Commandes utiles
+## 7: Vérifier ses changements avant de pousser
+
+Quatre vérifications automatiques tournent sur chaque pull request. Elles se
+rejouent en local, ce qui évite un aller-retour avec la CI.
+
+Les deux premières comparent les fichiers à la documentation anglaise et
+attendent de la trouver dans un dossier `en` **à la racine du dépôt** `fr`
+(`.gitignore` le prévoit). Si la documentation anglaise est ailleurs, un lien
+symbolique suffit :
+
+```shell
+ln -s ../en en
+```
+
+### Style : les termes proscrits
+
+Les lignes `INTERDIT : "X" → "Y"` de `TRADUCTIONS.txt` sont vérifiées
+automatiquement. Le script lit ces lignes dynamiquement : c'est bien
+`TRADUCTIONS.txt` qui fait foi, aucune règle n'est codée en dur.
+
+```shell
+node .github/scripts/check-style-fr.mjs fichier1.xml fichier2.xml
+```
+
+Sans argument, il vérifie tous les fichiers `.xml` du dépôt.
+
+### Structure : l'ossature des blocs
+
+Chaque fichier est comparé à la version anglaise **à la révision qu'il déclare
+mirrorer** (`EN-Revision`), donc un fichier en retard ne produit pas de faux
+positif.
+
+```shell
+git diff --name-only master...HEAD -- '*.xml' | php .github/scripts/check-structure.php
+```
+
+### EN-Revision : la clé de hachage
+
+La clé de hachage déclarée doit être celle du **dernier** commit anglais du
+fichier, pas simplement celle du commit que la traduction reprend :
+
+```shell
+git -C en log -1 --format=%H -- chemin/du/fichier.xml
+```
+
+### Espaces
+
+```shell
+git log --check master..HEAD
+```
+
+Aucun espace en fin de ligne, aucune tabulation, pas de ligne vide surnuméraire.
+
+## 8: Commandes utiles
 
 ### Tester syntaxiquement tous les exemples dans le dossier `reference` :
 
