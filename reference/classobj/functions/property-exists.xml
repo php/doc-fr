@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: a4fb7f59310a598b8cb8ca1daa47e557f32ae66e  Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes Maintainer: pmartin -->
+<!-- EN-Revision: 623a2701987917d7c6b78511cbda442fc17ce500 Maintainer: yannick Status: ready -->
 <refentry xml:id="function.property-exists" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>property_exists</refname>
@@ -87,6 +85,70 @@ myClass::test();
 ?>
 ]]>
     </programlisting>
+   </example>
+  </para>
+  <simpara>
+   <function>property_exists</function> retourne &true; quelle que soit la
+   visibilité de la propriété, détecte les propriétés dynamiques ajoutées aux
+   instances (lorsque la classe utilise
+   <literal>#[AllowDynamicProperties]</literal>), et ignore les méthodes
+   magiques
+   <link linkend="language.oop5.overloading.members"><literal>__isset</literal></link>
+   et <literal>__get</literal>.
+  </simpara>
+  <para>
+   <example>
+    <title>Visibilité, propriétés dynamiques et méthodes magiques</title>
+    <programlisting role="php">
+<![CDATA[
+<?php
+
+#[AllowDynamicProperties]
+class MyClass {
+    public $public;
+    private $private;
+    static protected $protectedStatic;
+
+    // ignorée par property_exists
+    public function __isset(string $name): bool {
+        return true;
+    }
+
+    // ignorée par property_exists
+    public function __get(string $name): string {
+        return '';
+    }
+}
+
+$instance = new MyClass();
+$instance->instanced = 'abc';
+
+var_dump(property_exists($instance, 'public'));          // true  (publique)
+var_dump(property_exists($instance, 'private'));         // true  (visibilité ignorée)
+var_dump(property_exists($instance, 'protectedStatic')); // true  (visibilité ignorée)
+var_dump(property_exists($instance, 'instanced'));       // true  (propriété dynamique sur l'instance)
+var_dump(property_exists($instance, 'undefined'));       // false (non déclarée, __isset ignorée)
+
+var_dump(property_exists(MyClass::class, 'public'));    // true
+var_dump(property_exists(MyClass::class, 'instanced')); // false (les propriétés dynamiques ne sont pas sur la classe)
+var_dump(property_exists(MyClass::class, 'undefined')); // false
+
+?>
+]]>
+    </programlisting>
+    &example.outputs;
+    <screen>
+<![CDATA[
+bool(true)
+bool(true)
+bool(true)
+bool(true)
+bool(false)
+bool(true)
+bool(false)
+bool(false)
+]]>
+    </screen>
    </example>
   </para>
  </refsect1>
