@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 4d17b7b4947e7819ff5036715dd706be87ae4def Maintainer: Fan2Shrek Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 6e77169fdc9c087749f357bef877607ccc05f442 Maintainer: Fan2Shrek Status: ready -->
+
 <reference xml:id="class.swoole-timer" role="class" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
  <title>La classe Swoole\Timer</title>
  <titleabbrev>Swoole\Timer</titleabbrev>
@@ -10,9 +10,70 @@
 <!-- {{{ Swoole\Timer intro -->
   <section xml:id="swoole-timer.intro">
    &reftitle.intro;
+   <simpara>
+    Minuteur d'une précision de l'ordre de la milliseconde. L'implémentation sous-jacente
+    repose sur epoll_wait et setitimer, avec un tas-min qui permet d'ajouter un grand
+    nombre de minuteurs.
+   </simpara>
+   <simpara>
+    Dans les processus à E/S synchrones, tels que les processus Manager et TaskWorker,
+    elle repose sur setitimer et les signaux.
+   </simpara>
+   <simpara>
+    Dans les processus à E/S asynchrones, elle repose sur le délai d'expiration de
+    epoll_wait/kevent/poll/select.
+   </simpara>
    <para>
-
+    Le système sous-jacent ne prend pas en charge les minuteurs dont le délai vaut
+    <literal>0</literal> : une valeur inférieure à <literal>1</literal> milliseconde
+    émet une <constant>E_WARNING</constant> et l'appel échoue. Cela diffère de langages
+    tels que Node.js.
+    <methodname linkend="swoole-event.defer">Swoole\Event::defer</methodname>
+    permet d'obtenir un résultat similaire.
+    <programlisting role="php">
+<![CDATA[
+<?php
+Swoole\Event::defer(function () {
+  echo "hello\n";
+});
+?>
+]]>
+    </programlisting>
    </para>
+   <simpara>
+    Correction du minuteur : la durée d'exécution de la fonction de rappel n'influe pas
+    sur l'instant du déclenchement suivant. Par exemple, pour un minuteur tick de 10 ms
+    créé à 0,002 s, le premier rappel est exécuté à 0,012 s ; si la fonction de rappel
+    prend 5 ms, le déclenchement suivant a tout de même lieu à 0,022 s, et non à 0,027 s.
+   </simpara>
+   <simpara>
+    En revanche, si la fonction de rappel s'exécute trop longtemps, au point de couvrir
+    l'instant du déclenchement suivant, le système sous-jacent corrige le temps : il
+    abandonne les déclenchements périmés et rappelle la fonction au prochain instant
+    disponible. Par exemple, si la fonction de rappel exécutée à 0,012 s prend 15 ms, ce
+    qui retarde le minuteur prévu à 0,022 s, le rappel est déclenché à nouveau à 0,032 s.
+   </simpara>
+   <simpara>
+    Par défaut, une coroutine est automatiquement créée pour exécuter la fonction de
+    rappel lorsqu'un minuteur se déclenche. Ce comportement se désactive avec
+    <function>swoole_async_set</function>.
+   </simpara>
+   <warning>
+    <simpara>
+     Un minuteur ne fonctionne que dans l'espace du processus courant.
+    </simpara>
+   </warning>
+   <warning>
+    <simpara>
+     Les minuteurs sont purement asynchrones et incompatibles avec les fonctions d'E/S
+     synchrones.
+    </simpara>
+   </warning>
+   <warning>
+    <simpara>
+     L'exécution d'un minuteur peut présenter de légers écarts de temps.
+    </simpara>
+   </warning>
   </section>
 <!-- }}} -->
 
