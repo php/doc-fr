@@ -141,11 +141,17 @@ se trouve dans le document ``TRADUCTIONS.txt``.
 Il est aussi nécessaire de relire la traduction pour s'assurer que le texte
 traduit ait du sens et soit en accord avec le texte anglais.
 
-Après la relecture d'une traduction le tag/commentaire suivant
-``<!-- Reviewed: no/yes -->`` doit avoir la valeur `yes`.
-Lors d'une modification d'un fichier relu ce tag doit passer à la valeur ``no``,
-sauf lors de modifications mineures/changements purement XML (e.g. changement d'un élément
-`<methodsynopsis>`).
+### Marqueurs périmés
+
+Deux commentaires se rencontrent encore en tête des fichiers. Ils ne sont plus
+utilisés, aucun outil ne les lit, et il ne faut plus en ajouter :
+
+- ``<!-- Reviewed: no/yes -->``, qui suivait l'état de relecture d'un fichier ;
+- ``<!-- CREDITS: ... -->``, qui listait les traducteurs successifs. L'historique
+  git donne cette information de façon fiable.
+
+Les retirer des fichiers que l'on modifie par ailleurs, sans en faire une
+modification à part entière.
 
 ### Traduire une nouvelle page
 
