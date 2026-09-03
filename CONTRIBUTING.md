@@ -1,0 +1,267 @@
+# Documentation française de PHP
+
+Ce document a pour but d'expliquer comment participer à la rédaction de la
+documentation française de PHP.
+
+Si vous voulez lire la documentation et non la rédiger, allez voir le site PHP.net :
+https://www.php.net/manual/fr/
+
+De plus, si une erreur est présente dans la documentation, vérifiez qu'elle ne se
+trouve pas non plus dans la documentation anglaise, si oui, corrigez celle-ci d'abord.
+La traduction française suivra la modification faite dans la documentation anglaise.
+
+# Sommaire
+
+ 1. Installation
+ 2. Construire la documentation
+ 3. Revision Tracking
+ 4. Coding Standard
+ 5. Traduction, relectures et orthographe
+ 6. Workflow git
+ 7. Vérifier ses changements avant de pousser
+ 8. Commandes utiles
+
+
+## 1: Installation
+
+Pour construire la documentation il faut posséder à minima les trois repository suivant :
+ - ``php/doc-base`` : qui possède les outils pour construire la documentation
+   trouvée sur ``github.com`` : https://github.com/php/doc-base
+ - ``php/doc-en`` : la version anglaise de la documentation sur laquelle se rabattre quand
+   la version française est inexistante pour une page : https://github.com/php/doc-en
+ - ``php/doc-fr`` : la version française de la documentation : https://github.com/php/doc-fr
+
+> Note : vous pouvez cloner à partir du miroir GitHub, mais le dossier où se situe la
+> documentation anglaise *doit* être nommé ``en`` et celui de la documentation française
+> *doit* être nommé ``fr`` afin de pouvoir construire la documentation.
+
+## 2: Construire la documentation
+
+Il est important de savoir construire la documentation pour s'assurer que les changements effectués
+ne cassent pas le build, ce qui empêchera la publication de la dernière version de celle-ci sur php.net.
+
+En imaginant qu'on se situe dans le dossier ``fr`` dans la structure de dossier suivante :
+
+```
+|
+|- base
+|- en
+|- fr
+ |- ...
+```
+
+Il suffit d'exécuter ``php ../base/configure.php --with-lang=fr``
+
+Si tout se passe bien vous serez accueillis avec le message suivant :
+
+```
+All good. Saving .manual.xml... done.
+All you have to do now is run 'phd -d /home/user/Dev/php-docs/base/.manual.xml'
+If the script hangs here, you can abort with ^C.
+         _ _..._ __
+        \)`    (` /
+         /      `\
+        |  d  b   |
+        =\  Y    =/--..-="````"-.
+          '.=__.-'               `\
+             o/                 /\ \
+              |                 | \ \   / )
+               \    .--""`\    <   \ '-' /
+              //   |      ||    \   '---'
+         jgs ((,,_/      ((,,___/
+
+ (Run `nice php configure.php` next time!)
+```
+
+Sinon, vous avez une erreur XML Docbook qu'il faut corriger avant.
+
+
+## 3: Revision Tracking
+
+Pour s'assurer que la traduction française soit à jour avec la documentation anglaise,
+un système de `rev-check` existe.
+
+Ceci ce manifeste par le commentaire suivant en haut de chaque fichier XML :
+```xml
+<!-- EN-Revision: git-hash Maintainer: XXXX Status: YYYYY -->
+```
+
+Lors de la mise à jour d'un fichier pour répliquer les changements effectués sur la version
+anglaise, il est primordial de mettre à jour la clé de hachage `git-hash` du commit anglais.
+
+Le statut du rev-check peut actuellement être consulté sur le site des outils de la documentation
+de PHP : http://doc.php.net/revcheck.php?p=filesummary&lang=fr
+
+Pour voir les fichiers qui doivent être mise à jour, allez sur le lien "Outdated Files" qui
+amène à : http://doc.php.net/revcheck.php?p=files&lang=fr
+
+## 4: Coding style
+### Fichier XML
+
+Le pas à respecter pour l'indentation est de 1.
+Le caractère d'indentation est l'espace ` ` (aucune tabulation n'est admise dans les fichiers `.xml`).
+Exemple :
+```xml
+<note>
+_<para>
+__<example>
+___<title>
+___</title>
+__</example>
+_</para>
+</note>
+```
+
+De plus la soft-limit du nombre de caractères par ligne est de 80.
+
+### Exemple PHP
+
+Officiellement le groupe de documentation PHP a choisi d'utiliser les coding standards de PEAR,
+vous les trouverez ici : http://pear.php.net/manual/en/standards.php
+
+> En pratique néanmoins le coding style est un mélange entre PEAR et PSR-2/12,
+> essayez donc de suivre le style dans lequel la page a été écrite, ou celui de la documentation anglaise.
+
+Le code source PHP commence à la colonne zéro de l'exemple :
+```php
+<?php
+ca_commence_ici(); // bien
+  ca_commence_ici(); // pas bien
+?>
+```
+
+On notera aussi qu'on privilégie les `echo` à `print` (`echo` sans parenthèses).
+Tout le code est censé être compatible avec `error_reporting(E_ALL)`
+
+## 5: Traduction, relectures et orthographe
+
+Afin d'avoir un manuel en bon français, la traduction de certains termes techniques
+se trouve dans le document ``TRADUCTIONS.txt``.
+
+Il est aussi nécessaire de relire la traduction pour s'assurer que le texte
+traduit ait du sens et soit en accord avec le texte anglais.
+
+### Marqueurs périmés
+
+Deux commentaires se rencontrent encore en tête des fichiers. Ils ne sont plus
+utilisés, aucun outil ne les lit, et il ne faut plus en ajouter :
+
+- ``<!-- Reviewed: no/yes -->``, qui suivait l'état de relecture d'un fichier ;
+- ``<!-- CREDITS: ... -->``, qui listait les traducteurs successifs. L'historique
+  git donne cette information de façon fiable.
+
+Les retirer des fichiers que l'on modifie par ailleurs, sans en faire une
+modification à part entière.
+
+### Traduire une nouvelle page
+
+La traduction d'une nouvelle page anglaise en français est relativement simple :
+1. Copiez le fichier à traduire
+2. Collez-le au même emplacement, mais dans votre dossier ``fr``
+3. Ajoutez le commentaire de revision tracking avec la clé de hachage `git-hash` de la
+version du fichier anglais que vous venez de copier
+
+La clé de hachage `git-hash` permet de s'assurer que le fichier soit bien à jour après
+que la traduction est faite.
+
+Il est à noter que le fichier doit être *entièrement* (modulo les exemples) traduit
+avant d'être ajouté au repo git officiel.
+
+## 6: Workflow git
+
+Essayez (dans la mesure du possible) de commiter répertoire par répertoire,
+ou dans ``reference/`` extension par extension.
+
+Pour les messages de logs des commits, on essayera de :
+ - faire des messages en anglais (au cas où un non-francophone a besoin de comprendre les modifications)
+ - faire des messages explicites (ne pas mettre "typo" quand on rajoute du texte...)
+
+### Utilisateur lambda
+
+Pour proposer une modification vous devez passer par une pull request contre le miroir GitHub
+`doc-fr`, pour cela faire un fork du repository `doc-fr` de GitHub, créer une nouvelle branche
+(feature branch), faire vos modifications, committer, puis `git push` la branche sur votre fork
+afin d'ouvrir une pull request.
+
+Si des remarques sont faites sur votre pull request, suivez-les.
+
+En cas de conflit avec votre branche et la branche ``master``, il est préférable de faire
+un ``git rebase`` de votre branche sur ``master`` au lieu de ``git merge`` la branche ``master``
+dans la vôtre.
+
+### Utilisateur ayant un accès VCS (c.à.d un compte @php.net, avec du karma sur doc-fr)
+
+Il n'est pas nécessaire de passer par une pull request. Vous pouvez commit et
+push directement sur la branche ``master`` du repo doc-fr sur https://github.com.
+
+Évitez les "merge commit" et préférez un ``git rebase`` suivi d'un merge fast-forward.
+
+Ne créez et pushez pas des branches différentes de ``master`` sur le repo git officiel.
+
+## 7: Vérifier ses changements avant de pousser
+
+Quatre vérifications automatiques tournent sur chaque pull request. Elles se
+rejouent en local, ce qui évite un aller-retour avec la CI.
+
+Les deux premières comparent les fichiers à la documentation anglaise et
+attendent de la trouver dans un dossier `en` **à la racine du dépôt** `fr`
+(`.gitignore` le prévoit). Si la documentation anglaise est ailleurs, un lien
+symbolique suffit :
+
+```shell
+ln -s ../en en
+```
+
+### Style : les termes proscrits
+
+Les lignes `INTERDIT : "X" → "Y"` de `TRADUCTIONS.txt` sont vérifiées
+automatiquement. Le script lit ces lignes dynamiquement : c'est bien
+`TRADUCTIONS.txt` qui fait foi, aucune règle n'est codée en dur.
+
+```shell
+node .github/scripts/check-style-fr.mjs fichier1.xml fichier2.xml
+```
+
+Sans argument, il vérifie tous les fichiers `.xml` du dépôt.
+
+### Structure : l'ossature des blocs
+
+Chaque fichier est comparé à la version anglaise **à la révision qu'il déclare
+mirrorer** (`EN-Revision`), donc un fichier en retard ne produit pas de faux
+positif.
+
+```shell
+git diff --name-only master...HEAD -- '*.xml' | php .github/scripts/check-structure.php
+```
+
+### EN-Revision : la clé de hachage
+
+La clé de hachage déclarée doit être celle du **dernier** commit anglais du
+fichier, pas simplement celle du commit que la traduction reprend :
+
+```shell
+git -C en log -1 --format=%H -- chemin/du/fichier.xml
+```
+
+### Espaces
+
+```shell
+git log --check master..HEAD
+```
+
+Aucun espace en fin de ligne, aucune tabulation, pas de ligne vide surnuméraire.
+
+## 8: Commandes utiles
+
+### Tester syntaxiquement tous les exemples dans le dossier `reference` :
+
+Ici, on va lancer une analyse syntaxique de tous les fichiers dans
+les répertoires "functions" de fr/reference/. La technique est simple,
+on configure short_open_tag à Off en ligne de commande pour que PHP n'analyse
+que les exemples commençants par `<?php`, puis on lance la moulinette :
+
+```shell
+cd reference
+for i in $(find -name *.xml); do php -d "short_open_tag=Off" -l $i; done > syntax.txt
+cat syntax.txt | grep -B1 Errors
+```
