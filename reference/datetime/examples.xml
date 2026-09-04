@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: cd8b964b8566801265f0d287db6eb651f93be950 Maintainer: Fan2Shrek Status: ready -->
-<!-- Reviewed: yes -->
-<!-- CREDITS: DAnnebicque -->
+<!-- EN-Revision: 18c0977d5ec59f4207cb0b306c5473508bf640ed Maintainer: Fan2Shrek Status: ready -->
 
 <chapter xml:id="datetime.examples" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  &reftitle.examples;
@@ -9,18 +7,17 @@
  <section xml:id="datetime.examples-arithmetic">
   <title>Arithmétique avec DateTime</title>
   <para>
-   Les exemples suivants montrent quelques pièges de l'arithmétique de DateTime 
-   en ce qui concerne les transitions DST et les mois ayant un nombre différent 
+   Les exemples suivants montrent quelques pièges de l'arithmétique de DateTime
+   en ce qui concerne les transitions DST et les mois ayant un nombre différent
    de jours.
   </para>
-  <para>
-   <example>
-    <title>DateTimeImmutable::add/sub ajout d'un intervalle de temps écoulé</title>
-    <simpara>
-     Ajouter PT24H au-delà d'une transition DST semblera ajouter 23/25 heures
-     (pour la plupart des fuseaux horaires).
-    </simpara>
-    <programlisting role="php">
+  <example>
+   <title>DateTimeImmutable::add/sub ajout d'un intervalle de temps écoulé</title>
+   <simpara>
+    Ajouter PT24H au-delà d'une transition DST semblera ajouter 23/25 heures
+    (pour la plupart des fuseaux horaires).
+   </simpara>
+   <programlisting role="php">
 <![CDATA[
 <?php
 $dt = new DateTimeImmutable("2015-11-01 00:00:00", new DateTimeZone("America/New_York"));
@@ -28,25 +25,23 @@ echo "Start: ", $dt->format("Y-m-d H:i:s P"), PHP_EOL;
 $dt = $dt->add(new DateInterval("PT3H"));
 echo "End:   ", $dt->format("Y-m-d H:i:s P"), PHP_EOL;
 ]]>
-    </programlisting>
-    &example.outputs;
-    <screen>
+   </programlisting>
+   &example.outputs;
+   <screen>
 <![CDATA[
 Start: 2015-11-01 00:00:00 -04:00
 End:   2015-11-01 02:00:00 -05:00
 ]]>
-    </screen>
-   </example>
-  </para>
-  <para>
-   <example>
-    <title>DateTimeImmutable::modify et strtotime incrémentation ou décrémentation de valeurs individuelles</title>
-    <simpara>
-     Ajouter +24 heures au-delà d'une transition DST peut ajouter exactement 24 
-     heures comme vu avec la chaîne date/time 
-     (sauf si l'heure de début ou de fin est sur un point de transition).
-    </simpara>
-    <programlisting role="php">
+   </screen>
+  </example>
+  <example>
+   <title>DateTimeImmutable::modify et strtotime incrémentation ou décrémentation de valeurs individuelles</title>
+   <simpara>
+    Ajouter +24 heures au-delà d'une transition DST ajoutera exactement 24
+    heures comme vu avec la chaîne date/time
+    (sauf si l'heure de début ou de fin est sur un point de transition).
+   </simpara>
+   <programlisting role="php">
 <![CDATA[
 <?php
 $dt = new DateTimeImmutable("2015-11-01 00:00:00", new DateTimeZone("America/New_York"));
@@ -54,25 +49,54 @@ echo "Start: ", $dt->format("Y-m-d H:i:s P"), PHP_EOL;
 $dt = $dt->modify("+24 hours");
 echo "End:   ", $dt->format("Y-m-d H:i:s P"), PHP_EOL;
 ]]>
-    </programlisting>
-    &example.outputs;
-    <screen>
+   </programlisting>
+   &example.outputs;
+   <screen>
 <![CDATA[
 Start: 2015-11-01 00:00:00 -04:00
 End:   2015-11-02 00:00:00 -05:00
 ]]>
-    </screen>
-   </example>
-  </para>
-  <para>
-   <example>
-    <title>L'ajout ou la soustraction de dates/heures peut dépasser 
-     (en plus ou en moins) des dates</title>
-    <simpara>
-     Comme pour 31 janvier + 1 mois donnera comme résultat 2 mars (année bissextile) ou
-     3 mars (année normale).
-    </simpara>
-    <programlisting role="php">
+   </screen>
+  </example>
+  <example>
+   <title>DateInterval::createFromDateString crée des intervalles qui incrémentent ou décrémentent les valeurs des composants</title>
+   <simpara>
+    <methodname>DateInterval::createFromDateString</methodname> utilise
+    l'analyseur de date/heure, et la partie horaire de l'intervalle obtenu
+    incrémente ou décrémente les valeurs individuelles des composants. Pour un
+    intervalle créé avec <methodname>DateInterval::__construct</methodname>, la
+    partie horaire correspond en revanche au temps écoulé ; les deux ne sont
+    donc pas interchangeables lorsqu'une transition de fuseau horaire tombe
+    dans cette partie horaire. La partie date est appliquée de la même manière
+    dans les deux cas, si bien que <literal>P1D</literal> et
+    <literal>1 day</literal> donnent toujours le même résultat.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$dt = new DateTimeImmutable("2015-11-01 00:00:00", new DateTimeZone("America/New_York"));
+echo "Start:    ", $dt->format("Y-m-d H:i:s P"), PHP_EOL;
+echo "PT24H:    ", $dt->add(new DateInterval("PT24H"))->format("Y-m-d H:i:s P"), PHP_EOL;
+echo "24 hours: ", $dt->add(DateInterval::createFromDateString("24 hours"))->format("Y-m-d H:i:s P"), PHP_EOL;
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Start:    2015-11-01 00:00:00 -04:00
+PT24H:    2015-11-01 23:00:00 -05:00
+24 hours: 2015-11-02 00:00:00 -05:00
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>L'ajout ou la soustraction de dates/heures peut dépasser
+    (en plus ou en moins) des dates</title>
+   <simpara>
+    Comme pour 31 janvier + 1 mois donnera comme résultat 2 mars (année bissextile) ou
+    3 mars (année normale).
+   </simpara>
+   <programlisting role="php">
 <![CDATA[
 <?php
 echo "Normal year:\n"; // February has 28 days
@@ -87,9 +111,9 @@ echo "Start: ", $dt->format("Y-m-d H:i:s P"), PHP_EOL;
 $dt = $dt->modify("+1 month");
 echo "End:   ", $dt->format("Y-m-d H:i:s P"), PHP_EOL;
 ]]>
-    </programlisting>
-    &example.outputs;
-    <screen>
+   </programlisting>
+   &example.outputs;
+   <screen>
 <![CDATA[
 Normal year:
 Start: 2015-01-31 00:00:00 -05:00
@@ -98,12 +122,12 @@ Leap year:
 Start: 2016-01-31 00:00:00 -05:00
 End:   2016-03-02 00:00:00 -05:00
 ]]>
-    </screen>
-    <simpara>
-     Pour obtenir le dernier jour du mois prochain (autrement dit pour prévenir le
-     dépassement), le format <literal>last day of</literal> est disponible.
-    </simpara>
-    <programlisting role="php">
+   </screen>
+   <simpara>
+    Pour obtenir le dernier jour du mois prochain (autrement dit pour prévenir le
+    dépassement), le format <literal>last day of</literal> est disponible.
+   </simpara>
+   <programlisting role="php">
 <![CDATA[
 <?php
 echo "Normal year:\n"; // February has 28 days
@@ -118,9 +142,9 @@ echo "Start: ", $dt->format("Y-m-d H:i:s P"), PHP_EOL;
 $dt = $dt->modify("last day of next month");
 echo "End:   ", $dt->format("Y-m-d H:i:s P"), PHP_EOL;
 ]]>
-    </programlisting>
-    &example.outputs;
-    <screen>
+   </programlisting>
+   &example.outputs;
+   <screen>
 <![CDATA[
 Normal year:
 Start: 2015-01-31 00:00:00 -05:00
@@ -129,9 +153,8 @@ Leap year:
 Start: 2016-01-31 00:00:00 -05:00
 End:   2016-02-29 00:00:00 -05:00
 ]]>
-    </screen>
-   </example>
-  </para>
+   </screen>
+  </example>
  </section>
 
 </chapter>
