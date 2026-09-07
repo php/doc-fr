@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: a758e79c3bf173203550cb78ef07509cf859b212 Maintainer: lacatoire Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 3e6082f609ead63cfa7b33a06d8e0c723d51bc65 Maintainer: lacatoire Status: ready -->
 <refentry xml:id="function.stream-select" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>stream_select</refname>
@@ -16,12 +15,15 @@
    <methodparam><type class="union"><type>int</type><type>null</type></type><parameter>seconds</parameter></methodparam>
    <methodparam choice="opt"><type class="union"><type>int</type><type>null</type></type><parameter>microseconds</parameter><initializer>&null;</initializer></methodparam>
   </methodsynopsis>
-  <para>
+  <simpara>
    <function>stream_select</function> accepte un tableau de flux et
-   attend que l'un d'entre eux change de statut. Cette opération est
-   équivalente à ce que fait la fonction <function>socket_select</function>,
-   hormis le fait qu'elle travaille sur un flux.
-  </para>
+   attend que l'un d'entre eux change de statut. C'est l'équivalent de
+   <function>socket_select</function> pour les flux, mais les deux fonctions
+   ne se comportent pas identiquement en tout point : elles ne signalent pas
+   les arguments invalides de la même manière, et
+   <function>stream_select</function> peut se terminer sans consulter du tout
+   le système d'exploitation, comme décrit dans les notes ci-dessous.
+  </simpara>
  </refsect1>
  
  <refsect1 role="parameters">
@@ -232,18 +234,28 @@ if (false === stream_select($r, $w, $e, 0)) {
    </para>
   </note>
   <note>
-   <para>
-    Si l'on a écrit ou lu dans un flux qui est retourné dans les tableaux
-    de flux, soyez bien conscient que ces flux n'ont peut être pas écrit
-    ou lu la totalité des données demandées. Soyez en
-    mesure de lire un seul octet.
-   </para>
+   <simpara>
+    Lors de la lecture ou de l'écriture sur un flux retourné dans les tableaux,
+    il faut savoir que la totalité des données demandées n'est pas
+    nécessairement lue ou écrite. Il faut être prêt à ne traiter qu'un seul
+    octet.
+   </simpara>
   </note>
   <note>
-   <para>
+   <simpara>
     Quelques flux (comme <literal>zlib</literal>) ne peuvent pas être
     sélectionnés par cette fonction.
-   </para>
+   </simpara>
+  </note>
+  <note>
+   <simpara>
+    Un flux qui dispose déjà de données tamponnées du côté de PHP est signalé
+    comme prêt sans que l'appel <literal>select()</literal> sous-jacent ne soit
+    effectué. Dans ce cas, les tableaux <parameter>write</parameter> et
+    <parameter>except</parameter> sont vidés sans avoir été examinés : un flux
+    qui était prêt en écriture n'est donc pas signalé, et la valeur de retour ne
+    compte que les flux disponibles en lecture.
+   </simpara>
   </note>
   <note>
    <title>Compatibilité Windows</title>
@@ -264,6 +276,7 @@ if (false === stream_select($r, $w, $e, 0)) {
   &reftitle.seealso;
   <simplelist>
    <member><function>stream_set_blocking</function></member>
+   <member><function>socket_select</function></member>
   </simplelist>
  </refsect1>
 </refentry>
