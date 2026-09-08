@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: e674990649cd2b111b8dd1175a7a1befcc621635 Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: 8c273ad6577a6b4d6d3adea73502a4516ca2fe0c Maintainer: lacatoire Status: ready -->
 
 <sect1 xml:id="control-structures.for" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>for</title>
@@ -19,8 +19,8 @@ for (expr1; expr2; expr3)
  </para>
  <simpara>
   La première expression (<varname>expr1</varname>) est
-  évaluée (exécutée), quoi qu'il arrive au
-  début de la boucle.
+  évaluée (exécutée) une seule fois, sans condition,
+  au début de la boucle.
  </simpara>
  <simpara>
   Au début de chaque itération, l'expression
@@ -144,97 +144,63 @@ endfor;
   </informalexample>
  </para>
  <simpara>
-  Beaucoup de personnes ont l'habitude d'itérer grâce à des tableaux, comme dans
-  l'exemple ci-dessous.
+  Les expressions <varname>expr2</varname> et <varname>expr3</varname> sont
+  évaluées à chaque itération. Il est conseillé d'y employer des expressions
+  simples pour éviter les problèmes de performance. Par exemple, si le nombre
+  d'itérations est connu à l'avance, il vaut mieux utiliser une variable
+  plutôt qu'un appel de fonction dans <varname>expr2</varname> :
  </simpara>
  <para>
   <informalexample>
-   <programlisting role="php">
+   <programlisting role="php" annotations="non-interactive">
 <![CDATA[
 <?php
-/*
- * Ceci est un tableau avec des données que nous voulons modifier
- * au long de la boucle
- */
-$people = array(
-    array('name' => 'Kalle', 'salt' => 856412),
-    array('name' => 'Pierre', 'salt' => 215863)
-);
 
-for($i = 0; $i < count($people); ++$i) {
-    $people[$i]['salt'] = random_int(100000, 999999);
+$people = ['Kalle', 'Pierre'];
+
+// Mauvaise pratique : appeler une fonction à chaque itération
+for($i = 0; $i < getIterationCount($people); ++$i) {
+    $people[$i] .= ' est sympa';
 }
-var_dump($people);
+
+// Bonne pratique : stocker le nombre dans une variable
+for($i = 0, $peopleCount = getIterationCount($people); $i < $peopleCount; ++$i) {
+    $people[$i] .= ' est sympa';
+}
+
 ]]>
    </programlisting>
-   &example.outputs.similar;
-   <screen>
-<![CDATA[
-array(2) {
-  [0]=>
-  array(2) {
-    ["name"]=>
-    string(5) "Kalle"
-    ["salt"]=>
-    int(454478)
-  }
-  [1]=>
-  array(2) {
-    ["name"]=>
-    string(6) "Pierre"
-    ["salt"]=>
-    int(776978)
-  }
-}
-]]>
-   </screen>
   </informalexample>
  </para>
  <simpara>
-  Ce code peut être lent parce qu'il doit calculer la taille du tableau à chaque
-  itération. Étant donné que la taille ne change jamais, il peut facilement être
-  optimisé en utilisant une variable intermédiaire pour stocker la taille au lieu
-  d'appeler de façon répétitive la fonction <function>count</function> :
+  Dans l'exemple ci-dessus, la fonction est appelée à chaque itération de la
+  première boucle, alors qu'elle retourne toujours la même valeur. Stocker
+  cette valeur dans une variable, comme le fait la seconde boucle, n'appelle
+  la fonction qu'une seule fois. Il est à noter que le nombre d'itérations est
+  alors figé : si le tableau est modifié à l'intérieur de la boucle, la valeur
+  stockée ne reflète plus sa taille.
  </simpara>
- <para>
-  <informalexample>
-   <programlisting role="php">
-<![CDATA[
-<?php
-$people = array(
-    array('name' => 'Kalle', 'salt' => 856412),
-    array('name' => 'Pierre', 'salt' => 215863)
-);
 
-for($i = 0, $size = count($people); $i < $size; ++$i) {
-    $people[$i]['salt'] = random_int(100000, 999999);
-}
-var_dump($people);
-]]>
-   </programlisting>
-   &example.outputs.similar;
-   <screen>
-<![CDATA[
-array(2) {
-  [0]=>
-  array(2) {
-    ["name"]=>
-    string(5) "Kalle"
-    ["salt"]=>
-    int(454478)
-  }
-  [1]=>
-  array(2) {
-    ["name"]=>
-    string(6) "Pierre"
-    ["salt"]=>
-    int(776978)
-  }
-}
-]]>
-   </screen>
-  </informalexample>
- </para>
+ <note>
+  <simpara>
+   La taille d'un &array; est stockée avec le tableau, ce qui signifie que
+   l'appel à la fonction native <function>count</function> ne nécessite pas de
+   compter les éléments et ne pose pas de problème de performance. Ceci ne
+   s'applique pas à <constant>COUNT_RECURSIVE</constant>, qui parcourt tout le
+   tableau. Il faut également être prudent lors de l'utilisation de
+   <function>count</function> sur des objets implémentant
+   <interfacename>Countable</interfacename>, car de tels appels peuvent être
+   plus coûteux.
+  </simpara>
+ </note>
+
+ <note>
+  <simpara>
+   La boucle <literal>for</literal> n'est pas la façon recommandée d'itérer sur
+   des tableaux. La boucle &foreach; est spécifiquement conçue pour cet usage
+   et est généralement plus pratique.
+  </simpara>
+ </note>
 </sect1>
 
 <!-- Keep this comment at the end of the file
