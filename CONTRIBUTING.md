@@ -203,10 +203,13 @@ Ne créez et pushez pas des branches différentes de ``master`` sur le repo git 
 Quatre vérifications automatiques tournent sur chaque pull request. Elles se
 rejouent en local, ce qui évite un aller-retour avec la CI.
 
-Les deux premières comparent les fichiers à la documentation anglaise et
-attendent de la trouver dans un dossier `en` **à la racine du dépôt** `fr`
-(`.gitignore` le prévoit). Si la documentation anglaise est ailleurs, un lien
-symbolique suffit :
+Deux d'entre elles comparent les fichiers à la documentation anglaise, mais
+pas avec la même disposition. La vérification de structure se lance depuis le
+répertoire qui contient `fr`, `en` et `doc-base` côte à côte, comme la
+construction de la documentation. La vérification de l'`EN-Revision`, elle,
+attend la documentation anglaise dans un dossier `en` **à la racine du dépôt**
+`fr` (`.gitignore` le prévoit) ; si elle est ailleurs, un lien symbolique
+suffit :
 
 ```shell
 ln -s ../en en
@@ -230,8 +233,13 @@ Chaque fichier est comparé à la version anglaise **à la révision qu'il décl
 mirrorer** (`EN-Revision`), donc un fichier en retard ne produit pas de faux
 positif.
 
+Le script est celui de `doc-base`, partagé par toutes les traductions. Il se
+lance depuis le répertoire qui contient `fr`, `en` et `doc-base` côte à côte,
+comme la construction de la documentation :
+
 ```shell
-git diff --name-only master...HEAD -- '*.xml' | php .github/scripts/check-structure.php
+git -C fr diff --name-only master...HEAD -- '*.xml' \
+  | php doc-base/scripts/translation/check-structure.php --lang=fr
 ```
 
 ### EN-Revision : la clé de hachage
