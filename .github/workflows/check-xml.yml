@@ -3,6 +3,9 @@
 # miroir de doc-en. Chaque fichier est comparé au doc-en à la révision qu'il dit
 # mirrorer (EN-Revision), donc un fichier en retard ne produit pas de faux
 # positif. Le script émet ses annotations ::error lui-même.
+#
+# Le script est celui de doc-base, partagé par toutes les traductions, et non
+# plus une copie propre à ce dépôt.
 
 name: "Structure"
 
@@ -19,9 +22,9 @@ jobs:
     name: "Check XML"
     runs-on: ubuntu-22.04
     steps:
-      # doc-fr à la racine, doc-en dans le sous-répertoire en/ : c'est
-      # l'arborescence attendue par check-structure.php. Le ref explicite
-      # prend la tête réelle de la PR, et non le commit de fusion que
+      # fr/, en/ et doc-base/ côte à côte : c'est l'arborescence attendue par
+      # les scripts de doc-base, la même que celle du workflow de build. Le ref
+      # explicite prend la tête réelle de la PR, et non le commit de fusion que
       # actions/checkout construit par défaut : ce dernier a master pour
       # deuxième parent, donc le diff plus bas y verrait aussi tous les
       # fichiers arrivés sur master depuis le dernier push de la PR.
@@ -29,6 +32,7 @@ jobs:
       - name: "Checkout php/doc-fr"
         uses: actions/checkout@v4
         with:
+          path: fr
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
@@ -39,9 +43,16 @@ jobs:
           repository: php/doc-en
           fetch-depth: 0
 
+      - name: "Checkout php/doc-base"
+        uses: actions/checkout@v4
+        with:
+          path: doc-base
+          repository: php/doc-base
+
       - name: "Check structure"
         run: |
           BASE="${{ github.event.pull_request.base.sha }}"
-          git fetch --no-tags --depth=1 origin "$BASE"
-          git diff --name-only "$BASE"...HEAD -- '*.xml' \
-            | php8.1 .github/scripts/check-structure.php
+          git -C fr fetch --no-tags --depth=1 origin "$BASE"
+          git -C fr diff --name-only "$BASE"...HEAD -- '*.xml' \
+            | php8.1 doc-base/scripts/translation/check-structure.php \
+                --lang=fr --github
