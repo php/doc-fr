@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 029f19dbc090e4d249a23c0ab087d47059b37adc Maintainer: lacatoire Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 72d861de4970c2dbc84c391c1a4caab4a10a91fa Maintainer: lacatoire Status: ready -->
 <reference xml:id="class.serializable" role="class" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xi="http://www.w3.org/2001/XInclude">
 
  <title>L'interface Serializable</title>
@@ -38,6 +37,35 @@
      une notice de dépréciation.
     </para>
    </warning>
+
+   <simpara>
+    Le nouveau code devrait utiliser les méthodes magiques
+    <link linkend="object.serialize">__serialize()</link> et
+    <link linkend="object.unserialize">__unserialize()</link>,
+    disponibles à partir de PHP 7.4.0.
+    Lorsqu'une classe les déclare en plus de cette interface,
+    <function>serialize</function> utilise toujours
+    <link linkend="object.serialize">__serialize()</link> et n'atteint jamais
+    <methodname>Serializable::serialize</methodname>.
+    La désérialisation est déterminée par le format des données : un flux
+    écrit par PHP 7.4.0 ou ultérieur est lu par
+    <link linkend="object.unserialize">__unserialize()</link>, un flux écrit
+    avant l'est toujours par
+    <methodname>Serializable::unserialize</methodname>.
+    Implémenter <interfacename>Serializable</interfacename> reste donc utile
+    pour lire d'anciens flux, et pour satisfaire une déclaration de type
+    <interfacename>Serializable</interfacename> ; déclarer les quatre méthodes
+    couvre tous les cas et évite la notice de dépréciation.
+   </simpara>
+
+   <note>
+    <simpara>
+     Les méthodes magiques n'ont pas d'interface propre : une classe qui les
+     déclare sans implémenter <interfacename>Serializable</interfacename>
+     n'en est pas une instance.
+     <function>method_exists</function> est le moyen de les détecter.
+    </simpara>
+   </note>
   </section>
 
   <section xml:id="serializable.synopsis">
@@ -57,45 +85,61 @@
   <section xml:id="serializable.examples">
    &reftitle.examples;
    <example xml:id="serializable.example.basic">
-    <title>Exemple simple</title>
+    <title>Prise en charge de PHP 7.1.0 à 7.3.0</title>
+    <simpara>
+     Les méthodes magiques portent la forme sérialisée, et les méthodes de
+     l'interface leur délèguent, de sorte qu'une seule représentation convient
+     dans les deux cas.
+    </simpara>
     <programlisting role="php">
 <![CDATA[
 <?php
-class obj implements Serializable {
-    private $data;
-    public function __construct() {
-        $this->data = "Mes données privées";
+class Task implements Serializable
+{
+    private $label;
+
+    public function __construct($label)
+    {
+        $this->label = $label;
     }
-    public function serialize() {
-        return serialize($this->data);
+
+    public function __serialize(): array
+    {
+        return ['label' => $this->label];
     }
-    public function unserialize($data) {
-        $this->data = unserialize($data);
+
+    public function __unserialize(array $data): void
+    {
+        $this->label = $data['label'];
     }
-    public function getData() {
-        return $this->data;
+
+    // Jamais appelé à partir de PHP 7.4.0
+    public function serialize()
+    {
+        return serialize($this->__serialize());
+    }
+
+    // Toujours appelé à partir de PHP 7.4.0, pour les données écrites avant
+    public function unserialize($data)
+    {
+        $this->__unserialize(unserialize($data));
     }
 }
 
-$obj = new obj;
-$ser = serialize($obj);
-
-var_dump($ser);
-
-$newobj = unserialize($ser);
-
-var_dump($newobj->getData());
+var_dump(serialize(new Task('deploy')));
 ?>
 ]]>
     </programlisting>
-    &example.outputs.similar;
+    &example.outputs;
     <screen>
 <![CDATA[
-Deprecated: obj implements the Serializable interface, which is deprecated. Implement __serialize() and __unserialize() instead (or in addition, if support for old PHP versions is necessary) in script on line 2
-string(44) "C:3:"obj":29:{s:21:"Mes données privées";}"
-string(21) "Mes données privées"
+string(40) "O:4:"Task":1:{s:5:"label";s:6:"deploy";}"
 ]]>
     </screen>
+    <simpara>
+     Avant PHP 7.4.0, le même code sérialise via l'interface et affiche
+     <literal>string(47) "C:4:"Task":31:{a:1:{s:5:"label";s:6:"deploy";}}"</literal>.
+    </simpara>
    </example>
   </section>
 
