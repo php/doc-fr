@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 3f1dbc451b313fb1ec8058f24c1beccf55fce316 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 82b5e0afeb38142e91fbba05f06b46c3129420ba Maintainer: yannick Status: ready -->
 <appendix xml:id="filters" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Liste des filtres disponibles</title>
  <para>
@@ -286,7 +285,7 @@ fclose($fp);
 
   <section xml:id="filters.compression.zlib">
    <title>zlib.deflate et zlib.inflate</title>
-   <simpara>
+   <para>
     <literal>zlib.deflate</literal> (compression) et
     <literal>zlib.inflate</literal> (décompression) sont les implémentations
     des méthodes de compression présentées dans la
@@ -306,12 +305,119 @@ fclose($fp);
     occupent le moins d'espace en mémoire. Par défaut,
     <parameter>window</parameter> vaut actuellement <literal>15</literal>.
 
+    Le filtre <literal>zlib.deflate</literal> implémente les méthodes de
+    compression <literal>DEFLATE</literal>, <literal>ZLIB</literal> et
+    <literal>GZIP</literal> selon la valeur du paramètre
+    <parameter>window</parameter>.
+
+    Les 4 bits de poids faible du paramètre window définissent la taille du
+    tampon d'historique interne, exprimée comme le logarithme en base 2 de
+    cette taille, entre 8 et 15. La signification des autres bits est décrite
+    ci-dessous.
+
+    <itemizedlist>
+     <listitem>
+      <simpara>
+       <literal>DEFLATE</literal> (<link xlink:href="&url.rfc;1951">RFC 1951</link>)
+       est un algorithme de compression brut, sans en-tête ni somme de contrôle.
+       Il est utilisé lorsque le paramètre window est compris entre -9 et -15.
+       Cet algorithme est la base de tous les formats générés par le filtre
+       <literal>zlib.deflate</literal>.
+       Les fonctions qui opèrent directement sur des chaînes sont
+       <function>gzdeflate</function> et <function>gzinflate</function>.
+      </simpara>
+     </listitem>
+
+     <listitem>
+      <simpara>
+       <literal>ZLIB</literal> (<link xlink:href="&url.rfc;1950">RFC 1950</link>)
+       applique l'algorithme <literal>DEFLATE</literal> et ajoute un en-tête de
+       2 octets et un trailer de 4 octets contenant la somme de contrôle Adler32
+       des données non compressées en ordre big-endian :
+       <literal><![CDATA[ZLIB = ENTETEZLIB(2o) DEFLATE ADLER32(4o)]]></literal>
+
+       L'en-tête de 2 octets, lu comme un entier non signé de 16 bits en
+       big-endian, doit être un multiple de 31.
+       Ce format est généré lorsque le paramètre window est compris entre 8 et 15.
+       Les fonctions qui opèrent directement sur des chaînes sont
+       <function>gzcompress</function> et <function>gzuncompress</function>.
+      </simpara>
+     </listitem>
+
+     <listitem>
+      <simpara>
+       <literal>GZIP</literal> (<link xlink:href="&url.rfc;1952">RFC 1952</link>)
+       applique l'algorithme <literal>DEFLATE</literal> en ajoutant un en-tête et
+       un trailer contenant la somme de contrôle <literal>CRC32</literal> des
+       données non compressées et leur longueur, tous deux en ordre little-endian :
+       <literal><![CDATA[GZIP = ENTETEGZIP(10o) DEFLATE CRC32(4o) LONGUEUR(4o)]]></literal>
+
+       C'est le format des fichiers <literal>.gz</literal>.
+       Ce format est généré lorsque le paramètre window est compris entre
+       9+16=25 et 15+16=31. La longueur des données non compressées est limitée
+       à 4 Go ; au-delà, seul le modulo 2^32 de la longueur réelle est stocké
+       dans la partie <literal>LONGUEUR</literal>.
+       Les fonctions qui opèrent directement sur des chaînes sont
+       <function>gzencode</function> et <function>gzdecode</function> ;
+       la fonction <function>gzopen</function> permet de lire et d'écrire des
+       fichiers <literal>.gz</literal>.
+      </simpara>
+     </listitem>
+    </itemizedlist>
+
+    Avec le filtre <literal>zlib.inflate</literal>, seul le paramètre
+    <parameter>window</parameter> est pris en compte ; tout autre paramètre
+    (<parameter>memory</parameter>, <parameter>level</parameter>) est ignoré.
+    En notant $W le logarithme en base 2 de la taille du tampon d'historique,
+    de sorte que 2^$W octets sont alloués par le décompresseur. Pour le format
+    ZLIB, cette valeur doit être supérieure ou égale à celle enregistrée dans
+    l'en-tête, vérifiée à la décompression ; pour les autres formats, elle doit
+    simplement être suffisamment grande pour les distances de correspondance
+    présentes dans les données.
+    La plage est 9 ≤ $W ≤ 15. En cas de doute, $W=15 est le choix le plus sûr.
+
+    <itemizedlist>
+     <listitem>
+      <simpara>
+       <literal>DEFLATE</literal> (<link xlink:href="&url.rfc;1951">RFC 1951</link>) :
+        utiliser window=-$W, avec $W au moins égal à la valeur utilisée à la
+        compression. En cas de doute, utiliser window=-15.
+      </simpara>
+     </listitem>
+
+     <listitem>
+      <simpara>
+       <literal>ZLIB</literal> (<link xlink:href="&url.rfc;1950">RFC 1950</link>) :
+        utiliser window=$W. La valeur de $W est disponible dans l'en-tête ZLIB,
+        sinon utiliser window=15.
+      </simpara>
+     </listitem>
+
+     <listitem>
+      <simpara>
+       <literal>GZIP</literal> (<link xlink:href="&url.rfc;1952">RFC 1952</link>) :
+       utiliser window=$W+16. Un en-tête GZIP ne contient pas la taille de
+       fenêtre, donc utiliser window=31 sauf si la valeur utilisée à la
+       compression est connue.
+      </simpara>
+     </listitem>
+
+     <listitem>
+      <simpara>
+       <literal>ZLIB ou GZIP</literal> :
+       utiliser window=$W+32 pour la détection automatique de l'en-tête, de
+       sorte que les deux formats puissent être reconnus et décompressés ;
+       window=15+32=47 est le choix le plus sûr.
+      </simpara>
+     </listitem>
+    </itemizedlist>
+
     <parameter>memory</parameter> est une indication du niveau de mémoire
     nécessaire.
     Les valeurs valides vont de 1, pour l'allocation minimale, à 9, pour une
     allocation maximale. L'allocation de mémoire affecte la vitesse d'exécution,
     et n'a pas d'impact sur la taille de la charge utile générée.
-   </simpara>
+   </para>
 
    <note>
     <simpara>
