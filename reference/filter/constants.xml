@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 1900175b061e4de78f5ba3e79874e457d7e710a1 Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: 50c9f3e8e25439475fbad952e60334178a54b048 Maintainer: lacatoire Status: ready -->
 <appendix xml:id="filter.constants" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  &reftitle.constants;
  &extension.constants;
@@ -546,7 +546,7 @@
          <emphasis>OBSOLÈTE</emphasis> à partir de PHP 7.3.0 et
          <emphasis>SUPPRIMÉ</emphasis> à partir de PHP 8.0.0.
          Cela est dû au fait qu'il est toujours implicite avec
-         le filtre <constant>FILTER_VALIDATE_URL</constant>.
+         le filtre <constant>FILTER_VALIDATE_URL</constant> pour la plupart des schémas.
         </simpara>
        </warning>
       </listitem>
@@ -606,6 +606,52 @@
       Ce filtre ne fonctionne que sur les <acronym>URL</acronym>s <acronym>ASCII</acronym>.
       Cela signifie que les noms de domaine internationalisés (IDN) seront toujours rejetés.
      </simpara>
+    </warning>
+    <warning>
+     <simpara>
+      Ce filtre est très permissif. Pour tout schéma autre que
+      <literal>http://</literal> ou <literal>https://</literal>, le contenu
+      de l'hôte sera accepté sans aucune validation, bien que la présence
+      d'un hôte reste requise sauf si l'<acronym>URL</acronym> a pour schéma
+      <literal>mailto:</literal>, <literal>news:</literal> ou
+      <literal>file:</literal>. Les schémas eux-mêmes ne sont pas validés et
+      peuvent être acceptés même s'ils ne correspondent pas à un schéma
+      d'<acronym>URL</acronym> connu, ou s'ils ont une autre signification en
+      PHP (comme <link linkend="book.phar">phar://</link>). Le filtre
+      accepte également les adresses
+      <link xlink:href="&url.filter.loopback;">loopback</link>
+      correspondant à l'hôte courant.
+     </simpara>
+     <informalexample>
+      <programlisting role="php">
+<![CDATA[
+<?php
+
+var_dump(filter_var('javascript://x%0aalert(1)', FILTER_VALIDATE_URL));
+var_dump(filter_var('javascript://?demo', FILTER_VALIDATE_URL));
+var_dump(filter_var('news:?demo', FILTER_VALIDATE_URL));
+var_dump(filter_var('phar://demo', FILTER_VALIDATE_URL));
+var_dump(filter_var('123://demo', FILTER_VALIDATE_URL));
+var_dump(filter_var('-://demo', FILTER_VALIDATE_URL));
+var_dump(filter_var('http://127.0.0.1', FILTER_VALIDATE_URL));
+var_dump(filter_var('gopher://127.0.0.1', FILTER_VALIDATE_URL));
+?>
+]]>
+      </programlisting>
+      &example.outputs;
+      <screen>
+<![CDATA[
+string(25) "javascript://x%0aalert(1)"
+bool(false)
+string(10) "news:?demo"
+string(11) "phar://demo"
+string(10) "123://demo"
+string(8) "-://demo"
+string(16) "http://127.0.0.1"
+string(18) "gopher://127.0.0.1"
+]]>
+      </screen>
+     </informalexample>
     </warning>
    </listitem>
   </varlistentry>
