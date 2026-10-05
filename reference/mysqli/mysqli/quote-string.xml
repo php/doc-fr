@@ -1,58 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 01175bf92d73d885dc5a19793bc1d0c5d1a75bac Maintainer: yannick Status: ready -->
-<refentry xml:id="mysqli.real-escape-string" xmlns="http://docbook.org/ns/docbook">
+<!-- EN-Revision: 01175bf92d73d885dc5a19793bc1d0c5d1a75bac Maintainer: lacatoire Status: ready -->
+<refentry xml:id="mysqli.quote-string" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
-  <refname>mysqli::real_escape_string</refname>
-  <refname>mysqli_real_escape_string</refname>
-  <refpurpose>Protège les caractères spéciaux d'une chaîne pour l'utiliser dans une
-   requête SQL, en prenant en compte le jeu de caractères courant de la 
-   connexion</refpurpose>
+  <refname>mysqli::quote_string</refname>
+  <refname>mysqli_quote_string</refname>
+  <refpurpose>Entoure de guillemets et protège une chaîne pour l'utiliser dans une requête SQL</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
   &reftitle.description;
-  <para>&style.oop;</para>
+  <simpara>&style.oop;</simpara>
   <methodsynopsis role="mysqli">
-   <modifier>public</modifier> <type>string</type><methodname>mysqli::real_escape_string</methodname>
+   <modifier>public</modifier> <type>string</type><methodname>mysqli::quote_string</methodname>
    <methodparam><type>string</type><parameter>string</parameter></methodparam>
   </methodsynopsis>
-  <para>&style.procedural;</para>
+  <simpara>&style.procedural;</simpara>
   <methodsynopsis>
-   <type>string</type><methodname>mysqli_real_escape_string</methodname>
+   <type>string</type><methodname>mysqli_quote_string</methodname>
    <methodparam><type>mysqli</type><parameter>mysql</parameter></methodparam>
    <methodparam><type>string</type><parameter>string</parameter></methodparam>
   </methodsynopsis>
-  <para>
+  <simpara>
    Cette fonction est utilisée pour créer une chaîne SQL valide qui pourra
-   être utilisée dans une requête SQL. La chaîne de caractères
-   <literal>string</literal> est encodée pour produire une chaîne SQL échappée,
-   en tenant compte du jeu de caractères courant de la connexion.
-  </para>
+   être utilisée dans une requête SQL.
+   La chaîne donnée est échappée de la même façon que par
+   <methodname>mysqli::real_escape_string</methodname>, en tenant compte du jeu
+   de caractères courant de la connexion, et le résultat est entouré de
+   guillemets simples. La valeur retournée doit donc être insérée dans la
+   requête sans ajouter d'autres guillemets autour d'elle.
+  </simpara>
+  <simpara>
+   Contrairement à <methodname>mysqli::real_escape_string</methodname>, le résultat
+   est également sûr lorsque le mode SQL <literal>NO_BACKSLASH_ESCAPES</literal>
+   est activé sur la connexion.
+  </simpara>
   <caution>
    <title>Sécurité : Le jeu de caractères par défaut</title>
-   <para>
+   <simpara>
     Le jeu de caractères doit être défini soit au niveau serveur,
     soit avec la fonction API <function>mysqli_set_charset</function>
-    pour qu'il affecte la fonction <function>mysqli_real_escape_string</function>.
+    pour qu'il affecte la fonction <function>mysqli_quote_string</function>.
     Voir la section sur les concepts
     <link linkend="mysqlinfo.concepts.charset">des jeux de caractères</link>
     pour plus d'informations.
-   </para>
-  </caution>
-  <warning>
-   <simpara>
-    Cette fonction n'ajoute pas de guillemets autour du résultat : ils doivent être
-    ajoutés par l'appelant. Si le mode SQL <literal>NO_BACKSLASH_ESCAPES</literal> est
-    activé sur la connexion, seul le guillemet simple
-    (<literal>'</literal>) est échappé : une valeur placée entre guillemets doubles
-    (<literal>"</literal>) peut donc terminer la chaîne et permettre une injection SQL.
-    Il faut utiliser à la place des
-    <link linkend="mysqli.quickstart.prepared-statements">requêtes préparées</link>.
-    Si ce n'est pas possible, il faut utiliser
-    <methodname>mysqli::quote_string</methodname>, qui entoure toujours le
-    résultat de guillemets simples.
    </simpara>
-  </warning>
+  </caution>
+  <note>
+   <simpara>
+    L'ajout de guillemets ne convient qu'aux littéraux de type chaîne. Cela ne
+    sécurise pas les identifiants, tels que les noms de tables ou de colonnes.
+    Dès que c'est possible, il faut utiliser des
+    <link linkend="mysqli.quickstart.prepared-statements">requêtes préparées</link>
+    plutôt que de construire les requêtes manuellement.
+   </simpara>
+  </note>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -63,9 +64,9 @@
     <varlistentry>
      <term><parameter>string</parameter></term>
      <listitem>
-      <para>
-       La &string; à échapper.
-      </para>
+      <simpara>
+       La &string; à entourer de guillemets et à échapper.
+      </simpara>
       <simpara>
        Les caractères encodés sont <literal>NUL (ASCII 0)</literal>,
        <literal>\n</literal>, <literal>\r</literal>, <literal>\</literal>,
@@ -82,16 +83,16 @@
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>
-   Retourne une &string; échappée.
-  </para>
+  <simpara>
+   Retourne la chaîne échappée, entourée de guillemets simples.
+  </simpara>
  </refsect1>
 
  <refsect1 role="examples">
   &reftitle.examples;
   <example>
-   <title>Exemple avec <methodname>mysqli::real_escape_string</methodname></title>
-   <para>&style.oop;</para>
+   <title>Exemple avec <methodname>mysqli::quote_string</methodname></title>
+   <simpara>&style.oop;</simpara>
    <programlisting role="php">
 <![CDATA[
 <?php
@@ -101,18 +102,17 @@ $mysqli = new mysqli("localhost", "my_user", "my_password", "world");
 
 $city = "'s-Hertogenbosch";
 
-/* Cette requête avec $city échappé fonctionnera */
-$query = sprintf("SELECT CountryCode FROM City WHERE name='%s'",
-    $mysqli->real_escape_string($city));
+/* Cette requête avec $city entouré de guillemets fonctionnera */
+$query = sprintf("SELECT CountryCode FROM City WHERE name=%s", $mysqli->quote_string($city));
 $result = $mysqli->query($query);
 printf("Select a retourné %d lignes.\n", $result->num_rows);
 
-/* Cette requête échouera, car $city n'a pas été échappé */
+/* Cette requête échouera, car $city n'a pas été entouré de guillemets ni échappé */
 $query = sprintf("SELECT CountryCode FROM City WHERE name='%s'", $city);
 $result = $mysqli->query($query);
 ]]>
    </programlisting>
-   <para>&style.procedural;</para>
+   <simpara>&style.procedural;</simpara>
    <programlisting role="php">
 <![CDATA[
 <?php
@@ -122,13 +122,12 @@ $mysqli = mysqli_connect("localhost", "my_user", "my_password", "world");
 
 $city = "'s-Hertogenbosch";
 
-/* Cette requête avec $city échappé fonctionnera */
-$query = sprintf("SELECT CountryCode FROM City WHERE name='%s'",
-    mysqli_real_escape_string($mysqli, $city));
+/* Cette requête avec $city entouré de guillemets fonctionnera */
+$query = sprintf("SELECT CountryCode FROM City WHERE name=%s", mysqli_quote_string($mysqli, $city));
 $result = mysqli_query($mysqli, $query);
 printf("Select a retourné %d lignes.\n", mysqli_num_rows($result));
 
-/* Cette requête échouera, car $city n'a pas été échappé */
+/* Cette requête échouera, car $city n'a pas été entouré de guillemets ni échappé */
 $query = sprintf("SELECT CountryCode FROM City WHERE name='%s'", $city);
 $result = mysqli_query($mysqli, $query);
 ]]>
@@ -147,8 +146,8 @@ Fatal error: Uncaught mysqli_sql_exception: You have an error in your SQL syntax
  <refsect1 role="seealso">
   &reftitle.seealso;
   <simplelist>
-   <member><function>mysqli_set_charset</function></member>
-   <member><function>mysqli_quote_string</function></member>
+   <member><methodname>mysqli::real_escape_string</methodname></member>
+   <member><methodname>mysqli::set_charset</methodname></member>
   </simplelist>
  </refsect1>
 
