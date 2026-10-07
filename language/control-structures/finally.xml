@@ -1,0 +1,496 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 7c915c0c28b8e2e4306333c64602ee4800c73754 Maintainer: lacatoire Status: ready -->
+
+<sect1 xml:id="control-structures.finally" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>finally</title>
+ <?phpdoc print-version-for="finally"?>
+ <simpara>
+  Un bloc &finally; peut aussi être spécifié après, ou à la place, des blocs
+  &catch;.
+  Le code d'un bloc &finally; est toujours exécuté après les blocs &try; et
+  &catch;, même si une instruction &return; ou &yield; est rencontrée, ou si une
+  erreur <exceptionname>Throwable</exceptionname> n'est pas attrapée ou est
+  relancée.
+  Il est exécuté avant la reprise du flux d'exécution normal.
+  La seule exception à cette règle est l'arrêt brutal du script, comme lors d'un
+  appel à <function>exit</function> ou d'une erreur fatale (par exemple lorsque
+  le temps d'exécution maximal est dépassé).
+ </simpara>
+ <example>
+  <title>Traitement d'une erreur <exceptionname>Throwable</exceptionname> avec un bloc &finally;</title>
+  <programlisting role="php">
+<![CDATA[
+<?php
+function inverse($x) {
+    return 1/$x;
+}
+
+try {
+    echo inverse(5) . "\n";
+} catch (\DivisionByZeroError $e) {
+    echo 'Erreur attrapée : ',  $e->getMessage(), "\n";
+} finally {
+    echo "Premier finally.\n";
+}
+
+try {
+    echo inverse(0) . "\n";
+} catch (\DivisionByZeroError $e) {
+    echo 'Erreur attrapée : ',  $e->getMessage(), "\n";
+} finally {
+    echo "Second finally.\n";
+}
+
+// Poursuite de l'exécution
+echo "Bonjour le monde\n";
+]]>
+  </programlisting>
+  &example.outputs.8;
+  <screen>
+<![CDATA[
+0.2
+Premier finally.
+Erreur attrapée : Division by zero
+Second finally.
+Bonjour le monde
+]]>
+  </screen>
+ </example>
+
+ <simpara>
+  Lorsque la pile d'appels est dépilée après qu'une erreur
+  <exceptionname>Throwable</exceptionname> a été lancée, tous les blocs
+  &finally; rencontrés en chemin sont exécutés.
+  En d'autres termes, les blocs &finally; imbriqués sont exécutés même si
+  l'erreur <exceptionname>Throwable</exceptionname> n'est pas attrapée par un
+  bloc &catch; adjacent.
+ </simpara>
+ <example>
+  <title>Tous les blocs &finally; sont exécutés</title>
+  <programlisting role="php">
+   <![CDATA[
+<?php
+try {
+    try {
+        throw new Exception();
+    } finally {
+        echo "Finally interne\n";
+    }
+} catch (Exception $e) {
+} finally {
+    echo "Finally externe\n";
+}
+]]>
+  </programlisting>
+  &example.outputs;
+  <screen>
+<![CDATA[
+Finally interne
+Finally externe
+]]>
+  </screen>
+ </example>
+
+ <sect2>
+  <title>Interaction entre un bloc &finally; et une instruction &return;</title>
+  <simpara>
+   Une interaction notable existe entre le bloc &finally; et une instruction
+   &return;.
+   Si une instruction &return; est rencontrée dans un bloc &try; ou &catch;, le
+   bloc &finally; est tout de même exécuté. De plus, l'instruction &return; est
+   évaluée lorsqu'elle est rencontrée, mais le résultat n'est retourné qu'après
+   l'exécution du bloc &finally;. En outre, si le bloc &finally; contient lui
+   aussi une instruction &return;, c'est la valeur du bloc &finally; qui est
+   retournée.
+  </simpara>
+  <example>
+   <title>Interaction entre &return; dans un bloc &finally; et un &return; précédent</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+function testReturnTry() {
+    try {
+        echo 'Dans try', "\n";
+        return 'try';
+    } finally {
+        echo 'Dans finally', "\n";
+        return 'finally';
+    }
+}
+
+function testReturnCatch() {
+    try {
+        throw new Exception('foo');
+    } catch (Exception $e) {
+        echo 'Dans catch', "\n";
+        return 'catch';
+    } finally {
+        echo 'Dans finally', "\n";
+        return 'finally';
+    }
+}
+
+echo testReturnTry(), "\n";
+echo testReturnCatch(), "\n";
+
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Dans try
+Dans finally
+finally
+Dans catch
+Dans finally
+finally
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>Interaction entre le bloc &finally; et &return;</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+function testReturnTry() {
+    try {
+        return 'try';
+    } finally {
+        echo 'finally ';
+    }
+}
+
+function testReturnCatch() {
+    try {
+        throw new Exception('foo');
+    } catch (Exception $e) {
+        return 'catch';
+    } finally {
+        echo 'finally ';
+    }
+}
+
+echo testReturnTry(), "\n";
+echo testReturnCatch(), "\n";
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+finally try
+finally catch
+]]>
+   </screen>
+  </example>
+ </sect2>
+
+ <sect2>
+  <title>Interaction entre un bloc &finally; et une exception lancée dans un bloc &try;</title>
+  <simpara>
+   Si le bloc &try; et le bloc &finally; lancent tous deux une exception,
+   l'exception lancée par le bloc &finally; est celle qui est propagée, et
+   l'exception lancée par le bloc &try; est utilisée comme son exception
+   précédente.
+  </simpara>
+  <example>
+   <title>Exception dans try et dans finally</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+
+try {
+    try {
+        throw new Exception(message: 'Troisième', previous: new Exception('Quatrième'));
+    } finally {
+        throw new Exception(message: 'Première', previous: new Exception('Deuxième'));
+    }
+} catch (Exception $e) {
+    var_dump(
+        $e->getMessage(),
+        $e->getPrevious()->getMessage(),
+        $e->getPrevious()->getPrevious()->getMessage(),
+        $e->getPrevious()->getPrevious()->getPrevious()->getMessage(),
+    );
+}
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+string(9) "Première"
+string(9) "Deuxième"
+string(10) "Troisième"
+string(10) "Quatrième"
+]]>
+   </screen>
+  </example>
+ </sect2>
+
+ <sect2>
+  <title>
+   Comportement d'un bloc &finally; dans un
+   <link linkend="language.generators">générateur</link>
+  </title>
+
+  <simpara>
+   Si une erreur <exceptionname>Throwable</exceptionname> est lancée pendant le
+   parcours d'un générateur, le bloc &finally; du générateur est exécuté, car
+   il est l'élément précédent de la pile d'appels.
+  </simpara>
+  <example>
+   <title>
+    Bloc &finally; exécuté lorsqu'une <exceptionname>Exception</exceptionname>
+    a été lancée
+   </title>
+   <programlisting role="php">
+    <![CDATA[
+<?php
+function generate()
+{
+    try {
+        yield 1;
+        yield 2;
+    } catch(\Exception $e) {
+        echo 'catch';
+    } finally {
+        echo "finally\n";
+    }
+}
+
+try {
+    foreach (generate() as $i) {
+        echo $i, "\n";
+        throw new Exception();
+    }
+} catch(Exception $e) {
+    echo 'catch externe';
+}
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+1
+finally
+catch externe
+]]>
+   </screen>
+  </example>
+
+  <simpara>
+   Il est possible d'utiliser &yield; dans un bloc &finally;, mais si une
+   erreur <exceptionname>Throwable</exceptionname> survient et n'est pas
+   attrapée dans le &foreach;, une erreur <exceptionname>Error</exceptionname>
+   <literal>Cannot yield from finally in a force-closed generator</literal> est
+   lancée.
+  </simpara>
+  <example>
+   <title>
+    Erreur lors d'un &yield; dans un bloc &finally; lorsqu'une
+    <exceptionname>Exception</exceptionname> a été lancée
+   </title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+function generate()
+{
+    try {
+        yield 1;
+        yield 2;
+    } catch(\Exception $e) {
+        echo 'catch';
+    } finally {
+        echo "finally\n";
+        yield 3;
+    }
+}
+
+try {
+    foreach (generate() as $i) {
+        echo $i, "\n";
+        throw new Exception();
+    }
+} catch(Exception $e) {
+    echo 'catch externe';
+}
+]]>
+   </programlisting>
+   &example.outputs.similar;
+   <screen>
+<![CDATA[
+1
+finally
+
+Fatal error: Uncaught Exception in /in/GbFmu:19
+Stack trace:
+#0 {main}
+
+Next Error: Cannot yield from finally in a force-closed generator in /in/GbFmu:12
+Stack trace:
+#0 /in/GbFmu(19): generate()
+#1 {main}
+  thrown in /in/GbFmu on line 12
+]]>
+   </screen>
+  </example>
+ </sect2>
+
+ <sect2>
+  <title>Interaction entre un bloc &finally; et un appel à <function>exit</function></title>
+  <simpara>
+   Lorsque <function>exit</function> est appelé dans un bloc &try; ou &catch;,
+   tous les blocs &finally; sont ignorés.
+  </simpara>
+  <example>
+   <title>Interaction entre un bloc &finally; et <function>exit</function> appelé dans un bloc &try;</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+try {
+    echo 'quitter';
+    exit(0);
+} finally {
+    echo 'finally';
+}
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+quitter
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>Interaction entre un bloc &finally; et <function>exit</function> appelé dans un bloc &catch;</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+try {
+    throw new Exception('foo');
+} catch (Exception $e) {
+    echo 'catch';
+    exit(0);
+} finally {
+    echo 'finally ';
+}
+]]>
+   </programlisting>
+   &example.outputs;
+  <screen>
+<![CDATA[
+catch
+]]>
+   </screen>
+  </example>
+  <example>
+   <title>Tous les blocs &finally; sont ignorés lorsque <function>exit</function> est appelé</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+try {
+    try {
+        echo 'quitter';
+        exit(0);
+    } finally {
+        echo 'finally interne ';
+    }
+} finally {
+    echo 'finally externe';
+}
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+quitter
+]]>
+   </screen>
+  </example>
+
+  <simpara>
+   Lorsque <function>exit</function> est appelé dans un bloc &finally;, tous les
+   autres blocs &finally; externes sont ignorés.
+  </simpara>
+  <example>
+   <title>Ignorer le bloc &finally; externe en appelant <function>exit</function></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+try {
+    try {
+        echo 'try', "\n";
+    } finally {
+        echo 'finally interne ';
+        exit(0);
+    }
+} finally {
+    echo 'finally externe';
+}
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+try
+finally interne
+]]>
+   </screen>
+  </example>
+
+  <sect3>
+   <title>Cas limite d'un appel à <function>exit</function> dans un &foreach; sur un générateur</title>
+   <simpara>
+    Ce cas limite a un comportement fortement dépendant de la version de PHP
+    avec laquelle le code est exécuté.
+   </simpara>
+
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+function generate()
+{
+    try {
+        yield 1;
+        yield 2;
+    } catch(\Exception $e) {
+        echo 'catch';
+    } finally {
+        echo "finally interne\n";
+    }
+}
+
+try {
+    foreach (generate() as $i) {
+        echo $i, "\n";
+        exit(0);
+    }
+} finally {
+    echo "finally externe\n";
+}
+]]>
+    </programlisting>
+    <simpara>
+     Sortie de l'exemple ci-dessus antérieurement à PHP 7.1.14, avec PHP 7.2.0
+     et 7.2.1, et à partir de PHP 8.0.0
+    </simpara>
+    <screen>
+<![CDATA[
+1
+finally interne
+]]>
+    </screen>
+    <simpara>
+     Sortie de l'exemple ci-dessus à partir de PHP 7.1.14 et 7.2.2, et
+     antérieurement à PHP 8.0.0
+    </simpara>
+    <screen>
+<![CDATA[
+1
+]]>
+    </screen>
+   </informalexample>
+  </sect3>
+ </sect2>
+</sect1>
