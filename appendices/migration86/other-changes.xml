@@ -1,0 +1,599 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 894fa67ba030cd241a56d898869852c7b1a59c0a Maintainer: lacatoire Status: ready -->
+<sect1 xml:id="migration86.other-changes">
+ <title>Autres changements</title>
+
+ <sect2 xml:id="migration86.other-changes.core">
+  <title>Changements du cœur</title>
+
+  <sect3 xml:id="migration86.other-changes.core.core">
+   <title>Core</title>
+
+   <simpara>
+    En cas de condition <acronym>OOM</acronym> (mémoire insuffisante) fatale,
+    PHP appelle désormais <literal>abort()</literal> au lieu de
+    <literal>exit(1)</literal>, ce qui change le code de sortie en 134 et peut
+    créer un core dump.
+   </simpara>
+
+   <simpara>
+    La constante <constant>PHP_OS_FAMILY</constant> a une valeur
+    <literal>AIX</literal> lors de l'exécution sur AIX ou IBM i via PASE.
+   </simpara>
+
+  </sect3>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.other-changes.sapi">
+  <title>Changements dans les modules SAPI</title>
+
+  <sect3 xml:id="migration86.other-changes.sapi.cli">
+   <title>CLI</title>
+
+   <simpara>
+    Le <link linkend="features.commandline.webserver">serveur de développement
+    intégré</link> accepte désormais les requêtes utilisant la méthode
+    <acronym>HTTP</acronym> <literal>QUERY</literal> au lieu de retourner
+    <literal>501 Not Implemented</literal>.
+   </simpara>
+
+   <simpara>
+    Le <link linkend="features.commandline.webserver">serveur de développement
+    intégré</link> ne reflète plus l'en-tête <literal>Host</literal> des
+    requêtes.
+   </simpara>
+
+  </sect3>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.other-changes.functions">
+  <title>Fonctions modifiées</title>
+
+  <sect3 xml:id="migration86.other-changes.functions.core">
+   <title>Core</title>
+
+   <simpara>
+    <function>header_register_callback</function> déclare désormais
+    <type>true</type> comme type de retour.
+    Elle ne peut plus retourner &false; à partir de PHP 8.0.0, date à laquelle le
+    passage d'une fonction de rappel invalide a commencé à lancer une
+    <exceptionname>TypeError</exceptionname>.
+   </simpara>
+
+   <simpara>
+    <function>register_tick_function</function> déclare désormais
+    <type>true</type> comme type de retour.
+    Elle a toujours retourné &true; en cas de succès ; une fonction de rappel
+    invalide lance une <exceptionname>TypeError</exceptionname> lors de
+    l'analyse des arguments, avant que le corps de la fonction ne soit
+    atteint.
+   </simpara>
+
+   <simpara>
+    <function>ini_get_all</function> inclut désormais un élément
+    <literal>"builtin_default_value"</literal> pour chaque directive lorsque
+    <parameter>details</parameter> vaut &true;.
+    Il contient la valeur par défaut intégrée de la directive (ou &null; si
+    elle n'en a pas), indépendamment des valeurs définies dans &php.ini;, en
+    ligne de commande ou à l'exécution.
+   </simpara>
+
+   <simpara>
+    <function>fclose</function>, <function>file_put_contents</function> et
+    <function>copy</function> retournent désormais &false; lorsque le vidage
+    ou la fermeture du flux échoue.
+    Auparavant, de tels échecs étaient silencieusement ignorés.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.functions.date">
+   <title>Date</title>
+
+   <para>
+    Les méthodes suivantes ont désormais des types de retour provisoires
+    <type>static</type> :
+
+    <simplelist>
+     <member><methodname>DateTime::createFromInterface</methodname></member>
+     <member><methodname>DateTimeImmutable::__set_state</methodname></member>
+     <member><methodname>DateTimeImmutable::modify</methodname></member>
+     <member><methodname>DateTimeImmutable::add</methodname></member>
+     <member><methodname>DateTimeImmutable::sub</methodname></member>
+     <member><methodname>DateTimeImmutable::setTimezone</methodname></member>
+     <member><methodname>DateTimeImmutable::setTime</methodname></member>
+     <member><methodname>DateTimeImmutable::setDate</methodname></member>
+     <member><methodname>DateTimeImmutable::setISODate</methodname></member>
+     <member><methodname>DateTimeImmutable::setTimestamp</methodname></member>
+     <member><methodname>DateTimeImmutable::createFromInterface</methodname></member>
+     <member><methodname>DateTimeZone::__set_state</methodname></member>
+     <member><methodname>DateInterval::__set_state</methodname></member>
+     <member><methodname>DatePeriod::__set_state</methodname></member>
+    </simplelist>
+   </para>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.functions.filter">
+   <title>Filter</title>
+
+   <simpara>
+    Le type de retour de <function>filter_var_array</function> a été restreint
+    de
+    <type class="union"><type>array</type><type>false</type><type>null</type></type>
+    à <type class="union"><type>array</type><type>false</type></type>.
+    La fonction établit toujours un tableau avant de filtrer, &null; n'était
+    donc jamais retourné.
+    <function>filter_input_array</function> n'est pas affectée : elle retourne
+    toujours &null; lorsque la superglobale demandée n'existe pas.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.functions.ldap">
+   <title>LDAP</title>
+
+   <simpara>
+    Le type de retour de <function>ldap_free_result</function> a été restreint
+    de <type>bool</type> à <type>true</type>.
+    La fonction retournait déjà toujours &true;.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.functions.mysqli">
+   <title>MySQLi</title>
+
+   <simpara>
+    La structure retournée par <function>mysqli_get_charset</function> ne
+    contient plus l'élément non documenté <literal>"comment"</literal>.
+    La valeur de <literal>"charsetnr"</literal> est désormais fixée à la
+    constante <literal>0</literal>, car ce numéro était un détail
+    d'implémentation qui n'aurait pas dû être exposé publiquement.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.functions.openssl">
+   <title>OpenSSL</title>
+
+   <simpara>
+    La sortie de <function>openssl_x509_parse</function> contient désormais
+    une entrée <literal>"criticalExtensions"</literal> listant toutes les
+    extensions critiques du certificat.
+   </simpara>
+
+   <simpara>
+    <function>openssl_sign</function> et <function>openssl_verify</function>
+    ont désormais un argument optionnel supplémentaire
+    <parameter>salt_length</parameter> qui permet de contrôler la longueur du
+    sel <acronym>RSA</acronym>-PSS lorsque
+    <constant>OPENSSL_PKCS1_PSS_PADDING</constant> est utilisé.
+    Il accepte une longueur explicite ou l'une des nouvelles constantes
+    <constant>OPENSSL_RSA_PSS_SALTLEN_<replaceable>*</replaceable></constant>.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.functions.pdo-dblib">
+   <title>PDO_DBLIB</title>
+
+   <simpara>
+    Lors de l'utilisation de connexions persistantes, une vérification de
+    disponibilité de la connexion est désormais effectuée dans
+    <methodname>PDO::__construct</methodname>.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.functions.phar">
+   <title>Phar</title>
+
+   <simpara>
+    <methodname>Phar::mungServer</methodname> prend désormais en charge les
+    valeurs par référence.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.functions.readline">
+   <title>Readline</title>
+
+   <simpara>
+    <function>readline_completion_function</function> déclare désormais
+    <type>true</type> comme type de retour.
+    Elle a toujours retourné &true; en cas de succès ; une fonction de rappel
+    invalide lance une <exceptionname>TypeError</exceptionname> lors de
+    l'analyse des arguments, avant que le corps de la fonction ne soit
+    atteint.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.functions.reflection">
+   <title>Reflection</title>
+
+   <simpara>
+    Les sorties de
+    <methodname>ReflectionClassConstant::__toString</methodname> et de
+    <methodname>ReflectionConstant::__toString</methodname> affichent
+    désormais les valeurs de constantes <type>bool</type> sous la forme
+    <literal>true</literal> et <literal>false</literal> plutôt que
+    <literal>1</literal> et une chaîne vide.
+    Cela affecte également d'autres façons d'afficher les constantes de
+    classe, par ex. <methodname>ReflectionClass::__toString</methodname>.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.functions.sockets">
+   <title>Sockets</title>
+
+   <simpara>
+    <function>socket_addrinfo_lookup</function> a désormais un argument
+    optionnel supplémentaire <parameter>error_code</parameter> qui, lorsqu'il
+    n'est pas &null;, reçoit le code d'erreur en cas d'échec (l'une des
+    constantes <constant>EAI_<replaceable>*</replaceable></constant>).
+   </simpara>
+
+   <simpara>
+    Le type de retour de <function>socket_cmsg_space</function> a été restreint
+    de <type class="union"><type>int</type><type>null</type></type> à
+    <type>int</type>.
+    Tous les chemins d'échec lancent une
+    <exceptionname>ValueError</exceptionname> à partir de PHP 8.0.0, &null; n'était
+    donc jamais retourné.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.functions.zip">
+   <title>Zip</title>
+
+   <simpara>
+    Le type de retour de <function>zip_entry_close</function> a été restreint
+    de <type>bool</type> à <type>true</type>.
+    La fonction retournait déjà toujours &true;.
+   </simpara>
+
+  </sect3>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.other-changes.extensions">
+  <title>Autres changements aux extensions</title>
+
+  <sect3 xml:id="migration86.other-changes.extensions.fileinfo">
+   <title>Fileinfo</title>
+
+   <simpara>
+    Mise à jour vers file 5.48.
+    Les bases de données magic compilées sur mesure avec d'anciennes versions
+    de file doivent être régénérées.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.extensions.hash">
+   <title>Hash</title>
+
+   <simpara>
+    La version intégrée de xxHash a été mise à jour vers 0.8.2.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.extensions.mysqli">
+   <title>MySQLi</title>
+
+   <simpara>
+    Ajout de la nouvelle constante <constant>MYSQLI_OPT_COMPRESS</constant>.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.extensions.opcache">
+   <title>Opcache</title>
+
+   <simpara>
+    Le <acronym>JIT</acronym> est désormais pris en charge pour les
+    compilations <acronym>ZTS</acronym> sur Apple Silicon.
+   </simpara>
+
+  </sect3>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.other-changes.ini">
+  <title>Changements dans la gestion des fichiers INI</title>
+
+  <sect3 xml:id="migration86.other-changes.ini.core">
+   <title>Core</title>
+
+   <simpara>
+    L'option INI <!-- <link linkend="ini.error-include-args"> -->error_include_args<!-- </link> -->
+    a été ajoutée pour rendre cohérent l'affichage des arguments de fonction
+    dans les erreurs ; elle est désactivée par défaut.
+    Auparavant, le fait qu'une fonction affiche un paramètre dans l'erreur
+    dépendait de chaque appel à la fonction d'erreur interne.
+    Désormais, tous les paramètres tels qu'ils ont réellement été passés à la
+    fonction seront affichés.
+    Cela utilise la même infrastructure que les traces d'appels : les
+    paramètres sensibles ne seront donc pas affichés, et les chaînes seront
+    tronquées selon
+    <link linkend="ini.zend.exception-string-param-max-len">zend.exception_string_param_max_len</link>.
+    <!-- RFC: https://wiki.php.net/rfc/display_error_function_args -->
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.ini.mbstring">
+   <title>MBString</title>
+
+   <simpara>
+    La directive INI
+    <link linkend="ini.mbstring.detect-order">mbstring.detect_order</link>
+    met désormais à jour l'ordre de détection interne lorsqu'elle est modifiée
+    à l'exécution via <function>ini_set</function>.
+    Auparavant, les modifications à l'exécution avec
+    <function>ini_set</function> n'avaient aucun effet sur
+    <function>mb_detect_order</function>.
+    Définir la directive à &null; ou à une chaîne vide à l'exécution laisse
+    désormais inchangé l'ordre de détection précédemment configuré.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.ini.mysqli">
+   <title>MySQLi</title>
+
+   <simpara>
+    <link linkend="ini.mysqli.default-port">mysqli.default_port</link> vérifie
+    désormais la validité de la valeur, qui doit être comprise entre
+    <literal>0</literal> et <literal>65535</literal> inclus.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.ini.opcache">
+   <title>Opcache</title>
+
+   <simpara>
+    <link linkend="ini.opcache.jit-debug">opcache.jit_debug</link> accepte un
+    nouveau drapeau : <literal>ZEND_JIT_DEBUG_TRACE_EXIT_INFO_SRC</literal>.
+    Lorsqu'il est utilisé avec <literal>ZEND_JIT_DEBUG_TRACE_EXIT_INFO</literal>,
+    la source des points de sortie est affichée dans les informations de
+    sortie, dans les compilations de débogage.
+   </simpara>
+
+  </sect3>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.other-changes.performance">
+  <title>Performance</title>
+
+  <sect3 xml:id="migration86.other-changes.performance.core">
+   <title>Core</title>
+
+   <simpara>
+    <function>printf</function> n'utilisant que <literal>%s</literal> et
+    <literal>%d</literal> sera compilée en l'interpolation de chaîne
+    équivalente, évitant le coût d'un appel de fonction et l'analyse répétée de
+    la chaîne de format.
+   </simpara>
+
+   <simpara>
+    Les arguments sont désormais passés plus efficacement aux constructeurs
+    connus (par ex. lors de l'utilisation de <code>new self()</code>).
+   </simpara>
+
+   <simpara>
+    <function>array_map</function> utilisant comme fonction de rappel un
+    <link linkend="functions.first_class_callable_syntax">callable de première
+    classe</link> ou une
+    <link linkend="migration86.new-features.core.partial-function-application">application
+    partielle de fonction</link> sera compilée en la boucle
+    <link linkend="control-structures.foreach">foreach</link> équivalente,
+    évitant la création de <classname>Closure</classname> intermédiaires et le
+    coût de l'appel de fonctions de rappel utilisateur depuis des fonctions
+    internes, et offrant une meilleure visibilité au <acronym>JIT</acronym>.
+   </simpara>
+
+   <simpara>
+    Les performances de la <acronym>VM</acronym> TAILCALL ont été améliorées,
+    et elle est désormais activée sous Windows lors de la compilation avec
+    Clang 19 ou ultérieur sur x86_64.
+   </simpara>
+
+   <simpara>
+    Les performances des compilations <acronym>ZTS</acronym> ont été
+    améliorées.
+   </simpara>
+
+   <simpara>
+    Ajout d'un cache de fermetures sans état.
+    <!-- RFC: https://wiki.php.net/rfc/closure-optimizations#stateless_closure_caching -->
+   </simpara>
+
+   <simpara>
+    Le code profondément récursif qui amène la VM à allouer de nouvelles pages
+    de pile devrait désormais être plus rapide.
+   </simpara>
+
+   <simpara>
+    Amélioration des performances du tri des tableaux à un seul élément.
+   </simpara>
+
+   <para>
+    Amélioration des performances des fonctions suivantes :
+
+    <simplelist>
+     <member><function>addcslashes</function>, lors de la génération d'échappements octaux</member>
+     <member><function>array_fill_keys</function></member>
+     <member><function>array_intersect</function></member>
+     <member><function>array_map</function>, avec plusieurs tableaux passés</member>
+     <member><function>array_product</function> et <function>array_sum</function>, pour les tableaux ne contenant que des entiers</member>
+     <member><function>array_unshift</function></member>
+     <member><function>array_walk</function></member>
+     <member><function>intval</function>, pour <code>intval('0b...', 2)</code> et <code>intval('+0b...', 2)</code></member>
+     <member><function>pathinfo</function>, lorsqu'un seul composant est demandé</member>
+     <member><function>str_pad</function></member>
+     <member><function>str_repeat</function>, lorsque le multiplicateur vaut <literal>1</literal></member>
+     <member><function>str_split</function></member>
+    </simplelist>
+   </para>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.performance.dom">
+   <title>DOM</title>
+
+   <simpara>
+    <methodname>DOMText::splitText</methodname> et
+    <methodname>Dom\Text::splitText</methodname> sont plus rapides et
+    consomment moins de mémoire.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.performance.gd">
+   <title>GD</title>
+
+   <simpara>
+    <function>imagebmp</function>, <function>imagewbmp</function>,
+    <function>imagegd</function> et <function>imagegd2</function> mettent
+    désormais la sortie en tampon lors de l'écriture vers des flux PHP, ce qui
+    améliore significativement les performances d'écriture des images dans des
+    fichiers.
+   </simpara>
+
+   <simpara>
+    Amélioration des performances de <function>imagegrabscreen</function> et
+    <function>imagegrabwindow</function> sous Windows.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.performance.intl">
+   <title>Intl</title>
+
+   <simpara>
+    Amélioration des performances de
+    <methodname>IntlCalendar::getAvailableLocales</methodname> et de
+    <methodname>IntlDateFormatter::localtime</methodname>/<function>datefmt_localtime</function>
+    grâce à la préallocation des tableaux qu'elles retournent.
+   </simpara>
+
+   <simpara>
+    Amélioration des performances de
+    <function>transliterator_list_ids</function> et de
+    <function>resourcebundle_locales</function> grâce à la préallocation des
+    tableaux qu'elles retournent.
+   </simpara>
+
+   <simpara>
+    Optimisation de l'appel de la fonction de rappel dans
+    <methodname>IntlChar::enumCharTypes</methodname>.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.performance.json">
+   <title>JSON</title>
+
+   <simpara>
+    Amélioration des performances de l'encodage des tableaux et des objets.
+   </simpara>
+
+   <simpara>
+    Amélioration des performances de la génération de l'indentation dans
+    <function>json_encode</function> lors de l'utilisation de
+    <constant>JSON_PRETTY_PRINT</constant>.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.performance.mbstring">
+   <title>MBString</title>
+
+   <simpara>
+    Amélioration des performances de <function>mb_str_pad</function>.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.performance.phar">
+   <title>Phar</title>
+
+   <simpara>
+    Réduction des allocations temporaires lors de l'itération sur les
+    répertoires Phar.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.performance.uri">
+   <title>URI</title>
+
+   <simpara>
+    Amélioration des performances de
+    <methodname>Uri\WhatWg\Url::parse</methodname> lors de la collecte des
+    erreurs de validation grâce à la préallocation du tableau d'erreurs.
+   </simpara>
+
+   <simpara>
+    Réduction des allocations lors de la lecture des hôtes IPv6/IPvFuture et
+    des chemins avec <classname>Uri\Rfc3986\Uri</classname>.
+   </simpara>
+
+   <simpara>
+    Amélioration des performances et de la consommation de mémoire lors de
+    l'utilisation des accesseurs normalisants (non bruts) sur des URI déjà
+    normalisées avec <classname>Uri\Rfc3986\Uri</classname>.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.other-changes.performance.zip">
+   <title>Zip</title>
+
+   <simpara>
+    Amélioration des performances de
+    <methodname>ZipArchive::addGlob</methodname> et de
+    <methodname>ZipArchive::addPattern</methodname> grâce à la préallocation
+    des tableaux qu'elles retournent.
+   </simpara>
+
+   <simpara>
+    Les copies de chaînes sont évitées dans
+    <methodname>ZipArchive::addFromString</methodname>.
+   </simpara>
+
+  </sect3>
+
+ </sect2>
+
+</sect1>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->

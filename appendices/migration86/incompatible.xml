@@ -1,0 +1,921 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EN-Revision: 894fa67ba030cd241a56d898869852c7b1a59c0a Maintainer: lacatoire Status: ready -->
+<sect1 xml:id="migration86.incompatible" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <title>Changements non rétrocompatibles</title>
+
+ <sect2 xml:id="migration86.incompatible.core">
+  <title>PHP Core</title>
+
+  <sect3 xml:id="migration86.incompatible.core.foreach-by-reference">
+   <title>foreach par référence après compactage d'un tableau</title>
+
+   <simpara>
+    Les boucles <link linkend="control-structures.foreach">foreach</link> par
+    référence peuvent désormais visiter des éléments précédemment ignorés après
+    le compactage d'un tableau.
+    Les pointeurs internes sur des éléments supprimés passent désormais à
+    l'élément survivant suivant lors de la copie sur écriture.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.incompatible.core.magic-property-isset">
+   <title>Coalescence sur null et <function>empty</function> sur les propriétés magiques</title>
+
+   <simpara>
+    <literal>??</literal> et <function>empty</function> sur une propriété
+    magique n'appellent plus <link linkend="object.get">__get()</link> lorsque
+    <link linkend="object.isset">__isset()</link> a matérialisé la propriété
+    en écrivant dans la table des propriétés.
+    La valeur fraîchement écrite est retournée directement.
+    <function>isset</function> appliqué directement à la propriété n'est pas
+    affecté ; les formes imbriquées telles que
+    <literal>isset($o-&gt;p['k'])</literal> suivent le même chemin que
+    <literal>??</literal>.
+   </simpara>
+
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+#[\AllowDynamicProperties]
+class Example
+{
+    public function __isset(string $name): bool
+    {
+        $this->$name = 'from __isset()';
+        return true;
+    }
+
+    public function __get(string $name): string
+    {
+        return 'from __get()';
+    }
+}
+
+$example = new Example();
+var_dump($example->foo ?? 'default');
+// À partir de PHP 8.6.0 : string(14) "from __isset()"
+// Avant PHP 8.6.0 : string(12) "from __get()"
+]]>
+    </programlisting>
+   </informalexample>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.incompatible.core.array-intersect">
+   <title>Conversion en chaîne dans <function>array_intersect</function></title>
+
+   <simpara>
+    <function>array_intersect</function> avec au moins deux tableaux convertit
+    désormais les valeurs en chaînes lors du parcours de ses entrées plutôt que
+    pendant les comparaisons du tri.
+    Cela peut modifier le nombre et l'ordre des avertissements de conversion
+    et des appels à <link linkend="object.tostring">__toString()</link>,
+    l'exception de conversion qui est atteinte, ainsi que le résultat pour les
+    implémentations de <link linkend="object.tostring">__toString()</link> à
+    état.
+    Les types des arguments sont validés avant de vérifier la présence de
+    tableaux vides ou de convertir les valeurs ; un argument ultérieur invalide
+    peut donc supprimer les effets de bord de conversion des tableaux
+    précédents.
+    Les valeurs ne sont pas converties si l'un des tableaux d'entrée est vide.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.incompatible.core.trim-form-feed">
+   <title>Saut de page supprimé par défaut</title>
+
+   <simpara>
+    Le saut de page (<literal>\f</literal>) est désormais ajouté aux
+    caractères supprimés par défaut par <function>trim</function>,
+    <function>rtrim</function> et <function>ltrim</function>.
+    <!-- RFC: https://wiki.php.net/rfc/trim_form_feed -->
+   </simpara>
+
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+var_dump(trim("\f hello \f"));
+// À partir de PHP 8.6.0 : string(5) "hello"
+// Avant PHP 8.6.0 : string(9) "\f hello \f"
+]]>
+    </programlisting>
+   </informalexample>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.incompatible.core.new-value-errors">
+   <title>Nouvelles erreurs pour les arguments invalides</title>
+
+   <para>
+    Les fonctions suivantes lèvent désormais une
+    <exceptionname>ValueError</exceptionname> lorsqu'une valeur de drapeau ou
+    de mode invalide est passée :
+
+    <simplelist>
+     <member><function>array_filter</function> (<parameter>mode</parameter>)</member>
+     <member><function>array_change_key_case</function> (<parameter>case</parameter>)</member>
+     <member><function>pathinfo</function> (<parameter>flags</parameter>)</member>
+     <member><function>scandir</function> (<parameter>sorting_order</parameter>)</member>
+    </simplelist>
+   </para>
+
+   <para>
+    Les fonctions suivantes lèvent désormais une
+    <exceptionname>ValueError</exceptionname> lorsque l'argument donné contient
+    des octets <literal>NUL</literal> :
+
+    <simplelist>
+     <member><function>getenv</function> et <function>putenv</function> (premier argument)</member>
+     <member><function>dl</function> (<parameter>extension_filename</parameter>)</member>
+     <member><function>openlog</function> (<parameter>prefix</parameter>)</member>
+     <member><function>parse_str</function> (<parameter>string</parameter>)</member>
+     <member><function>proc_open</function> (<parameter>cwd</parameter>)</member>
+    </simplelist>
+   </para>
+
+   <para>
+    Les fonctions suivantes lèvent désormais une
+    <exceptionname>ValueError</exceptionname> pour les valeurs hors limites,
+    au lieu de les plafonner silencieusement ou de les laisser déborder :
+
+    <simplelist>
+     <member>
+      <function>number_format</function>, lorsque <parameter>decimals</parameter>
+      est en dehors de la plage des entiers.
+     </member>
+     <member>
+      <function>sleep</function>, lorsque <parameter>seconds</parameter> est
+      supérieur à <literal>UINT_MAX</literal>, ou
+      <literal>UINT_MAX / 1000</literal> sous Windows.
+     </member>
+     <member>
+      <function>usleep</function>, lorsque <parameter>microseconds</parameter>
+      est supérieur à <literal>UINT_MAX</literal>.
+     </member>
+    </simplelist>
+   </para>
+
+   <simpara>
+    <function>linkinfo</function> lève désormais une
+    <exceptionname>ValueError</exceptionname> lorsque l'argument
+    <parameter>path</parameter> est vide.
+   </simpara>
+
+   <simpara>
+    <function>setlocale</function> lève désormais une
+    <exceptionname>ValueError</exceptionname> lorsqu'un nom de locale contient
+    des octets <literal>NUL</literal>, au lieu de le tronquer silencieusement.
+    Les tableaux ne sont désormais acceptés que pour l'argument
+    <parameter>locales</parameter>.
+    Passer un tableau comme argument de locale variadique ultérieur lance
+    désormais une <exceptionname>TypeError</exceptionname>.
+    Passer des arguments de locale supplémentaires lorsque
+    <parameter>locales</parameter> est un tableau lance désormais une
+    <exceptionname>ArgumentCountError</exceptionname>.
+   </simpara>
+
+   <para>
+    Les fonctions suivantes lèvent désormais une
+    <exceptionname>ValueError</exceptionname> lorsque l'argument
+    <parameter>filename</parameter> contient des octets <literal>NUL</literal> :
+
+    <simplelist>
+     <member><function>fileperms</function></member>
+     <member><function>fileinode</function></member>
+     <member><function>filesize</function></member>
+     <member><function>fileowner</function></member>
+     <member><function>filegroup</function></member>
+     <member><function>fileatime</function></member>
+     <member><function>filemtime</function></member>
+     <member><function>filectime</function></member>
+     <member><function>filetype</function></member>
+     <member><function>is_writable</function></member>
+     <member><function>is_readable</function></member>
+     <member><function>is_executable</function></member>
+     <member><function>is_file</function></member>
+     <member><function>is_dir</function></member>
+     <member><function>is_link</function></member>
+     <member><function>file_exists</function></member>
+     <member><function>lstat</function></member>
+     <member><function>stat</function></member>
+    </simplelist>
+   </para>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.incompatible.core.imprecise-number-conversion">
+   <title>Notice sur la conversion imprécise de nombres</title>
+
+   <simpara>
+    <function>base_convert</function>, <function>bindec</function>,
+    <function>hexdec</function> et <function>octdec</function> émettent
+    désormais une notice lorsqu'elles ne peuvent pas convertir précisément le
+    nombre donné.
+   </simpara>
+
+  </sect3>
+
+  <sect3 xml:id="migration86.incompatible.core.unpack-endianness">
+   <title>Modificateurs d'endianness dans les noms de format de <function>unpack</function></title>
+
+   <simpara>
+    <function>unpack</function> interprète désormais un <literal>&lt;</literal>
+    ou un <literal>&gt;</literal> suivant immédiatement un code de format
+    comme un modificateur d'endianness, et non comme le premier caractère du
+    nom de l'élément.
+    Les formats tels que <literal>"s&lt;value"</literal> produisent désormais
+    la clé <literal>"value"</literal> au lieu de
+    <literal>"&lt;value"</literal>, et <literal>"C&gt;name"</literal> lève une
+    <exceptionname>ValueError</exceptionname> car le code de format
+    <literal>C</literal> n'accepte aucun modificateur d'endianness.
+    Un nom commençant par ces caractères n'est pas affecté lorsqu'un
+    répéteur le précède, comme dans <literal>"s1&lt;value"</literal>.
+    Voir aussi les
+    <link linkend="migration86.new-features.core.pack-unpack-endianness">nouveaux
+    modificateurs d'endianness</link>.
+    <!-- RFC: https://wiki.php.net/rfc/pack-unpack-endianness-signed-integers-support -->
+   </simpara>
+
+   <informalexample>
+    <programlisting role="php">
+<![CDATA[
+<?php
+var_dump(unpack('s<value', "\x01\x00"));
+// À partir de PHP 8.6.0 : ["value" => 1]
+// Avant PHP 8.6.0 : ["<value" => 1]
+]]>
+    </programlisting>
+   </informalexample>
+
+  </sect3>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.com">
+  <title>COM</title>
+
+  <simpara>
+   Il n'est plus possible de cloner des objets <classname>variant</classname>,
+   car le comportement du clonage était mal défini.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.curl">
+  <title>cURL</title>
+
+  <simpara>
+   La fonction de rappel enregistrée avec
+   <constant>CURLOPT_READFUNCTION</constant> lance désormais une
+   <exceptionname>ValueError</exceptionname> lorsqu'elle retourne un entier
+   autre que <literal>0</literal>,
+   <constant>CURL_READFUNC_ABORT</constant> ou
+   <constant>CURL_READFUNC_PAUSE</constant>.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.dom">
+  <title>DOM</title>
+
+  <simpara>
+   Les propriétés précédemment documentées comme en lecture seule (par ex.
+   <property>DOMNode::$nodeType</property>,
+   <property>DOMDocument::$xmlEncoding</property>,
+   <property>DOMEntity::$actualEncoding</property>,
+   <property>DOMEntity::$encoding</property>,
+   <property>DOMEntity::$version</property>) sont désormais déclarées avec une
+   <link linkend="language.oop5.visibility-members-aviz">visibilité
+   asymétrique</link> (<code>public private(set)</code>).
+   Toute tentative d'écriture depuis l'extérieur de la classe lève désormais
+   <quote>Cannot modify private(set) property <replaceable>class</replaceable>::$<replaceable>prop</replaceable> from global scope</quote>
+   au lieu de l'ancienne erreur de modification d'une propriété en lecture
+   seule.
+   <methodname>ReflectionProperty::isWritable</methodname> rapporte également
+   ces propriétés avec exactitude.
+  </simpara>
+
+  <simpara>
+   L'accès par index sur les objets <classname>Dom\DtdNamedNodeMap</classname>
+   retourne désormais &null; pour les index entiers négatifs au lieu de
+   retourner le premier nœud, et lève une
+   <exceptionname>ValueError</exceptionname> lorsque l'index entier est
+   supérieur à <constant>PHP_INT_MAX</constant> au lieu de déborder vers un
+   index plus petit.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.ftp">
+  <title>FTP</title>
+
+  <simpara>
+   <function>ftp_nb_fget</function>, <function>ftp_nb_fput</function>,
+   <function>ftp_nb_get</function> et <function>ftp_nb_put</function> lancent
+   désormais une <exceptionname>Error</exceptionname> lorsque la connexion est
+   déjà en cours de transfert, au lieu d'émettre un avertissement et de
+   retourner &false;.
+   <function>ftp_close</function> lance déjà une exception dans la même
+   situation.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.gd">
+  <title>GD</title>
+
+  <simpara>
+   <function>imagesetstyle</function>, <function>imagefilter</function> et
+   <function>imagecrop</function> filtrent les types et les valeurs de leurs
+   arguments de type tableau et lèvent en conséquence une
+   <exceptionname>TypeError</exceptionname> ou une
+   <exceptionname>ValueError</exceptionname>.
+  </simpara>
+
+  <simpara>
+   <function>imageaffinematrixget</function> impose désormais le type
+   <type class="union"><type>array</type><type>float</type></type> documenté
+   pour le paramètre <parameter>options</parameter>, y compris le
+   comportement correspondant du typage faible et strict.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.gmp">
+  <title>GMP</title>
+
+  <simpara>
+   <function>gmp_fact</function> lève désormais une
+   <exceptionname>ValueError</exceptionname> si <parameter>num</parameter>
+   ne tient pas dans un unsigned long.
+  </simpara>
+
+  <simpara>
+   <function>gmp_pow</function>, <function>gmp_binomial</function>,
+   <function>gmp_root</function> et <function>gmp_rootrem</function> lèvent
+   désormais une <exceptionname>ValueError</exceptionname> si leur second
+   argument ne tient pas dans un unsigned long.
+  </simpara>
+
+  <simpara>
+   Les opérateurs de décalage (<literal>&lt;&lt;</literal>,
+   <literal>&gt;&gt;</literal>) et d'exponentiation (<literal>**</literal>)
+   sur les objets <classname>GMP</classname> lèvent désormais une
+   <exceptionname>ValueError</exceptionname> lorsque les opérandes de droite
+   <classname>GMP</classname> sont en dehors de la plage des unsigned long, au
+   lieu de les tronquer silencieusement.
+  </simpara>
+
+  <simpara>
+   L'analyse des chaînes d'entiers <classname>GMP</classname> lève désormais
+   une <exceptionname>ValueError</exceptionname> pour les chaînes contenant des
+   octets <literal>NUL</literal>, au lieu de les tronquer silencieusement.
+  </simpara>
+
+  <simpara>
+   Le message de la <exceptionname>DivisionByZeroError</exceptionname> levée
+   par <function>gmp_powm</function> lors d'un modulo par zéro inclut
+   désormais le nom de la fonction et l'index de l'argument
+   (<parameter>modulus</parameter>).
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.intl">
+  <title>Intl</title>
+
+  <simpara>
+   Passer un objet non stringable comme fuseau horaire aux
+   <acronym>API</acronym> Intl qui acceptent des objets ou des chaînes de
+   fuseau horaire lève désormais une <exceptionname>TypeError</exceptionname>
+   au lieu d'une <exceptionname>Error</exceptionname>.
+  </simpara>
+
+  <simpara>
+   <methodname>IntlIterator::current</methodname> retourne désormais &null;
+   lorsqu'elle est appelée avant que l'itérateur ne soit positionné, ou après
+   que l'itérateur est devenu invalide, au lieu d'exposer une valeur indéfinie.
+  </simpara>
+
+  <simpara>
+   <methodname>IntlBreakIterator::getLocale</methodname> lève désormais une
+   <exceptionname>ValueError</exceptionname> lorsque le type n'est ni
+   <constant>Locale::ACTUAL_LOCALE</constant> ni
+   <constant>Locale::VALID_LOCALE</constant>, au lieu de retourner &false;.
+  </simpara>
+
+  <simpara>
+   <methodname>MessageFormatter::parse</methodname> et
+   <methodname>MessageFormatter::parseMessage</methodname> retournent désormais
+   <constant>PHP_INT_MIN</constant> sous forme de <type>int</type>, plutôt que
+   de <type>float</type>, sur les plateformes 64 bits lors de l'analyse de
+   valeurs entières.
+  </simpara>
+
+  <simpara>
+   Le paramètre <parameter>type</parameter> de
+   <methodname>IntlBreakIterator::getPartsIterator</methodname> est passé de
+   <type>string</type> à <type>int</type> pour correspondre à l'implémentation
+   sous-jacente.
+  </simpara>
+
+  <simpara>
+   <methodname>UConverter::transcode</methodname> rejette désormais les valeurs
+   d'option <literal>from_subst</literal> et <literal>to_subst</literal> de plus
+   de 127 octets, au lieu de tronquer silencieusement la longueur avant de la
+   transmettre à <acronym>ICU</acronym>.
+  </simpara>
+
+  <simpara>
+   <methodname>ResourceBundle::get</methodname> et
+   <function>resourcebundle_get</function> rapportent désormais les recherches
+   de ressources sans repli avec
+   <quote>without fallback to <replaceable>locale</replaceable></quote>
+   au lieu du message mal formé
+   <quote>without fallback from to <replaceable>locale</replaceable></quote>.
+  </simpara>
+
+  <simpara>
+   <methodname>IntlDateFormatter::parse</methodname>/<function>datefmt_parse</function>
+   et
+   <methodname>IntlDateFormatter::localtime</methodname>/<function>datefmt_localtime</function>
+   lèvent désormais une <exceptionname>TypeError</exceptionname> lorsque
+   l'argument <parameter>offset</parameter> n'est pas de type <type>int</type>,
+   au lieu de convertir silencieusement la valeur.
+  </simpara>
+
+  <simpara>
+   <methodname>Collator::sort</methodname>,
+   <function>collator_sort</function>,
+   <methodname>Collator::asort</methodname> et
+   <function>collator_asort</function> rapportent désormais les échecs de
+   conversion <acronym>UTF-8</acronym>/<acronym>UTF-16</acronym> pendant la
+   comparaison via le mécanisme d'erreur d'intl et retournent &false;.
+   Avec <link linkend="ini.intl.use-exceptions">intl.use_exceptions</link>
+   activé, ces échecs lancent une <exceptionname>IntlException</exceptionname>.
+   Auparavant, ces chemins émettaient un avertissement et comparaient la
+   valeur comme une chaîne vide.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.mbstring">
+  <title>MBString</title>
+
+  <simpara>
+   Les tables de données Unicode ont été mises à jour vers Unicode 18.0.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.pcntl">
+  <title>PCNTL</title>
+
+  <simpara>
+   <function>pcntl_alarm</function> lève désormais une
+   <exceptionname>ValueError</exceptionname> si l'argument
+   <parameter>seconds</parameter> est inférieur à zéro ou supérieur à la
+   valeur <literal>UINT_MAX</literal> de la plateforme.
+  </simpara>
+
+  <simpara>
+   <function>pcntl_exec</function> lève désormais une
+   <exceptionname>ValueError</exceptionname> si l'argument
+   <parameter>args</parameter> n'est pas un tableau de type liste.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.pcre">
+  <title>PCRE</title>
+
+  <simpara>
+   <function>preg_grep</function> retourne désormais &false; au lieu d'un
+   tableau partiel lorsqu'une erreur d'exécution <acronym>PCRE</acronym> se
+   produit (par ex. une entrée <acronym>UTF-8</acronym> malformée avec le
+   modificateur <literal>u</literal>).
+   Cela est cohérent avec les autres fonctions <literal>preg_*</literal>.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.pgsql">
+  <title>PGSQL</title>
+
+  <simpara>
+   Lorsque <function>pg_fetch_object</function> reçoit un paramètre
+   <parameter>constructor_args</parameter> non vide pour une classe sans
+   constructeur, la <exceptionname>ValueError</exceptionname> fait désormais
+   référence à l'argument <parameter>constructor_args</parameter> au lieu de
+   <parameter>class</parameter>.
+   Les erreurs levées lorsque la classe demandée n'est pas instanciable
+   (abstraite, interface, énumération) apparaissent désormais avant la
+   récupération de la ligne.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.phar">
+  <title>Phar</title>
+
+  <simpara>
+   <methodname>Phar::mungServer</methodname> lève désormais une
+   <exceptionname>ValueError</exceptionname> lorsqu'une valeur d'argument
+   invalide est passée, au lieu de l'ignorer silencieusement.
+  </simpara>
+
+  <simpara>
+   <methodname>Phar::addEmptyDir</methodname> rejette désormais les chemins
+   <literal>"/.phar"</literal> en plus des chemins <literal>".phar"</literal>,
+   et lève la même <exceptionname>BadMethodCallException</exceptionname> pour
+   les tentatives de création du répertoire magique réservé
+   <literal>".phar"</literal> par cette forme.
+   Les noms non magiques qui partagent simplement le préfixe
+   <literal>".phar"</literal> sont désormais traités comme des répertoires
+   ordinaires.
+  </simpara>
+
+  <simpara>
+   Les fichiers ne sont automatiquement interprétés comme des archives Phar
+   lors de leur inclusion que si <literal>".phar"</literal> apparaît comme
+   extension dans la composante nom de fichier de leur chemin.
+   Auparavant, cela pouvait se produire dans un nom de répertoire ou comme
+   partie d'une extension telle que <literal>".pharma"</literal>.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.session">
+  <title>Session</title>
+
+  <simpara>
+   Définir <link linkend="ini.session.cookie-path">session.cookie_path</link>,
+   <link linkend="ini.session.cookie-domain">session.cookie_domain</link> ou
+   <link linkend="ini.session.cache-limiter">session.cache_limiter</link> avec
+   une valeur contenant des octets <literal>NUL</literal> émet désormais un
+   avertissement et laisse le réglage inchangé.
+   Auparavant, les octets <literal>NUL</literal> étaient silencieusement
+   acceptés : pour <literal>cookie_path</literal> et
+   <literal>cookie_domain</literal>, cela amenait la <acronym>SAPI</acronym> à
+   abandonner l'en-tête <literal>Set-Cookie</literal> ; pour
+   <literal>cache_limiter</literal>, la valeur était silencieusement tronquée
+   à l'octet <literal>NUL</literal>.
+  </simpara>
+
+  <simpara>
+   <function>session_module_name</function> lance désormais une
+   <exceptionname>ValueError</exceptionname> si <parameter>name</parameter>
+   est une chaîne contenant des octets <literal>NUL</literal>.
+  </simpara>
+
+  <simpara>
+   <function>session_encode</function> retourne désormais une chaîne vide au
+   lieu de &false; pour les sessions vides.
+   Elle ne retourne désormais &false; que lorsque les données de session n'ont
+   pas pu être encodées.
+   Cela se produit principalement avec le gestionnaire de sérialisation par
+   défaut si une clé contient le caractère pipe (<literal>|</literal>).
+  </simpara>
+
+  <simpara>
+   Lorsque <link linkend="ini.session.lazy-write">session.lazy_write</link>
+   est activé et qu'un gestionnaire de session implémente
+   <interfacename>SessionUpdateTimestampHandlerInterface</interfacename>, les
+   sessions qui ont été lues comme vides et restent vides au moment de
+   l'écriture déclenchent désormais
+   <methodname>SessionUpdateTimestampHandlerInterface::updateTimestamp</methodname>
+   au lieu de <methodname>SessionHandlerInterface::write</methodname>.
+   Auparavant, <methodname>SessionHandlerInterface::write</methodname> était
+   toujours appelée pour les sessions vides car
+   <function>session_encode</function> retournait &false;, contournant la
+   comparaison de lazy_write.
+   Les gestionnaires de session personnalisés qui s'appuient sur l'appel de
+   <methodname>SessionHandlerInterface::write</methodname> avec des données
+   vides (par ex. pour détruire la session) devraient implémenter la même
+   logique dans leur méthode
+   <methodname>SessionUpdateTimestampHandlerInterface::updateTimestamp</methodname>.
+  </simpara>
+
+  <para>
+   Les valeurs par défaut de trois réglages INI de session ont changé afin de
+   fournir un comportement sécurisé dès l'installation :
+   <!-- RFC: https://wiki.php.net/rfc/session_security_defaults -->
+
+   <simplelist>
+    <member>
+     <link linkend="ini.session.use-strict-mode">session.use_strict_mode</link>
+     vaut désormais <literal>1</literal> (auparavant <literal>0</literal>).
+     Le mode strict rejette les identifiants de session non initialisés, ce
+     qui atténue la fixation de session.
+     Les gestionnaires de session personnalisés qui s'appuyaient auparavant sur
+     l'acceptation d'identifiants fournis de l'extérieur sans entrée de
+     stockage correspondante doivent soit implémenter
+     <methodname>SessionUpdateTimestampHandlerInterface::validateId</methodname>
+     et <methodname>SessionIdInterface::create_sid</methodname>, soit
+     définir explicitement ce réglage à <literal>0</literal>.
+    </member>
+    <member>
+     <link linkend="ini.session.cookie-httponly">session.cookie_httponly</link>
+     vaut désormais <literal>1</literal> (auparavant <literal>0</literal>).
+     Les cookies de session ne sont plus accessibles à JavaScript via
+     <literal>document.cookie</literal>.
+     Les applications qui lisent le cookie de session depuis JavaScript doivent
+     définir explicitement ce réglage à <literal>0</literal>.
+    </member>
+    <member>
+     <link linkend="ini.session.cookie-samesite">session.cookie_samesite</link>
+     vaut désormais <literal>"Lax"</literal> (auparavant non défini).
+     Les cookies de session ne sont plus envoyés lors des requêtes
+     inter-sites autres que les navigations de premier niveau utilisant des
+     méthodes <acronym>HTTP</acronym> sûres.
+     Les applications qui dépendent de l'envoi des cookies de session lors de
+     soumissions POST inter-sites doivent définir explicitement ce réglage à
+     <literal>"None"</literal> (et définir également
+     <link linkend="ini.session.cookie-secure">session.cookie_secure</link>
+     à <literal>1</literal>).
+    </member>
+   </simplelist>
+  </para>
+
+  <simpara>
+   <methodname>SessionHandler::validateId</methodname> a été ajoutée et
+   délègue au gestionnaire de sauvegarde configuré.
+   Une sous-classe qui déclare <methodname>SessionHandler::validateId</methodname>
+   sans type de retour émet désormais un avertissement de dépréciation pour le
+   type de retour <type>bool</type> provisoire.
+   Une sous-classe qui surcharge <methodname>SessionHandler::open</methodname>
+   sans appeler <code>parent::open()</code> conserve son comportement
+   précédent et émet un avertissement lorsqu'un identifiant est validé.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.shmop">
+  <title>Shmop</title>
+
+  <simpara>
+   <function>shmop_open</function> lève désormais une
+   <exceptionname>ValueError</exceptionname> lorsque l'argument
+   <parameter>key</parameter> est en dehors de la plage <literal>key_t</literal>
+   de la plateforme, au lieu de transmettre une clé tronquée au système
+   d'exploitation.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.simplexml">
+  <title>SimpleXML</title>
+
+  <simpara>
+   <methodname>SimpleXMLElement::__construct</methodname> lève désormais une
+   <exceptionname>ValueError</exceptionname> lorsque l'argument
+   <parameter>data</parameter> contient des octets <literal>NUL</literal>,
+   comme <function>simplexml_load_file</function>.
+   Avec <parameter>dataIsURL</parameter> défini, le chemin était auparavant
+   tronqué au premier octet <literal>NUL</literal>.
+   Sans lui, la chaîne était transmise à libxml, qui, avec les options par
+   défaut, rejette un <literal>NUL</literal> sur les versions actuelles mais
+   accepte le document tronqué sur les versions plus anciennes et avec
+   <constant>LIBXML_RECOVER</constant>.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.soap">
+  <title>SOAP</title>
+
+  <simpara>
+   L'option <literal>"classmap"</literal> de
+   <classname>SoapClient</classname> et <classname>SoapServer</classname>
+   rejette désormais les tableaux contenant des clés entières.
+   Auparavant, les tableaux creux à clés entières et les tableaux à clés
+   mixtes pouvaient être acceptés.
+   <classname>SoapClient</classname> lance désormais une
+   <exceptionname>TypeError</exceptionname> pour les options
+   <literal>"classmap"</literal> qui ne sont pas des tableaux et une
+   <exceptionname>ValueError</exceptionname> pour les tableaux contenant des
+   clés entières, y compris lorsque l'option <literal>"exceptions"</literal>
+   est désactivée.
+  </simpara>
+
+  <simpara>
+   L'analyse des <acronym>WSDL</acronym>/schémas <acronym>XML</acronym> rejette
+   désormais les valeurs entières hors limites pour les contraintes
+   d'occurrence et les facettes de restriction entières.
+   Les valeurs négatives de <literal>minOccurs</literal> et
+   <literal>maxOccurs</literal> sont également rejetées.
+  </simpara>
+
+  <simpara>
+   Les erreurs d'encodage SOAP rapportent désormais le type concerné ou
+   l'opération défaillante dans le message d'erreur, au lieu du message
+   générique <quote>Encoding: Violation of encoding rules</quote>.
+   Le code qui compare le message exact peut nécessiter une mise à jour.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.sockets">
+  <title>Sockets</title>
+
+  <simpara>
+   <function>socket_set_option</function> avec
+   <constant>SO_ATTACH_REUSEPORT_CBPF</constant> nécessite désormais une
+   <parameter>value</parameter> de type <type>int</type> et un
+   <parameter>level</parameter> égal à <constant>SOL_SOCKET</constant>.
+   Tout autre type de valeur lance une <exceptionname>TypeError</exceptionname>
+   au lieu d'être converti, et tout autre niveau émet un avertissement et
+   retourne &false;.
+  </simpara>
+
+  <simpara>
+   <function>socket_set_option</function> avec
+   <constant>SO_ATTACH_REUSEPORT_CBPF</constant> et une
+   <parameter>value</parameter> égale à <literal>0</literal> détache désormais
+   le filtre reuseport via <constant>SO_DETACH_REUSEPORT_BPF</constant>.
+   Elle utilisait auparavant <constant>SO_DETACH_BPF</constant>, un alias de
+   <constant>SO_DETACH_FILTER</constant>, qui laissait le programme reuseport
+   attaché.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.sodium">
+  <title>Sodium</title>
+
+  <simpara>
+   Les fonctions de hachage de mots de passe
+   <function>sodium_crypto_pwhash</function>,
+   <function>sodium_crypto_pwhash_str</function>,
+   <function>sodium_crypto_pwhash_scryptsalsa208sha256</function> et
+   <function>sodium_crypto_pwhash_scryptsalsa208sha256_str</function> lancent
+   désormais une <exceptionname>ValueError</exceptionname> au lieu d'une
+   <exceptionname>SodiumException</exceptionname> lorsqu'un argument est hors
+   limites, comme un <parameter>opslimit</parameter> ou un
+   <parameter>memlimit</parameter> inférieur au minimum documenté.
+   <exceptionname>SodiumException</exceptionname> est toujours lancée pour les
+   échecs internes de libsodium.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.spl">
+  <title>SPL</title>
+
+  <simpara>
+   Les implémentations de <methodname>SplObjectStorage::getHash</methodname>
+   ne peuvent plus modifier aucune instance de
+   <classname>SplObjectStorage</classname>.
+   Toute tentative en ce sens lance désormais une
+   <exceptionname>Error</exceptionname>.
+  </simpara>
+
+  <simpara>
+   <methodname>SplFileObject::next</methodname> fait désormais avancer le flux
+   lorsqu'aucun appel précédent à <methodname>SplFileObject::current</methodname>
+   n'a mis une ligne en cache.
+   Un appel ultérieur à <methodname>SplFileObject::current</methodname>
+   retourne la nouvelle ligne plutôt que la précédente.
+  </simpara>
+
+  <simpara>
+   <methodname>SplFileObject::fgets</methodname> ne met plus en cache la ligne
+   retournée pour les appels ultérieurs à
+   <methodname>SplFileObject::current</methodname>.
+   <methodname>SplFileObject::current</methodname> relit désormais depuis la
+   position courante du flux au lieu de retourner la ligne que
+   <methodname>SplFileObject::fgets</methodname> vient de retourner.
+  </simpara>
+
+  <simpara>
+   <methodname>SplFileObject::next</methodname> au-delà de la fin du fichier
+   (<acronym>EOF</acronym>) n'incrémente plus
+   <methodname>SplFileObject::key</methodname> sans limite.
+   <methodname>SplFileObject::seek</methodname> au-delà de
+   <acronym>EOF</acronym> produit désormais la même valeur de
+   <methodname>SplFileObject::key</methodname> que
+   <classname>SplTempFileObject</classname> ; les deux retournaient
+   auparavant des valeurs différentes.
+  </simpara>
+
+  <simpara>
+   <methodname>DirectoryIterator::key</methodname> retourne désormais
+   <type class="union"><type>int</type><type>string</type></type>, et
+   <methodname>DirectoryIterator::current</methodname> retourne
+   <type class="union"><type>string</type><type>SplFileInfo</type><type>static</type></type>.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.sysvshm">
+  <title>Sysvshm</title>
+
+  <simpara>
+   <function>shm_attach</function> lève désormais une
+   <exceptionname>ValueError</exceptionname> lorsque l'argument
+   <parameter>key</parameter> est en dehors de la plage <literal>key_t</literal>
+   de la plateforme, au lieu de transmettre une clé tronquée au système
+   d'exploitation.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.uri">
+  <title>URI</title>
+
+  <simpara>
+   <methodname>Uri\WhatWg\Url::__construct</methodname> définit désormais
+   <parameter>softErrors</parameter> à un tableau vide lorsque le traitement
+   de l'URL lance une exception, au lieu de conserver sa valeur.
+   Les erreurs de validation de l'URL restent disponibles dans la propriété
+   <property>Uri\WhatWg\InvalidUrlException::$errors</property>.
+  </simpara>
+
+  <simpara>
+   <methodname>Uri\WhatWg\Url::__construct</methodname>,
+   <methodname>Uri\WhatWg\Url::parse</methodname>, les méthodes
+   <literal>Uri\WhatWg\Url::with*()</literal> et
+   <methodname>Uri\WhatWg\UrlBuilder::build</methodname> rapportent désormais
+   les erreurs de validation dans l'ordre où elles sont détectées.
+   Cela inverse l'ordre de plusieurs erreurs par rapport à PHP 8.5.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.zip">
+  <title>Zip</title>
+
+  <simpara>
+   <methodname>ZipArchive::extractTo</methodname> lève désormais une
+   <exceptionname>TypeError</exceptionname> pour l'argument
+   <parameter>files</parameter> si une ou plusieurs des entrées ne sont pas
+   des chaînes.
+  </simpara>
+
+  <simpara>
+   <methodname>ZipArchive::addGlob</methodname> et
+   <methodname>ZipArchive::addPattern</methodname> lèvent désormais une
+   <exceptionname>TypeError</exceptionname> lorsque l'option
+   <literal>"remove_all_path"</literal> n'est pas de type <type>bool</type>,
+   ou lorsque les options <literal>"comp_method"</literal>,
+   <literal>"comp_flags"</literal> ou <literal>"enc_method"</literal> ne sont
+   pas de type <type>int</type> (les chaînes numériques sont converties), au
+   lieu d'émettre un avertissement.
+  </simpara>
+
+  <simpara>
+   Sérialiser ou désérialiser une <classname>ZipArchive</classname> lance
+   désormais une <exceptionname>Exception</exceptionname>.
+   Une sous-classe peut surcharger
+   <link linkend="object.serialize">__serialize()</link> et
+   <link linkend="object.unserialize">__unserialize()</link> pour effectuer un
+   aller-retour via <methodname>ZipArchive::closeString</methodname> et
+   <methodname>ZipArchive::openString</methodname>.
+  </simpara>
+
+ </sect2>
+
+ <sect2 xml:id="migration86.incompatible.zlib">
+  <title>Zlib</title>
+
+  <simpara>
+   <function>deflate_init</function> lève désormais une
+   <exceptionname>TypeError</exceptionname> lorsque la valeur de l'option
+   <literal>"level"</literal>, <literal>"memory"</literal>,
+   <literal>"window"</literal> ou <literal>"strategy"</literal> n'est pas de
+   type <type>int</type>.
+  </simpara>
+
+  <simpara>
+   <function>inflate_init</function> lève désormais une
+   <exceptionname>TypeError</exceptionname> lorsque la valeur de l'option
+   <literal>"window"</literal> n'est pas de type <type>int</type>.
+  </simpara>
+
+ </sect2>
+
+</sect1>
+<!-- Keep this comment at the end of the file
+Local variables:
+mode: sgml
+sgml-omittag:t
+sgml-shorttag:t
+sgml-minimize-attributes:nil
+sgml-always-quote-attributes:t
+sgml-indent-step:1
+sgml-indent-data:t
+indent-tabs-mode:nil
+sgml-parent-document:nil
+sgml-default-dtd-file:"~/.phpdoc/manual.ced"
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+vim600: syn=xml fen fdm=syntax fdl=2 si
+vim: et tw=78 syn=sgml
+vi: ts=1 sw=1
+-->
