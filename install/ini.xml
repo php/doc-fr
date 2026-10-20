@@ -1,127 +1,197 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 8a4f1c0069f2f5ad08dfd5dfbd8ddc6a4107f110 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 42b47025176b4d1d6ac6b6ba8d46b317b8206baa Maintainer: yannick Status: ready -->
 <chapter xml:id="configuration" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink"
 xmlns:xi="http://www.w3.org/2001/XInclude">
  <title>Configuration à l'exécution</title>
  
  <sect1 xml:id="configuration.file">
   <title>Le fichier de configuration</title>
-  
+
   <simpara>
-   Le fichier de configuration (&php.ini;) est lu par PHP au démarrage. Si PHP
-   a été compilé en module, le fichier n'est lu qu'une seule
+   Le fichier de configuration principal (&php.ini;) est lu par PHP au
+   démarrage. Si PHP a été compilé en module, le fichier n'est lu qu'une seule
    fois, au lancement du serveur web. Pour les versions
-   <acronym>CGI</acronym> et <acronym>CLI</acronym> le fichier est lu à
+   <acronym>CGI</acronym> et <acronym>CLI</acronym>, le fichier est lu à
    chaque invocation.
   </simpara>
   <para>
-   Le &php.ini; est cherché dans ces endroits (et dans cet ordre) :
-   <itemizedlist>
+   PHP localise le fichier de configuration principal de la manière suivante :
+   <orderedlist>
     <listitem>
      <simpara>
-      L'endroit spécifique du module SAPI (la directive <literal>PHPIniDir</literal>
-      d'Apache 2, l'option de la ligne de commande <literal>-c</literal> en CGI et en CLI)
+      Si le SAPI actif fournit un chemin spécifique pour &php.ini;, celui-ci est
+      utilisé (par exemple, la directive <literal>PHPIniDir</literal> d'Apache 2,
+      ou l'option de la ligne de commande <literal>-c</literal> en
+      <acronym>CGI</acronym> et en <acronym>CLI</acronym>).
      </simpara>
     </listitem>
     <listitem>
      <simpara>
-      La variable d'environnement <varname>PHPRC</varname>.
+      Sinon, PHP construit un chemin de recherche à partir des emplacements
+      suivants :
      </simpara>
+     <itemizedlist>
+      <listitem>
+       <simpara>
+        La variable d'environnement <varname>PHPRC</varname>.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        Sous Windows, le chemin configuré dans le registre
+        (<literal>IniFilePath</literal>).
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        Le dossier courant de travail, sauf pour les SAPI qui le désactivent,
+        comme <acronym>CLI</acronym>.
+       </simpara>
+       <note>
+        <simpara>
+         Le serveur web Apache change ce dossier en dossier root au démarrage, ce qui fait
+         que PHP essaye de lire &php.ini; depuis le système de fichiers racine s'il existe.
+        </simpara>
+       </note>
+      </listitem>
+      <listitem>
+       <simpara>
+        Le dossier de l'exécutable PHP ou du module SAPI.
+       </simpara>
+      </listitem>
+      <listitem>
+       <simpara>
+        Le dossier indiqué par l'option de compilation
+        <literal>--with-config-file-path</literal>, ou le dossier Windows
+        (<filename class="directory">C:\windows</filename>
+        ou <filename class="directory">C:\winnt</filename>) sous Windows.
+       </simpara>
+      </listitem>
+     </itemizedlist>
     </listitem>
     <listitem>
      <simpara>
-      L'endroit où se trouve le fichier <literal>php.ini</literal>
-      peut être défini pour différentes versions de PHP.
-      La racine des clés de registre dépend de l'architecture 32 ou 64 bit de l'OS et de PHP.
-      Pour un OS et PHP 32 bit ou un OS et PHP 64 bit, utiliser
-      <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\PHP]</literal>. Pour PHP 32 bit
-      sur un OS 64 bit, utiliser
-      <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\PHP]</literal>
-      à la place.
-      Pour une installation avec la même architecture, les clés de registre suivantes sont cherchées dans cet ordre :
-      <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\PHP\x.y.z]</literal>,
-      <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\PHP\x.y]</literal> et
-      <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\PHP\x]</literal>, où
-      x, y et z signifient les versions majeures, mineures et normales.
-      Pour une architecture 32 bit de PHP sur un OS 64 bit, les clés de 
-      registre suivantes sont cherchées dans cet ordre :
-      <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6421Node\PHP\x.y.z]</literal>,
-      <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6421Node\PHP\x.y]</literal> et
-      <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6421Node\PHP\x]</literal>, où
-      x, y et z signifient les versions majeures, mineures et normales.
-      S'il y a une valeur pour <literal>IniFilePath</literal> dans ces clés,
-      la première trouvée sera utilisée comme endroit où se trouve le fichier
-      <literal>php.ini</literal> (uniquement sous Windows).
+      PHP cherche ensuite <filename>php-SAPI.ini</filename> dans ce chemin de
+      recherche et, s'il n'est pas trouvé, &php.ini;. Le nom du SAPI peut être
+      déterminé en utilisant la fonction <function>php_sapi_name</function>.
      </simpara>
     </listitem>
-    <listitem>
-     <simpara>
-      <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\PHP]</literal> ou
-      <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\PHP]</literal>, valeur de
-      <literal>IniFilePath</literal> (uniquement sous Windows).
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      Le dossier courant de travail (sauf pour CLI)
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      Le dossier du serveur web (pour les modules SAPI), ou le dossier contenant PHP
-      (autrement sous Windows)
-     </simpara>
-    </listitem>
-    <listitem>
-     <simpara>
-      Le dossier Windows (<filename class="directory">C:\windows</filename>
-      ou <filename class="directory">C:\winnt</filename>) (pour Windows), ou
-      l'option de compilation <literal>--with-config-file-path</literal> lors de la compilation
-     </simpara>
-    </listitem>
-   </itemizedlist>
+   </orderedlist>
   </para>
-  <para>
-   Si le fichier <filename>php-SAPI.ini</filename> existe (où SAPI utilise SAPI, donc le
-   nom du fichier est par exemple <filename>php-cli.ini</filename> ou
-   <filename>php-apache.ini</filename>), il sera utilisé à la place du &php.ini;.
-   Le nom SAPI peut être déterminé en utilisant la fonction <function>php_sapi_name</function>.
-  </para>
-  <note>
-   <para>
-    Le serveur web Apache change ce dossier en dossier root au démarrage, ce qui fait
-    que PHP essaye de lire &php.ini; depuis le système de fichiers racine s'il existe.
-   </para>
-  </note>
   <simpara>
-   Les variables d'environnement peuvent être référencées dans les valeurs
-   de configuration de &php.ini; comme illustré ci-dessous. À partir de PHP 8.3.0,
-   une valeur de repli peut être spécifiée, qui sera utilisée lorsque la variable
-   référencée n'est pas définie.
+   Après l'étape du fichier de configuration principal, PHP peut en plus
+   parcourir les fichiers <literal>.ini</literal> présents dans le chemin
+   indiqué par la variable d'environnement
+   <varname>PHP_INI_SCAN_DIR</varname> ou, si elle n'est pas définie, par
+   l'option de compilation
+   <option role="configure">--with-config-file-scan-dir</option>.
   </simpara>
-  <example>
-   <title>Variables d'environnement dans &php.ini;</title>
-   <programlisting role="ini">
+  <sect2 xml:id="configuration.file.windows">
+   <title>Emplacement dans le registre Windows</title>
+
+   <simpara>
+    Sous Windows, PHP peut obtenir l'emplacement du fichier de configuration
+    principal depuis le registre, grâce à la valeur <literal>IniFilePath</literal>.
+   </simpara>
+
+   <simpara>
+    Les clés de registre exactes examinées dépendent de la version de PHP et de
+    l'architecture 32 ou 64 bit de PHP et de Windows.
+   </simpara>
+
+   <para>
+    Pour PHP 32 bit sur un OS 32 bit, ou PHP 64 bit sur un OS 64 bit, les
+    clés de registre suivantes sont examinées dans cet ordre :
+    <itemizedlist>
+     <listitem>
+      <simpara>
+       <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\PHP\x.y.z]</literal>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\PHP\x.y]</literal>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\PHP\x]</literal>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\PHP]</literal>
+      </simpara>
+     </listitem>
+    </itemizedlist>
+   </para>
+   <simpara>
+    Dans ces clés, <literal>x</literal>, <literal>y</literal> et
+    <literal>z</literal> désignent les versions majeure, mineure et corrective
+    de PHP. Si l'une de ces clés contient une valeur
+    <literal>IniFilePath</literal>, la première trouvée est utilisée.
+   </simpara>
+   <para>
+    Pour PHP 32 bit sur un OS 64 bit, les clés de registre suivantes sont
+    examinées dans cet ordre :
+    <itemizedlist>
+     <listitem>
+      <simpara>
+       <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\PHP\x.y.z]</literal>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\PHP\x.y]</literal>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\PHP\x]</literal>
+      </simpara>
+     </listitem>
+     <listitem>
+      <simpara>
+       <literal>[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\PHP]</literal>
+      </simpara>
+     </listitem>
+    </itemizedlist>
+   </para>
+   <simpara>
+    Si l'une de ces clés contient une valeur <literal>IniFilePath</literal>,
+    la première trouvée est utilisée.
+   </simpara>
+  </sect2>
+  <sect2 xml:id="configuration.file.syntax">
+   <title>Syntaxe du fichier de configuration</title>
+   <simpara>
+    Les variables d'environnement peuvent être référencées dans les valeurs
+    de configuration de &php.ini; comme illustré ci-dessous. À partir de PHP 8.3.0,
+    une valeur de repli peut être spécifiée, qui sera utilisée lorsque la variable
+    référencée n'est pas définie.
+   </simpara>
+   <example>
+    <title>Variables d'environnement dans &php.ini;</title>
+    <programlisting role="ini">
 <![CDATA[
 ; PHP_MEMORY_LIMIT est repris depuis l'environnement
 memory_limit = ${PHP_MEMORY_LIMIT}
 ; Si PHP_MAX_EXECUTION_TIME n'est pas défini, il prendra la valeur de repli 30.
 max_execution_time = ${PHP_MAX_EXECUTION_TIME:-30}
 ]]>
-   </programlisting>
-  </example>
-  <para>
-   Les directives &php.ini; sont directement documentées, par extensions,
-   sur les pages respectives du manuel de ces extensions. La
-   <link linkend="ini">liste des directives internes</link> est disponible
-   en annexe. Il est probable que toutes les directives PHP ne sont pas documentées
-   dans le manuel. Pour une liste complète des directives disponibles dans la version de PHP utilisée,
-   il convient de lire les commentaires du fichier &php.ini;.
-   Il est également possible de trouver la
-   <link xlink:href="&url.php.git.phpini;">dernière version du &php.ini;</link>
-   sur Git.
-  </para>
-  <para>
+    </programlisting>
+   </example>
+   <simpara>
+    Les directives &php.ini; sont directement documentées, par extensions,
+    sur les pages respectives du manuel de ces extensions. La
+    <link linkend="ini">liste des directives internes</link> est disponible
+    en annexe. Il est probable que toutes les directives PHP ne sont pas documentées
+    dans le manuel. Pour une liste complète des directives disponibles dans la version de PHP utilisée,
+    il convient de lire les commentaires du fichier &php.ini;.
+    Il est également possible de trouver la
+    <link xlink:href="&url.php.git.phpini;">dernière version du &php.ini;</link>
+    sur Git.
+   </simpara>
    <example>
     <title>Extrait du &php.ini;</title>
     <programlisting role="ini">
@@ -143,13 +213,13 @@ include_path = ".;c:\php\lib"
     </programlisting>
     <!-- TODO: add more details about values and expressions -->
    </example>
-  </para>
-  <para>
-   Il est possible de se référer à des variables .ini
-   depuis des fichiers .ini. Par exemple : <literal>open_basedir = ${open_basedir}
-   ":/new/dir"</literal>.
-  </para>
-    <sect2 xml:id="configuration.file.scan">
+   <simpara>
+    Il est possible de se référer à des variables .ini
+    depuis des fichiers .ini. Par exemple : <literal>open_basedir = ${open_basedir}
+    ":/new/dir"</literal>.
+   </simpara>
+  </sect2>
+  <sect2 xml:id="configuration.file.scan">
    <title>Parcourir des répertoires</title>
 
    <para>
