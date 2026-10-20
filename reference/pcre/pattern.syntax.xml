@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: c414a81646ee424d1814725f54ec86b9a8f6b434 Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: 75a5eb81be58ce50889c429c5d32b321af016d23 Maintainer: lacatoire Status: ready -->
 
 <chapter xml:id="reference.pcre.pattern.syntax" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Syntaxe des masques</title>
@@ -24,7 +24,7 @@
    trivial : un masque qui serait "<literal>Le rapide renard gris</literal>",
    pourra correspondre à une partie de la chaîne sujet qui sera
    identique au masque, par exemple
-   "<literal>Le rapide renard gris court dans la forêt</literal>",
+   "<literal>Le rapide renard gris court dans la forêt</literal>".
   </para>
  </section>
  <section xml:id="regexp.reference.delimiters">
@@ -383,7 +383,7 @@
    devient hex 7B.
   </para>
   <para>
-   Après "<literal>\x</literal>", deux caractères
+   Après "<literal>\x</literal>", jusqu'à deux caractères
    hexadécimaux sont lus (les lettres peuvent être en majuscule
    ou minuscule).
    En mode <emphasis>UTF-8</emphasis>, "<literal>\x{...}</literal>"
@@ -394,7 +394,7 @@
    sur 2 octets si la valeur est plus grande que 127.
   </para>
   <para>
-   Après "<literal>\0</literal>", deux caractères octaux sont lus.
+   Après "<literal>\0</literal>", jusqu'à deux caractères octaux sont lus.
    Dans chacun des cas, le métacaractère tente de lire autant
    de caractères que possible. Ainsi, la séquence
    "<literal>\0\x\07</literal>" sera comprise comme deux caractères nuls,
@@ -402,10 +402,10 @@
    suffisamment de chiffres après le métacaractère.
   </para>
   <para>
-   L'antislash de fin suivi par un nombre autre que 0 est compliqué.
-   À l'extérieur d'une classe de caractère, PCRE le lit, et tous les nombres
+   Le traitement d'un antislash suivi par un nombre autre que 0 est compliqué.
+   À l'extérieur d'une classe de caractères, PCRE le lit, et tous les nombres
    qui suivent, en tant que nombres décimaux. Si le nombre est plus petit que
-   10 ou s'il y a eu au moins précédemment une parenthèse gauche capturante
+   10 ou s'il y a eu précédemment au moins autant de parenthèses gauches capturantes
    dans l'expression, la séquence entière est prise en tant que <emphasis>référence arrière</emphasis>.
    Une description sur le fonctionnement est donnée plus tard, suivez la discussion
    sur les parenthèses des sous masques.
@@ -433,7 +433,7 @@
      <term><emphasis>\40</emphasis></term>
      <listitem>
       <simpara>
-       identique, dans la mesure où il n'y a pas 40
+       identique, dans la mesure où il y a moins de 40
        parenthèses ouvrantes auparavant
       </simpara>
      </listitem>
@@ -636,7 +636,7 @@
   <para>
    La quatrième utilisation de l'antislash intervient lors d'assertions
    simples. Une assertion impose une condition à un certain point,
-   sans remplacer de caractère. L'utilisation de sous-masques pour
+   sans consommer de caractère de la chaîne sujet. L'utilisation de sous-masques pour
    réaliser des assertions plus complexes est décrite
    plus bas. Les assertions avec antislash sont les suivantes :
   </para>
@@ -729,6 +729,25 @@
    fonction <function>preg_match</function>. Elle diffère de <literal>\A</literal>
    lorsque la valeur du paramètre <parameter>offset</parameter> est différente
    de zéro.
+  </para>
+  <simpara>
+   L'antislash est également utilisé pour les séquences suivantes :
+  </simpara>
+  <para>
+   <variablelist>
+    <varlistentry>
+     <term><emphasis>\Q</emphasis></term>
+     <listitem><simpara>début d'une séquence littérale, les métacaractères jusqu'à <literal>\E</literal> sont traités comme des caractères littéraux</simpara></listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><emphasis>\E</emphasis></term>
+     <listitem><simpara>fin d'une séquence littérale commencée par <literal>\Q</literal></simpara></listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><emphasis>\K</emphasis></term>
+     <listitem><simpara>réinitialise le début de l'occurrence rapportée</simpara></listitem>
+    </varlistentry>
+   </variablelist>
   </para>
   <para>
    <literal>\Q</literal> et <literal>\E</literal> peuvent être utilisés
@@ -1005,7 +1024,7 @@
   <para>
    La sensibilité à la casse de la recherche n'affecte pas les
    séquences d'échappement. Par exemple, <literal>\p{Lu}</literal> 
-   cherche toujours et uniquement les lettres en majuscules
+   cherche toujours et uniquement les lettres en majuscules.
   </para>
   <para>
    Les jeux de caractères unicodes sont définis comme appartenant à certains scripts.
@@ -1314,12 +1333,14 @@
    qu'il soit protégé par un antislash.
   </para>
   <para>
-   Par exemple, le caractère <literal>[aeiou]</literal> remplace
+   Par exemple, la classe de caractères <literal>[aeiou]</literal> remplace
    n'importe quelle voyelle minuscule, tandis que <literal>[^aeiou]</literal>
    remplace n'importe quel caractère qui n'est pas une voyelle
    minuscule. <literal>^</literal> est une notation pratique pour
    spécifier des caractères qui sont dans une classe,
-   en ne citant que ceux qui n'y sont pas. Le comportement est inchangé.
+   en énumérant ceux qui n'y sont pas. Ce n'est pas une assertion : elle consomme
+   toujours un caractère de la chaîne sujet, et échoue si le pointeur courant
+   se trouve à la fin de la chaîne.
   </para>
   <para>
    Avec l'option d'insensibilité à la casse, toutes les lettres
@@ -1355,8 +1376,8 @@
    "<literal>W46]</literal>" ou "<literal>-46]</literal>". Cependant, si
    "<literal>]</literal>" est protégé avec un antislash, le
    masque <literal>[W-\]46]</literal> est interprété comme
-   une classe d'un seul caractère, contenant un intervalle de
-   caractères. La valeur octale ou hexadécimale de
+   une seule classe contenant un intervalle de caractères, suivi de deux
+   caractères distincts. La valeur octale ou hexadécimale de
    "<literal>]</literal>" peut aussi être utilisée pour déterminer
    les limites de l'intervalle.
   </para>
@@ -1371,7 +1392,7 @@
    "<literal>[][\^_`wxyzabc]</literal>", avec l'option
    d'insensibilité de casse. Si la table locale de
    caractères est "fr", "<literal>[\xc8-\xcb]</literal>"
-   correspond aux caractères accentués.
+   correspond aux caractères E accentués, en majuscule comme en minuscule.
   </para>
   <para>
    Les types de caractères <literal>\d</literal>,
@@ -1465,7 +1486,7 @@
   <para>
    La classe <literal>word</literal> est une extension Perl, et <literal>blank</literal>
    est une extension GNU de Perl 5.8. La négation est une autre extension Perl ; elle est indiquée
-   par le caractère <literal>^</literal> après un double-point. Par exemple,
+   par le caractère <literal>^</literal> après un deux-points. Par exemple,
    <literal>[12[:^digit:]]</literal> trouve "1", "2", mais aussi tout caractère qui n'est pas un chiffre.
   </para>
   <para>
@@ -1600,8 +1621,9 @@
    accepte "<literal>ab</literal>", "<literal>aB</literal>", "<literal>c</literal>",
    et "<literal>C</literal>", même si, comme dans le cas de
    "<literal>C</literal>", la première alternative qui porte
-   l'option n'est pas prise en compte. Sinon, cela risque d'introduire
-   des comportements très étranges
+   l'option est abandonnée avant que l'option ne soit prise en compte. Cela vient du fait que
+   les options sont appliquées à la compilation. Sinon, cela risquerait d'introduire
+   des comportements très étranges.
   </para>
   <para>
    Les options spécifiques à PCRE telles
@@ -1645,7 +1667,7 @@
   <para>
    Par exemple, soit la chaîne sujet "<literal>le roi soleil</literal>"
    qui est utilisée avec le masque suivant :
-   <literal>Le ((roi|prince) (soleil|charmant))</literal>, les sous-masques
+   <literal>le ((roi|prince) (soleil|charmant))</literal>, les sous-masques
    capturés sont "<literal>roi soleil</literal>", "<literal>roi</literal>",
    et "<literal>soleil</literal>", numérotés respectivement 1, 2, et 3.
   </para>
@@ -1659,7 +1681,7 @@
    avec la chaîne "<literal>le prince charmant</literal>", utilisé
    avec le masque
    
-   <literal>Le ((?:roi|prince) (soleil|charmant))</literal>
+   <literal>le ((?:roi|prince) (soleil|charmant))</literal>
    
    les chaînes capturées seront "<literal>prince charmant</literal>"
    et "<literal>charmant</literal>", numérotés respectivement 1
@@ -1748,7 +1770,7 @@
    la suite des caractères suivants :
    
    <itemizedlist>
-    <listitem><simpara>Un caractère unique, même s'il s'agit d'un métacaractère</simpara></listitem>
+    <listitem><simpara>Un caractère unique, éventuellement protégé</simpara></listitem>
     <listitem><simpara>Le métacaractère . </simpara></listitem>
     <listitem><simpara>Une classe de caractères</simpara></listitem>
     <listitem><simpara>Une référence de retour (voir section suivante)</simpara></listitem>
@@ -1935,7 +1957,7 @@
  </section>
  
  <section xml:id="regexp.reference.back-references">
-  <title>Références arrières </title>
+  <title>Références arrière </title>
   <para>
    En dehors des classes de caractères, un antislash suivi
    d'un nombre plus grand que 0 (et possiblement plusieurs chiffres)
@@ -2160,7 +2182,7 @@
    par trois chiffres qui ne sont pas "999". À noter que chaque assertion
    est appliquée indépendamment, au même point de
    la chaîne à traiter. Tout d'abord, il est
-   vérifié que les trois premiers caractères ont
+   vérifié que les trois caractères précédents sont
    tous des chiffres, puis on s'assure que ces trois caractères
    ne sont pas "<literal>999</literal>". Le masque précédant
    n'accepte pas "<literal>foo</literal>" précédé de
@@ -2174,8 +2196,8 @@
    
   </para>
   <para>
-   Dans ce masque, la première assertion vérifie les six premiers
-   caractères, s'assure que les trois premiers sont des chiffres,
+   Dans ce masque, la première assertion vérifie les six caractères
+   précédents, s'assure que les trois premiers sont des chiffres,
    et la deuxième assertion s'assure que les trois derniers
    caractères ne sont pas "<literal>999</literal>".
   </para>
@@ -2231,8 +2253,8 @@
    
   </para>
   <para>
-   Après avoir tenté d'utiliser les 6 chiffres suivis
-   de "<literal>foo</literal>" qui font échouer, l'action habituelle
+   Après avoir trouvé les 6 chiffres puis échoué à trouver
+   "<literal>foo</literal>", l'action habituelle
    sera de réessayer avec 5 chiffres, puis avec 4, et ainsi de
    suite jusqu'à l'échec final. Un sous-masque évalué une seule fois
    permettrait d'indiquer que lorsqu'une partie du masque est trouvée,
@@ -2289,8 +2311,8 @@
    arrière, et remplace tous les caractères sauf le dernier,
    échoue, retourne en arrière, prend un caractère
    de moins, etc. et ainsi de suite. Encore une fois, la recherche du
-   "<literal>a</literal>" passe en revue toute la chaîne de gauche
-   à droite, ce qui n'est pas très efficace. Par contre,
+   "<literal>a</literal>" passe en revue toute la chaîne de droite
+   à gauche, ce qui n'est pas très efficace. Par contre,
    si le masque était écrit
    
    <literal>^(?&gt;.*)(?&lt;=abcd)</literal>
@@ -2305,8 +2327,8 @@
   </para>
   <para>
    Lorsqu'un masque contient une répétition illimitée
-   dans un sous-masque, qui contient lui-même un nombre
-   illimité de répétiteurs, l'utilisation des
+   dans un sous-masque qui peut lui-même être répété un nombre
+   illimité de fois, l'utilisation des
    sous-masques à utilisation unique est la seule façon
    d'éviter l'échec de la recherche après un
    temps de calcul trop long.
@@ -2400,7 +2422,7 @@
    a été fait. Au niveau le plus haut, la condition est fausse.
   </para>
   <para>
-   Si la condition n'est pas une séquence de chiffres, il faut que ce soit
+   Si la condition n'est ni une séquence de chiffres ni <literal>(R)</literal>, il faut que ce soit
    une assertion. Ce peut être une assertion positive ou négative,
    arrière ou avant. Considérons le masque suivant (mêmes conditions que
    le précédent) et avec deux possibilités en seconde ligne :
@@ -2511,7 +2533,7 @@ int(1)
    répétitions imbriquées, ce qui fait que
    l'utilisation de sous-masques à utilisation unique
    pour rechercher les séquences de caractères
-   non-parenthèses est important, lorsqu'il s'applique à
+   non-parenthèses est importante, lorsqu'il s'applique à
    une chaîne qui n'est pas valide. Par exemple, si on l'applique
    à
    
