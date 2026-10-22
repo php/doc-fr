@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 855bfee2f3db70d7dbb4c60c7c4a4efa567f1c60 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: b57e4540345a84d3f82ffd0e84dc40d3f9c35241 Maintainer: lacatoire Status: ready -->
 <refentry xml:id="sqlite3.busytimeout" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>SQLite3::busyTimeout</refname>
@@ -14,9 +13,31 @@
    <methodparam><type>int</type><parameter>milliseconds</parameter></methodparam>
   </methodsynopsis>
   <para>
-   Définit le gestionnaire d'attente qui patientera tant que la base de données
-   n'est pas verrouillée ou que le délai d'attente ne soit atteint.
+   Définit le gestionnaire d'attente qui patientera jusqu'à ce que la base de
+   données ne soit plus verrouillée ou que le délai d'attente soit atteint.
   </para>
+  <simpara>
+   Le gestionnaire d'attente est intégré à SQLite, aucune fonction de rappel
+   n'a donc besoin d'être fournie. Lorsqu'une requête trouve la base de données
+   verrouillée par une autre connexion, SQLite réessaie pendant
+   <parameter>milliseconds</parameter> millisecondes au maximum. Si la base de
+   données est toujours verrouillée au terme de ce délai, la requête échoue
+   avec l'erreur <literal>database is locked</literal>
+   (<literal>SQLITE_BUSY</literal>).
+  </simpara>
+  <simpara>
+   La manière dont cet échec se manifeste dépend de
+   <methodname>SQLite3::enableExceptions</methodname>. Lorsque les exceptions
+   sont activées, une exception <exceptionname>SQLite3Exception</exceptionname>
+   est lancée. Sinon, une <constant>E_WARNING</constant> est émise et la
+   méthode qui a exécuté la requête, comme
+   <methodname>SQLite3::exec</methodname> ou
+   <methodname>SQLite3::query</methodname>, retourne &false;.
+  </simpara>
+  <simpara>
+   Par défaut, aucun gestionnaire d'attente n'est défini : une requête échoue
+   donc immédiatement si la base de données est verrouillée.
+  </simpara>
  </refsect1>
 
  <refsect1 role="parameters">
@@ -26,11 +47,11 @@
     <varlistentry>
      <term><parameter>milliseconds</parameter></term>
      <listitem>
-      <para>
-       Les millisecondes à attendre. Le fait de définir cette valeur
-       à une valeur inférieure ou égale à zéro désactivera un gestionnaire
-       d'attente précédemment défini.
-      </para>
+      <simpara>
+       Le nombre maximal de millisecondes à attendre un verrou. Le fait de
+       définir cette valeur à une valeur inférieure ou égale à zéro désactivera
+       un gestionnaire d'attente précédemment défini.
+      </simpara>
      </listitem>
     </varlistentry>
    </variablelist>
@@ -39,9 +60,11 @@
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>
-   Retourne &true; en cas de succès, &return.falseforfailure;.
-  </para>
+  <simpara>
+   Retourne &true; si le délai d'attente a été défini, &return.falseforfailure;.
+   La valeur de retour indique seulement si le délai a été défini. Elle ne
+   signifie pas que les requêtes suivantes obtiendront le verrou à temps.
+  </simpara>
  </refsect1>
 
 </refentry>
