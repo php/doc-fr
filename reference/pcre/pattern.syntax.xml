@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 75a5eb81be58ce50889c429c5d32b321af016d23 Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: 75ed9b0163e3e0563e82fdb98ef1cc9008c794a9 Maintainer: lacatoire Status: ready -->
 
 <chapter xml:id="reference.pcre.pattern.syntax" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Syntaxe des masques</title>
@@ -345,7 +345,16 @@
     <varlistentry>
      <term><emphasis>\R</emphasis></term>
      <listitem>
-      <simpara>saut de ligne : satisfait par \n, \r et \r\n</simpara>
+      <simpara>
+       saut de ligne. Par défaut, <literal>\R</literal> correspond à toute
+       séquence de saut de ligne Unicode : en mode 8 bits non UTF-8, cela
+       équivaut à <literal>(?&gt;\r\n|\n|\x0b|\f|\r|\x85)</literal> ; en mode
+       UTF-8, deux caractères supplémentaires, U+2028 et U+2029, sont ajoutés.
+       Si le masque contient la séquence spéciale
+       <literal>(*BSR_ANYCRLF)</literal>, <literal>\R</literal> ne correspond
+       qu'à <literal>\r\n</literal>, <literal>\r</literal> et
+       <literal>\n</literal>.
+      </simpara>
      </listitem>
     </varlistentry>
     <varlistentry>
@@ -361,6 +370,26 @@
      <listitem>
       <simpara>
        caractère en hexadécimal, de code hh
+      </simpara>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><emphasis>\x{hhhh}</emphasis></term>
+     <listitem>
+      <simpara>
+       en <emphasis>mode UTF-8</emphasis>, le caractère Unicode dont le point
+       de code est le nombre hexadécimal donné
+      </simpara>
+     </listitem>
+    </varlistentry>
+    <varlistentry>
+     <term><emphasis>\N{U+hhhh}</emphasis></term>
+     <listitem>
+      <simpara>
+       en <emphasis>mode UTF-8</emphasis>, le caractère Unicode dont le point
+       de code est le nombre hexadécimal donné, équivalent dans ce mode à
+       <literal>\x{hhhh}</literal> ; contrairement à <literal>\x{hhhh}</literal>,
+       cette syntaxe n'est pas reconnue hors du mode UTF-8
       </simpara>
      </listitem>
     </varlistentry>
@@ -1217,13 +1246,20 @@
    Les caractères avec la propriété "mark" sont typiquement les lettres
    accentuées qui affectent le caractère qui les précède.
   </simpara>
-  <para>
+  <simpara>
    La recherche de caractères par les propriétés Unicode n'est pas la méthode
    la plus rapide, car PCRE doit chercher une structure qui contient les données
-   dans plus de quinze mille caractères. C'est pour cela que les séquences
-   traditionnelles comme <literal>\d</literal> et
-   <literal>\w</literal> n'utilisent pas les propriétés Unicode dans PCRE.
-  </para>
+   dans plus de quinze mille caractères. À partir de PHP 5.4.0, les séquences
+   d'échappement de types de caractères génériques <literal>\d</literal>,
+   <literal>\s</literal> et <literal>\w</literal> (ainsi que leurs équivalents en
+   majuscules) utilisent les propriétés Unicode lorsque le modificateur
+   <link linkend="reference.pcre.pattern.modifiers">PCRE_UTF8</link>
+   (<literal>u</literal>) est défini, de sorte que, par exemple,
+   <literal>\d</literal> correspond aussi aux chiffres décimaux non ASCII.
+   Antérieur à PHP 5.4.0, ces séquences d'échappement n'utilisaient pas les
+   propriétés Unicode, pour des raisons d'efficacité, sauf si
+   <literal>(*UCP)</literal> était explicitement ajouté au masque.
+  </simpara>
  </section>
  
  <section xml:id="regexp.reference.anchors">
@@ -2073,7 +2109,7 @@
  
  <section xml:id="regexp.reference.assertions">
   <title>Assertions</title>
-  <para>
+  <simpara>
    Une assertion est un test sur les caractères suivants ou
    précédents celui qui est en cours d'étude. Ce
    test ne consomme pas de caractères (ie, on ne déplace
@@ -2083,10 +2119,12 @@
    <literal>^</literal> et <literal>$</literal>, et sont décrites
    dans les <link linkend="regexp.reference.escape">séquences d'échappement</link>.
    Il existe cependant des types d'assertions plus complexes, codées sous la forme
-   de sous-masques. Il en existe deux types : celles qui travaillent
-   <emphasis>au-delà</emphasis> de la position courante, et celles qui
-   travaillent <emphasis>en-deçà</emphasis>.
-  </para>
+   de sous-masques. Il en existe deux types : les assertions
+   <emphasis>avant</emphasis> (<emphasis>lookahead</emphasis>), qui regardent
+   au-delà de la position courante dans la chaîne sujet, et les assertions
+   <emphasis>arrière</emphasis> (<emphasis>lookbehind</emphasis>), qui
+   regardent en-deçà.
+  </simpara>
   <para>
    Une assertion se comporte comme un sous-masque, hormis le fait qu'elle
    ne déplace pas le pointeur de position. Les <emphasis>assertions avant</emphasis>
