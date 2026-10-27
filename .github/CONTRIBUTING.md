@@ -3,24 +3,24 @@
 Ce document a pour but d'expliquer comment participer à la rédaction de la
 documentation française de PHP.
 
-Si vous voulez lire la documentation et non la rédiger, allez voir le site PHP.net :
+Pour **lire** la documentation et non la rédiger, allez sur
 https://www.php.net/manual/fr/
 
-De plus, si une erreur est présente dans la documentation, vérifiez qu'elle ne se
-trouve pas non plus dans la documentation anglaise, si oui, corrigez celle-ci d'abord.
-La traduction française suivra la modification faite dans la documentation anglaise.
+> [!NOTE]
+> Si une erreur est présente dans la documentation, vérifiez qu'elle ne se
+> trouve pas aussi dans la documentation anglaise. Si oui, corrigez celle-ci
+> d'abord : la traduction française suivra.
 
-# Sommaire
+## Démarrage rapide
 
- 1. Installation
- 2. Construire la documentation
- 3. Revision Tracking
- 4. Coding Standard
- 5. Traduction, relectures et orthographe
- 6. Workflow git
- 7. Vérifier ses changements avant de pousser
- 8. Commandes utiles
-
+1. Faites un fork de `php/doc-fr` et clonez-le (voir [Installation](#1-installation)).
+2. Créez une branche à partir de `master`.
+3. Modifiez le fichier XML en respectant le [coding style](#4-coding-style). Pour
+   une mise à jour, changez aussi la clé de hachage `EN-Revision`
+   ([Revision Tracking](#3-revision-tracking)).
+4. [Vérifiez vos changements](#7-vérifier-ses-changements-avant-de-pousser).
+5. Poussez la branche sur votre fork et ouvrez une pull request contre `php/doc-fr`
+   ([Workflow git](#6-workflow-git)), avec des messages de commit en anglais.
 
 ## 1: Installation
 
@@ -95,6 +95,16 @@ de PHP : http://doc.php.net/revcheck.php?p=filesummary&lang=fr
 Pour voir les fichiers qui doivent être mise à jour, allez sur le lien "Outdated Files" qui
 amène à : http://doc.php.net/revcheck.php?p=files&lang=fr
 
+### Issues `[Sync EN]` automatiques
+
+Chaque jour, un workflow ouvre une issue `[Sync EN]` (label `sync-en`) pour chaque
+commit de `php/doc-en` qui touche un fichier traduit ou ajoute un fichier XML. Le corps
+liste les fichiers FR à mettre à jour et les nouveaux fichiers EN. Les commits dont le
+message contient `[skip-revcheck]` sont ignorés.
+
+Pour en traiter une : reportez les changements, mettez à jour `EN-Revision`, puis
+écrivez `Fixes: #numéro` dans la pull request.
+
 ## 4: Coding style
 ### Fichier XML
 
@@ -116,22 +126,8 @@ De plus la soft-limit du nombre de caractères par ligne est de 80.
 
 ### Exemple PHP
 
-Officiellement le groupe de documentation PHP a choisi d'utiliser les coding standards de PEAR,
-vous les trouverez ici : http://pear.php.net/manual/en/standards.php
-
-> En pratique néanmoins le coding style est un mélange entre PEAR et PSR-2/12,
-> essayez donc de suivre le style dans lequel la page a été écrite, ou celui de la documentation anglaise.
-
-Le code source PHP commence à la colonne zéro de l'exemple :
-```php
-<?php
-ca_commence_ici(); // bien
-  ca_commence_ici(); // pas bien
-?>
-```
-
-On notera aussi qu'on privilégie les `echo` à `print` (`echo` sans parenthèses).
-Tout le code est censé être compatible avec `error_reporting(E_ALL)`
+Les exemples suivent le guide officiel de la documentation PHP, commun à toutes les
+langues : https://doc.php.net/guide/cs-for-examples.md
 
 ## 5: Traduction, relectures et orthographe
 
@@ -215,17 +211,9 @@ suffit :
 ln -s ../en en
 ```
 
-### Style : les termes proscrits
+### Style
 
-Les lignes `INTERDIT : "X" → "Y"` de `TRADUCTIONS.txt` sont vérifiées
-automatiquement. Le script lit ces lignes dynamiquement : c'est bien
-`TRADUCTIONS.txt` qui fait foi, aucune règle n'est codée en dur.
-
-```shell
-node .github/scripts/check-style-fr.mjs fichier1.xml fichier2.xml
-```
-
-Sans argument, il vérifie tous les fichiers `.xml` du dépôt.
+Les termes proscrits sont listés dans `TRADUCTIONS.txt` (lignes `INTERDIT`), qui fait foi.
 
 ### Structure : l'ossature des blocs
 
