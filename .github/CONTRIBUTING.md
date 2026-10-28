@@ -102,7 +102,7 @@ commit de `php/doc-en` qui touche un fichier traduit ou ajoute un fichier XML. L
 liste les fichiers FR à mettre à jour et les nouveaux fichiers EN. Les commits dont le
 message contient `[skip-revcheck]` sont ignorés.
 
-Pour en traiter une : reportez les changements, mettez à jour `EN-Revision`, puis
+Pour en traiter une : reportez les changements, mettez à jour `EN-Revision` avec le hash du nouveau commit, puis
 écrivez `Fixes: #numéro` dans la pull request.
 
 ## 4: Coding style
