@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: af4e920c7232115ba0fe800b280eefbbed078597 Maintainer: yannick Status: ready -->
-<!-- Reviewed: no -->
+<!-- EN-Revision: 2ad26fb7916c8ffb5264c07b30610ef4553e4cbf Maintainer: lacatoire Status: ready -->
 <refentry xml:id="function.openssl-x509-parse" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>openssl_x509_parse</refname>
-  <refpurpose>Analyse un certificat X509</refpurpose>
+  <refpurpose>Analyse un certificat X509 et retourne les informations sous forme de tableau</refpurpose>
  </refnamediv>
 
  <refsect1 role="description">
@@ -16,12 +14,10 @@
    <methodparam choice="opt"><type>bool</type><parameter>short_names</parameter><initializer>&true;</initializer></methodparam>
   </methodsynopsis>
   <para>
-   <function>openssl_x509_parse</function> analyse le certificat X509
-   <parameter>certificate</parameter>, et retourne les informations contenues
-   dedans, y compris le sujet (<literal>subject</literal>), nom (<literal>name</literal>),
-   émetteur (<literal>issuer name</literal>), dates de début et de fin
-   (<literal>valid from date</literal> et <literal>valid to date</literal>),
-   etc.
+   <function>openssl_x509_parse</function> retourne des informations sur le
+   <parameter>certificate</parameter> fourni, notamment le nom du sujet,
+   le nom de l'émetteur, les usages (<literal>purposes</literal>), les dates
+   de début et de fin de validité, etc.
   </para>
  </refsect1>
 
@@ -57,10 +53,215 @@
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
+  <simpara>
+   Retourne un &array; contenant les champs du certificat en cas de succès, ou &false; si une erreur survient.
+  </simpara>
+  <simpara>
+   <literal>alias</literal> n'est présent que si le certificat possède un alias.
+   Toutes les autres clés listées ci-dessous sont toujours présentes.
+  </simpara>
   <para>
-   <emphasis>La structure des données retournées est
-   (délibérément) non documentée, car elle
-   est sujette à des changements sans préavis.</emphasis>
+   <table>
+    <title>Tableau retourné par <function>openssl_x509_parse</function></title>
+    <tgroup cols="3">
+     <thead>
+      <row>
+       <entry>Clé</entry>
+       <entry>Type</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><literal>name</literal></entry>
+       <entry><type>string</type></entry>
+       <entry>
+        Nom distinctif du sujet sous forme d'une seule chaîne, dont les composants sont séparés par des barres obliques.
+        Par exemple, <literal>/C=US/O=Example/CN=example.com</literal>.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>subject</literal></entry>
+       <entry><type>array</type></entry>
+       <entry>
+        Nom distinctif du sujet. Les clés sont des noms courts comme
+        <literal>CN</literal> lorsque <parameter>short_names</parameter> vaut
+        &true;, et des noms longs comme <literal>commonName</literal>
+        sinon. Chaque valeur est une &string; UTF-8, ou un &array; de
+        &string; UTF-8 lorsque ce composant apparaît plusieurs fois.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>hash</literal></entry>
+       <entry><type>string</type></entry>
+       <entry>
+        Hachage hexadécimal en minuscules du nom du sujet, tel qu'utilisé pour
+        rechercher un certificat dans un répertoire d'autorités de certification OpenSSL. Il s'agit d'une valeur de 8 chiffres.
+        Ce n'est pas l'empreinte du certificat ; voir
+        <function>openssl_x509_fingerprint</function>.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>issuer</literal></entry>
+       <entry><type>array</type></entry>
+       <entry>
+        Nom distinctif de l'émetteur, sous la même forme que
+        <literal>subject</literal>.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>version</literal></entry>
+       <entry><type>int</type></entry>
+       <entry>
+        Champ de version brut stocké dans le certificat. Cette valeur est
+        inférieure d'une unité à la version du certificat habituellement affichée :
+        un certificat de version 1 vaut <literal>0</literal>, un certificat de
+        version 2 vaut <literal>1</literal>, et un certificat de version 3 vaut
+        <literal>2</literal>.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>serialNumber</literal></entry>
+       <entry><type>string</type></entry>
+       <entry>
+        Représentation décimale du numéro de série. Les numéros de série volumineux sont
+        retournés à la place sous forme de chaîne hexadécimale préfixée par <literal>0x</literal>.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>serialNumberHex</literal></entry>
+       <entry><type>string</type></entry>
+       <entry>
+        Représentation hexadécimale en majuscules du numéro de série.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>validFrom</literal></entry>
+       <entry><type>string</type></entry>
+       <entry>
+        Date de début de validité au format ASN.1, soit UTCTime
+        (<literal>YYMMDDHHMMSSZ</literal>), soit GeneralizedTime
+        (<literal>YYYYMMDDHHMMSSZ</literal>).
+       </entry>
+      </row>
+      <row>
+       <entry><literal>validTo</literal></entry>
+       <entry><type>string</type></entry>
+       <entry>
+        Date de fin de validité, sous la même forme que <literal>validFrom</literal>.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>validFrom_time_t</literal></entry>
+       <entry><type>int</type></entry>
+       <entry>
+        Date de début de validité sous forme d'horodatage Unix, ou <literal>-1</literal> si
+        la date n'a pas pu être analysée.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>validTo_time_t</literal></entry>
+       <entry><type>int</type></entry>
+       <entry>
+        Date de fin de validité sous forme d'horodatage Unix, ou <literal>-1</literal> si
+        la date n'a pas pu être analysée.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>alias</literal></entry>
+       <entry><type>string</type></entry>
+       <entry>
+        Alias du certificat (nom convivial). Présent uniquement s'il est défini.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>signatureTypeSN</literal></entry>
+       <entry><type>string</type></entry>
+       <entry>
+        Nom court de l'algorithme de signature.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>signatureTypeLN</literal></entry>
+       <entry><type>string</type></entry>
+       <entry>
+        Nom long de l'algorithme de signature.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>signatureTypeNID</literal></entry>
+       <entry><type>int</type></entry>
+       <entry>
+        Identifiant numérique de l'algorithme de signature (NID OpenSSL).
+       </entry>
+      </row>
+      <row>
+       <entry><literal>purposes</literal></entry>
+       <entry><type>array</type></entry>
+       <entry>
+        Vérifications des usages, indexées par identifiant d'usage. Les identifiants sont les
+        constantes <link linkend="openssl.purpose-check"><constant>X509_PURPOSE_<replaceable>*</replaceable></constant></link>.
+        Chaque valeur est un &array; décrit ci-dessous.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>extensions</literal></entry>
+       <entry><type>array</type></entry>
+       <entry>
+        Extensions du certificat, indexées par nom court (par exemple
+        <literal>subjectAltName</literal>) ou par OID lorsque l'extension n'a
+        pas de nom court. Chaque valeur est un texte décrivant cette extension, ou les données
+        brutes de l'extension lorsqu'elles ne peuvent pas être affichées. Les clés présentes dépendent du certificat.
+        Ce tableau ne suit pas <parameter>short_names</parameter>.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
+  </para>
+  <simpara>
+   Chaque élément de <literal>purposes</literal> possède les clés suivantes :
+  </simpara>
+  <para>
+   <table>
+    <title>Entrée d'usage</title>
+    <tgroup cols="3">
+     <thead>
+      <row>
+       <entry>Clé</entry>
+       <entry>Type</entry>
+       <entry>&Description;</entry>
+      </row>
+     </thead>
+     <tbody>
+      <row>
+       <entry><literal>0</literal></entry>
+       <entry><type>bool</type></entry>
+       <entry>
+        &true; si le certificat peut être utilisé pour cet usage en tant que
+        certificat d'entité finale.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>1</literal></entry>
+       <entry><type>bool</type></entry>
+       <entry>
+        &true; si le certificat peut être utilisé pour cet usage en tant que
+        certificat d'autorité de certification.
+       </entry>
+      </row>
+      <row>
+       <entry><literal>2</literal></entry>
+       <entry><type>string</type></entry>
+       <entry>
+        Nom de l'usage. Un nom court comme <literal>sslclient</literal>
+        lorsque <parameter>short_names</parameter> vaut &true;, et un nom long
+        comme <literal>SSL client</literal> sinon.
+       </entry>
+      </row>
+     </tbody>
+    </tgroup>
+   </table>
   </para>
  </refsect1>
 
