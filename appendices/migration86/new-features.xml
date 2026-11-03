@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 5fc5cc44b0bacad862c0e2002e81b963ecc37c01 Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: 09e39c586d1fa47d499807f911ff92d69d175db7 Maintainer: lacatoire Status: ready -->
 <sect1 xml:id="migration86.new-features" xmlns:xlink="http://www.w3.org/1999/xlink">
  <title>Nouvelles fonctionnalités</title>
 
@@ -270,9 +270,65 @@ var_dump(unpack('s>value', "\xff\xfe")); // ["value" => int(-2)]
   <title>Date</title>
 
   <simpara>
-   Ajout de la classe <classname>Time\Duration</classname>.
+   Ajout de la classe <classname>Time\Duration</classname> pour représenter une
+   durée fixe de temps écoulé, comme un timeout, avec une précision à la
+   nanoseconde.
+   Contrairement à <classname>DateInterval</classname>, elle n'a pas d'unités
+   calendaires comme les jours ou les mois : sa longueur est donc non ambiguë.
    <!-- RFC: https://wiki.php.net/rfc/duration_class -->
   </simpara>
+
+  <para>
+   Les durées sont immuables et peuvent être comparées avec les opérateurs de
+   comparaison. La classe fournit :
+   <simplelist>
+    <member>
+     Des méthodes de fabrique telles que
+     <methodname>Time\Duration::fromSeconds</methodname>,
+     <methodname>Time\Duration::fromMilliseconds</methodname> et
+     <methodname>Time\Duration::fromIso8601DurationString</methodname>
+    </member>
+    <member>
+     L'arithmétique avec <methodname>Time\Duration::add</methodname>,
+     <methodname>Time\Duration::sub</methodname>,
+     <methodname>Time\Duration::multiplyBy</methodname> et
+     <methodname>Time\Duration::divideBy</methodname>
+    </member>
+    <member>
+     <methodname>Time\Duration::negate</methodname> et
+     <methodname>Time\Duration::absolute</methodname> pour changer le signe
+    </member>
+    <member>
+     <methodname>Time\Duration::compare</methodname> pour une utilisation comme
+     fonction de rappel de tri
+    </member>
+   </simplelist>
+  </para>
+
+  <simpara>
+   Une <exceptionname>Time\TimeException</exceptionname> est lancée lorsqu'une
+   durée dépasse la plage représentable d'environ 292 ans, ou lorsqu'une chaîne
+   de durée <acronym>ISO</acronym> 8601 est invalide.
+  </simpara>
+
+  <informalexample>
+   <programlisting role="php">
+<![CDATA[
+<?php
+$timeout = \Time\Duration::fromSeconds(2)->add(\Time\Duration::fromMilliseconds(500));
+
+printf("%d.%09d secondes\n", $timeout->seconds, $timeout->nanoseconds);
+var_dump($timeout > \Time\Duration::fromSeconds(2));
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+2.500000000 secondes
+bool(true)
+]]>
+   </screen>
+  </informalexample>
 
  </sect2>
 
