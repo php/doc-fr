@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: b890f28c0c6d2856eadcdc34b3faf83a846b3d79 Maintainer: Fan2Shrek Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 3e4d4fa6a24d0f04db6fa1f42905653bdd853905 Maintainer: Fan2Shrek Status: ready -->
 <refentry xml:id="function.pcntl-async-signals" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>pcntl_async_signals</refname>
@@ -65,6 +64,69 @@
     </tbody>
    </tgroup>
   </informaltable>
+ </refsect1>
+
+ <refsect1 role="examples">
+  &reftitle.examples;
+  <example>
+   <title>Appeler les gestionnaires de signaux pendant un transfert cURL</title>
+   <simpara>
+    Sans la fonction de rappel de progression, le gestionnaire ne serait pas
+    appelé avant la fin du transfert. <constant>CURLOPT_XFERINFOFUNCTION</constant>
+    est disponible à partir de PHP 8.2.0 ; il faut utiliser
+    <constant>CURLOPT_PROGRESSFUNCTION</constant> pour les versions antérieures.
+   </simpara>
+   <programlisting role="php">
+<![CDATA[
+<?php
+pcntl_async_signals(true);
+
+pcntl_signal(SIGALRM, function () {
+    echo "Pulsation\n";
+    pcntl_alarm(1);
+});
+pcntl_alarm(1);
+
+$ch = curl_init('https://example.com/slow-endpoint');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+// Rappeler du code PHP pendant le transfert permet au gestionnaire de s'exécuter
+curl_setopt($ch, CURLOPT_NOPROGRESS, false);
+curl_setopt($ch, CURLOPT_XFERINFOFUNCTION, function () {
+    return 0;
+});
+
+$response = curl_exec($ch);
+?>
+]]>
+   </programlisting>
+  </example>
+ </refsect1>
+
+ <refsect1 role="notes">
+  &reftitle.notes;
+  <simpara>
+   Lorsque la gestion asynchrone des signaux est activée, un gestionnaire
+   installé avec <function>pcntl_signal</function> n'est pas appelé au moment
+   où le signal est reçu. Le signal est enregistré, et le gestionnaire est
+   appelé la prochaine fois que le moteur vérifie la présence de signaux en
+   attente pendant l'exécution de code PHP, par exemple après le retour d'un
+   appel de fonction, ou à la prochaine itération d'une boucle.
+  </simpara>
+  <simpara>
+   Par conséquent, un appel de longue durée à une fonction interne, comme
+   <function>curl_exec</function> ou une requête de base de données, n'est pas
+   interrompu pour appeler le gestionnaire : celui-ci n'est appelé qu'une fois
+   que cette fonction a retourné. Le gestionnaire est appelé plus tôt
+   uniquement si la fonction rappelle du code PHP pendant son exécution, par
+   exemple via une fonction de rappel
+   <constant>CURLOPT_XFERINFOFUNCTION</constant>.
+  </simpara>
+  <simpara>
+   Un signal peut tout de même interrompre un appel système sur lequel la
+   fonction est bloquée. Par exemple, <function>sleep</function> retourne alors
+   prématurément, et le gestionnaire est appelé une fois qu'elle a retourné.
+  </simpara>
  </refsect1>
 
  <refsect1 role="seealso"><!-- {{{ -->
