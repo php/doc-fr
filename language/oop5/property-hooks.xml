@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: dff848b17dafaabfb7662ffb5fecfcb04e3b771d Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: 3a0bf5e678f1023de7cd2148f2c5a70ffdff4a59 Maintainer: lacatoire Status: ready -->
 <sect1 xml:id="language.oop5.property-hooks" xmlns="http://docbook.org/ns/docbook">
  <title>Hooks de propriété</title>
 
@@ -409,6 +409,153 @@ class Person {
    Surcharger l'intégralité de la propriété de tableau est autorisé, et se comporte de la même manière que toute autre propriété.
    Ne travailler qu'avec des éléments du tableau nécessite une attention particulière.
   </simpara>
+ </sect2>
+ <sect2 xml:id="language.oop5.property-hooks.isset-unset">
+  <title><function>isset</function>, <function>empty</function> et <function>unset</function></title>
+  <simpara>
+   Lorsque <function>isset</function> ou <function>empty</function> est utilisée sur une
+   propriété qui possède un hook <literal>get</literal>, le hook est appelé et
+   la valeur qu'il retourne est vérifiée à la place de la valeur de sauvegarde de la propriété.
+   <function>isset</function> retourne &true; si cette valeur n'est pas &null;,
+   et <function>empty</function> retourne &true; si cette valeur est égale à &false;.
+   Ce comportement est voulu : un hook <literal>get</literal> peut calculer ou initialiser
+   la valeur lors de sa lecture, de sorte que le code extérieur aux hooks de la propriété
+   ne peut pas observer directement la valeur de sauvegarde.
+  </simpara>
+  <simpara>
+   Par conséquent, si le hook <literal>get</literal> lit une valeur de sauvegarde
+   qui n'a pas été initialisée, l'utilisation de <function>isset</function> ou de
+   <function>empty</function> sur la propriété lève une <exceptionname>Error</exceptionname>,
+   comme le fait la lecture de la propriété.
+   Il en va de même pour
+   <link linkend="language.operators.comparison.coalesce">l'opérateur de fusion null</link>.
+  </simpara>
+  <example>
+   <title><function>isset</function> sur une propriété avec un hook <literal>get</literal></title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Article
+{
+    public ?string $title = null {
+        get => $this->title ?? 'Untitled';
+    }
+
+    public string $author {
+        get => ucfirst($this->author);
+        set => $this->author = $value;
+    }
+}
+
+$article = new Article();
+
+// La valeur de sauvegarde est null, mais le hook get retourne 'Untitled'.
+var_dump(isset($article->title));
+
+// Le hook get lit une valeur de sauvegarde non initialisée.
+try {
+    var_dump(isset($article->author));
+} catch (Error $e) {
+    echo $e->getMessage(), "\n";
+}
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+bool(true)
+Typed property Article::$author must not be accessed before initialization
+]]>
+   </screen>
+  </example>
+  <simpara>
+   Si une propriété "backed" n'a pas de hook <literal>get</literal>,
+   <function>isset</function> et <function>empty</function> vérifient directement
+   la valeur de sauvegarde, comme pour une propriété sans hooks.
+   Sur une propriété virtuelle qui n'a pas de hook <literal>get</literal>,
+   elles lèvent une <exceptionname>Error</exceptionname>, car la propriété ne peut pas être lue.
+  </simpara>
+  <simpara>
+   À l'intérieur des hooks d'une propriété, <code>$this->propName</code> fait référence à la
+   valeur de sauvegarde de cette propriété, donc <code>isset($this->propName)</code> vérifie
+   directement la valeur de sauvegarde.
+   Un hook <literal>get</literal> peut s'en servir pour gérer une valeur de sauvegarde non initialisée.
+   Il est souvent plus simple de donner à la propriété une valeur par défaut, comme &null;.
+  </simpara>
+  <example>
+   <title>Gestion d'une valeur de sauvegarde non initialisée</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Article
+{
+    // Initialiser la valeur de sauvegarde évite l'erreur.
+    public ?string $subtitle = null {
+        get => $this->subtitle !== null ? ucfirst($this->subtitle) : null;
+    }
+
+    // Le hook get vérifie sa propre valeur de sauvegarde.
+    public string $author {
+        get => isset($this->author) ? ucfirst($this->author) : 'Anonymous';
+        set => $this->author = $value;
+    }
+}
+
+$article = new Article();
+
+var_dump(isset($article->subtitle));
+var_dump(isset($article->author));
+var_dump($article->author);
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+bool(false)
+bool(true)
+string(9) "Anonymous"
+]]>
+   </screen>
+  </example>
+  <simpara>
+   Une propriété qui possède des hooks ne peut pas être détruite.
+   L'utilisation de <function>unset</function> sur celle-ci lève une <exceptionname>Error</exceptionname>,
+   que la propriété soit "backed" ou virtuelle, et même lorsque
+   <function>unset</function> est appelée depuis l'intérieur de la classe ou de l'un de ses hooks.
+  </simpara>
+  <example>
+   <title><function>unset</function> sur une propriété avec des hooks</title>
+   <programlisting role="php">
+<![CDATA[
+<?php
+class Rectangle
+{
+    public int $area {
+        get => $this->h * $this->w;
+    }
+
+    public function __construct(public int $h, public int $w) {}
+}
+
+$r = new Rectangle(4, 5);
+
+try {
+    unset($r->area);
+} catch (Error $e) {
+    echo $e->getMessage(), "\n";
+}
+?>
+]]>
+   </programlisting>
+   &example.outputs;
+   <screen>
+<![CDATA[
+Cannot unset hooked property Rectangle::$area
+]]>
+   </screen>
+  </example>
  </sect2>
  <sect2>
   <title>Héritage</title>
