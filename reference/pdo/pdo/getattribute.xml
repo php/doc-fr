@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 00b118595a963f00211e96224e3fba35bdebc83c Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: ea010c6c957f8fdd64e1d622ab5fbe584cf3d231 Maintainer: lacatoire Status: ready -->
 <refentry xml:id="pdo.getattribute" xmlns="http://docbook.org/ns/docbook">
  <refnamediv>
   <refname>PDO::getAttribute</refname>
@@ -20,10 +20,11 @@
    à la fonction <methodname>PDOStatement::getAttribute</methodname>.
   </para>
 
-  <para>
-   Il est à noter que certaines combinaisons base de données/pilote ne prennent pas en charge tous les
-   attributs de connexion.
-  </para>
+  <simpara>
+   Seuls les attributs génériques listés ci-dessous peuvent être récupérés avec
+   tous les pilotes. La possibilité de récupérer tout autre attribut dépend du
+   pilote.
+  </simpara>
 
  </refsect1>
 
@@ -35,8 +36,9 @@
      <term><parameter>attribute</parameter></term>
      <listitem>
       <para>
-       Une des constantes <constant>PDO::ATTR_<replaceable>*</replaceable></constant>. Les attributs génériques
-       qui sont appliqués aux connexions sont les suivants :
+       Une des constantes <constant>PDO::ATTR_<replaceable>*</replaceable></constant>.
+       Les attributs génériques suivants sont gérés par PDO lui-même
+       et peuvent être récupérés avec tous les pilotes :
        <simplelist>
         <member><constant>PDO::ATTR_CASE</constant></member>
         <member><constant>PDO::ATTR_DEFAULT_FETCH_MODE</constant></member>
@@ -49,7 +51,16 @@
        </simplelist>
       </para>
       <simpara>
-       Certains pilotes peuvent faire usage d'attributs supplémentaires spécifiques au pilote.
+       Tous les autres attributs sont gérés par le pilote.
+       La possibilité de les récupérer varie d'un pilote à l'autre.
+       Cela inclut des attributs génériques tels que
+       <constant>PDO::ATTR_AUTOCOMMIT</constant>,
+       <constant>PDO::ATTR_CLIENT_VERSION</constant>,
+       <constant>PDO::ATTR_CONNECTION_STATUS</constant>,
+       <constant>PDO::ATTR_SERVER_INFO</constant>,
+       <constant>PDO::ATTR_SERVER_VERSION</constant> et
+       <constant>PDO::ATTR_TIMEOUT</constant>,
+       ainsi que des attributs spécifiques au pilote.
        Il est à noter que les attributs spécifiques au pilote <emphasis>ne doivent pas</emphasis>
        être utilisés avec d'autres pilotes.
       </simpara>
@@ -62,17 +73,21 @@
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
   <simpara>
-   Un appel réussi retourne la valeur de l'attribut PDO demandé.
-   Un appel qui a échoué retourne la valeur &null;.
+   Retourne la valeur de l'attribut demandé, ou &false; en cas d'échec.
+  </simpara>
+  <simpara>
+   La valeur de certains attributs, tels que
+   <constant>PDO::ATTR_PERSISTENT</constant>, peut elle-même être &false;,
+   si bien qu'une valeur de retour &false; n'indique pas toujours un échec.
   </simpara>
  </refsect1>
 
  <refsect1 role="errors">
   &reftitle.errors;
-  <para>
+  <simpara>
    La méthode <methodname>PDO::getAttribute</methodname> peut générer une exception <exceptionname>PDOException</exceptionname>
    lorsque le pilote sous-jacent ne prend pas en charge l'<parameter>attribute</parameter> demandé.
-  </para>
+  </simpara>
  </refsect1>
 
  <refsect1 role="changelog">
@@ -117,20 +132,38 @@
     <programlisting role="php">
 <![CDATA[
 <?php
-$conn = new PDO('odbc:sample', 'db2inst1', 'ibmdb2');
-$attributes = array(
-    "AUTOCOMMIT", "ERRMODE", "CASE", "CLIENT_VERSION", "CONNECTION_STATUS",
-    "ORACLE_NULLS", "PERSISTENT", "PREFETCH", "SERVER_INFO", "SERVER_VERSION",
-    "TIMEOUT"
-);
+$pdo = new PDO('sqlite::memory:');
 
-foreach ($attributes as $val) {
-    echo "PDO::ATTR_$val: ";
-    echo $conn->getAttribute(constant("PDO::ATTR_$val")) . "\n";
+$attributes = [
+    'DRIVER_NAME', 'ERRMODE', 'CASE', 'ORACLE_NULLS', 'PERSISTENT',
+    'CLIENT_VERSION', 'SERVER_VERSION', 'AUTOCOMMIT', 'TIMEOUT',
+];
+
+foreach ($attributes as $name) {
+    try {
+        $value = $pdo->getAttribute(constant("PDO::ATTR_$name"));
+        echo "PDO::ATTR_$name: ", var_export($value, true), "\n";
+    } catch (PDOException $e) {
+        echo "PDO::ATTR_$name: ", $e->getMessage(), "\n";
+    }
 }
 ?>
 ]]>
     </programlisting>
+    &example.outputs.similar;
+    <screen>
+<![CDATA[
+PDO::ATTR_DRIVER_NAME: 'sqlite'
+PDO::ATTR_ERRMODE: 2
+PDO::ATTR_CASE: 0
+PDO::ATTR_ORACLE_NULLS: 0
+PDO::ATTR_PERSISTENT: false
+PDO::ATTR_CLIENT_VERSION: '3.46.1'
+PDO::ATTR_SERVER_VERSION: '3.46.1'
+PDO::ATTR_AUTOCOMMIT: SQLSTATE[IM001]: Driver does not support this function: driver does not support that attribute
+PDO::ATTR_TIMEOUT: SQLSTATE[IM001]: Driver does not support this function: driver does not support that attribute
+]]>
+    </screen>
    </example>
   </para>
  </refsect1>
