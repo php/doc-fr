@@ -1,0 +1,83 @@
+# https://docs.github.com/en/actions
+# Temporary: end-to-end test of the move of the third-party extensions to
+# php/doc-extensions. It builds the extensions manual and this manual from the
+# branches of the pull requests of the block, serves both with web-php and
+# checks that the old URLs are redirected and that the manuals link to each
+# other. The test is web-php/tests/extensions-migration.sh, which anyone can
+# run locally with the same six repositories.
+#
+# Remove this workflow once the pull requests are merged, or replace the pinned
+# refs by master.
+
+name: "Extensions migration"
+
+on:
+  pull_request:
+    branches: ["master"]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  end-to-end:
+    name: "End to end"
+    runs-on: ubuntu-latest
+    steps:
+      # The six repositories side by side: this is the layout expected by the
+      # doc-base scripts and by the test. The explicit ref takes the real head
+      # of this pull request, not the merge commit.
+      - name: "Checkout php/doc-fr"
+        uses: actions/checkout@v7
+        with:
+          path: fr
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      # Fallback of the translation, with the moved extensions removed.
+      - name: "Checkout php/doc-en"
+        uses: actions/checkout@v7
+        with:
+          repository: php/doc-en
+          path: en
+          ref: refs/pull/5998/head
+
+      - name: "Checkout php/doc-base"
+        uses: actions/checkout@v7
+        with:
+          repository: php/doc-base
+          path: doc-base
+
+      - name: "Checkout php/phd"
+        uses: actions/checkout@v7
+        with:
+          repository: php/phd
+          path: phd
+          ref: refs/pull/270/head
+
+      - name: "Checkout php/doc-extensions"
+        uses: actions/checkout@v7
+        with:
+          repository: php/doc-extensions
+          path: extensions
+          ref: refs/pull/49/head
+
+      - name: "Checkout php/web-php"
+        uses: actions/checkout@v7
+        with:
+          repository: php/web-php
+          path: web-php
+          ref: refs/pull/2038/head
+
+      - name: "Setup PHP"
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: "dom, iconv, intl, libxml, mbstring, simplexml, sqlite3, xmlreader, xmlwriter"
+          coverage: none
+
+      - name: "Build both manuals and test the redirects and the links"
+        run: sh web-php/tests/extensions-migration.sh "$GITHUB_WORKSPACE"
