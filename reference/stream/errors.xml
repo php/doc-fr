@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- $Revision$ -->
-<!-- EN-Revision: 96c9d88bad9a7d7d44bfb7f26c226df7ee9ddf26 Maintainer: yannick Status: ready -->
-<!-- Reviewed: yes -->
+<!-- EN-Revision: 8d7f211071c3b37962c15528835d9971f6b7eef9 Maintainer: yannick Status: ready -->
 
 <chapter xml:id="stream.errors">
  <title>Erreurs de flux</title>
@@ -17,6 +15,106 @@
   <constant>E_WARNING</constant> sera généré pour indiquer la nature
   de l'erreur.
  </para>
+
+ <section xml:id="stream.errors.handling">
+  <title>Configuration de la gestion des erreurs</title>
+  <simpara>
+   À partir de PHP 8.6.0, la façon dont les erreurs de flux sont signalées peut
+   être modifiée pour chaque opération qui utilise un
+   <link linkend="stream.contexts">contexte de flux</link>, en définissant les
+   <link linkend="context.stream">options de contexte de flux</link>
+   <parameter>error_mode</parameter>, <parameter>error_store</parameter>
+   et <parameter>error_handler</parameter>.
+   Chaque erreur est décrite par un objet <exceptionname>StreamError</exceptionname>,
+   dont la propriété <link linkend="streamerror.props.code">code</link>
+   est un cas de <enumname>StreamErrorCode</enumname>.
+  </simpara>
+  <simpara>
+   Une erreur est soit <emphasis>fatale</emphasis> (elle met fin à l'opération),
+   comme un fichier qui ne peut pas être ouvert, soit <emphasis>non fatale</emphasis>,
+   auquel cas elle est signalée mais ne lance pas d'exception avec le mode
+   <constant>StreamErrorMode::Exception</constant>. Une même opération peut
+   signaler plusieurs erreurs.
+  </simpara>
+  <simpara>
+   L'option <parameter>error_mode</parameter> prend un cas de
+   <enumname>StreamErrorMode</enumname> et définit comment les erreurs sont
+   signalées :
+  </simpara>
+  <itemizedlist>
+   <listitem>
+    <simpara>
+     <constant>StreamErrorMode::Error</constant>, la valeur par défaut, émet
+     des diagnostics tels que <constant>E_WARNING</constant> et
+     <constant>E_NOTICE</constant>.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     <constant>StreamErrorMode::Exception</constant> lance une
+     <exceptionname>StreamException</exceptionname> si l'opération a
+     signalé une erreur fatale. Les erreurs non fatales ne lancent pas
+     d'exception et n'émettent aucun diagnostic.
+    </simpara>
+   </listitem>
+   <listitem>
+    <simpara>
+     <constant>StreamErrorMode::Silent</constant> n'émet aucun diagnostic
+     et ne lance aucune exception.
+    </simpara>
+   </listitem>
+  </itemizedlist>
+  <simpara>
+   L'option <parameter>error_store</parameter> prend un cas de
+   <enumname>StreamErrorStore</enumname> et définit quelles erreurs
+   sont conservées pour <function>stream_last_errors</function>. Avec la valeur
+   par défaut, <constant>StreamErrorStore::Auto</constant>, cela dépend du
+   mode d'erreur :
+  </simpara>
+  <informaltable>
+   <tgroup cols="2">
+    <thead>
+     <row>
+      <entry>Mode d'erreur</entry>
+      <entry>Erreurs stockées avec <constant>StreamErrorStore::Auto</constant></entry>
+     </row>
+    </thead>
+    <tbody>
+     <row>
+      <entry><constant>StreamErrorMode::Error</constant></entry>
+      <entry>Aucune</entry>
+     </row>
+     <row>
+      <entry><constant>StreamErrorMode::Exception</constant></entry>
+      <entry>Les erreurs non fatales</entry>
+     </row>
+     <row>
+      <entry><constant>StreamErrorMode::Silent</constant></entry>
+      <entry>Toutes les erreurs</entry>
+     </row>
+    </tbody>
+   </tgroup>
+  </informaltable>
+  <simpara>
+   L'option <parameter>error_handler</parameter> est un
+   <type>callable</type> qui reçoit la liste des objets
+   <exceptionname>StreamError</exceptionname> de chaque opération qui a
+   signalé des erreurs, sauf si une
+   <exceptionname>StreamException</exceptionname> est lancée.
+  </simpara>
+  <note>
+   <simpara>
+    <function>stream_context_set_default</function> rejette ces options.
+    Elles doivent être définies sur un contexte créé avec
+    <function>stream_context_create</function> et passé à la
+    fonction, ou avec lequel le flux a été ouvert.
+   </simpara>
+  </note>
+  <simpara>
+   Voir les <link linkend="context.stream">options de contexte de flux</link>
+   pour des exemples de chaque mode d'erreur et d'un gestionnaire d'erreurs.
+  </simpara>
+ </section>
 </chapter>
 
 <!-- Keep this comment at the end of the file
