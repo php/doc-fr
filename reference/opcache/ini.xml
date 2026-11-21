@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: 8cdccd62091924e8fdec3424c748c3a34f279ceb Maintainer: lacatoire Status: ready -->
+<!-- EN-Revision: 3feebd8c17479a0fd12d714bf7c19e12e2eacd12 Maintainer: lacatoire Status: ready -->
 <sect1 xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" xml:id="opcache.configuration">
  &reftitle.runtime;
  &extension.runtime;
@@ -204,7 +204,7 @@
      </row>
      <row>
       <entry><link linkend="ini.opcache.file-cache">opcache.file_cache</link></entry>
-      <entry>NULL</entry>
+      <entry>&null;</entry>
       <entry><constant>INI_SYSTEM</constant></entry>
       <entry/>
      </row>
@@ -270,9 +270,9 @@
      </row>
      <row>
       <entry><link linkend="ini.opcache.jit-buffer-size">opcache.jit_buffer_size</link></entry>
-      <entry>0</entry>
+      <entry>64M</entry>
       <entry><constant>INI_SYSTEM</constant></entry>
-      <entry>Disponible à partir de PHP 8.0.0</entry>
+      <entry>Disponible à partir de PHP 8.0.0. Avant PHP 8.4.0, la valeur par défaut était 0</entry>
      </row>
      <row>
       <entry><link linkend="ini.opcache.jit-debug">opcache.jit_debug</link></entry>
@@ -462,8 +462,7 @@
      nombres premiers
      <literal>{ 223, 463, 983, 1979, 3907, 7963, 16229, 32531, 65407, 130987, 262237, 524521, 1048793 }</literal>
      qui est plus grand ou égal que la valeur configurée. La valeur minimale est 200.
-     La valeur maximale est 100000 dans PHP &lt; 5.5.6, et 1000000 dans les versions
-     ultérieures.
+     La valeur maximale est 1000000.
      Les valeurs hors de cet intervalle sont fixées à l'intervalle autorisé.
     </simpara>
    </listitem>
@@ -489,10 +488,26 @@
    </term>
    <listitem>
     <simpara>
-     Si activé, OPcache ajoute le dossier de travail courant à la clé du script,
-     éliminant ainsi les collisions possibles entre les fichiers dont le nom
-     de base est identique. Le fait de désactiver cette fonctionnalité améliore
-     les performances, mais peut casser les applications existantes.
+     Si activé, OPcache ajoute le dossier de travail courant,
+     l'<link linkend="ini.include-path">include_path</link> et le dossier du
+     script qui effectue l'inclusion à la clé d'un script inclus avec un chemin
+     relatif, éliminant ainsi les collisions possibles entre des fichiers
+     différents inclus avec le même chemin relatif. Le fait de désactiver cette
+     fonctionnalité améliore les performances, mais peut casser les
+     applications existantes.
+    </simpara>
+    <simpara>
+     Si désactivé, le chemin relatif est utilisé seul comme clé. Par exemple,
+     si <filename>foo/x.php</filename> et <filename>bar/y.php</filename>
+     contiennent tous deux <code>include 'config.php';</code>, la seconde
+     inclusion exécute le fichier <filename>foo/config.php</filename> mis en
+     cache au lieu de <filename>bar/config.php</filename>.
+    </simpara>
+    <simpara>
+     Cette directive n'a aucun effet sur les scripts inclus avec un chemin
+     absolu ou via une enveloppe de flux, ni lorsque
+     <link linkend="ini.opcache.revalidate-path">opcache.revalidate_path</link>
+     est activé.
     </simpara>
    </listitem>
   </varlistentry>
@@ -545,10 +560,21 @@
    </term>
    <listitem>
     <simpara>
-     Si désactivé, les fichiers en cache existant utilisant le même
-     <link linkend="ini.include-path">include_path</link> seront réutilisés.
-     Aussi, si un fichier avec le même nom est quelque part ailleurs dans le
-     include_path, il ne sera pas trouvé.
+     Si désactivé, OPcache recherche d'abord un script en cache en utilisant
+     comme clé le chemin passé à <function>include</function> ou
+     <function>require</function> (voir
+     <link linkend="ini.opcache.use-cwd">opcache.use_cwd</link>), et utilise
+     ce script sans résoudre à nouveau le chemin. Ainsi, si le chemin désigne
+     maintenant un autre fichier, le script précédemment mis en cache est
+     toujours utilisé. Par exemple, un fichier de même nom ajouté plus tôt dans
+     l'<link linkend="ini.include-path">include_path</link> ne sera pas trouvé,
+     et un lien symbolique du chemin modifié pour pointer vers un autre dossier
+     n'est pas suivi.
+    </simpara>
+    <simpara>
+     Si activé, le chemin est toujours résolu vers le chemin réel du fichier,
+     qui sert ensuite à rechercher le script en cache. C'est plus lent, mais le
+     fichier utilisé est toujours celui que le chemin désigne actuellement.
     </simpara>
    </listitem>
   </varlistentry>
@@ -1529,7 +1555,6 @@ function getA() { return A; }
    </term>
    <listitem>
     <simpara>
-     <!-- TODO: Pas totalement sûr tbh -->
      Nombre maximal d'appels récursifs déroulés dans une boucle.
     </simpara>
    </listitem>
@@ -1541,7 +1566,6 @@ function getA() { return A; }
    </term>
    <listitem>
     <simpara>
-     <!-- TODO: Pas totalement sûr tbh -->
      Nombre maximal de retours récursifs déroulés dans une boucle.
     </simpara>
    </listitem>
