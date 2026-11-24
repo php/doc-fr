@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- EN-Revision: d20d66d9c76ff98dceb853aeb86794fe9d657669 Maintainer: yannick Status: ready -->
+<!-- EN-Revision: 0e165c09c5b960013112a58e82320cc3f3961797 Maintainer: yannick Status: ready -->
 <refentry xml:id="soapserver.setpersistence" xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink">
  <refnamediv>
   <refname>SoapServer::setPersistence</refname>
@@ -12,27 +12,29 @@
    <modifier>public</modifier> <type>void</type><methodname>SoapServer::setPersistence</methodname>
    <methodparam><type>int</type><parameter>mode</parameter></methodparam>
   </methodsynopsis>
-  <para>
-   Cette fonction permet de changer la persistance d'un objet SoapServer entre les
+  <simpara>
+   Cette méthode permet de changer la persistance d'un objet <classname>SoapServer</classname> entre les
    requêtes. Elle permet de sauvegarder les données entre les requêtes, au moyen des
-   sessions PHP. Cette fonction n'a d'effet qu'après avoir exporté la liste des fonctions
+   sessions PHP. Cette méthode n'a d'effet sur un objet <classname>SoapServer</classname> qu'après avoir exporté la liste des fonctions
    au moyen de <methodname>SoapServer::setClass</methodname>.
-  </para>
+  </simpara>
    <note>
-    <para>
-     La constante de persistance <constant>SOAP_PERSISTENCE_SESSION</constant> 
+    <simpara>
+     La constante de persistance <constant>SOAP_PERSISTENCE_SESSION</constant>
      rend uniquement les objets de la classe donnée persistants, mais non pas
-     les données statiques. Dans ce cas, <varname>$this->bar</varname> 
-     au lieu de self::$bar.
-    </para>
+     les données statiques. Dans ce cas, utilisez <varname>$this->bar</varname>
+     au lieu de <varname>self::$bar</varname>.
+    </simpara>
    </note>
-  <note>
-    <para>
-     <constant>SOAP_PERSISTENCE_SESSION</constant> serialise les données de l'objet entre
-     les requêtes. Dans le cas des ressources, (par exemple <classname>PDO</classname>),
-     <link linkend="object.wakeup">__wakeup()</link> et <link linkend="object.sleep">__sleep()</link> devraient être
+   <note>
+    <simpara>
+     <constant>SOAP_PERSISTENCE_SESSION</constant> sérialise les données de l'objet entre
+     les requêtes. Pour utiliser correctement des ressources (par exemple <classname>PDO</classname>),
+     les méthodes magiques
+     <link linkend="object.unserialize">__unserialize()</link> et
+     <link linkend="object.serialize">__serialize()</link> devraient être
      utilisées.
-    </para>  
+    </simpara>
   </note>
  </refsect1>
 
@@ -46,19 +48,19 @@
       <para>
        Une des constantes <constant>SOAP_PERSISTENCE_<replaceable>*</replaceable></constant>. 
       </para>
-      <para>
-       <constant>SOAP_PERSISTENCE_REQUEST</constant> - Les données de SoapServer
+      <simpara>
+       <constant>SOAP_PERSISTENCE_REQUEST</constant> - Les données de <classname>SoapServer</classname>
        ne sont pas persistantes entre les requêtes. C'est le comportement par
-       <emphasis role="bold">défaut</emphasis> de tout objet SoapServer après
-       appel à setClass().
-      </para>
-      <para>
-       <constant>SOAP_PERSISTENCE_SESSION</constant> - Les données de SoapServer
+       <emphasis role="bold">défaut</emphasis> de tout objet <classname>SoapServer</classname> après
+       appel à <methodname>SoapServer::setClass</methodname>.
+      </simpara>
+      <simpara>
+       <constant>SOAP_PERSISTENCE_SESSION</constant> - Les données de <classname>SoapServer</classname>
        persistent entre les requêtes. Ceci est réalisé en sérialisant les données de
-       la classe SoapServer dans <varname>$_SESSION['_bogus_session_name']</varname>,
+       la classe <classname>SoapServer</classname> dans <varname>$_SESSION['_bogus_session_name']</varname>,
        et ainsi <function>session_start</function> doit être appelée avant de passer
        sous ce mode de persistance.
-      </para>
+      </simpara>
      </listitem>
     </varlistentry>
    </variablelist>
@@ -67,9 +69,9 @@
 
  <refsect1 role="returnvalues">
   &reftitle.returnvalues;
-  <para>
+  <simpara>
    &return.void;
-  </para>
+  </simpara>
  </refsect1>
 
  <refsect1 role="changelog">
@@ -108,45 +110,56 @@
     <programlisting role="php">
 <![CDATA[
 <?php
- class MyFirstPersistentSoapServer {
-     private $resource; // (Par exemple PDO, mysqli, etc..)
-     public $myvar1;
-     public $myvar2;
 
-     public function __construct() {
-         $this->__wakeup(); // On appelle notre wakeup pour relancer notre ressource
-     }
+class MyFirstPersistentSoapServer
+{
+    private $resource; // (Par exemple PDO, mysqli, etc..)
+    public $myvar1;
+    public $myvar2;
 
-     public function __wakeup() {
-         $this->resource = CodeToStartOurResourceUp();
-     }
+    public function __construct()
+    {
+        $this->resource = CodeToStartOurResourceUp(); // On démarre notre ressource
+    }
 
-     public function __sleep() {
-         // On s'assure d'enlever $resource ici, ainsi nos données peuvent persister en session
-         // Si on oublie, la désérialisation lors de la prochaine requête échouera et notre objet
-         // SoapObject ne sera donc pas persistant entre les requêtes.
-         return array('myvar1','myvar2');
-     }
- }
+    public function __unserialize(array $data): void
+    {
+        $this->myvar1 = $data['myvar1'];
+        $this->myvar2 = $data['myvar2'];
 
- try {
-     session_start();
-     $server = new SoapServer(null, array('uri' => $_SERVER['REQUEST_URI']));
-     $server->setClass('MyFirstPersistentSoapServer');
-     // setPersistence() DOIT être appelée après setClass(), car le comportement de setClass()
-     // affecte SESSION_PERSISTENCE_REQUEST.
-     $server->setPersistence(SOAP_PERSISTENCE_SESSION);
-     $server->handle();
- } catch(SoapFault $e) {
-     error_log("SOAP ERROR: ". $e->getMessage());
- }
-?>
+        $this->resource = CodeToStartOurResourceUp();
+    }
+
+    public function __serialize(): array
+    {
+        // On s'assure d'enlever $resource ici, ainsi nos données peuvent persister en session.
+        // Si on oublie, la désérialisation lors de la prochaine requête échouera et un objet
+        // MyFirstPersistentSoapServer ne sera donc pas persistant entre les requêtes.
+        return [
+            'myvar1' => $this->myvar1,
+            'myvar2' => $this->myvar2,
+        ];
+    }
+}
+
+try {
+    session_start();
+    $server = new SoapServer(null, ['uri' => $_SERVER['REQUEST_URI']]);
+    $server->setClass('MyFirstPersistentSoapServer');
+    // setPersistence() DOIT être appelée après setClass(), car le comportement de setClass()
+    // affecte SOAP_PERSISTENCE_REQUEST.
+    $server->setPersistence(SOAP_PERSISTENCE_SESSION);
+    $server->handle();
+} catch (SoapFault $e) {
+    error_log("SOAP ERROR: " . $e->getMessage());
+}
+
 ]]>
     </programlisting>
    </example>
   </para>
  </refsect1>
-  
+
  <refsect1 role="seealso">
   &reftitle.seealso;
   <para>
